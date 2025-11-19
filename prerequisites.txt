@@ -1,0 +1,266 @@
+# Prerequisites and Setup Guide for YourDaddy v3.0 - Advanced AI Assistant
+
+## Project Overview
+YourDaddy v3.0 is an advanced AI assistant with the following capabilities:
+- **Offline Wake Word Detection** ("Hey Daddy")
+- **Offline Speech-to-Text** (No internet required for voice commands)
+- **Computer Vision** (Can see and analyze your screen)
+- **Memory System** (Remembers past conversations)
+- **Windows Automation** (Full control of Windows applications)
+- **Natural Language Processing** via Google Gemini AI
+
+## System Requirements
+
+### Operating System
+- **Windows 10 or Windows 11** (Required)
+- Administrative privileges may be needed for certain automation tasks
+
+### Python Environment
+- **Python 3.8 or higher** (Recommended: Python 3.9-3.11)
+- **Virtual environment** (strongly recommended to avoid conflicts)
+
+### Required Tools and Software
+1. **Git** (for cloning and version control)
+2. **Visual Studio Code** (recommended IDE)
+3. **Windows PowerShell or Command Prompt**
+4. **Microphone** (for voice commands)
+5. **Speakers/Headphones** (for voice responses)
+
+## Environment Setup
+
+### 1. API Keys Required
+Before running the application, you must obtain and set up the following API keys:
+
+#### Google Gemini API Key (Required)
+- Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
+- Create a new API key for Gemini
+- Set the environment variable:
+  ```bash
+  # Windows Command Prompt
+  set GEMINI_API_KEY=your_api_key_here
+  
+  # Windows PowerShell
+  $env:GEMINI_API_KEY="your_api_key_here"
+  
+  # For permanent setup, add to System Environment Variables
+  ```
+
+#### Picovoice Access Key (Required for Wake Word)
+- Visit [Picovoice Console](https://console.picovoice.ai/)
+- Sign up for a free account
+- Get your AccessKey from the dashboard
+- Update the `PICOVOICE_ACCESS_KEY` variable in `yourdaddy_app.py` (line ~75)
+
+### 2. Python Virtual Environment Setup
+```bash
+# Create virtual environment
+python -m venv .venv
+
+# Activate virtual environment
+# On Windows Command Prompt:
+.venv\Scripts\activate.bat
+
+# On Windows PowerShell:
+.venv\Scripts\Activate.ps1
+
+# On Git Bash:
+source .venv/Scripts/activate
+```
+
+### 3. Install Dependencies
+```bash
+# Install all required packages
+pip install -r requirements.txt
+
+# Or install core packages individually:
+pip install autogen-agentchat autogen-ext pywinauto google-generativeai openai
+pip install pvporcupine vosk pillow pyttsx3 SpeechRecognition pyaudio
+```
+
+### 4. Download Required Model Files
+
+#### Vosk Speech Recognition Model (Required for Offline STT)
+```bash
+# Download the small English model (about 50MB)
+# Create model directory if it doesn't exist
+mkdir model
+cd model
+
+# Download and extract Vosk model
+# You can download from: https://alphacephei.com/vosk/models
+# Extract to: model/vosk-model-small-en-us-0.15/
+```
+
+#### Wake Word File (Required)
+- The project should include `hey-daddy_en_windows_v3_0_0.ppn`
+- This file is used for offline wake word detection
+- If missing, you can create custom wake words at [Picovoice Console](https://console.picovoice.ai/)
+
+## Windows-Specific Prerequisites
+
+### Windows Automation Dependencies
+The project uses `pywinauto` for Windows GUI automation, which requires:
+
+1. **Windows Accessibility APIs** (usually pre-installed)
+2. **UI Automation support** (built into Windows 10/11)
+3. **Administrative privileges** for some automation tasks
+
+### Audio System Requirements
+For voice features to work properly:
+- **Working microphone** with proper drivers
+- **Audio output device** (speakers/headphones)
+- **Windows Audio service** running
+- **Microphone permissions** granted to Python/Terminal
+
+### Offline Processing Requirements
+- **Sufficient disk space** (minimum 100MB for Vosk model)
+- **Adequate RAM** (minimum 4GB recommended for smooth operation)
+- **CPU with decent performance** (for real-time speech processing)
+
+## Application Permissions
+
+### Required Permissions
+- **File system access** (for reading/writing notes and memory database)
+- **Application launch permissions** (to open programs)
+- **Registry read access** (for Windows settings)
+- **Network access** (for web searches and Gemini API calls)
+- **Microphone access** (for voice commands - CRITICAL)
+- **Screen capture access** (for vision capabilities)
+
+### Optional Permissions
+- **Notification permissions** (for toast notifications)
+- **System settings access** (for opening Windows Settings)
+- **Audio device control** (for volume adjustment)
+
+## Troubleshooting Common Issues
+
+### 1. GEMINI_API_KEY Not Set
+**Error**: "GEMINI_API_KEY not set"
+**Solution**: Set the environment variable and restart VS Code/terminal
+
+### 2. Picovoice AccessKey Issues
+**Error**: "Picovoice AccessKey not set" or wake word not working
+**Solutions**:
+- Sign up at [Picovoice Console](https://console.picovoice.ai/)
+- Copy your AccessKey and update line ~75 in `yourdaddy_app.py`
+- Ensure `.ppn` file exists in project directory
+
+### 3. Vosk Model Missing
+**Error**: "Model not found" or speech recognition fails
+**Solutions**:
+- Download Vosk model from [https://alphacephei.com/vosk/models](https://alphacephei.com/vosk/models)
+- Extract to `model/vosk-model-small-en-us-0.15/` directory
+- Ensure directory structure is correct
+
+### 4. PyWinAuto Access Issues
+**Error**: Application automation fails
+**Solutions**:
+- Run as administrator
+- Ensure target applications are not running as admin (if your script isn't)
+- Check Windows UAC settings
+
+### 5. Audio/Microphone Issues
+**Error**: "Microphone not working" or "No audio input"
+**Solutions**:
+- Check microphone permissions in Windows Privacy settings
+- Test microphone in Windows Sound settings
+- Ensure PyAudio is properly installed: `pip install pyaudio`
+- Try running as administrator
+
+### 6. Import Errors
+**Error**: Module not found errors
+**Solutions**:
+- Ensure virtual environment is activated
+- Reinstall requirements: `pip install -r requirements.txt`
+- Check Python version compatibility (3.8+)
+
+## Development Environment
+
+### Recommended VS Code Extensions
+- Python
+- Python Debugger
+- Pylance
+- Python Indent
+- autoDocstring
+
+### Code Formatting (Optional)
+```bash
+pip install black flake8 mypy
+```
+
+## Security Considerations
+
+### API Key Security
+- Never commit API keys to version control
+- Use environment variables or secure key management
+- Regularly rotate API keys
+
+### Windows Security
+- Be cautious with automation scripts that have broad system access
+- Test in a controlled environment first
+- Consider running in a limited user account for testing
+
+## Performance Notes
+
+### System Resources
+- **CPU Usage**: Higher during voice processing and AI inference
+- **Memory Usage**: ~200-500MB depending on loaded models
+- **Disk Space**: Minimum 100MB for Vosk model
+- **Network**: Intermittent usage for Gemini API calls and web searches
+
+### Optimization Tips
+- Use virtual environments to avoid package conflicts
+- Keep Windows and audio drivers updated for best automation compatibility
+- Monitor API usage to avoid Gemini rate limits
+- Close unnecessary applications for better speech recognition performance
+- Use SSD for faster model loading if available
+
+## Project Structure
+
+```
+assitant/
+├── agent_brain.py          # Original simple agent controller
+├── yourdaddy_app.py        # Main GUI application with voice & vision
+├── automation_tools.py     # Windows automation functions + memory system
+├── voice_listener.py       # Legacy voice listener (if present)
+├── requirements.txt        # Python dependencies
+├── prerequisites.txt       # This setup guide
+├── hey-daddy_en_windows_v3_0_0.ppn  # Wake word file (Picovoice)
+├── LICENSE.txt             # Project license
+├── model/                  # Vosk speech recognition model
+│   └── vosk-model-small-en-us-0.15/
+└── .venv/                  # Virtual environment (created during setup)
+```
+
+## Getting Started
+
+### Quick Start (Recommended)
+1. Clone or download the project
+2. Set up virtual environment: `python -m venv .venv`
+3. Activate environment: `.venv\Scripts\activate`
+4. Install dependencies: `pip install -r requirements.txt`
+5. Download Vosk model (see section 4 above)
+6. Set GEMINI_API_KEY environment variable
+7. Get Picovoice AccessKey and update `yourdaddy_app.py`
+8. Run: `python yourdaddy_app.py`
+
+### Alternative (Simple Agent)
+For basic functionality without voice/vision:
+- Run: `python agent_brain.py`
+
+## Usage
+
+### Main Application (yourdaddy_app.py)
+- Launch the GUI application
+- Click "Start 'YourDaddy'" to begin listening
+- Say "Hey Daddy" to activate
+- Give voice commands like:
+  - "Open calculator"
+  - "What am I looking at?" (uses vision)
+  - "Remember that I like pizza" (saves to memory)
+  - "What did we talk about?" (retrieves memory)
+  - "Write an essay about AI"
+  - "Set volume to 50"
+
+### Voice Commands
+The assistant can perform various tasks through voice commands and has full access to your screen for context.

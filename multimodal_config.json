@@ -1,0 +1,123 @@
+{
+  "gemini": {
+    "api_key": "",
+    "model": "gemini-2.5-pro",
+    "temperature": 0.7,
+    "max_tokens": 4096,
+    "safety_settings": [
+      {
+        "category": "HARM_CATEGORY_HARASSMENT",
+        "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+      },
+      {
+        "category": "HARM_CATEGORY_HATE_SPEECH",
+        "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+      }
+    ]
+  },
+  "voice": {
+    "recognition": {
+      "engine": "vosk",
+      "model_path": "model/vosk-model-small-en-us-0.15",
+      "language": "en-US",
+      "energy_threshold": 4000,
+      "pause_threshold": 0.8,
+      "multilingual": true,
+      "supported_languages": [
+        "en-US",
+        "hi-IN",
+        "en-IN"
+      ]
+    },
+    "synthesis": {
+      "engine": "pyttsx3",
+      "rate": 150,
+      "volume": 0.8,
+      "voice_id": 0,
+      "multilingual": true,
+      "hindi_voice": true,
+      "english_voice": true
+    },
+    "wake_word": {
+      "enabled": true,
+      "keyword": "hey daddy",
+      "hindi_keywords": [
+        "arre daddy",
+        "sun daddy",
+        "hey daddy"
+      ],
+      "access_key": "",
+      "sensitivity": 0.5
+    }
+  },
+  "languages": {
+    "primary": "hinglish",
+    "fallback": "en",
+    "supported": [
+      "en",
+      "hi",
+      "hinglish"
+    ],
+    "auto_detect": true,
+    "translation": {
+      "engine": "google",
+      "api_key": "",
+      "cache_translations": true,
+      "max_cache_size": 1000,
+      "offline_fallback": true
+    },
+    "hinglish": {
+      "enable_processing": true,
+      "romanization": true,
+      "script_mixing": true,
+      "cultural_context": true,
+      "common_phrases": {
+        "greeting": [
+          "namaste",
+          "hello",
+          "hi",
+          "kaise ho"
+        ],
+        "confirmation": [
+          "haan",
+          "yes",
+          "theek hai",
+          "ok"
+        ],
+        "negation": [
+          "nahi",
+          "no",
+          "nahin",
+          "bilkul nahi"
+        ]
+      }
+    }
+  },
+  "ui": {
+    "theme": "dark",
+    "animations": true,
+    "transparency": 0.9,
+    "auto_hide": false,
+    "position": "center"
+  },
+  "features": {
+    "multimodal_ai": true,
+    "voice_commands": true,
+    "smart_automation": true,
+    "learning_mode": true,
+    "performance_optimization": true,
+    "conversational_ai": true
+  },
+  "automation": {
+    "auto_discovery": true,
+    "smart_suggestions": true,
+    "usage_tracking": true,
+    "context_awareness": true
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "yourdaddy.log",
+    "max_size": "10MB",
+    "backup_count": 5
+  }
+}

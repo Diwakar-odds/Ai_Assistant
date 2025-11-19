@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YourDaddy Assistant - Web Interface</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="title">
+                <i class="fas fa-robot"></i>
+                YourDaddy Assistant
+            </h1>
+            <div class="status" id="status">
+                <span class="status-dot"></span>
+                <span id="status-text">Ready</span>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- Voice Interface -->
+            <section class="voice-section">
+                <div class="voice-controls">
+                    <button id="voice-btn" class="voice-btn" title="Voice input">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <div class="voice-status">
+                        <span id="voice-text">Click microphone to start voice commands</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Command Interface -->
+            <section class="command-section">
+                <div class="input-group">
+                    <input type="text" id="command-input" placeholder="Type your command here..." autocomplete="off">
+                    <button id="send-btn" title="Send message">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Output Display -->
+            <section class="output-section">
+                <div class="output-header">
+                    <h3>Assistant Response</h3>
+                    <button id="clear-btn" class="clear-btn">
+                        <i class="fas fa-trash"></i> Clear
+                    </button>
+                </div>
+                <div id="output" class="output-content">
+                    <div class="welcome-message">
+                        <i class="fas fa-robot"></i>
+                        <p>Hello! I'm your AI assistant. You can:</p>
+                        <ul>
+                            <li>🗣️ Use voice commands</li>
+                            <li>💬 Type text commands</li>
+                            <li>🚀 Open applications</li>
+                            <li>🔍 Search the web</li>
+                            <li>📝 Take notes</li>
+                            <li>🎵 Control music</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Quick Actions -->
+            <section class="actions-section">
+                <h3>Quick Actions</h3>
+                <div class="action-grid">
+                    <button class="action-btn" data-command="discover apps">
+                        <i class="fas fa-search"></i>
+                        Discover Apps
+                    </button>
+                    <button class="action-btn" data-command="system status">
+                        <i class="fas fa-chart-line"></i>
+                        System Status
+                    </button>
+                    <button class="action-btn" data-command="weather">
+                        <i class="fas fa-cloud-sun"></i>
+                        Weather
+                    </button>
+                    <button class="action-btn" data-command="news">
+                        <i class="fas fa-newspaper"></i>
+                        Latest News
+                    </button>
+                </div>
+            </section>
+
+            <!-- Recent Apps -->
+            <section class="apps-section">
+                <h3>Recent Applications</h3>
+                <div id="recent-apps" class="apps-grid">
+                    <!-- Apps will be populated by JavaScript -->
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <div class="footer-content">
+                <span>&copy; 2024 YourDaddy Assistant</span>
+                <div class="footer-links">
+                    <a href="#" onclick="showAbout()">About</a>
+                    <a href="#" onclick="showSettings()">Settings</a>
+                    <a href="#" onclick="showHelp()">Help</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="modal-close">&times;</span>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

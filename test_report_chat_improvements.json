@@ -1,0 +1,110 @@
+{
+  "timestamp": "2025-11-19 06:54:55",
+  "total_tests": 17,
+  "appropriate_responses": 16,
+  "success_rate": 94.11764705882352,
+  "detailed_results": [
+    {
+      "query": "hello",
+      "response": "👋 Hello! I'm your assistant. I can help you open apps, search the web, play music, create documents, and much more. What would you like me to do?",
+      "appropriate": true,
+      "category": "greeting"
+    },
+    {
+      "query": "hi there",
+      "response": "👋 Hello! I'm your assistant. I can help you open apps, search the web, play music, create documents, and much more. What would you like me to do?",
+      "appropriate": true,
+      "category": "greeting"
+    },
+    {
+      "query": "good morning",
+      "response": "👋 Hello! I'm your assistant. I can help you open apps, search the web, play music, create documents, and much more. What would you like me to do?",
+      "appropriate": true,
+      "category": "greeting"
+    },
+    {
+      "query": "how are you?",
+      "response": "I'm doing great, thank you for asking! 😊 I'm ready to help you with any tasks. What can I do for you today?",
+      "appropriate": true,
+      "category": "wellbeing"
+    },
+    {
+      "query": "what can you do?",
+      "response": "🚀 I can help you with many things:\n\n📱 Open applications (chrome, notepad, calculator, etc.)\n🔍 Search Google for anything\n🎵 Play music on YouTube/Spotify\n📝 Create documents and presentations\n🔧 Control system settings (volume, WiFi, etc.)\n📊 Perform calculations\n⏰ Tell you time and date\n\nJust ask me naturally! For example: 'open chrome', 'play some music', or 'search for python tutorials'.",
+      "appropriate": true,
+      "category": "capabilities"
+    },
+    {
+      "query": "what's your name?",
+      "response": "I'm following our conversation about General Conversation. What else can I help you with? 🚀",
+      "appropriate": true,
+      "category": "identity"
+    },
+    {
+      "query": "play music",
+      "response": "🎵 I'd love to play music for you! Please tell me what song or artist you'd like to hear. For example: 'play believer', 'play coldplay', or 'play some rock music'.",
+      "appropriate": true,
+      "category": "music_command"
+    },
+    {
+      "query": "play something by coldplay",
+      "response": "🎵 Opening YouTube search for: 'thing by cold'",
+      "appropriate": true,
+      "category": "music_command"
+    },
+    {
+      "query": "open notepad",
+      "response": "✅ Opening Notepad",
+      "appropriate": false,
+      "category": "app_command"
+    },
+    {
+      "query": "search for python tutorials",
+      "response": "🔍 Searching Google for: 'pyth tutorials'",
+      "appropriate": true,
+      "category": "search_command"
+    },
+    {
+      "query": "tell me a joke",
+      "response": "I'm following our conversation about General Conversation. What else can I help you with? 🚀",
+      "appropriate": true,
+      "category": "entertainment"
+    },
+    {
+      "query": "what's the weather like?",
+      "response": "I'm following our conversation about General Conversation. What else can I help you with? 🚀",
+      "appropriate": true,
+      "category": "information"
+    },
+    {
+      "query": "I'm feeling sad",
+      "response": "I'm following our conversation about General Conversation. What else can I help you with? 🚀",
+      "appropriate": true,
+      "category": "emotional_support"
+    },
+    {
+      "query": "that's awesome",
+      "response": "I'm following our conversation about General Conversation. What else can I help you with? 🚀",
+      "appropriate": true,
+      "category": "acknowledgment"
+    },
+    {
+      "query": "can you help me learn python programming?",
+      "response": "🚀 I can help you with many things:\n\n📱 Open applications (chrome, notepad, calculator, etc.)\n🔍 Search Google for anything\n🎵 Play music on YouTube/Spotify\n📝 Create documents and presentations\n🔧 Control system settings (volume, WiFi, etc.)\n📊 Perform calculations\n⏰ Tell you time and date\n\nJust ask me naturally! For example: 'open chrome', 'play some music', or 'search for python tutorials'.",
+      "appropriate": true,
+      "category": "learning_assistance"
+    },
+    {
+      "query": "I need to organize my schedule",
+      "response": "I'd be happy to help! 💪 Here are some things I can do for you:\n\n• Open applications: 'open chrome'\n• Search: 'google python tutorial'\n• Play music: 'play believer'\n• Create files: 'create a document'\n• System control: 'volume up'\n\nWhat would you like me to help with?",
+      "appropriate": true,
+      "category": "productivity"
+    },
+    {
+      "query": "how do I fix my computer?",
+      "response": "I'm following our conversation about General Conversation. What else can I help you with? 🚀",
+      "appropriate": true,
+      "category": "technical_support"
+    }
+  ]
+}
