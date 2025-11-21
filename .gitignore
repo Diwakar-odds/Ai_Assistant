@@ -24,6 +24,7 @@ share/python-wheels/
 MANIFEST
 
 # Virtual Environment
+.venv/
 venv/
 env/
 ENV/
@@ -44,11 +45,16 @@ token.pickle
 *.db
 *.sqlite
 *.sqlite3
+
+# User Data & Cache
+user_data/
+offline_cache/
 data/
 
 # Logs
 logs/
 *.log
+*.log.*
 
 # IDE / Editor
 .vscode/
@@ -64,13 +70,17 @@ ehthumbs.db
 Desktop.ini
 
 # Voice Models (large files)
-# model/
+model/vosk-*/
+model/*.bin
+model/*.gz
 # *.ppn
 
 # Audio Files
 *.wav
 *.mp3
 *.ogg
+*.flac
+temp_edge_tts_output.*
 
 # Screenshots & Images
 screenshots/
@@ -143,3 +153,10 @@ typings/
 *.pid
 *.seed
 *.pid.lock
+
+# AI Assistant Specific
+=0.16.0
+yourdaddy.log
+backend.log
+temp_*
+*.session

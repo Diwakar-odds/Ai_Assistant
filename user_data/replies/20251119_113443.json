@@ -1,3 +1,0 @@
-{
-    "reply": "\u274c Error generating model response: cannot import name 'BaseTransport' from 'httpx' (C:\\Users\\hp\\AppData\\Roaming\\Python\\Python311\\site-packages\\httpx\\__init__.py)"
-}
