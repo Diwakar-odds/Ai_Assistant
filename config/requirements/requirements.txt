@@ -1,0 +1,273 @@
+# YourDaddy Assistant - Unified Requirements
+# =========================================
+# Python 3.11+ Compatible
+# Install with: pip install -r requirements.txt
+
+# =========================================
+# MEDIA DOWNLOADERS
+# =========================================
+yt-dlp>=2023.11.16
+static-ffmpeg>=2.5
+
+# =========================================
+# WEB FRAMEWORK & API
+# =========================================
+Flask==3.1.0
+Flask-SocketIO==5.3.6
+flask-cors==5.0.0
+flask-restful==0.3.10
+Flask-JWT-Extended==4.6.0
+Flask-Limiter==3.8.0
+python-socketio==5.8.0
+eventlet==0.33.3
+Werkzeug==3.1.3
+websockets>=11.0.0
+
+# =========================================
+# SECURITY & ENCRYPTION
+# =========================================
+cryptography==45.0.0
+PyJWT==2.10.1
+secrets-manager==0.4
+keyring==25.5.0
+python-dotenv==1.0.1
+certifi==2025.10.5
+pycryptodome>=3.23.0
+
+
+# =========================================
+# CORE AI/ML FRAMEWORK
+# =========================================
+autogen-agentchat==0.7.5
+autogen-core==0.7.5
+autogen-ext==0.7.5
+
+# =========================================
+# GOOGLE AI/GEMINI INTEGRATION
+# =========================================
+google-genai>=1.57.0
+google-generativeai==0.8.5
+google-ai-generativelanguage==0.6.15
+google-api-core==2.28.1
+google-api-python-client==2.187.0
+google-auth
+google-auth-oauthlib
+google-auth-httplib2==0.2.1
+googleapis-common-protos==1.72.0
+
+# =========================================
+# OPENAI INTEGRATION
+# =========================================
+openai==2.8.0
+
+# =========================================
+# MULTILINGUAL SUPPORT
+# =========================================
+deep-translator==1.11.4
+langdetect==1.0.9
+transliterate==1.10.2
+indic-transliteration==2.3.37
+
+# =========================================
+# VOICE & AUDIO PROCESSING
+# =========================================
+kittentts
+pygame-ce>=2.4.0
+pydub==0.25.1
+soundfile==0.12.1
+librosa==0.10.2
+
+noisereduce>=3.0.0
+# pocketsphinx>=5.0.0  # Commented out: requires C++ build tools on Windows
+sounddevice>=0.5.0
+# webrtcvad>=2.0.10  # Requires C++ build tools - optional
+# TTS>=0.22.0  # Coqui TTS - large package, optional
+# PyAudio==0.2.14  # Commented - often fails on Python 3.11+, use sounddevice as alternative
+
+# =========================================
+# MACHINE LEARNING & AI
+# =========================================
+scikit-learn>=1.4.0
+tensorflow>=2.16.0
+tf-keras>=2.16.0
+torch==2.3.1
+torchvision==0.18.1
+transformers==4.44.2
+sentence-transformers==3.0.1
+numpy<2.0.0
+
+# =========================================
+# VECTOR SEARCH & RAG
+# =========================================
+faiss-cpu>=1.7.4
+chromadb>=0.4.22
+langchain>=0.1.0
+langchain-community>=0.0.10
+
+# =========================================
+# COMPUTER VISION & IMAGE PROCESSING
+# =========================================
+Pillow==11.3.0
+opencv-python==4.10.0.84
+pytesseract==0.3.13
+
+# =========================================
+# WINDOWS AUTOMATION & GUI
+# =========================================
+pywinauto==0.6.9; platform_system=='Windows'
+pywin32==311; platform_system=='Windows'
+pywin32-ctypes==0.2.3; platform_system=='Windows'
+pyautogui==0.9.54; platform_system=='Windows'
+comtypes==1.4.13; platform_system=='Windows'
+pycaw==20240210; platform_system=='Windows'
+win32-setctime==1.1.0; platform_system=='Windows'
+
+# =========================================
+# MUSIC INTEGRATION
+# =========================================
+spotipy==2.24.0
+ytmusicapi==1.8.1
+
+# =========================================
+# WEB SCRAPING & AUTOMATION
+# =========================================
+selenium==4.17.2
+beautifulsoup4==4.12.3
+lxml==4.9.4
+feedparser==6.0.11
+
+# =========================================
+# HTTP & NETWORKING
+# =========================================
+httpx==0.28.1
+httpcore==1.0.9
+requests==2.32.5
+urllib3==2.5.0
+
+# =========================================
+# DOCUMENT PROCESSING
+# =========================================
+PyPDF2>=3.0.1
+pdfplumber==0.11.4
+
+# =========================================
+# TASK SCHEDULING & AUTOMATION
+# =========================================
+schedule==1.2.2
+APScheduler==3.11.0
+watchdog==3.0.0
+
+# =========================================
+# SYSTEM & PERFORMANCE
+# =========================================
+psutil==5.9.8
+memory_profiler==0.61.0
+cachetools==5.3.0
+
+# =========================================
+# NOTIFICATIONS & GUI ENHANCEMENTS
+# =========================================
+win10toast==0.9
+plyer==2.1.0
+tkcalendar==1.6.1
+ttkbootstrap==1.16.0
+ttkthemes==3.2.2
+
+# =========================================
+# DATA PROCESSING & VALIDATION
+# =========================================
+pydantic>=2.0.0,<3.0.0
+pydantic_core>=2.0.0,<3.0.0
+
+# =========================================
+# ASYNC & CONCURRENCY
+# =========================================
+aiofiles==25.1.0
+anyio==4.11.0
+
+# =========================================
+# MODEL CONTEXT PROTOCOL (MCP)
+# =========================================
+mcp>=1.1.0
+
+# =========================================
+# ADVANCED FEATURES & PERFORMANCE
+# =========================================
+diskcache>=5.6.3
+redis>=5.0.0
+
+
+
+# =========================================
+# UTILITIES
+# =========================================
+colorama==0.4.6
+packaging==25.0
+tqdm==4.67.1
+regex==2025.11.3
+qrcode==7.4.0
+
+# =========================================
+# PROTOCOL BUFFERS & GRPC
+# =========================================
+protobuf>=5.26.1,<6.0
+grpcio
+grpcio-status
+
+# =========================================
+# TYPE CHECKING
+# =========================================
+typing_extensions==4.15.0
+annotated-types==0.7.0
+
+# =========================================
+# NETWORK & VISUALIZATION
+# =========================================
+networkx==3.1
+matplotlib>=3.7.2
+
+# =========================================
+# ENCODING & CHARSET
+# =========================================
+charset-normalizer==3.4.4
+idna==3.11
+
+# =========================================
+# DESKTOP APP & PACKAGING
+# =========================================
+pywebview>=4.4.1
+pythonnet>=3.0.0
+pyinstaller==6.16.0
+pyinstaller-hooks-contrib==2025.9
+
+# =========================================
+# LOCAL AI (OPTIONAL - for offline LLM)
+# =========================================
+# llama-cpp-python>=0.2.32  # Requires C++ build tools and CMake - install separately if needed
+huggingface-hub>=0.20.0
+
+# =========================================
+# NOTES & PLATFORM COMPATIBILITY
+# =========================================
+# Built-in Python modules (no installation needed):
+# - tkinter, sqlite3, json, os, sys, time, threading, asyncio
+# 
+# Windows-specific packages:
+# - pywin32, pywinauto, win10toast, comtypes, pycaw
+# - May not install on Linux/macOS
+#
+# Audio dependencies (system-level):
+# - Windows: Usually works out of the box
+# - Linux: sudo apt-get install portaudio19-dev python3-pyaudio
+# - macOS: brew install portaudio
+#
+# Python 3.11+ compatibility notes:
+# - PyAudio commented out (often fails) - use sounddevice instead
+# - TensorFlow upgraded to 2.16+ for protobuf 5.x support
+# - scikit-learn upgraded to 1.4+ for Python 3.11+ support
+# - protobuf uses flexible version range for compatibility
+#
+# Optional dependencies:
+# - Some AI packages require CUDA for GPU acceleration
+# - OCR requires Tesseract: https://github.com/tesseract-ocr/tesseract
+# - Some features may require additional API keys (see .env.example)

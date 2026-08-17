@@ -1,0 +1,5 @@
+# SSL Certificates - DO NOT COMMIT
+*.pem
+*.key
+*.crt
+*.csr

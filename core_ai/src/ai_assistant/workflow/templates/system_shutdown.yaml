@@ -1,0 +1,10 @@
+name: System Shutdown Workflow
+version: "1.0"
+metadata:
+  intent: SYSTEM_SHUTDOWN
+  description: "Workflow for shutting down the system"
+
+steps:
+  - id: 1
+    action: system.power.shutdown
+    description: "Shut down the PC"

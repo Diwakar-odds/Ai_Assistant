@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="YourDaddy AI">
+    <meta name="theme-color" content="#4a90e2">
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/static/manifest.json">
+    
+    <!-- iOS Specific -->
+    <link rel="apple-touch-icon" href="/static/icons/icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/static/icons/icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/icons/icon-192x192.png">
+    
+    <!-- Android Specific -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+    
+    <!-- Splash Screens for iOS -->
+    <meta name="apple-mobile-web-app-title" content="YourDaddy AI">
+    <link rel="apple-touch-startup-image" href="/static/splash/splash-2048x2732.png">
+    
+    <title>{% block title %}YourDaddy AI Assistant{% endblock %}</title>
+    
+    <!-- Stylesheets -->
+    {% block styles %}
+    <style>
+        /* Mobile-First Responsive Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        /* Safe area handling for notched devices */
+        .safe-area {
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+        }
+        
+        /* Loading indicator */
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+        }
+        
+        /* Offline indicator */
+        .offline-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #ff6b6b;
+            color: white;
+            text-align: center;
+            padding: 10px;
+            display: none;
+            z-index: 10000;
+        }
+        
+        .offline-indicator.show {
+            display: block;
+        }
+        
+        /* Touch-friendly buttons */
+        button, .button {
+            min-height: 44px;
+            min-width: 44px;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        button:active, .button:active {
+            transform: scale(0.95);
+        }
+        
+        /* Responsive containers */
+        @media (max-width: 768px) {
+            body {
+                font-size: 14px;
+            }
+        }
+    </style>
+    {% endblock %}
+</head>
+<body class="safe-area">
+    <!-- Offline Indicator -->
+    <div id="offline-indicator" class="offline-indicator">
+        ⚠️ You are offline. Some features may be limited.
+    </div>
+    
+    <!-- Loading Indicator -->
+    <div id="loading" class="loading" style="display: none;">
+        <div class="spinner">Loading...</div>
+    </div>
+    
+    <!-- Main Content -->
+    <main id="main-content">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Install Prompt -->
+    <div id="install-prompt" style="display: none; position: fixed; bottom: 20px; left: 20px; right: 20px; background: #4a90e2; color: white; padding: 15px; border-radius: 10px; z-index: 1000;">
+        <p style="margin-bottom: 10px;">📲 Install YourDaddy AI as an app!</p>
+        <button id="install-button" style="background: white; color: #4a90e2; margin-right: 10px;">Install</button>
+        <button id="dismiss-install" style="background: transparent; color: white; border: 1px solid white;">Later</button>
+    </div>
+    
+    <!-- Scripts -->
+    {% block scripts %}
+    <script>
+        // Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', async () => {
+                try {
+                    const registration = await navigator.serviceWorker.register('/static/service-worker.js');
+                    console.log('✅ Service Worker registered:', registration);
+                    
+                    // Check for updates periodically
+                    setInterval(() => {
+                        registration.update();
+                    }, 60000); // Check every minute
+                    
+                } catch (error) {
+                    console.error('❌ Service Worker registration failed:', error);
+                }
+            });
+        }
+        
+        // Install Prompt Handling
+        let deferredPrompt;
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Show install prompt
+            const installPrompt = document.getElementById('install-prompt');
+            if (installPrompt) {
+                installPrompt.style.display = 'block';
+            }
+        });
+        
+        // Install button click
+        document.getElementById('install-button')?.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`User ${outcome} the install prompt`);
+            
+            deferredPrompt = null;
+            document.getElementById('install-prompt').style.display = 'none';
+        });
+        
+        // Dismiss install prompt
+        document.getElementById('dismiss-install')?.addEventListener('click', () => {
+            document.getElementById('install-prompt').style.display = 'none';
+        });
+        
+        // Online/Offline Detection
+        function updateOnlineStatus() {
+            const offlineIndicator = document.getElementById('offline-indicator');
+            if (navigator.onLine) {
+                offlineIndicator?.classList.remove('show');
+            } else {
+                offlineIndicator?.classList.add('show');
+            }
+        }
+        
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        updateOnlineStatus();
+        
+        // Prevent zoom on double-tap (iOS)
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', (event) => {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+        
+        // Handle viewport height for mobile browsers
+        function setVH() {
+            const vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
+        }
+        
+        setVH();
+        window.addEventListener('resize', setVH);
+        window.addEventListener('orientationchange', setVH);
+        
+        // Loading indicator helper
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+        }
+        
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+        
+        // Make available globally
+        window.showLoading = showLoading;
+        window.hideLoading = hideLoading;
+        
+        // Log PWA installation
+        window.addEventListener('appinstalled', () => {
+            console.log('✅ PWA installed successfully!');
+            // Track installation analytics if needed
+        });
+        
+        // Handle iOS standalone mode
+        if (window.navigator.standalone) {
+            console.log('✅ Running in iOS standalone mode');
+        }
+        
+        // Handle Android TWA mode
+        if (document.referrer.includes('android-app://')) {
+            console.log('✅ Running in Android TWA mode');
+        }
+    </script>
+    {% endblock %}
+</body>
+</html>

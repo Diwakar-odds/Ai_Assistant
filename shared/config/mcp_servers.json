@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "MCP Server Configurations for YourDaddy AI Assistant",
+  "servers": {
+    "filesystem": {
+      "name": "filesystem",
+      "description": "Access local file system - read, write, search files and directories",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."],
+      "enabled": true,
+      "category": "file-operations",
+      "capabilities": [
+        "read_file",
+        "write_file",
+        "list_directory",
+        "search_files",
+        "get_file_info"
+      ],
+      "notes": "Install with: npm install -g @modelcontextprotocol/server-filesystem"
+    },
+    "postgres": {
+      "name": "postgres",
+      "description": "PostgreSQL database access for queries and data management",
+      "command": "uvx",
+      "args": ["mcp-server-postgres", "postgresql://localhost:5432/yourdaddy_ai"],
+      "enabled": false,
+      "category": "database",
+      "capabilities": [
+        "query",
+        "execute",
+        "list_tables",
+        "describe_table"
+      ],
+      "notes": "Install with: pip install mcp-server-postgres. Update connection string as needed."
+    },
+    "github": {
+      "name": "github",
+      "description": "GitHub integration - repos, issues, PRs, code search",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      },
+      "enabled": true,
+      "category": "development",
+      "capabilities": [
+        "search_repositories",
+        "create_issue",
+        "list_issues",
+        "get_file_contents"
+      ],
+      "notes": "Requires GITHUB_TOKEN environment variable. Install with: npm install -g @modelcontextprotocol/server-github"
+    },
+    "sqlite": {
+      "name": "sqlite",
+      "description": "SQLite database access for local data storage",
+      "command": "uvx",
+      "args": ["mcp-server-sqlite", "--db-path", "databases/assistant.db"],
+      "enabled": false,
+      "category": "database",
+      "capabilities": [
+        "query",
+        "execute",
+        "list_tables",
+        "schema"
+      ],
+      "notes": "Install with: pip install mcp-server-sqlite"
+    },
+    "google-drive": {
+      "name": "google-drive",
+      "description": "Google Drive integration - read/write files, manage folders",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-gdrive"],
+      "enabled": false,
+      "category": "cloud-storage",
+      "capabilities": [
+        "list_files",
+        "read_file",
+        "write_file",
+        "search"
+      ],
+      "notes": "Requires Google Drive API credentials"
+    },
+    "slack": {
+      "name": "slack",
+      "description": "Slack integration - send messages, read channels, manage workspace",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-slack"],
+      "env": {
+        "SLACK_BOT_TOKEN": "${SLACK_BOT_TOKEN}",
+        "SLACK_TEAM_ID": "${SLACK_TEAM_ID}"
+      },
+      "enabled": false,
+      "category": "communication",
+      "capabilities": [
+        "send_message",
+        "list_channels",
+        "read_messages"
+      ],
+      "notes": "Requires Slack bot token and team ID"
+    },
+    "brave-search": {
+      "name": "brave-search",
+      "description": "Brave Search API for web search capabilities",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+      "env": {
+        "BRAVE_API_KEY": "${BRAVE_API_KEY}"
+      },
+      "enabled": false,
+      "category": "web-search",
+      "capabilities": [
+        "web_search",
+        "local_search",
+        "news_search"
+      ],
+      "notes": "Requires Brave Search API key from https://brave.com/search/api/"
+    },
+    "memory": {
+      "name": "memory",
+      "description": "Persistent memory/knowledge graph for AI context",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "enabled": false,
+      "category": "ai-enhancement",
+      "capabilities": [
+        "store_memory",
+        "retrieve_memory",
+        "search_memory",
+        "create_relation"
+      ],
+      "notes": "Enables long-term memory and context retention"
+    },
+    "puppeteer": {
+      "name": "puppeteer",
+      "description": "Browser automation for web scraping and testing",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-puppeteer"],
+      "enabled": false,
+      "category": "automation",
+      "capabilities": [
+        "navigate",
+        "screenshot",
+        "click",
+        "fill_form",
+        "scrape"
+      ],
+      "notes": "Headless browser automation. Install with: npm install -g @modelcontextprotocol/server-puppeteer"
+    },
+    "sequential-thinking": {
+      "name": "sequential-thinking",
+      "description": "Enhanced reasoning and problem-solving capabilities",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "enabled": false,
+      "category": "ai-enhancement",
+      "capabilities": [
+        "think",
+        "reason",
+        "plan",
+        "analyze"
+      ],
+      "notes": "Improves AI reasoning for complex problems"
+    },
+    "chrome-devtools": {
+      "name": "chrome-devtools",
+      "description": "Chrome DevTools MCP for browser debugging and inspection",
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp"],
+      "enabled": true,
+      "category": "development",
+      "capabilities": [
+        "inspect_dom",
+        "view_console",
+        "debug_javascript",
+        "network_inspection",
+        "performance_profiling",
+        "element_selection"
+      ],
+      "notes": "Use VS Code's Get DevTools MCP flow or run via npx chrome-devtools-mcp. The old @modelcontextprotocol/server-chrome-devtools package does not exist."
+    }
+  },
+  "categories": {
+    "file-operations": "File system and document management",
+    "database": "Database access and queries",
+    "development": "Development tools and version control",
+    "cloud-storage": "Cloud storage and file services",
+    "communication": "Messaging and collaboration",
+    "web-search": "Web search and information retrieval",
+    "ai-enhancement": "AI capabilities and memory",
+    "automation": "Browser and system automation"
+  },
+  "notes": [
+    "Enable servers by setting 'enabled': true",
+    "Environment variables in ${} format will be replaced from system env or .env file",
+    "Install required MCP servers before enabling them",
+    "Some servers require API keys or credentials - check the notes field",
+    "Add custom servers by following the same schema structure"
+  ]
+}

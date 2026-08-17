@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline - YourDaddy AI</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            color: white;
+            text-align: center;
+        }
+        
+        .offline-container {
+            max-width: 500px;
+        }
+        
+        .offline-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        h1 {
+            font-size: 2em;
+            margin-bottom: 15px;
+        }
+        
+        p {
+            font-size: 1.1em;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+        
+        .retry-button {
+            background: white;
+            color: #667eea;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .retry-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        
+        .features-list {
+            margin-top: 40px;
+            text-align: left;
+        }
+        
+        .feature-item {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .feature-item strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="offline-icon">📡</div>
+        <h1>You're Offline</h1>
+        <p>It looks like you've lost your internet connection. Don't worry, some features might still work!</p>
+        
+        <button class="retry-button" onclick="location.reload()">
+            🔄 Retry Connection
+        </button>
+        
+        <div class="features-list">
+            <div class="feature-item">
+                <strong>✅ Cached Content</strong>
+                Previously viewed pages are still available
+            </div>
+            <div class="feature-item">
+                <strong>💾 Local Storage</strong>
+                Your settings and preferences are saved
+            </div>
+            <div class="feature-item">
+                <strong>🔄 Auto-Sync</strong>
+                Your actions will sync when you're back online
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Automatically retry when connection is restored
+        window.addEventListener('online', () => {
+            location.reload();
+        });
+        
+        // Check connection every 5 seconds
+        setInterval(() => {
+            if (navigator.onLine) {
+                location.reload();
+            }
+        }, 5000);
+    </script>
+</body>
+</html>

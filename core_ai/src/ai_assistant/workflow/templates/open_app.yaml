@@ -1,0 +1,13 @@
+name: Open Application Workflow
+version: "1.0"
+metadata:
+  intent: OPEN_APP
+  aliases: ["OPEN_BROWSER"]
+  entities: ["app"]
+  description: "Workflow for opening applications and browsers"
+
+steps:
+  - id: 1
+    action: system.app.open
+    description: "Launch requested application"
+    requires: ["app"]

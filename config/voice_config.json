@@ -1,0 +1,190 @@
+{
+  "tts": {
+    "engines": {
+      "edge_tts": {
+        "enabled": true,
+        "priority": 1,
+        "voices": {
+          "en-US": {
+            "female": "en-US-AriaNeural",
+            "male": "en-US-GuyNeural",
+            "default": "en-US-AriaNeural"
+          },
+          "hi-IN": {
+            "female": "hi-IN-SwaraNeural",
+            "male": "hi-IN-MadhurNeural",
+            "default": "hi-IN-SwaraNeural"
+          },
+          "en-GB": {
+            "female": "en-GB-SoniaNeural",
+            "male": "en-GB-RyanNeural",
+            "default": "en-GB-SoniaNeural"
+          }
+        },
+        "styles": {
+          "normal": "",
+          "cheerful": "cheerful",
+          "excited": "excited",
+          "friendly": "friendly",
+          "calm": "calm"
+        }
+      },
+      "pyttsx3": {
+        "enabled": true,
+        "priority": 2,
+        "rate": 150,
+        "volume": 0.9
+      },
+      "gtts": {
+        "enabled": true,
+        "priority": 3,
+        "slow": false
+      }
+    },
+    "default_engine": "edge_tts",
+    "default_voice": "en-US-AriaNeural",
+    "default_language": "en-US",
+    "default_gender": "female",
+    "speed": 1.0,
+    "volume": 0.9,
+    "cache_enabled": true,
+    "cache_dir": "data/voice_cache",
+    "max_cache_size_mb": 500
+  },
+  "stt": {
+    "engines": {
+      "whisper_api": {
+        "enabled": true,
+        "priority": 1,
+        "model": "whisper-1",
+        "requires_api_key": true,
+        "timeout": 30,
+        "supports_multilingual": true,
+        "supports_hinglish": true,
+        "language_hints": {
+          "en": "English speech with possible Indian accent.",
+          "hi": "Hindi speech, may contain some English words.",
+          "auto": "Mixed Hindi and English speech (Hinglish). Contains both languages."
+        }
+      },
+      "google_speech": {
+        "enabled": true,
+        "priority": 2,
+        "timeout": 10,
+        "dual_language_recognition": true,
+        "supported_languages": [
+          "en-US",
+          "en-IN",
+          "hi-IN"
+        ],
+        "hinglish_strategy": "dual_recognition"
+      },
+      "vosk": {
+        "enabled": true,
+        "priority": 3,
+        "offline": true,
+        "model_path": "model/vosk-model-en-us-0.22",
+        "model_hi_path": "model/vosk-model-small-hi-0.22",
+        "supported_languages": [
+          "en",
+          "hi"
+        ]
+      },
+      "web_speech_api": {
+        "enabled": true,
+        "priority": 4,
+        "browser_only": true,
+        "supported_languages": [
+          "en-US",
+          "en-IN",
+          "hi-IN"
+        ]
+      }
+    },
+    "default_engine": "whisper_api",
+    "fallback_enabled": true,
+    "language": "auto",
+    "language_alternatives": [
+      "hi-IN",
+      "en-IN",
+      "en-US"
+    ],
+    "continuous": true,
+    "interim_results": true,
+    "max_alternatives": 3,
+    "profanity_filter": false,
+    "noise_reduction": true,
+    "vad_enabled": true,
+    "energy_threshold": 4000,
+    "dynamic_energy": true,
+    "pause_threshold": 0.8,
+    "phrase_threshold": 0.3,
+    "timeout": 10,
+    "phrase_time_limit": 15
+  },
+  "wake_word": {
+    "enabled": true,
+    "phrases": [
+      "hey daddy",
+      "ok daddy",
+      "hey assistant",
+      "ok assistant"
+    ],
+    "sensitivity": 0.5,
+    "detection_mode": "pattern_matching",
+    "phonetic_matching": true,
+    "timeout": 5,
+    "confirmation_beep": true,
+    "continuous_listening": true,
+    "model_path": "model/wake_word_model.pmdl"
+  },
+  "voice_activity_detection": {
+    "enabled": true,
+    "engine": "webrtcvad",
+    "aggressiveness": 2,
+    "frame_duration_ms": 30,
+    "padding_duration_ms": 300,
+    "min_speech_duration_ms": 500
+  },
+  "audio": {
+    "sample_rate": 16000,
+    "channels": 1,
+    "chunk_size": 1024,
+    "format": "int16",
+    "device_index": null,
+    "input_device": null,
+    "output_device": null
+  },
+  "features": {
+    "speaker_verification": false,
+    "voice_profiles": false,
+    "emotion_detection": false,
+    "noise_cancellation": true,
+    "echo_cancellation": false,
+    "adaptive_gain": true,
+    "voice_feedback": true,
+    "command_history": true,
+    "multilingual": true
+  },
+  "feedback": {
+    "confirmation_sound": true,
+    "error_sound": true,
+    "listening_beep": true,
+    "success_chime": true,
+    "volume": 0.7
+  },
+  "performance": {
+    "thread_pool_size": 4,
+    "max_queue_size": 100,
+    "async_processing": true,
+    "gpu_acceleration": false,
+    "batch_processing": false
+  },
+  "logging": {
+    "enabled": true,
+    "level": "INFO",
+    "log_audio": false,
+    "log_transcripts": true,
+    "log_dir": "logs/voice"
+  }
+}

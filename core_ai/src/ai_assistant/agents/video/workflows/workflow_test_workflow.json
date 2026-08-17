@@ -1,0 +1,15 @@
+{
+  "profile": "test_workflow",
+  "actions": [
+    {
+      "timestamp": 1768578783.0019264,
+      "type": "hotkey",
+      "params": {
+        "keys": [
+          "ctrl",
+          "c"
+        ]
+      }
+    }
+  ]
+}

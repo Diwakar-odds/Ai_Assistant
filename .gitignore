@@ -1,0 +1,231 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment Variables & Secrets
+.env
+*.env
+!.env.example
+!backend.env.example
+!app_integration.env.example
+credentials.json
+token.pickle
+*.pem
+*.key
+*.cert
+
+# App Integration Security
+config/secure/
+config/app_integration.env
+config/backend.env
+config/*_credentials.json
+config/encryption.key
+*_credentials.json
+*.credentials
+api_keys/
+secrets/
+*_token.pickle
+calendar_token.pickle
+gmail_token.pickle
+
+# Database Files
+*.db
+*.sqlite
+*.sqlite3
+
+# User Data & Cache
+user_data/
+offline_cache/
+data/
+
+# User-Specific Configuration (Auto-Generated)
+config/discovered_apps.json
+config/app_usage.db
+config/user_settings.json
+config/multimodal_config.json
+ai_assistant/config/contacts.json
+
+# Config files that may contain secrets
+config/*.env
+!config/*.env.example
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Voice Models (large files)
+model/vosk-*/
+model/*.bin
+model/*.gz
+# *.ppn
+
+# Audio Files
+*.wav
+*.mp3
+*.ogg
+*.flac
+temp_edge_tts_output.*
+
+# Screenshots & Images
+screenshots/
+*.png
+*.jpg
+*.jpeg
+!static/**/*.png
+!static/**/*.jpg
+
+# Temporary Files
+tmp/
+temp/
+*.tmp
+*.bak
+*.cache
+
+# Test Coverage
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Distribution / Packaging
+*.whl
+*.exe
+*.dmg
+*.pkg
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# Node.js (for React frontend)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# React Build
+project/dist/
+project/build/
+static/dist/
+
+# OS-specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# PyInstaller
+*.spec
+
+# Miscellaneous
+.sass-cache/
+connect.lock
+typings/
+*.pid
+*.seed
+*.pid.lock
+
+# AI Assistant Specific
+=0.16.0
+yourdaddy.log
+backend.log
+temp_*
+*.session
+*.gguf
+
+# Legacy Backups
+legacy_backup/
+
+
+# User Generated Text & Reports
+*.txt
+!requirements.txt
+!requirements-ci.txt
+!pytest.ini
+*_REPORT.md
+*_PLAN.md
+*_OPTIMIZATION.md
+BACKEND_OPTIMIZATION.md
+PERSONALIZATION_IMPLEMENTATION_PLAN.md
+SECURITY_AUDIT_REPORT.md
+
+ROOM_FOR_IMPROVEMENTS_AND_FUTURE_SCOPES.md
+
+dist_package/
+desktop/build/
+desktop/dist/
+
+# Local AI Models
+core_ai/src/ai_assistant/models/vosk-*/
+
+# Configuration Overrides
+core_ai/src/config/mcp_servers.json
+
+# Scratch Scripts
+*fix_emojis*.py
+
+# Generated Installers
+*.msi
+
+# Generated Data & Test Outputs
+commands_dataset.csv
+tests/output/
+
+# Cache files
+**/discovered_apps.json

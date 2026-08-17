@@ -1,0 +1,26 @@
+{
+  "description": "MCP Server Configurations - Copy to mcp_servers.json and configure",
+  "servers": {
+    "filesystem": {
+      "name": "filesystem",
+      "description": "Access local file system",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/your/workspace/path"],
+      "enabled": false
+    },
+    "postgres": {
+      "name": "postgres",
+      "description": "PostgreSQL database access",
+      "command": "uvx",
+      "args": ["mcp-server-postgres", "postgresql://user:pass@localhost:5432/dbname"],
+      "enabled": false
+    },
+    "chrome-devtools": {
+      "name": "chrome-devtools",
+      "description": "Chrome DevTools MCP for browser debugging and inspection",
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp"],
+      "enabled": false
+    }
+  }
+}

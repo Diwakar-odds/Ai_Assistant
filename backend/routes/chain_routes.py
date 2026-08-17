@@ -1,0 +1,125 @@
+from flask import Blueprint, jsonify, request, send_from_directory, render_template, Response, stream_with_context
+from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity, verify_jwt_in_request
+import os, json, sys, time, datetime
+try:
+    from backend.modern_web_backend import logger, api_logger, get_current_context
+except ImportError:
+    pass
+    
+
+chain_bp = Blueprint('chain', __name__)
+
+
+try:
+    from backend.modern_web_backend import *
+except ImportError:
+    from modern_web_backend import *
+@chain_bp.route('/api/chains/create', methods=['POST'])
+@jwt_required()
+def create_chain():
+    """Create a new action chain from command"""
+    if not MULTI_AGENT_AVAILABLE:
+        return jsonify({"error": "Multi-Agent System not available"}), 503
+        
+    data = request.get_json()
+    command = data.get("command")
+    
+    if not command:
+        return jsonify({"error": "Command is required"}), 400
+        
+    try:
+        import asyncio
+        manager = get_chain_manager()
+        
+        # 1. Create Chain Synchronously (well, effectively) to get ID
+        # We need to run the async create_chain method
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        chain = loop.run_until_complete(manager.create_chain(command))
+        
+        # 2. Run execution in background
+        def run_chain_background(chain_obj):
+            async def _run():
+                # Continue with Steps 2-7
+                # Subscribe to progress
+                manager.subscribe_progress(chain_obj.id, _broadcast_chain_progress)
+                
+                # Step 2: Process & Breakdown
+                await manager.decompose_command(chain_obj)
+                
+                # Step 3: Identify
+                await manager.identify_executors(chain_obj)
+                
+                # Step 4: Assign & Execute + Step 5: Track Progress
+                report = await manager.execute_chain(chain_obj.id)
+                
+                # Step 7: Notify
+                await manager.notify_completion(report)
+                
+            new_loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(new_loop)
+            new_loop.run_until_complete(_run())
+            new_loop.close()
+            
+        thread = threading.Thread(target=run_chain_background, args=(chain,))
+        thread.start()
+        
+        return jsonify({
+            "status": "started", 
+            "message": "Chain execution started",
+            "chain_id": chain.id,
+            "command": command
+        })
+        
+    except Exception as e:
+        logger.error(f"Chain creation error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@chain_bp.route('/api/chains/<chain_id>/resume', methods=['POST'])
+@jwt_required()
+def resume_chain(chain_id):
+    """Resume a paused chain with user input/confirmation"""
+    if not MULTI_AGENT_AVAILABLE:
+        return jsonify({"error": "Multi-Agent System not available"}), 503
+        
+    data = request.get_json()
+    user_input = data.get("input")
+    action = data.get("action", "proceed") # proceed, cancel, retry
+    
+    # Placeholder for resume logic
+    # In future: manager.resume_chain(chain_id, action, user_input)
+    return jsonify({"status": "resumed", "message": "Resume signal sent (Not fully implemented)"})
+
+@chain_bp.route('/api/chains/<chain_id>', methods=['GET'])
+@jwt_required()
+def get_chain_status(chain_id):
+    """Get status of an action chain"""
+    if not MULTI_AGENT_AVAILABLE:
+        return jsonify({"error": "Multi-Agent System not available"}), 503
+        
+    try:
+        manager = get_chain_manager()
+        chain = manager.get_chain(chain_id)
+        
+        if not chain:
+            return jsonify({"error": "Chain not found"}), 404
+            
+        return jsonify(chain.to_dict())
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@chain_bp.route('/api/chains/history', methods=['GET'])
+@jwt_required()
+def get_chain_history():
+    """Get history of action chains"""
+    if not MULTI_AGENT_AVAILABLE:
+        return jsonify({"error": "Multi-Agent System not available"}), 503
+        
+    try:
+        tracker = get_progress_tracker()
+        history = tracker.get_recent_chains(limit=20)
+        return jsonify({"chains": history})
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

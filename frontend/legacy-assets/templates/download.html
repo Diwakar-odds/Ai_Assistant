@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download AI Assistant - Windows Desktop App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .download-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 20px 50px;
+            font-size: 1.3em;
+            border-radius: 50px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 15px;
+            transition: transform 0.3s, box-shadow 0.3s;
+            text-decoration: none;
+            margin: 20px 0;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .download-btn svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .feature {
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .feature-icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .feature h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .steps {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 30px;
+            margin: 30px 0;
+        }
+
+        .steps h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .step {
+            display: flex;
+            gap: 15px;
+            margin: 15px 0;
+            align-items: start;
+        }
+
+        .step-number {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .system-requirements {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+
+        .system-requirements h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .system-requirements ul {
+            list-style: none;
+            padding-left: 20px;
+        }
+
+        .system-requirements li:before {
+            content: "✓ ";
+            color: #28a745;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .file-size {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+            
+            .download-btn {
+                padding: 15px 30px;
+                font-size: 1.1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="download-container">
+        <div class="header">
+            <h1>🚀 AI Assistant</h1>
+            <p>Download for Windows</p>
+        </div>
+
+        <div class="content">
+            <center>
+                <a href="/download/windows-app" class="download-btn" id="downloadBtn">
+                    <svg fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M13 8V2H7v6H2l8 8 8-8h-5zM0 18h20v2H0v-2z"/>
+                    </svg>
+                    Download for Windows
+                </a>
+                <div class="file-size">Version 1.0.0 | ~50-100 MB</div>
+            </center>
+
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">💻</div>
+                    <h3>Native Desktop</h3>
+                    <p>Runs as a native Windows application</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Fast & Efficient</h3>
+                    <p>Optimized performance for desktop</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Secure</h3>
+                    <p>Your data stays on your device</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Easy to Use</h3>
+                    <p>Simple installation, no coding required</p>
+                </div>
+            </div>
+
+            <div class="steps">
+                <h2>📋 Installation Steps</h2>
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div>
+                        <strong>Download the ZIP file</strong><br>
+                        Click the download button above to get AI-Assistant-Windows.zip
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div>
+                        <strong>Extract the files</strong><br>
+                        Right-click the downloaded ZIP file and select "Extract All"
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div>
+                        <strong>Run the application</strong><br>
+                        Double-click <code>Run-AI-Assistant.bat</code> to launch the app
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div>
+                        <strong>Enjoy!</strong><br>
+                        The AI Assistant will open in a desktop window
+                    </div>
+                </div>
+            </div>
+
+            <div class="system-requirements">
+                <h3>⚙️ System Requirements</h3>
+                <ul>
+                    <li>Windows 10 or Windows 11 (64-bit)</li>
+                    <li>4 GB RAM minimum (8 GB recommended)</li>
+                    <li>500 MB free disk space</li>
+                    <li>Internet connection for AI features</li>
+                </ul>
+            </div>
+
+            <center style="margin-top: 30px; color: #6c757d;">
+                <p>Need help? <a href="/support" style="color: #667eea;">Contact Support</a></p>
+                <p style="margin-top: 10px; font-size: 0.9em;">
+                    By downloading, you agree to our <a href="/terms" style="color: #667eea;">Terms of Service</a>
+                </p>
+            </center>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('downloadBtn').addEventListener('click', function(e) {
+            // Track download
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'download', {
+                    'event_category': 'Windows App',
+                    'event_label': 'Version 1.0.0'
+                });
+            }
+            
+            // Show thank you message after download starts
+            setTimeout(() => {
+                alert('Thank you for downloading AI Assistant! 🎉\n\nCheck your Downloads folder and follow the installation steps.');
+            }, 500);
+        });
+    </script>
+</body>
+</html>

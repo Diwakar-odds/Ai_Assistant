@@ -1,0 +1,209 @@
+{
+  "general": {
+    "animations": true,
+    "enableHinglish": true,
+    "language": "en-US",
+    "secondaryLanguage": "hi-IN",
+    "startOnBoot": true,
+    "theme": "dark"
+  },
+  "security": {
+    "apiKeys": {
+      "googleGemini": "",
+      "openAI": "",
+      "anthropic": "",
+      "elevenLabs": ""
+    },
+    "permissions": {
+      "allowFileDeletion": false,
+      "allowAppExecution": true,
+      "allowWebBrowsing": true,
+      "allowSystemControl": true
+    },
+    "encryption": {
+      "encryptDatabase": true,
+      "enablePinParams": false
+    }
+  },
+  "ai": {
+    "contextWindow": 4096,
+    "defaultModel": "gemini-2.5-flash",
+    "defaultProvider": "gemini",
+    "localLlm": {
+      "enabled": false,
+      "modelPath": "",
+      "useGpu": false
+    },
+    "maxTokens": 2048,
+    "safetySettings": {
+      "dangerousContent": "block_none",
+      "harassment": "block_none",
+      "hateSpeech": "block_none",
+      "sexuallyExplicit": "block_none"
+    },
+    "temperature": 0.7
+  },
+  "voice": {
+    "stt": {
+      "continuous": true,
+      "enabled": true,
+      "engine": "whisper",
+      "language": "en-US",
+      "model": "vosk-model-small-en-us-0.15",
+      "noise_reduction": true
+    },
+    "tts": {
+      "available_voices": [
+        {
+          "accent": "Neutral",
+          "description": "Local KittenTTS AI Voice",
+          "gender": "female",
+          "id": "kittentts",
+          "language": "en",
+          "name": "KittenTTS (AI Voice)",
+          "personality": "Warm and natural"
+        },
+        {
+          "accent": "US",
+          "description": "Warm and friendly",
+          "gender": "female",
+          "id": "en-US-AriaNeural",
+          "language": "en-US",
+          "name": "Aria",
+          "personality": "Friendly and conversational"
+        },
+        {
+          "accent": "US",
+          "description": "Professional and clear",
+          "gender": "female",
+          "id": "en-US-JennyNeural",
+          "language": "en-US",
+          "name": "Jenny",
+          "personality": "Professional and articulate"
+        },
+        {
+          "accent": "US",
+          "description": "Confident and professional",
+          "gender": "male",
+          "id": "en-US-GuyNeural",
+          "language": "en-US",
+          "name": "Guy",
+          "personality": "Confident and authoritative"
+        },
+        {
+          "accent": "US",
+          "description": "Warm and conversational",
+          "gender": "male",
+          "id": "en-US-DavisNeural",
+          "language": "en-US",
+          "name": "Davis",
+          "personality": "Warm and approachable"
+        },
+        {
+          "accent": "UK",
+          "description": "British elegance",
+          "gender": "female",
+          "id": "en-GB-SoniaNeural",
+          "language": "en-GB",
+          "name": "Sonia",
+          "personality": "Elegant and refined"
+        },
+        {
+          "accent": "UK",
+          "description": "British sophistication",
+          "gender": "male",
+          "id": "en-GB-RyanNeural",
+          "language": "en-GB",
+          "name": "Ryan",
+          "personality": "Sophisticated and clear"
+        },
+        {
+          "accent": "Indian",
+          "description": "Indian warmth",
+          "gender": "female",
+          "id": "en-IN-NeerjaNeural",
+          "language": "en-IN",
+          "name": "Neerja",
+          "personality": "Warm and expressive"
+        },
+        {
+          "accent": "Indian",
+          "description": "Indian clarity",
+          "gender": "male",
+          "id": "en-IN-PrabhatNeural",
+          "language": "en-IN",
+          "name": "Prabhat",
+          "personality": "Clear and professional"
+        },
+        {
+          "accent": "US",
+          "description": "Energetic and cheerful",
+          "gender": "female",
+          "id": "en-US-AnaNeural",
+          "language": "en-US",
+          "name": "Ana",
+          "personality": "Cheerful and enthusiastic"
+        },
+        {
+          "accent": "US",
+          "description": "Deep and reassuring",
+          "gender": "male",
+          "id": "en-US-ChristopherNeural",
+          "language": "en-US",
+          "name": "Christopher",
+          "personality": "Calm and reassuring"
+        },
+        {
+          "accent": "UK",
+          "description": "Young and friendly British",
+          "gender": "female",
+          "id": "en-GB-LibbyNeural",
+          "language": "en-GB",
+          "name": "Libby",
+          "personality": "Youthful and energetic"
+        },
+        {
+          "accent": "US",
+          "description": "Natural and friendly",
+          "gender": "male",
+          "id": "en-US-EricNeural",
+          "language": "en-US",
+          "name": "Eric",
+          "personality": "Casual and friendly"
+        }
+      ],
+      "enabled": true,
+      "pitch": 1,
+      "speed": 13,
+      "voice_id": "en-GB-LibbyNeural",
+      "voice_name": "Libby",
+      "volume": 153
+    },
+    "wakeWord": {
+      "enabled": true,
+      "phrases": [
+        "hey daddy",
+        "hey assistant"
+      ],
+      "sensitivity": 0.5
+    }
+  },
+  "automation": {
+    "autoUpdate": true,
+    "autoBackup": "weekly",
+    "maxHistorySize": 1000,
+    "smartHome": {
+      "enabled": false,
+      "provider": "none"
+    }
+  },
+  "system": {
+    "logLevel": "INFO",
+    "maxLogSizeMb": 10,
+    "minimizeToTray": true,
+    "notifications": {
+      "desktop": true,
+      "sound": true
+    }
+  }
+}

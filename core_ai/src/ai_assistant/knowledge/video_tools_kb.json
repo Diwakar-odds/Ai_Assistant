@@ -1,0 +1,394 @@
+{
+  "tools": {
+    "davinci_resolve": {
+      "name": "DaVinci Resolve",
+      "description": "Professional non-linear video editing suite with advanced color correction.",
+      "documentation_url": "https://documents.blackmagicdesign.com/UserManuals/DaVinci_Resolve_18_Reference_Manual.pdf",
+      "ui_structure": {
+        "layout": "Pages based workflow (Bottom Tabs)",
+        "pages": [
+          "Media (Import/Organize)",
+          "Cut (Fast Editing)",
+          "Edit (Timeline Editing)",
+          "Fusion (VFX)",
+          "Color (Grading)",
+          "Fairlight (Audio)",
+          "Deliver (Export)"
+        ],
+        "key_panels": {
+          "media_pool": "Top Left",
+          "viewer": "Top Center",
+          "inspector": "Top Right",
+          "timeline": "Bottom",
+          "effects_library": "Top Left (Toggle)"
+        }
+      },
+      "shortcuts": {
+        "cut": [
+          "ctrl",
+          "b"
+        ],
+        "blade_tool": [
+          "b"
+        ],
+        "arrow_tool": [
+          "a"
+        ],
+        "undo": [
+          "ctrl",
+          "z"
+        ],
+        "redo": [
+          "ctrl",
+          "shift",
+          "z"
+        ],
+        "save": [
+          "ctrl",
+          "s"
+        ],
+        "ripple_delete": [
+          "shift",
+          "backspace"
+        ],
+        "delete_selected": [
+          "backspace"
+        ],
+        "mark_in": [
+          "i"
+        ],
+        "mark_out": [
+          "o"
+        ],
+        "play_pause": [
+          "space"
+        ],
+        "play_reverse": [
+          "j"
+        ],
+        "stop": [
+          "k"
+        ],
+        "play_forward": [
+          "l"
+        ],
+        "zoom_in": [
+          "ctrl",
+          "="
+        ],
+        "zoom_out": [
+          "ctrl",
+          "-"
+        ],
+        "full_screen": [
+          "p"
+        ],
+        "render_cache": [
+          "alt",
+          "r"
+        ]
+      },
+      "workflows": {
+        "basic_cut": [
+          "Switch to Edit Page",
+          "Drag media to timeline",
+          "Use 'J/K/L' to scrub",
+          "Press 'B' for Blade or 'Ctrl+B' to split",
+          "Select junk",
+          "Press 'Shift+Backspace' to ripple delete"
+        ],
+        "proxy_mode": [
+          "Menu: Playback -> Proxy Handling -> Prefer Proxies"
+        ],
+        "multicam_editing": [
+          "Select multiple angles in Media Pool",
+          "Right click -> Create New Multicam Clip",
+          "Switch to Cut/Edit Page",
+          "Enable Dual Viewer",
+          "Play and press 1-9 to switch angles live"
+        ]
+      },
+      "official_training": {
+        "edit_page": [
+          "Intro to Editing: Tools, Techniques, Refining Rough Cuts",
+          "Advanced Editing: Trim Edit, Match Frame, Replace Shots",
+          "Multicam Editing: Syncing angles, Switching",
+          "VFX in Edit: Travelling Mattes, Green Screen Keying"
+        ],
+        "color_page": [
+          "Intro to Color: Primary/Secondary, Scopes, Balancing",
+          "Advanced Color: Color Management, Node Editor, Magic Mask",
+          "Delivery: Presets, Render Queue"
+        ],
+        "fusion_page": [
+          "Intro to Fusion: Node Interface, Compositing, Tracking",
+          "3D Workspace: Shapes, Cameras, Lights",
+          "3D Compositing: Camera Tracking, Paint Out"
+        ],
+        "fairlight_page": [
+          "Sound Editing, Sweetening, Recording, Mixing, Mastering"
+        ]
+      },
+      "certification_topics": [
+        "High Speed Editing on Cut Page",
+        "Advanced Color Correction (Node Structures)",
+        "Fusion VFX Compositing",
+        "Fairlight Audio Post Production"
+      ]
+    },
+    "filmora": {
+      "name": "Wondershare Filmora",
+      "description": "User-friendly video editor with AI creative tools and effects.",
+      "ui_structure": {
+        "layout": "Standard Three-Panel",
+        "panels": {
+          "media_library": "Top Left",
+          "preview_window": "Top Right",
+          "timeline": "Bottom"
+        },
+        "features": [
+          "AI Portrait",
+          "Auto Reframe",
+          "Instant Mode"
+        ]
+      },
+      "shortcuts": {
+        "split": [
+          "ctrl",
+          "b"
+        ],
+        "cut": [
+          "ctrl",
+          "x"
+        ],
+        "undo": [
+          "ctrl",
+          "z"
+        ],
+        "redo": [
+          "ctrl",
+          "y"
+        ],
+        "delete": [
+          "delete"
+        ],
+        "export": [
+          "ctrl",
+          "e"
+        ],
+        "play_pause": [
+          "space"
+        ],
+        "save": [
+          "ctrl",
+          "s"
+        ],
+        "import": [
+          "ctrl",
+          "i"
+        ],
+        "trim_start": [
+          "alt",
+          "["
+        ],
+        "trim_end": [
+          "alt",
+          "]"
+        ],
+        "detach_audio": [
+          "ctrl",
+          "alt",
+          "d"
+        ]
+      },
+      "workflows": {
+        "fast_cut": [
+          "Use 'Ctrl+B' to split",
+          "Delete junk",
+          "Alt+[ to trim start",
+          "Alt+] to trim end"
+        ],
+        "render_preview": [
+          "enter"
+        ]
+      }
+    },
+    "capcut_desktop": {
+      "name": "CapCut Desktop",
+      "description": "AI-powered video editor focused on social media content creation.",
+      "ui_structure": {
+        "layout": "Four-panel standard layout",
+        "panels": {
+          "import_media": "Top Left",
+          "player_preview": "Top Center",
+          "details_effects": "Top Right",
+          "timeline": "Bottom"
+        },
+        "features": [
+          "Auto Captions",
+          "Text-to-Speech",
+          "AI Scripts"
+        ]
+      },
+      "shortcuts": {
+        "split": [
+          "ctrl",
+          "b"
+        ],
+        "split_all_tracks": [
+          "ctrl",
+          "shift",
+          "b"
+        ],
+        "undo": [
+          "ctrl",
+          "z"
+        ],
+        "redo": [
+          "ctrl",
+          "shift",
+          "z"
+        ],
+        "delete": [
+          "backspace"
+        ],
+        "export": [
+          "ctrl",
+          "e"
+        ],
+        "play_pause": [
+          "space"
+        ],
+        "zoom_in": [
+          "ctrl",
+          "="
+        ],
+        "zoom_out": [
+          "ctrl",
+          "-"
+        ],
+        "group_clips": [
+          "ctrl",
+          "g"
+        ],
+        "ungroup_clips": [
+          "ctrl",
+          "shift",
+          "g"
+        ]
+      },
+      "workflows": {
+        "fast_cut": [
+          "Move playhead",
+          "Ctrl+B to split",
+          "Select clip",
+          "Backspace to delete"
+        ],
+        "auto_captions": [
+          "Text tab",
+          "Auto Captions",
+          "Create"
+        ]
+      }
+    },
+    "vn_editor": {
+      "name": "VN Video Editor",
+      "description": "Multi-platform video editor (VlogNow) for mobile and desktop.",
+      "ui_structure": {
+        "layout": "Vertical track layers",
+        "tracks": [
+          "Video (Main)",
+          "PIP (Overlay)",
+          "Text",
+          "Music/Sound"
+        ],
+        "toolbar": "Bottom of screen (Split, Speed, Volume, FX)"
+      },
+      "shortcuts": {
+        "split": [
+          "ctrl",
+          "k"
+        ],
+        "delete": [
+          "delete"
+        ],
+        "play_pause": [
+          "space"
+        ],
+        "undo": [
+          "ctrl",
+          "z"
+        ],
+        "redo": [
+          "ctrl",
+          "shift",
+          "z"
+        ],
+        "export": [
+          "e"
+        ],
+        "prev_frame": [
+          "left"
+        ],
+        "next_frame": [
+          "right"
+        ]
+      },
+      "workflows": {
+        "speed_ramp": [
+          "Select clip",
+          "Click Curve/Speed",
+          "Adjust points"
+        ]
+      }
+    },
+    "premiere_pro": {
+      "name": "Adobe Premiere Pro",
+      "description": "Industry standard timeline-based video editing software.",
+      "shortcuts": {
+        "cut": [
+          "ctrl",
+          "k"
+        ],
+        "undo": [
+          "ctrl",
+          "z"
+        ],
+        "redo": [
+          "ctrl",
+          "shift",
+          "z"
+        ],
+        "save": [
+          "ctrl",
+          "s"
+        ],
+        "ripple_delete": [
+          "shift",
+          "delete"
+        ],
+        "mark_in": [
+          "i"
+        ],
+        "mark_out": [
+          "o"
+        ],
+        "zoom_in": [
+          "="
+        ],
+        "zoom_out": [
+          "-"
+        ],
+        "play_pause": [
+          "space"
+        ]
+      }
+    }
+  },
+  "general_best_practices": [
+    "Always use proxy media for 4K editing.",
+    "Organize bins by media type (Video, Audio, SFX).",
+    "Save versions often (v1, v2, v_final).",
+    "Use J-Cuts (Audio editing before video) for smoother dialogue."
+  ]
+}

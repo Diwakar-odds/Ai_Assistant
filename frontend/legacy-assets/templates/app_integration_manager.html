@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Assistant - App Integration Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .auth-card, .main-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .auth-card {
+            max-width: 400px;
+            margin: 50px auto;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        input[type="password"], input[type="text"], select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e1e1;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #bdc3c7 0%, #2c3e50 100%);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-running {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-stopped {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-disabled {
+            background: #e2e3e5;
+            color: #6c757d;
+        }
+
+        .app-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .app-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .app-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .app-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .app-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .app-category {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .app-description {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+
+        .app-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 AI Assistant</h1>
+            <p>Secure App Integration Manager</p>
+        </div>
+
+        <!-- Login Form -->
+        <div id="authCard" class="auth-card">
+            <h2 style="text-align: center; margin-bottom: 20px;">Login</h2>
+            <div id="authAlert" class="alert alert-error hidden"></div>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="password">Admin Password:</label>
+                    <input type="password" id="password" required>
+                </div>
+                <button type="submit" class="btn" style="width: 100%;">Login</button>
+            </form>
+        </div>
+
+        <!-- Main Content -->
+        <div id="mainContent" class="main-content hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>App Integration Dashboard</h2>
+                <div>
+                    <button class="btn" onclick="showAddAppModal()">➕ Register App</button>
+                    <button class="btn btn-secondary" onclick="autoStartApps()">🚀 Auto-Start</button>
+                    <button class="btn btn-secondary" onclick="logout()">🚪 Logout</button>
+                </div>
+            </div>
+
+            <div id="alert" class="alert hidden"></div>
+
+            <!-- Statistics -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div id="totalApps" class="stat-number">0</div>
+                    <div class="stat-label">Total Apps</div>
+                </div>
+                <div class="stat-card">
+                    <div id="runningApps" class="stat-number">0</div>
+                    <div class="stat-label">Running Apps</div>
+                </div>
+                <div class="stat-card">
+                    <div id="enabledApps" class="stat-number">0</div>
+                    <div class="stat-label">Enabled Apps</div>
+                </div>
+                <div class="stat-card">
+                    <div id="autoStartApps" class="stat-number">0</div>
+                    <div class="stat-label">Auto-Start Apps</div>
+                </div>
+            </div>
+
+            <!-- Apps Grid -->
+            <div id="appsGrid" class="app-grid">
+                <div class="loading">Loading apps...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add App Modal -->
+    <div id="addAppModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeAddAppModal()">&times;</span>
+            <h2>Register New App</h2>
+            <div id="addAppAlert" class="alert hidden"></div>
+            <form id="addAppForm">
+                <div class="form-group">
+                    <label for="appName">App Name (lowercase, alphanumeric):</label>
+                    <input type="text" id="appName" required pattern="[a-z0-9_-]+">
+                </div>
+                <div class="form-group">
+                    <label for="displayName">Display Name:</label>
+                    <input type="text" id="displayName" required>
+                </div>
+                <div class="form-group">
+                    <label for="description">Description:</label>
+                    <textarea id="description" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="category">Category:</label>
+                    <select id="category" required>
+                        <option value="productivity">Productivity</option>
+                        <option value="media">Media</option>
+                        <option value="development">Development</option>
+                        <option value="communication">Communication</option>
+                        <option value="social">Social</option>
+                        <option value="utility">Utility</option>
+                        <option value="entertainment">Entertainment</option>
+                        <option value="business">Business</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="integrationType">Integration Type:</label>
+                    <select id="integrationType" required>
+                        <option value="basic">Basic (Executable Launch)</option>
+                        <option value="api">API Integration</option>
+                        <option value="oauth">OAuth Authentication</option>
+                        <option value="webhook">Webhook Integration</option>
+                    </select>
+                </div>
+                <div class="form-group" id="executableGroup">
+                    <label for="executablePath">Executable Path:</label>
+                    <input type="text" id="executablePath">
+                </div>
+                <div class="form-group" id="apiGroup" style="display: none;">
+                    <label for="apiEndpoint">API Endpoint:</label>
+                    <input type="text" id="apiEndpoint">
+                </div>
+                <div class="form-group" id="credentialsGroup" style="display: none;">
+                    <label for="apiKey">API Key:</label>
+                    <input type="password" id="apiKey">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="autoStart"> Auto-start with assistant
+                    </label>
+                </div>
+                <div style="text-align: right;">
+                    <button type="button" class="btn btn-secondary" onclick="closeAddAppModal()">Cancel</button>
+                    <button type="submit" class="btn">Register App</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5001/api';
+        let authToken = localStorage.getItem('authToken');
+
+        // Check authentication status
+        if (authToken) {
+            showMainContent();
+            loadApps();
+        }
+
+        // Login form
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch('http://localhost:5001/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ password }),
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    authToken = password; // Simple auth for now
+                    localStorage.setItem('authToken', authToken);
+                    showMainContent();
+                    loadApps();
+                } else {
+                    showAlert('authAlert', data.error, 'error');
+                }
+            } catch (error) {
+                showAlert('authAlert', 'Failed to connect to server. Make sure the integration API is running.', 'error');
+            }
+        });
+
+        // Add app form
+        document.getElementById('addAppForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                name: document.getElementById('appName').value,
+                display_name: document.getElementById('displayName').value,
+                description: document.getElementById('description').value,
+                category: document.getElementById('category').value,
+                integration_type: document.getElementById('integrationType').value,
+                auto_start: document.getElementById('autoStart').checked,
+            };
+
+            const executablePath = document.getElementById('executablePath').value;
+            if (executablePath) formData.executable_path = executablePath;
+
+            const apiEndpoint = document.getElementById('apiEndpoint').value;
+            if (apiEndpoint) formData.api_endpoint = apiEndpoint;
+
+            const apiKey = document.getElementById('apiKey').value;
+            if (apiKey) formData.api_key = apiKey;
+
+            try {
+                const response = await apiCall('/apps', {
+                    method: 'POST',
+                    body: JSON.stringify(formData),
+                });
+
+                if (response.success) {
+                    showAlert('alert', response.message, 'success');
+                    closeAddAppModal();
+                    loadApps();
+                } else {
+                    showAlert('addAppAlert', response.error, 'error');
+                }
+            } catch (error) {
+                showAlert('addAppAlert', error.message, 'error');
+            }
+        });
+
+        // Integration type change handler
+        document.getElementById('integrationType').addEventListener('change', (e) => {
+            const type = e.target.value;
+            const execGroup = document.getElementById('executableGroup');
+            const apiGroup = document.getElementById('apiGroup');
+            const credGroup = document.getElementById('credentialsGroup');
+
+            if (type === 'basic') {
+                execGroup.style.display = 'block';
+                apiGroup.style.display = 'none';
+                credGroup.style.display = 'none';
+            } else {
+                execGroup.style.display = 'none';
+                apiGroup.style.display = 'block';
+                credGroup.style.display = 'block';
+            }
+        });
+
+        function showMainContent() {
+            document.getElementById('authCard').classList.add('hidden');
+            document.getElementById('mainContent').classList.remove('hidden');
+        }
+
+        function logout() {
+            localStorage.removeItem('authToken');
+            authToken = null;
+            location.reload();
+        }
+
+        function showAlert(elementId, message, type) {
+            const alert = document.getElementById(elementId);
+            alert.textContent = message;
+            alert.className = `alert alert-${type === 'error' ? 'error' : 'success'}`;
+            alert.classList.remove('hidden');
+            
+            setTimeout(() => {
+                alert.classList.add('hidden');
+            }, 5000);
+        }
+
+        async function apiCall(endpoint, options = {}) {
+            const response = await fetch(API_BASE + endpoint, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                    ...options.headers,
+                },
+                ...options,
+            });
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    logout();
+                    throw new Error('Authentication required');
+                }
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            return await response.json();
+        }
+
+        async function loadApps() {
+            try {
+                const data = await apiCall('/apps');
+                
+                // Update statistics
+                document.getElementById('totalApps').textContent = data.total_count;
+                document.getElementById('runningApps').textContent = data.running_count;
+                
+                const enabledCount = Object.values(data.apps).filter(app => app.enabled).length;
+                const autoStartCount = Object.values(data.apps).filter(app => app.auto_start).length;
+                
+                document.getElementById('enabledApps').textContent = enabledCount;
+                document.getElementById('autoStartApps').textContent = autoStartCount;
+
+                // Render apps
+                renderApps(data.apps);
+                
+            } catch (error) {
+                showAlert('alert', 'Failed to load apps: ' + error.message, 'error');
+                document.getElementById('appsGrid').innerHTML = '<div class="loading">Failed to load apps</div>';
+            }
+        }
+
+        function renderApps(apps) {
+            const grid = document.getElementById('appsGrid');
+            
+            if (Object.keys(apps).length === 0) {
+                grid.innerHTML = '<div class="loading">No apps registered. Click "Register App" to get started.</div>';
+                return;
+            }
+
+            grid.innerHTML = Object.values(apps).map(app => `
+                <div class="app-card">
+                    <div class="app-header">
+                        <div class="app-title">${app.display_name}</div>
+                        <div class="status-badge status-${app.status === 'running' ? 'running' : app.enabled ? 'stopped' : 'disabled'}">
+                            ${app.status === 'running' ? '🟢 Running' : app.enabled ? '⚫ Stopped' : '❌ Disabled'}
+                        </div>
+                    </div>
+                    <div class="app-category">📁 ${app.category} • 🔗 ${app.integration_type}</div>
+                    <div class="app-description">${app.description || 'No description'}</div>
+                    <div class="app-actions">
+                        ${app.status === 'running' 
+                            ? `<button class="btn btn-danger" onclick="stopApp('${app.name}')">⏹️ Stop</button>`
+                            : `<button class="btn btn-success" onclick="launchApp('${app.name}')" ${!app.enabled ? 'disabled' : ''}>▶️ Launch</button>`
+                        }
+                        <button class="btn btn-secondary" onclick="toggleApp('${app.name}', ${!app.enabled})">
+                            ${app.enabled ? '❌ Disable' : '✅ Enable'}
+                        </button>
+                        <button class="btn btn-danger" onclick="removeApp('${app.name}')">🗑️ Remove</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function launchApp(appName) {
+            try {
+                const data = await apiCall(`/apps/${appName}/launch`, { method: 'POST' });
+                showAlert('alert', data.message, 'success');
+                loadApps();
+            } catch (error) {
+                showAlert('alert', error.message, 'error');
+            }
+        }
+
+        async function stopApp(appName) {
+            try {
+                const data = await apiCall(`/apps/${appName}/stop`, { method: 'POST' });
+                showAlert('alert', data.message, 'success');
+                loadApps();
+            } catch (error) {
+                showAlert('alert', error.message, 'error');
+            }
+        }
+
+        async function toggleApp(appName, enabled) {
+            try {
+                const data = await apiCall(`/apps/${appName}/enable`, {
+                    method: 'POST',
+                    body: JSON.stringify({ enabled }),
+                });
+                showAlert('alert', data.message, 'success');
+                loadApps();
+            } catch (error) {
+                showAlert('alert', error.message, 'error');
+            }
+        }
+
+        async function removeApp(appName) {
+            if (!confirm(`Are you sure you want to remove ${appName}? This will delete all stored credentials.`)) {
+                return;
+            }
+
+            try {
+                const data = await apiCall(`/apps/${appName}`, { method: 'DELETE' });
+                showAlert('alert', data.message, 'success');
+                loadApps();
+            } catch (error) {
+                showAlert('alert', error.message, 'error');
+            }
+        }
+
+        async function autoStartApps() {
+            try {
+                const data = await apiCall('/system/autostart', { method: 'POST' });
+                showAlert('alert', data.message, 'success');
+                setTimeout(loadApps, 2000); // Reload after 2 seconds to see launched apps
+            } catch (error) {
+                showAlert('alert', error.message, 'error');
+            }
+        }
+
+        function showAddAppModal() {
+            document.getElementById('addAppModal').style.display = 'block';
+        }
+
+        function closeAddAppModal() {
+            document.getElementById('addAppModal').style.display = 'none';
+            document.getElementById('addAppForm').reset();
+            document.getElementById('addAppAlert').classList.add('hidden');
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('addAppModal');
+            if (event.target === modal) {
+                closeAddAppModal();
+            }
+        }
+
+        // Auto-refresh apps every 30 seconds
+        setInterval(() => {
+            if (!document.getElementById('mainContent').classList.contains('hidden')) {
+                loadApps();
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

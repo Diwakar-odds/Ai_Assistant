@@ -1,0 +1,80 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-assistant"
+version = "4.0.0"
+description = "An intelligent AI assistant with voice, automation, and integration capabilities"
+readme = "docs/README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "AI Assistant Team"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+requires-python = ">=3.11"
+dependencies = [
+    "flask",
+    "flask-cors", 
+    "flask-jwt-extended",
+    "flask-socketio",
+    "flask-limiter",
+    "requests",
+    "speech_recognition",
+    "pyttsx3",
+    "opencv-python",
+    "pillow",
+    "numpy",
+    "python-dotenv",
+    "cryptography",
+    "psutil",
+    "google-generativeai",
+    "googletrans==4.0.0rc1",
+    "httpx",
+    "python-dateutil",
+    "werkzeug",
+    "colorama",
+    "pywin32; platform_system=='Windows'",
+]
+
+[project.optional-dependencies]
+voice = [
+    "vosk",
+    "pyaudio",
+    "webrtcvad",
+]
+ocr = [
+    "pytesseract",
+    "easyocr",
+]
+ai = [
+    "openai",
+    "anthropic",
+    "ollama",
+]
+google = [
+    "google-api-python-client",
+    "google-auth-oauthlib",
+]
+
+[project.scripts]
+ai-assistant = "main:main"
+
+[project.urls]
+Homepage = "https://github.com/yourusername/ai-assistant"
+Repository = "https://github.com/yourusername/ai-assistant"
+Issues = "https://github.com/yourusername/ai-assistant/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ai_assistant*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.json", "*.yaml", "*.yml", "*.txt"]
