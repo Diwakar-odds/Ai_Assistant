@@ -31,8 +31,8 @@ def main():
     eval_dataset = Dataset.from_pandas(eval_df)
 
     # 2. Load Tokenizer and Model
-    # Using IndicBERT v2, excellent for Hindi and Bhojpuri
-    model_name = "ai4bharat/indic-bert"
+    # Using a public multilingual model
+    model_name = "distilbert-base-multilingual-cased"
     print(f"Loading Tokenizer and Model: {model_name}...")
     
     tokenizer = AutoTokenizer.from_pretrained(model_name)
