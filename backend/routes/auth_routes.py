@@ -1,19 +1,14 @@
 from flask import Blueprint, jsonify, request, send_from_directory, render_template, Response, stream_with_context
-from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity, verify_jwt_in_request
 import os, json, sys, time, datetime
-try:
-    from backend.modern_web_backend import logger, api_logger, get_current_context
-except ImportError:
-    pass
-    
+from werkzeug.security import generate_password_hash
+from .common import (
+    logger, api_logger, limiter, USERS_DB, validate_input, get_assistant,
+    jwt_required, create_access_token, get_jwt_identity, verify_jwt_in_request,
+    LAZY_INIT, BACKGROUND_INIT, ENABLE_VOICE, ENABLE_MULTIMODAL,
+    ENABLE_CONVERSATIONAL_AI, ENABLE_SYSTEM_MONITORING
+)
 
 auth_bp = Blueprint('auth', __name__)
-
-
-try:
-    from backend.modern_web_backend import *
-except ImportError:
-    from modern_web_backend import *
 @auth_bp.route('/api/user/preferences', methods=['GET'])
 @limiter.limit("20 per minute")
 def get_user_preferences():
@@ -154,7 +149,7 @@ def setup_user_profile():
                 s_node = kg.add_knowledge_node(skill, "skill", {})
                 kg.add_relationship(user_node_id, s_node, "has_skill", strength=0.9)
                 
-        logger.info(f"Ã¢Å“â€¦ Created/Updated profile for {name}")
+        logger.info(f"✅ Created/Updated profile for {name}")
         
         return jsonify({"success": True, "message": "Profile setup complete"})
         
@@ -198,7 +193,8 @@ def save_user_preferences():
 def get_initialization_status():
     """Get initialization status of all components"""
     try:
-        if hasattr(assistant, 'get_init_status'):
+        assistant = get_assistant()
+        if assistant and hasattr(assistant, 'get_init_status'):
             status = assistant.get_init_status()
             
             # Calculate overall readiness

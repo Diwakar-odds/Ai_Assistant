@@ -1,19 +1,8 @@
 from flask import Blueprint, jsonify, request, send_from_directory, render_template, Response, stream_with_context
-from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity, verify_jwt_in_request
 import os, json, sys, time, datetime
-try:
-    from backend.modern_web_backend import logger, api_logger, get_current_context
-except ImportError:
-    pass
-    
+from .common import logger, api_logger, jwt_required, create_access_token, get_jwt_identity, verify_jwt_in_request
 
 web_bp = Blueprint('web', __name__)
-
-
-try:
-    from backend.modern_web_backend import *
-except ImportError:
-    from modern_web_backend import *
 @web_bp.route('/api/web/weather', methods=['GET'])
 def api_get_weather():
     """Get weather information for a location"""

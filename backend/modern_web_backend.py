@@ -115,7 +115,7 @@ try:
     AUTOMATION_AVAILABLE = True
     print("✅ Automation tools loaded successfully")
 except ImportError as e:
-    print(f"Ã¢Å¡Â Ã¯Â¸Â Automation tools import failed: {e}")
+    print(f"⚠️Â Automation tools import failed: {e}")
     # Try fallback import from modules directly
     try:
         from ai_assistant.automation.app_discovery import (
@@ -125,7 +125,7 @@ except ImportError as e:
         AUTOMATION_AVAILABLE = True
         print("✅ App discovery loaded from modules")
     except ImportError as e2:
-        print(f"Ã¢ÂÅ’ App discovery also failed: {e2}")
+        print(f"❌ App discovery also failed: {e2}")
         AUTOMATION_AVAILABLE = False
 
 # Import Learning Router for automatic AI training
@@ -140,7 +140,7 @@ def _get_learning_router_lazy():
             learning_router = LearningDataRouter()
             logger.info("✅ Learning router initialized - AI will learn from all interactions")
         except Exception as e:
-            logger.warning(f"Ã¢Å¡Â Ã¯Â¸Â Learning router not available: {e}")
+            logger.warning(f"⚠️Â Learning router not available: {e}")
             LEARNING_ROUTER_AVAILABLE = False
             learning_router = None
     return learning_router
@@ -157,7 +157,7 @@ def _get_memory_retriever_lazy():
             memory_retriever = SmartMemoryRetrieval()
             logger.info("✅ Smart memory retrieval initialized - AI can answer from past conversations")
         except Exception as e:
-            logger.warning(f"Ã¢Å¡Â Ã¯Â¸Â Smart memory retrieval not available: {e}")
+            logger.warning(f"⚠️Â Smart memory retrieval not available: {e}")
             SMART_MEMORY_AVAILABLE = False
             memory_retriever = None
     return memory_retriever
@@ -198,7 +198,7 @@ def _get_enhanced_ai_lazy():
             enhanced_ai = get_enhanced_ai()
             logger.info("✅ Enhanced AI initialized (semantic cache, routing, streaming, emotion, verification)")
         except Exception as e:
-            logger.warning(f"Ã¢Å¡Â Ã¯Â¸Â Enhanced AI not available: {e}")
+            logger.warning(f"⚠️Â Enhanced AI not available: {e}")
     return enhanced_ai
 
 def _get_usage_analyzer_lazy():
@@ -210,7 +210,7 @@ def _get_usage_analyzer_lazy():
             usage_analyzer = UsagePatternAnalyzer()
             logger.info("✅ Usage pattern analyzer initialized")
         except Exception as e:
-            logger.warning(f"Ã¢Å¡Â Ã¯Â¸Â Usage analyzer not available: {e}")
+            logger.warning(f"⚠️Â Usage analyzer not available: {e}")
     return usage_analyzer
 
 # System monitoring
@@ -336,13 +336,13 @@ def get_or_create_env_secret(name: str) -> str:
             separator = "\n" if content and not content.endswith("\n") else ""
             with open(env_path, 'a', encoding='utf-8') as f:
                 f.write(f"{separator}{name}={new_key}\n")
-            logger.info(f"Ã°Å¸â€™Â¾ Generated and saved stable {name} to .env")
+            logger.info(f"💾 Generated and saved stable {name} to .env")
         
         # Update os.environ immediately so it's loaded
         os.environ[name] = new_key
         return new_key
     except Exception as e:
-        logger.warning(f"Ã¢Å¡Â Ã¯Â¸Â Could not write secret {name} to .env: {e}. Session will not persist across restarts.")
+        logger.warning(f"⚠️Â Could not write secret {name} to .env: {e}. Session will not persist across restarts.")
         return new_key
 
 if SECRETS_MANAGER_AVAILABLE:
@@ -541,7 +541,7 @@ try:
     
     if voice_initialized:
         logger.info("=" * 60)
-        logger.info("Ã°Å¸Å½Â¤ PROFESSIONAL VOICE SYSTEM ACTIVATED")
+        logger.info("🎙️ PROFESSIONAL VOICE SYSTEM ACTIVATED")
         logger.info("=" * 60)
         logger.info("✅ SmartWakeWordDetector - PocketSphinx (Offline)")
         logger.info("✅ NeuralVoiceEngine - Edge-TTS + Coqui")
@@ -551,14 +551,14 @@ try:
         logger.info("✅ Noise Reduction - Active")
         logger.info("=" * 60)
     else:
-        logger.warning("Ã¢Å¡Â Ã¯Â¸Â  Voice system running in limited mode")
+        logger.warning("⚠️Â  Voice system running in limited mode")
         
 except ImportError as e:
-    logger.warning(f"Ã¢Å¡Â Ã¯Â¸Â  Professional voice system not available: {e}")
-    logger.info("Ã°Å¸â€™Â¡ Basic voice features still available via assistant")
+    logger.warning(f"⚠️Â  Professional voice system not available: {e}")
+    logger.info("💡 Basic voice features still available via assistant")
 except Exception as e:
-    logger.error(f"Ã¢ÂÅ’ Voice system initialization failed: {e}")
-    logger.info("Ã°Å¸â€™Â¡ Server will continue without professional voice features")
+    logger.error(f"❌ Voice system initialization failed: {e}")
+    logger.info("💡 Server will continue without professional voice features")
 
 
 # User Management (Simple in-memory store - replace with database in production)
@@ -676,11 +676,17 @@ except Exception as e:
 # =============================================================================
 print("📋 Registering blueprints...")
 try:
-    from backend.blueprints import register_all_blueprints
-    register_all_blueprints(app, assistant)
+    from backend.routes import register_all_routes
+    register_all_routes(
+        app=app,
+        assistant_instance=assistant,
+        socketio_instance=socketio,
+        learning_router_instance=learning_router if 'learning_router' in globals() else None,
+        limiter_instance=limiter
+    )
     print("✅ All blueprints registered")
 except Exception as e:
-    print(f"Ã¢Å¡Â Ã¯Â¸Â Blueprint registration failed: {e}")
+    print(f"⚠️ Blueprint registration failed: {e}")
     import traceback
     traceback.print_exc()
 
@@ -713,7 +719,7 @@ try:
     dashboard_api = LearningDashboardAPI()
     DASHBOARD_API_AVAILABLE = True
 except ImportError as e:
-    print(f"Ã¢Å¡Â Ã¯Â¸Â Dashboard API not available: {e}")
+    print(f"⚠️Â Dashboard API not available: {e}")
     dashboard_api = None
     DASHBOARD_API_AVAILABLE = False
 
@@ -1074,7 +1080,7 @@ if not AUTOMATION_AVAILABLE:
     def spotify_next_track(*args, **kwargs): return "Spotify control not available"
     def spotify_previous_track(*args, **kwargs): return "Spotify control not available"
     def search_and_play_spotify(*args, **kwargs): return "Spotify search not available"
-    def get_weather_info(*args, **kwargs): return {"temperature": "22Ãƒâ€šÃ‚Â°C", "description": "Weather service not configured"}
+    def get_weather_info(*args, **kwargs): return {"temperature": "22°C", "description": "Weather service not configured"}
     def get_latest_news(*args, **kwargs): return []
     def get_stock_price(*args, **kwargs): return "N/A"
     def detect_taskbar_apps(*args, **kwargs): return []
@@ -1100,7 +1106,7 @@ if VOICE_API_AVAILABLE and 'voice_bp' in globals():
         logger.error(f"Failed to register voice API blueprint: {e}")
 else:
     if not VOICE_API_AVAILABLE:
-        logger.warning("Ã¢Å¡Â Ã¯Â¸  Voice API blueprint not available")
+        logger.warning("⚠️  Voice API blueprint not available")
 
 # (Redundant voice WebSocket handler registration removed during consolidation)
 
@@ -1236,7 +1242,7 @@ if __name__ == '__main__':
                     os.environ[env_name] = val
                     logger.info(f"Ã°Å¸â€â€˜ Stored Key '{key_name}' loaded into environment at startup.")
         except Exception as e:
-            logger.warning(f"Ã¢Å¡Â Ã¯Â¸Â Failed to load secure keys at startup: {e}")
+            logger.warning(f"⚠️Â Failed to load secure keys at startup: {e}")
             
         # Start app discovery schedulers (non-blocking)
         if AUTOMATION_AVAILABLE:
@@ -1251,7 +1257,7 @@ if __name__ == '__main__':
             start_system_monitor(socketio)
             print("✅ System monitoring started")
         except ImportError as e:
-            print(f"Ã¢Å¡Â Ã¯Â¸Â Could not start system monitoring: {e}")
+            print(f"⚠️Â Could not start system monitoring: {e}")
         
         # Register Google Speech Recognition WebSocket handlers
         if GOOGLE_SPEECH_WS_AVAILABLE:
@@ -1259,7 +1265,7 @@ if __name__ == '__main__':
                 register_google_speech_handlers(socketio)
                 print("✅ Google Speech Recognition WebSocket handlers registered")
             except Exception as e:
-                print(f"Ã¢Å¡Â Ã¯Â¸Â Could not register Google Speech handlers: {e}")
+                print(f"⚠️Â Could not register Google Speech handlers: {e}")
         
         # Register improved command handlers with proper routing
         try:
@@ -1269,7 +1275,7 @@ if __name__ == '__main__':
             chat_handlers.set_learning_router(learning_router if 'learning_router' in globals() else None)
             print("✅ Command handlers registered with local-first routing")
         except Exception as e:
-            print(f"Ã¢Å¡Â Ã¯Â¸Â Could not register command handlers: {e}")
+            print(f"⚠️Â Could not register command handlers: {e}")
             import traceback
             traceback.print_exc()
 

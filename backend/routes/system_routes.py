@@ -1,19 +1,39 @@
-from flask import Blueprint, jsonify, request, send_from_directory, render_template, Response, stream_with_context
-from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity, verify_jwt_in_request
-import os, json, sys, time, datetime
-try:
-    from backend.modern_web_backend import logger, api_logger, get_current_context
-except ImportError:
-    pass
-    
+import os
+import sys
+import time
+from datetime import datetime
+from flask import Blueprint, jsonify, request
+from .common import (
+    logger, api_logger, limiter, validate_input, get_assistant,
+    jwt_required, get_jwt_identity, verify_jwt_in_request,
+    ENABLE_VOICE, ENABLE_MULTIMODAL, ENABLE_CONVERSATIONAL_AI, ENABLE_SYSTEM_MONITORING
+)
 
 system_bp = Blueprint('system', __name__)
 
+try:
+    import psutil
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    PSUTIL_AVAILABLE = False
 
 try:
-    from backend.modern_web_backend import *
+    from ai_assistant.automation.app_discovery import get_apps_for_web, refresh_app_database
+    from ai_assistant.automation.automation_tools_new import (
+        smart_open_application, get_spotify_status,
+        spotify_play_pause, spotify_next_track, spotify_previous_track
+    )
+    AUTOMATION_AVAILABLE = True
 except ImportError:
-    from modern_web_backend import *
+    AUTOMATION_AVAILABLE = False
+
+MULTIMODAL_AVAILABLE = ENABLE_MULTIMODAL
+CONVERSATIONAL_AI_AVAILABLE = ENABLE_CONVERSATIONAL_AI
+MULTILINGUAL_AVAILABLE = True
+VOICE_AVAILABLE = ENABLE_VOICE
+ENHANCED_AI_AVAILABLE = True
+USAGE_ANALYZER_AVAILABLE = True
+
 @system_bp.route('/api/status')
 def api_status():
     """API status endpoint - Public"""
@@ -24,7 +44,6 @@ def api_status():
     except Exception:
         pass
     
-    # Check learning systems availability
     learning_systems_available = False
     try:
         from learning_integration import LEARNING_SYSTEMS_AVAILABLE
@@ -43,14 +62,8 @@ def api_status():
             "voice": VOICE_AVAILABLE,
             "system_monitoring": PSUTIL_AVAILABLE,
             "learning_systems": learning_systems_available,
-            # NEW ADVANCED FEATURES
             "enhanced_ai": ENHANCED_AI_AVAILABLE,
-            "usage_analyzer": USAGE_ANALYZER_AVAILABLE,
-            "semantic_cache": ENHANCED_AI_AVAILABLE and enhanced_ai and enhanced_ai.cache is not None,
-            "model_router": ENHANCED_AI_AVAILABLE and enhanced_ai and enhanced_ai.router is not None,
-            "streaming": ENHANCED_AI_AVAILABLE and enhanced_ai and enhanced_ai.streaming is not None,
-            "emotion_detection": ENHANCED_AI_AVAILABLE and enhanced_ai and enhanced_ai.emotion_detector is not None,
-            "visual_verification": ENHANCED_AI_AVAILABLE and enhanced_ai and enhanced_ai.verifier is not None
+            "usage_analyzer": USAGE_ANALYZER_AVAILABLE
         }
     })
 
@@ -60,10 +73,8 @@ def api_startup_sequence():
     """Get complete startup sequence data (JARVIS-style)"""
     try:
         from startup_sequence import get_startup_sequence
-        
         startup = get_startup_sequence()
         data = startup.get_startup_sequence_data()
-        
         return jsonify({
             "success": True,
             "data": data,
@@ -83,10 +94,8 @@ def api_startup_diagnostics():
     """Get system diagnostics for startup sequence"""
     try:
         from startup_sequence import get_startup_sequence
-        
         startup = get_startup_sequence()
         diagnostics = startup.get_system_diagnostics()
-        
         return jsonify({
             "success": True,
             "diagnostics": diagnostics,
@@ -106,10 +115,8 @@ def api_startup_briefing():
     """Get contextual briefing for startup sequence"""
     try:
         from startup_sequence import get_startup_sequence
-        
         startup = get_startup_sequence()
         briefing = startup.get_contextual_briefing()
-        
         return jsonify({
             "success": True,
             "briefing": briefing,
@@ -129,10 +136,18 @@ def api_startup_briefing():
 def api_system_stats():
     """Get real-time system statistics - PROTECTED"""
     try:
-        stats = assistant.get_real_time_system_stats()
-        return jsonify(stats)
+        assistant = get_assistant()
+        if assistant and hasattr(assistant, 'get_real_time_system_stats'):
+            stats = assistant.get_real_time_system_stats()
+            return jsonify(stats)
+        return jsonify({
+            "cpu_percent": 0,
+            "memory_percent": 0,
+            "disk_percent": 0,
+            "timestamp": datetime.now().isoformat()
+        })
     except Exception as e:
-        return jsonify({"error": "Failed to retrieve system stats"}), 500
+        return jsonify({"error": f"Failed to retrieve system stats: {e}"}), 500
 
 @system_bp.route('/api/features', methods=['GET'])
 def api_features():
@@ -160,17 +175,16 @@ def api_features():
     }
     return jsonify(features)
 
+@system_bp.route('/api/apps', methods=['GET'])
 @limiter.limit("30 per minute")
 def api_apps():
     """Get list of installed applications - PUBLIC"""
     try:
         if AUTOMATION_AVAILABLE:
             apps = get_apps_for_web()
-            # Ensure it's always a list
             if not isinstance(apps, list):
                 apps = []
         else:
-            # Fallback app list - MUST be an array, not object
             apps = [
                 {"name": "Chrome", "path": "chrome.exe", "category": "Browser", "usage": 89, "description": "Google Chrome web browser"},
                 {"name": "Mail", "path": "mail.exe", "category": "Communication", "usage": 76, "description": "Email application"},
@@ -178,20 +192,13 @@ def api_apps():
                 {"name": "Photos", "path": "photos.exe", "category": "Media", "usage": 52, "description": "Photo viewer"},
                 {"name": "Videos", "path": "vlc.exe", "category": "Media", "usage": 43, "description": "Video player"},
                 {"name": "Code", "path": "code.exe", "category": "Development", "usage": 92, "description": "Code editor"},
-                {"name": "Database", "path": "pgadmin.exe", "category": "Development", "usage": 67, "description": "Database administration"},
                 {"name": "Terminal", "path": "cmd.exe", "category": "System Tools", "usage": 78, "description": "Command line interface"},
                 {"name": "Calculator", "path": "calc.exe", "category": "System Tools", "usage": 45, "description": "Windows calculator"},
-                {"name": "Notepad", "path": "notepad.exe", "category": "System Tools", "usage": 30, "description": "Simple text editor"},
-                {"name": "Paint", "path": "mspaint.exe", "category": "System Tools", "usage": 25, "description": "Image editor"},
-                {"name": "Control Panel", "path": "control.exe", "category": "System Tools", "usage": 20, "description": "System settings"},
-                {"name": "Task Manager", "path": "taskmgr.exe", "category": "System Tools", "usage": 35, "description": "Process manager"}
+                {"name": "Notepad", "path": "notepad.exe", "category": "System Tools", "usage": 30, "description": "Simple text editor"}
             ]
-        
-        # Always return array directly
         return jsonify(apps)
     except Exception as e:
         logger.error(f"Failed to get apps: {e}")
-        # Return empty array on error, not error object
         return jsonify([]), 500
 
 @system_bp.route('/api/apps/refresh', methods=['POST'])
@@ -215,15 +222,14 @@ def api_refresh_apps():
         return jsonify({"error": str(e)}), 500
 
 @system_bp.route('/api/apps/launch', methods=['POST'])
-@jwt_required(optional=True)  # Optional authentication for demo purposes
+@jwt_required(optional=True)
 @limiter.limit("20 per minute")
 def api_launch_app():
-    """Launch an application - DEMO MODE"""
+    """Launch an application"""
     try:
         current_user = get_jwt_identity() or "demo_user"
-        data = request.get_json()
+        data = request.get_json() or {}
         
-        # Validate input
         is_valid, error = validate_input(data, 'app_name', 'app_name')
         if not is_valid:
             return jsonify({"error": error}), 400
@@ -234,14 +240,11 @@ def api_launch_app():
             if AUTOMATION_AVAILABLE:
                 result = smart_open_application(app_name)
                 if "Error" in result or "not found" in result.lower():
-                    # Try alternative approaches for common apps
                     if "youtube music" in app_name.lower():
-                        # Try opening YouTube Music via web
                         import webbrowser
                         webbrowser.open('https://music.youtube.com')
                         result = "Opened YouTube Music in web browser"
                     elif "spotify" in app_name.lower():
-                        # Try opening Spotify via web
                         import webbrowser
                         webbrowser.open('https://open.spotify.com')
                         result = "Opened Spotify in web browser"
@@ -250,17 +253,7 @@ def api_launch_app():
             else:
                 result = f"Launched {app_name} (simulation mode)"
         except Exception as launch_error:
-            # Fallback for common applications
-            if "youtube music" in app_name.lower():
-                import webbrowser
-                webbrowser.open('https://music.youtube.com')
-                result = "Opened YouTube Music in web browser"
-            elif "spotify" in app_name.lower():
-                import webbrowser
-                webbrowser.open('https://open.spotify.com')
-                result = "Opened Spotify in web browser"
-            else:
-                result = f"Could not launch {app_name} directly, but command was received"
+            result = f"Could not launch {app_name} directly: {launch_error}"
         
         return jsonify({
             "success": True,
@@ -291,7 +284,6 @@ def api_spotify_status():
                 "progress": 65,
                 "duration": 240
             }
-        
         return jsonify(status)
     except Exception as e:
         return jsonify({"error": "Failed to retrieve Spotify status"}), 500
@@ -303,7 +295,7 @@ def api_spotify_control():
     """Control Spotify playback - PROTECTED"""
     try:
         current_user = get_jwt_identity()
-        data = request.get_json()
+        data = request.get_json() or {}
         action = data.get('action', '')
         
         if not action:
@@ -330,7 +322,7 @@ def api_spotify_control():
     except Exception as e:
         return jsonify({
             "success": False,
-            "error": "Failed to control Spotify"
+            "error": f"Failed to control Spotify: {e}"
         }), 500
 
 @system_bp.route('/api/activity')

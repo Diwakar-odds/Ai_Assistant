@@ -1,19 +1,30 @@
-from flask import Blueprint, jsonify, request, send_from_directory, render_template, Response, stream_with_context
-from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity, verify_jwt_in_request
-import os, json, sys, time, datetime
-try:
-    from backend.modern_web_backend import logger, api_logger, get_current_context
-except ImportError:
-    pass
-    
+import os
+import time
+from pathlib import Path
+from datetime import datetime
+from flask import Blueprint, jsonify, request
+from .common import logger, limiter, BACKGROUND_INIT, jwt_required
 
 local_ai_bp = Blueprint('local_ai', __name__)
 
+# State variables for local AI
+local_ai_manager = None
+local_ai_initialized = False
 
 try:
-    from backend.modern_web_backend import *
+    from ai_assistant.ai.local_ai_manager import LocalAIManager
+    LOCAL_AI_AVAILABLE = True
 except ImportError:
-    from modern_web_backend import *
+    LOCAL_AI_AVAILABLE = False
+    LocalAIManager = None
+
+def _log_api(endpoint, method, request_data=None):
+    try:
+        from utils.session_activity_logger import log_api_request
+        log_api_request(endpoint=endpoint, method=method, user_id='default', request_data=request_data)
+    except Exception:
+        pass
+
 @local_ai_bp.route('/api/local-ai/status', methods=['GET'])
 @limiter.limit("10 per minute")
 def api_local_ai_status():
@@ -51,16 +62,16 @@ def local_ai_status():
             'success': True,
             'available': True,
             'initialized': local_ai_initialized,
-            'model_loaded': local_ai_manager is not None and local_ai_manager.current_model is not None
+            'model_loaded': local_ai_manager is not None and getattr(local_ai_manager, 'current_model', None) is not None
         }
         
         if local_ai_initialized and local_ai_manager:
             status['model_info'] = {
-                'name': local_ai_manager.model_config.name if local_ai_manager.model_config else None,
-                'context_length': local_ai_manager.model_config.context_length if local_ai_manager.model_config else None,
-                'threads': local_ai_manager.model_config.threads if local_ai_manager.model_config else None
+                'name': local_ai_manager.model_config.name if getattr(local_ai_manager, 'model_config', None) else None,
+                'context_length': local_ai_manager.model_config.context_length if getattr(local_ai_manager, 'model_config', None) else None,
+                'threads': local_ai_manager.model_config.threads if getattr(local_ai_manager, 'model_config', None) else None
             }
-            status['stats'] = local_ai_manager.get_stats()
+            status['stats'] = local_ai_manager.get_stats() if hasattr(local_ai_manager, 'get_stats') else {}
         else:
             status['message'] = 'No model loaded. Download TinyLlama or Qwen2 model.'
         
@@ -81,7 +92,7 @@ def local_ai_chat():
                 'error': 'Local AI not initialized. Check /api/local_ai/status'
             }), 503
         
-        data = request.json
+        data = request.json or {}
         message = data.get('message', '')
         max_tokens = data.get('max_tokens', 512)
         temperature = data.get('temperature', 0.7)
@@ -90,15 +101,8 @@ def local_ai_chat():
         if not message:
             return jsonify({'success': False, 'error': 'No message provided'}), 400
         
-        # Log request
-        log_api_request(
-            endpoint='/api/local_ai/chat',
-            method='POST',
-            user_id='default',
-            request_data={'message_length': len(message)}
-        )
+        _log_api('/api/local_ai/chat', 'POST', {'message_length': len(message)})
         
-        # Generate response
         start_time = time.time()
         
         if use_history:
@@ -118,8 +122,8 @@ def local_ai_chat():
             'response': response,
             'stats': {
                 'elapsed_time': round(elapsed, 2),
-                'avg_tokens_per_sec': local_ai_manager.stats.get('avg_tokens_per_sec', 0),
-                'total_queries': local_ai_manager.stats.get('total_queries', 0)
+                'avg_tokens_per_sec': getattr(local_ai_manager, 'stats', {}).get('avg_tokens_per_sec', 0) if hasattr(local_ai_manager, 'stats') else 0,
+                'total_queries': getattr(local_ai_manager, 'stats', {}).get('total_queries', 0) if hasattr(local_ai_manager, 'stats') else 0
             },
             'timestamp': datetime.now().isoformat()
         })
@@ -161,7 +165,7 @@ def local_ai_stats():
                 'error': 'Local AI not initialized'
             }), 503
         
-        stats = local_ai_manager.get_stats()
+        stats = local_ai_manager.get_stats() if hasattr(local_ai_manager, 'get_stats') else {}
         
         return jsonify({
             'success': True,
@@ -186,14 +190,13 @@ def local_ai_load_model():
                 'error': 'Local AI not available. Install llama-cpp-python'
             }), 503
         
-        data = request.json
+        data = request.json or {}
         model_name = data.get('model_name', 'tinyllama')
         threads = data.get('threads', 4)
         
         if not local_ai_manager:
             local_ai_manager = LocalAIManager()
         
-        # Map model names to file paths
         model_paths = {
             'tinyllama': 'model/local_models/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf',
             'qwen2': 'model/local_models/qwen2-0_5b-instruct-q4_k_m.gguf'
@@ -213,16 +216,15 @@ def local_ai_load_model():
                 'download_instructions': 'Run: huggingface-cli download TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf --local-dir model/local_models'
             }), 404
         
-        # Load model
         if local_ai_manager.load_model(str(model_path), threads=threads):
             local_ai_initialized = True
             return jsonify({
                 'success': True,
                 'message': f'Model {model_name} loaded successfully',
                 'model_info': {
-                    'name': local_ai_manager.model_config.name,
-                    'path': local_ai_manager.model_config.path,
-                    'threads': local_ai_manager.model_config.threads
+                    'name': local_ai_manager.model_config.name if getattr(local_ai_manager, 'model_config', None) else model_name,
+                    'path': str(model_path),
+                    'threads': threads
                 }
             })
         else:

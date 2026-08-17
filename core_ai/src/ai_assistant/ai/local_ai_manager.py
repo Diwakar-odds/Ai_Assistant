@@ -11,7 +11,12 @@ Hardware Requirements:
 import os
 import json
 import time
-import requests
+try:
+    import requests
+    REQUESTS_AVAILABLE = True
+except ImportError:
+    requests = None
+    REQUESTS_AVAILABLE = False
 from pathlib import Path
 from typing import Optional, Dict, List, Generator, Union
 from dataclasses import dataclass

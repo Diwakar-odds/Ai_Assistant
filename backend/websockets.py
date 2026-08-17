@@ -60,7 +60,7 @@ def handle_chat_stream(data):
             emit('chat_stream_error', {'error': 'No message provided'})
             return
         
-        logger.info(f"ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ WebSocket chat stream started: {session_id}")
+        logger.info(f"ÃƒÂ°Ã…Â¸"Ã‚Â¡ WebSocket chat stream started: {session_id}")
         
         # Get or create chat session
         with chat_session_lock:
@@ -275,7 +275,7 @@ def handle_voice_command(data):
             emit('voice_response', {'response': 'No command received', 'error': True})
             return
         
-        print(f"Ã°Å¸Å½Â¤ Processing voice command: {text}")
+        print(f"🎙️ Processing voice command: {text}")
         print(f"   Language: {language}")
         
         # Log the voice interaction

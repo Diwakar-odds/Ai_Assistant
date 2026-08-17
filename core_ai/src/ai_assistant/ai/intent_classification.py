@@ -10,7 +10,12 @@ Features:
 - Continuous improvement from corrections
 """
 
-import numpy as np
+try:
+    import numpy as np
+    NUMPY_AVAILABLE = True
+except ImportError:
+    np = None
+    NUMPY_AVAILABLE = False
 import json
 import sqlite3
 from datetime import datetime

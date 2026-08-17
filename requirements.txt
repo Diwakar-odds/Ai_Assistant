@@ -1,0 +1,3 @@
+# YourDaddy Assistant - Requirements Entry Point
+# ===============================================
+-r config/requirements/requirements.txt

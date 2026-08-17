@@ -16,7 +16,12 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict, List, Any, Tuple
 from pathlib import Path
 import logging
-import numpy as np
+try:
+    import numpy as np
+    NUMPY_AVAILABLE = True
+except ImportError:
+    np = None
+    NUMPY_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -410,8 +415,6 @@ if __name__ == "__main__":
     result = cache.get("Tell me a joke")
     print(f"Result: {result}\n")
     
-    # Stats
-    print("Cache Stats:")
-    stats = cache.get_stats()
-    for key, value in stats.items():
-        print(f"  {key}: {value}")
+# Alias for backward compatibility
+SemanticCache = SemanticResponseCache
+

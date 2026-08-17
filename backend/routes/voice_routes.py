@@ -1,19 +1,26 @@
-from flask import Blueprint, jsonify, request, send_from_directory, render_template, Response, stream_with_context
-from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity, verify_jwt_in_request
-import os, json, sys, time, datetime
+import os
+import sys
+import time
+import json
+import logging
+from datetime import datetime
+from flask import Blueprint, jsonify, request
+from .common import logger, limiter, validate_input, get_assistant, ENABLE_VOICE, jwt_required, get_jwt_identity
+
+voice_bp = Blueprint('voice_routes', __name__)
+
 try:
-    from backend.modern_web_backend import logger, api_logger, get_current_context
+    from voice_service import AVAILABLE_VOICES
 except ImportError:
-    pass
-    
+    AVAILABLE_VOICES = [
+        {"id": "en-US-AriaNeural", "name": "Aria (Female, US)", "lang": "en-US"},
+        {"id": "en-US-GuyNeural", "name": "Guy (Male, US)", "lang": "en-US"},
+        {"id": "hi-IN-SwaraNeural", "name": "Swara (Female, Hindi)", "lang": "hi-IN"},
+        {"id": "hi-IN-MadhurNeural", "name": "Madhur (Male, Hindi)", "lang": "hi-IN"}
+    ]
 
-voice_bp = Blueprint('voice', __name__)
+VOICE_AVAILABLE = ENABLE_VOICE
 
-
-try:
-    from backend.modern_web_backend import *
-except ImportError:
-    from modern_web_backend import *
 @voice_bp.route('/api/voice/history')
 @jwt_required()
 def api_voice_history():
@@ -30,16 +37,21 @@ def api_voice_history():
 def api_voice_status():
     """Get voice system status - PUBLIC"""
     try:
-        voice_available = VOICE_AVAILABLE and assistant.voice_recognizer is not None
+        assistant = get_assistant()
+        has_assistant = assistant is not None
+        has_rec = has_assistant and getattr(assistant, 'voice_recognizer', None) is not None
+        has_tts = has_assistant and getattr(assistant, 'tts_engine', None) is not None
+        has_wake = has_assistant and getattr(assistant, 'wake_word_detector', None) is not None
+        
         return jsonify({
             "connected": True,
-            "voice_available": voice_available,
+            "voice_available": VOICE_AVAILABLE and has_rec,
             "features": {
-                "speech_recognition": assistant.voice_recognizer is not None,
-                "text_to_speech": assistant.tts_engine is not None,
-                "wake_word_detection": assistant.wake_word_detector is not None
+                "speech_recognition": has_rec,
+                "text_to_speech": has_tts,
+                "wake_word_detection": has_wake
             },
-            "listening": getattr(assistant, 'voice_listening', False),
+            "listening": getattr(assistant, 'voice_listening', False) if has_assistant else False,
             "timestamp": datetime.now().isoformat()
         })
     except Exception as e:
@@ -55,22 +67,28 @@ def api_voice_status():
 def api_start_voice():
     """Start voice listening - PROTECTED"""
     try:
+        assistant = get_assistant()
+        if not assistant:
+            return jsonify({"error": "Assistant not initialized"}), 503
         result = assistant.start_voice_listening()
-        if "error" in result:
+        if isinstance(result, dict) and "error" in result:
             return jsonify(result), 500
         return jsonify(result)
     except Exception as e:
-        return jsonify({"error": "Failed to start voice listening"}), 500
+        return jsonify({"error": f"Failed to start voice listening: {e}"}), 500
 
 @voice_bp.route('/api/voice/stop', methods=['POST'])
 @jwt_required()
 def api_stop_voice():
     """Stop voice listening - PROTECTED"""
     try:
+        assistant = get_assistant()
+        if not assistant:
+            return jsonify({"error": "Assistant not initialized"}), 503
         result = assistant.stop_voice_listening()
         return jsonify(result)
     except Exception as e:
-        return jsonify({"error": "Failed to stop voice listening"}), 500
+        return jsonify({"error": f"Failed to stop voice listening: {e}"}), 500
 
 @voice_bp.route('/api/voice/speak', methods=['POST'])
 @jwt_required()
@@ -78,22 +96,21 @@ def api_stop_voice():
 def api_speak():
     """Convert text to speech - PROTECTED"""
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
         
-        # Validate input
         is_valid, error = validate_input(data, 'text', 'command')
         if not is_valid:
             return jsonify({"error": error}), 400
         
         text = data['text']
-        
         if not text:
             return jsonify({"error": "No text provided"}), 400
         
-        success = assistant.speak_text(text)
+        assistant = get_assistant()
+        success = assistant.speak_text(text) if assistant else False
         return jsonify({"success": success, "text": text})
     except Exception as e:
-        logging.error(f"Error in api_speak: {str(e)}")
+        logger.error(f"Error in api_speak: {str(e)}")
         return jsonify({"error": "Failed to process text-to-speech"}), 500
 
 @voice_bp.route('/api/voice/list', methods=['GET'])
@@ -106,7 +123,7 @@ def api_list_voices():
             "default": "en-US-AriaNeural"
         })
     except Exception as e:
-        logging.error(f"Error fetching voice list: {str(e)}")
+        logger.error(f"Error fetching voice list: {str(e)}")
         return jsonify({"error": "Failed to fetch voices"}), 500
 
 @voice_bp.route('/api/voice/preview', methods=['POST'])
@@ -114,32 +131,27 @@ def api_list_voices():
 def api_preview_voice():
     """Generate preview audio for a voice"""
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
         voice_id = data.get('voice_id', 'en-US-AriaNeural')
         sample_text = data.get('text', "Hello! This is a sample of my voice. I'm here to assist you with anything you need.")
         
-        # Find voice info
         voice_info = next((v for v in AVAILABLE_VOICES if v['id'] == voice_id), None)
         if not voice_info:
             return jsonify({"error": "Voice not found"}), 404
         
-        # Generate audio using Edge-TTS
         if VOICE_AVAILABLE:
             try:
                 import edge_tts
                 import tempfile
                 
-                # Create temporary file
                 temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.mp3')
                 output_path = temp_file.name
                 temp_file.close()
                 
-                # Generate audio
                 async def generate():
                     communicate = edge_tts.Communicate(sample_text, voice_id)
                     await communicate.save(output_path)
                 
-                # Run async function
                 import asyncio
                 try:
                     loop = asyncio.get_event_loop()
@@ -149,14 +161,12 @@ def api_preview_voice():
                 
                 loop.run_until_complete(generate())
                 
-                # Read and encode as base64
                 with open(output_path, 'rb') as f:
                     audio_data = f.read()
                 
                 import base64
                 audio_base64 = base64.b64encode(audio_data).decode('utf-8')
                 
-                # Clean up
                 os.unlink(output_path)
                 
                 return jsonify({
@@ -167,13 +177,13 @@ def api_preview_voice():
                 })
                 
             except Exception as e:
-                logging.error(f"Edge-TTS preview failed: {str(e)}")
+                logger.error(f"Edge-TTS preview failed: {str(e)}")
                 return jsonify({"error": f"Preview generation failed: {str(e)}"}), 500
         else:
             return jsonify({"error": "Voice synthesis not available"}), 503
             
     except Exception as e:
-        logging.error(f"Voice preview error: {str(e)}")
+        logger.error(f"Voice preview error: {str(e)}")
         return jsonify({"error": "Failed to generate preview"}), 500
 
 @voice_bp.route('/api/voice/process', methods=['POST'])
@@ -182,14 +192,17 @@ def api_preview_voice():
 def api_process_voice():
     """Process voice audio data - PROTECTED"""
     try:
-        current_user = get_jwt_identity()
-        data = request.get_json()
+        data = request.get_json() or {}
         audio_data = data.get('audio_data', '')
         
         if not audio_data:
             return jsonify({"error": "No audio data provided"}), 400
         
+        assistant = get_assistant()
+        if not assistant:
+            return jsonify({"error": "Assistant not initialized"}), 503
+            
         result = assistant.process_voice_audio(audio_data)
         return jsonify(result)
     except Exception as e:
-        return jsonify({"error": "Failed to process voice"}), 500
+        return jsonify({"error": f"Failed to process voice: {e}"}), 500
