@@ -13,6 +13,10 @@ from typing import Dict, List, Optional, Generator, Any, Callable, Union
 from abc import ABC, abstractmethod
 from datetime import datetime
 import re
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
