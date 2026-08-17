@@ -6,24 +6,28 @@
 
 ---
 
-## 📖 Table of Contents
+## Table of Contents
 1. [Project Vision & Key Features](#1-project-vision--key-features)
-2. [Monorepo Architecture Deep Dive](#2-monorepo-architecture-deep-dive)
-3. [The 27 Advanced Learning Systems](#3-the-27-advanced-learning-systems)
-4. [Complete API Reference Guide](#4-complete-api-reference-guide)
-5. [Automated Codebase Documentation](#5-automated-codebase-documentation)
-6. [Desktop Integration & Automation](#6-desktop-integration--automation)
-7. [Comprehensive Setup & Installation](#7-comprehensive-setup--installation)
-8. [Executable Packaging Guide](#8-executable-packaging-guide)
-9. [Troubleshooting & Known Issues](#9-troubleshooting--known-issues)
+2. [Quickstart Guide](#2-quickstart-guide)
+3. [Environment Variables Reference](#3-environment-variables-reference)
+4. [Security Model](#4-security-model)
+5. [API Overview](#5-api-overview)
+6. [Monorepo Architecture Deep Dive](#6-monorepo-architecture-deep-dive)
+7. [The 27 Advanced Learning Systems](#7-the-27-advanced-learning-systems)
+8. [Complete API Reference Guide](#8-complete-api-reference-guide)
+9. [Automated Codebase Documentation](#9-automated-codebase-documentation)
+10. [Desktop Integration & Automation](#10-desktop-integration--automation)
+11. [Comprehensive Setup & Installation](#11-comprehensive-setup--installation)
+12. [Executable Packaging Guide](#12-executable-packaging-guide)
+13. [Troubleshooting & Known Issues](#13-troubleshooting--known-issues)
 
 ---
 
-## 🚀 1. Project Vision & Key Features
+## 1. Project Vision & Key Features
 
 PULSAR is not just another chatbot. It is a **native Operating System Automation Suite** designed to act as your personal AI desktop agent. Unlike traditional web-based LLMs that are sandboxed in a browser, PULSAR connects directly to your Windows OS to observe, learn, and execute complex workflows on your behalf.
 
-### 🎯 Key Capabilities (Why PULSAR?)
+### Key Capabilities (Why PULSAR?)
 - **Native Windows Automation:** PULSAR can open apps, click buttons, type text, and manage your files directly.
 - **100% Offline & Private:** Powered by a massive 2.5 million line custom fine-tuning dataset, it runs entirely on local models (like Llama-3 via Ollama/Unsloth) ensuring zero data leakage.
 - **Multi-Modal Intelligence:** Features advanced computer vision (to read your screen) and voice integration (Whisper/TTS) so you can speak to it naturally.
@@ -34,7 +38,79 @@ PULSAR features over 700 specialized Python modules, 27 distinct machine learnin
 
 ---
 
-## 🏗️ 2. Monorepo Architecture Deep Dive
+## 2. Quickstart Guide
+
+> **Note**: PULSAR currently natively supports Windows.
+
+### Prerequisites
+- Python 3.10+
+- Node.js 18+
+- [Ollama](https://ollama.com/) (for running local LLMs)
+- [Tesseract-OCR](https://github.com/UB-Mannheim/tesseract/wiki) (Add to your System PATH)
+- C++ Build Tools (Required for compiling dependencies)
+
+### Setup & Run
+1. **Clone & Setup Environment**
+   ```bash
+   git clone <repo-url>
+   cd Ai_Assistant
+   python -m venv venv
+   .\venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+
+2. **Configure Environment Variables**
+   Create a `.env` file in the root directory (see Section 3 for reference).
+
+3. **Start the Backend**
+   ```bash
+   python backend/modern_web_backend.py
+   ```
+
+4. **Start the Frontend**
+   ```bash
+   cd frontend/web-app
+   npm install
+   npm run dev
+   ```
+
+---
+
+## 3. Environment Variables Reference
+
+Create a `.env` file in the root directory.
+
+| Variable | Requirement | Description |
+|---|---|---|
+| `OPENAI_API_KEY` | Optional | For falling back to OpenAI models if local LLM is unavailable. |
+| `GOOGLE_GEMINI_API_KEY` | Optional | For utilizing Gemini models for visual and complex reasoning. |
+| `ELEVEN_LABS_API_KEY` | Optional | For premium Text-To-Speech (TTS). |
+| `PIN_HASH` | **Required** | Hashed PIN for authenticating critical endpoints and desktop controls. |
+| `SECURITY_KEY` | **Required** | Secret key for encrypting local data. |
+| `TESSERACT_PATH` | Optional | Path to Tesseract executable (if not in System PATH). |
+
+---
+
+## 4. Security Model
+
+PULSAR takes security and privacy seriously:
+- **Authentication**: High-risk actions (e.g., executing desktop commands) require PIN-based authentication.
+- **Authorization**: Implements Role-Based Access Control (RBAC).
+- **Data Privacy**: Local LLMs guarantee zero data leakage. When external APIs are used, extensive data anonymization and PII redaction occur.
+- **Encryption**: Sensitive logs and user profiles are stored encrypted using the defined `SECURITY_KEY`.
+
+---
+
+## 5. API Overview
+
+PULSAR exposes several REST endpoints for frontend integration. Detailed route information can be found in the API Reference below.
+
+- **Authentication**: Most `/api/system/*` and `/api/app/*` routes require authentication via headers.
+- **Data Exchange**: All endpoints accept and return `application/json` unless otherwise specified (like WebSocket events).
+
+---
+
+## 6. Monorepo Architecture Deep Dive
 
 ```text
 Ai_Assistant/
@@ -246,1150 +322,1150 @@ Below is the auto-generated AST documentation of all major Python modules in the
 
 
 ### File: `core_ai\src\ai_assistant\agents\base_agent.py`
-- **Class `BaseAgent`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
+- **Class `BaseAgent`**: Base class for all AI agents
+  - **Function `__init__()`**: Signature: (self, agent_id, config)
 
 ### File: `core_ai\src\ai_assistant\agents\dispatcher.py`
-- **Class `Dispatcher`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `handle()`**: Internal helper or main execution logic.
+- **Class `Dispatcher`**: Dispatches natural language commands to appropriate workflows.
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `handle()`**: Process a natural language user input and dispatch to appropriate workflow.
 
 ### File: `core_ai\src\ai_assistant\agents\loader.py`
-- **Class `AgentLoader`**: Orchestrates logic for this module.
-  - **Function `register_agent_definitions()`**: Internal helper or main execution logic.
-  - **Function `_load_productivity()`**: Internal helper or main execution logic.
-  - **Function `_load_research()`**: Internal helper or main execution logic.
-  - **Function `_load_writer()`**: Internal helper or main execution logic.
-  - **Function `_load_video()`**: Internal helper or main execution logic.
-  - **Function `_load_creative()`**: Internal helper or main execution logic.
-  - **Function `_load_data()`**: Internal helper or main execution logic.
-  - **Function `_load_database()`**: Internal helper or main execution logic.
-  - **Function `_load_communication()`**: Internal helper or main execution logic.
-  - **Function `_load_web()`**: Internal helper or main execution logic.
-  - **Function `_load_student()`**: Internal helper or main execution logic.
-  - **Function `_load_file()`**: Internal helper or main execution logic.
-  - **Function `_load_audio()`**: Internal helper or main execution logic.
-  - **Function `_load_deep_research()`**: Internal helper or main execution logic.
-  - **Function `_load_autonomous()`**: Internal helper or main execution logic.
+- **Class `AgentLoader`**: Helper to load agents into the registry using Lazy Loading
+  - **Function `register_agent_definitions()`**: Register agent definitions (metadata + lazy factory) without instantiating
+  - **Function `_load_productivity()`**: Signature: ()
+  - **Function `_load_research()`**: Signature: ()
+  - **Function `_load_writer()`**: Signature: ()
+  - **Function `_load_video()`**: Signature: ()
+  - **Function `_load_creative()`**: Signature: ()
+  - **Function `_load_data()`**: Signature: ()
+  - **Function `_load_database()`**: Signature: ()
+  - **Function `_load_communication()`**: Signature: ()
+  - **Function `_load_web()`**: Signature: ()
+  - **Function `_load_student()`**: Signature: ()
+  - **Function `_load_file()`**: Signature: ()
+  - **Function `_load_audio()`**: Signature: ()
+  - **Function `_load_deep_research()`**: Signature: ()
+  - **Function `_load_autonomous()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\agents\models.py`
-- **Class `AgentStatus`**: Orchestrates logic for this module.
-- **Class `Task`**: Orchestrates logic for this module.
-- **Class `TaskResult`**: Orchestrates logic for this module.
-- **Class `VerificationResult`**: Orchestrates logic for this module.
-- **Class `ProofreadResult`**: Orchestrates logic for this module.
+- **Class `AgentStatus`**: Core component.
+- **Class `Task`**: Core component.
+- **Class `TaskResult`**: Core component.
+- **Class `VerificationResult`**: Core component.
+- **Class `ProofreadResult`**: Core component.
 
 ### File: `core_ai\src\ai_assistant\agents\registry.py`
-- **Class `AgentMetadata`**: Orchestrates logic for this module.
-- **Class `AgentRegistry`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `register_agent()`**: Internal helper or main execution logic.
-  - **Function `register_agent_definition()`**: Internal helper or main execution logic.
-  - **Function `_register_capabilities()`**: Internal helper or main execution logic.
-  - **Function `get_agent()`**: Internal helper or main execution logic.
-  - **Function `get_all_agents()`**: Internal helper or main execution logic.
-  - **Function `get_all_metadata()`**: Internal helper or main execution logic.
-  - **Function `find_agents_by_capability()`**: Internal helper or main execution logic.
+- **Class `AgentMetadata`**: Metadata for a lazy-loaded agent
+- **Class `AgentRegistry`**: Manages all available agents and their capabilities with lazy loading support
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `register_agent()`**: Register an already instantiated agent (legacy support)
+  - **Function `register_agent_definition()`**: Register an agent definition for lazy loading
+  - **Function `_register_capabilities()`**: Helper to map capabilities
+  - **Function `get_agent()`**: Get agent by ID, instantiating if necessary
+  - **Function `get_all_agents()`**: Get all currently ACTIVE agents
+  - **Function `get_all_metadata()`**: Get metadata for ALL agents (active and standby)
+  - **Function `find_agents_by_capability()`**: Find agent IDs that have a specific capability
 
 ### File: `core_ai\src\ai_assistant\agents\audio\audio_agent.py`
-- **Class `AudioAgent`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
+- **Class `AudioAgent`**: Handles specific audio tasks (Music, SFX, Audio Processing). Distinct from CreativeAgent (Speech) and VideoAgent (Editing).
+  - **Function `__init__()`**: Signature: (self, agent_id, config)
 
 ### File: `core_ai\src\ai_assistant\agents\communication\communication_agent.py`
-- **Class `CommunicationAgent`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
+- **Class `CommunicationAgent`**: Handles communications (Email, Messaging, Social).
+  - **Function `__init__()`**: Signature: (self, agent_id, config)
 
 ### File: `core_ai\src\ai_assistant\agents\core\autonomous_agent.py`
-- **Class `AutonomousAgent`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `passive_observe()`**: Internal helper or main execution logic.
+- **Class `AutonomousAgent`**: Replicates the 'hermes-agent' autonomous learning loop: 1. Observes conversations 2. Routes them to the LearningDataRouter for persistence 3. Propo...
+  - **Function `__init__()`**: Signature: (self, agent_id, config)
+  - **Function `passive_observe()`**: Can be called by the main chat loop to constantly feed data  into the agent without explicitly treating it as a task.
 
 ### File: `core_ai\src\ai_assistant\agents\creative\creative_agent.py`
-- **Class `CreativeAgent`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
+- **Class `CreativeAgent`**: Agent responsible for generating creative assets: - Images (Thumbnails, B-Roll, Art) - Audio (Voiceovers, Sound Effects)
+  - **Function `__init__()`**: Signature: (self, agent_id, config)
 
 ### File: `core_ai\src\ai_assistant\agents\file\file_manager_agent.py`
-- **Class `FileManagerAgent`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
+- **Class `FileManagerAgent`**: Handles file organization and operations.
+  - **Function `__init__()`**: Signature: (self, agent_id, config)
 
 ### File: `core_ai\src\ai_assistant\agents\productivity\productivity_agent.py`
-- **Class `ProductivityAgent`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_identify_task_type()`**: Internal helper or main execution logic.
+- **Class `ProductivityAgent`**: Handles office productivity tasks: Word, Excel, PowerPoint
+  - **Function `__init__()`**: Signature: (self, agent_id, config)
+  - **Function `_identify_task_type()`**: Signature: (self, task)
 
 ### File: `core_ai\src\ai_assistant\agents\research\deep_research_agent.py`
-- **Class `DeepResearchAgent`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_generate_search_queries()`**: Internal helper or main execution logic.
-  - **Function `_scrape_text()`**: Internal helper or main execution logic.
-  - **Function `_synthesize_results()`**: Internal helper or main execution logic.
+- **Class `DeepResearchAgent`**: Replicates the 'last30days-skill' workflow: 1. Topic Analysis 2. Parallel Web Search 3. LLM Synthesis
+  - **Function `__init__()`**: Signature: (self, agent_id, config)
+  - **Function `_generate_search_queries()`**: Use simple heuristics or LLM to generate targeted search queries
+  - **Function `_scrape_text()`**: Helper to scrape text from a URL
+  - **Function `_synthesize_results()`**: Use LLM to generate a final markdown brief
 
 ### File: `core_ai\src\ai_assistant\agents\research\research_agent.py`
-- **Class `ResearchAgent`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
+- **Class `ResearchAgent`**: Handles web research, searching, and simple scraping.
+  - **Function `__init__()`**: Signature: (self, agent_id, config)
 
 ### File: `core_ai\src\ai_assistant\agents\student\student_agent.py`
-- **Class `StudentAgent`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
+- **Class `StudentAgent`**: Handles educational tasks (Math, Quizzes, Study).
+  - **Function `__init__()`**: Signature: (self, agent_id, config)
 
 ### File: `core_ai\src\ai_assistant\agents\video\gui_controller.py`
-- **Class `AppControlInterface`**: Orchestrates logic for this module.
-- **Class `BaseGUIController`**: Orchestrates logic for this module.
-- **Class `PremiereProController`**: Orchestrates logic for this module.
-- **Class `KnowledgeBaseController`**: Orchestrates logic for this module.
-- **Class `AppControllerFactory`**: Orchestrates logic for this module.
-  - **Function `focus_window()`**: Internal helper or main execution logic.
-  - **Function `send_hotkey()`**: Internal helper or main execution logic.
-  - **Function `type_text()`**: Internal helper or main execution logic.
-  - **Function `click_at()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_load_libs()`**: Internal helper or main execution logic.
-  - **Function `focus_window()`**: Internal helper or main execution logic.
-  - **Function `send_hotkey()`**: Internal helper or main execution logic.
-  - **Function `type_text()`**: Internal helper or main execution logic.
-  - **Function `click_at()`**: Internal helper or main execution logic.
-  - **Function `execute_action()`**: Internal helper or main execution logic.
-  - **Function `perform_sequence()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_load_kb()`**: Internal helper or main execution logic.
-  - **Function `execute_action()`**: Internal helper or main execution logic.
-  - **Function `get_controller()`**: Internal helper or main execution logic.
+- **Class `AppControlInterface`**: Abstract interface for controlling external applications
+- **Class `BaseGUIController`**: Generic GUI Controller using PyAutoGUI
+- **Class `PremiereProController`**: Profile for Adobe Premiere Pro. Maps high-level actions to keyboard shortcuts.
+- **Class `KnowledgeBaseController`**: Controller that loads keymaps dynamically from the Knowledge Base.
+- **Class `AppControllerFactory`**: Core component.
+  - **Function `focus_window()`**: Signature: (self, app_name)
+  - **Function `send_hotkey()`**: Signature: (self, keys)
+  - **Function `type_text()`**: Signature: (self, text)
+  - **Function `click_at()`**: Signature: (self, x, y)
+  - **Function `__init__()`**: Signature: (self, app_key)
+  - **Function `_load_libs()`**: Signature: (self)
+  - **Function `focus_window()`**: Signature: (self, app_name)
+  - **Function `send_hotkey()`**: Signature: (self, keys)
+  - **Function `type_text()`**: Signature: (self, text)
+  - **Function `click_at()`**: Signature: (self, x, y)
+  - **Function `execute_action()`**: Signature: (self, action_name)
+  - **Function `perform_sequence()`**: Perform a common sequence of actions
+  - **Function `__init__()`**: Signature: (self, app_key)
+  - **Function `_load_kb()`**: Signature: (self)
+  - **Function `execute_action()`**: Signature: (self, action_name)
+  - **Function `get_controller()`**: Signature: (app_name)
 
 ### File: `core_ai\src\ai_assistant\agents\video\training_mode.py`
-- **Class `TrainingMode`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `add_action()`**: Internal helper or main execution logic.
-  - **Function `save_workflow()`**: Internal helper or main execution logic.
-  - **Function `load_workflow()`**: Internal helper or main execution logic.
+- **Class `TrainingMode`**: Allows 'training' the agent by defining workflows or recording actions. Future: Hook into keyboard hooks to record real-time (requires complex perm...
+  - **Function `__init__()`**: Signature: (self, profile_name)
+  - **Function `add_action()`**: Add an action to the current training session
+  - **Function `save_workflow()`**: Save the trained workflow to disk
+  - **Function `load_workflow()`**: Signature: (filename)
 
 ### File: `core_ai\src\ai_assistant\agents\video\video_agent.py`
-- **Class `VideoAgent`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `verifier()`**: Internal helper or main execution logic.
-  - **Function `_load_moviepy()`**: Internal helper or main execution logic.
-  - **Function `_load_whisper()`**: Internal helper or main execution logic.
+- **Class `VideoAgent`**: Handles video editing, creation, and transcription.
+  - **Function `__init__()`**: Signature: (self, agent_id, config)
+  - **Function `verifier()`**: Signature: (self)
+  - **Function `_load_moviepy()`**: Signature: (self)
+  - **Function `_load_whisper()`**: Signature: (self)
 
 ### File: `core_ai\src\ai_assistant\agents\video\visual_verifier.py`
-- **Class `VisualVerifier`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_ensure_libs()`**: Internal helper or main execution logic.
-  - **Function `capture_screen()`**: Internal helper or main execution logic.
-  - **Function `find_template()`**: Internal helper or main execution logic.
-  - **Function `verify_state()`**: Internal helper or main execution logic.
+- **Class `VisualVerifier`**: Provides computer vision capabilities to the agent.
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `_ensure_libs()`**: Signature: (self)
+  - **Function `capture_screen()`**: Capture the screen or a region. Region is (left, top, width, height). Returns an OpenCV BGR image.
+  - **Function `find_template()`**: Find a template image on the screen. Returns (x, y, w, h) of the match, or None.
+  - **Function `verify_state()`**: High-level verification.  In a real scenario, this would look up template paths from the Knowledge Base. For now, it checks generic templates.
 
 ### File: `core_ai\src\ai_assistant\agents\web\web_agent.py`
-- **Class `WebAgent`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
+- **Class `WebAgent`**: Handles general web automation (Forms, Interaction, Dynamic Scraping).
+  - **Function `__init__()`**: Signature: (self, agent_id, config)
 
 ### File: `core_ai\src\ai_assistant\agents\writer\writer_agent.py`
-- **Class `WriterAgent`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_generate_mock_content()`**: Internal helper or main execution logic.
+- **Class `WriterAgent`**: Handles content generation, writing, and summarization using LLMs.
+  - **Function `__init__()`**: Signature: (self, agent_id, config)
+  - **Function `_generate_mock_content()`**: Generate plausible mock content for testing
 
 ### File: `core_ai\src\ai_assistant\ai\active_learning.py`
-- **Class `ActiveLearner`**: Orchestrates logic for this module.
-  - **Function `example_usage()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `_load_queue()`**: Internal helper or main execution logic.
-  - **Function `add_unlabeled_sample()`**: Internal helper or main execution logic.
-  - **Function `uncertainty_sampling()`**: Internal helper or main execution logic.
-  - **Function `query_by_committee()`**: Internal helper or main execution logic.
-  - **Function `expected_model_change()`**: Internal helper or main execution logic.
-  - **Function `select_samples_to_label()`**: Internal helper or main execution logic.
-  - **Function `_add_to_queue()`**: Internal helper or main execution logic.
-  - **Function `get_next_to_label()`**: Internal helper or main execution logic.
-  - **Function `provide_label()`**: Internal helper or main execution logic.
-  - **Function `train()`**: Internal helper or main execution logic.
-  - **Function `get_labeling_efficiency()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
+- **Class `ActiveLearner`**: Active learning for sample-efficient model training
+  - **Function `example_usage()`**: Demonstrate active learning
+  - **Function `__init__()`**: Signature: (self, db_path, uncertainty_threshold)
+  - **Function `_init_database()`**: Initialize database
+  - **Function `_load_queue()`**: Load pending labeling queue
+  - **Function `add_unlabeled_sample()`**: Add unlabeled sample to pool
+  - **Function `uncertainty_sampling()`**: Calculate prediction uncertainty (least confident) Lower = more uncertain
+  - **Function `query_by_committee()`**: Calculate disagreement among committee members Higher = more disagreement = more informative
+  - **Function `expected_model_change()`**: Estimate how much model would change if we label this sample Uses gradient magnitude as proxy
+  - **Function `select_samples_to_label()`**: Select most informative samples for labeling
+  - **Function `_add_to_queue()`**: Add sample to labeling queue
+  - **Function `get_next_to_label()`**: Get next samples to label from queue
+  - **Function `provide_label()`**: Provide label for a sample
+  - **Function `train()`**: Train committee models on labeled data
+  - **Function `get_labeling_efficiency()`**: Calculate labeling efficiency metrics Shows how much accuracy we get per label
+  - **Function `get_stats()`**: Get active learning statistics
 
 ### File: `core_ai\src\ai_assistant\ai\adaptive_prompts.py`
-- **Class `PromptTemplate`**: Orchestrates logic for this module.
-- **Class `PromptExperiment`**: Orchestrates logic for this module.
-- **Class `PromptOptimizer`**: Orchestrates logic for this module.
-  - **Function `example_usage()`**: Internal helper or main execution logic.
-  - **Function `render()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `_load_templates()`**: Internal helper or main execution logic.
-  - **Function `_init_default_templates()`**: Internal helper or main execution logic.
-  - **Function `_generate_id()`**: Internal helper or main execution logic.
-  - **Function `save_template()`**: Internal helper or main execution logic.
-  - **Function `get_best_template()`**: Internal helper or main execution logic.
-  - **Function `render_prompt()`**: Internal helper or main execution logic.
-  - **Function `_enrich_context()`**: Internal helper or main execution logic.
-  - **Function `record_feedback()`**: Internal helper or main execution logic.
-  - **Function `create_ab_experiment()`**: Internal helper or main execution logic.
-  - **Function `record_experiment_result()`**: Internal helper or main execution logic.
-  - **Function `get_optimization_insights()`**: Internal helper or main execution logic.
-  - **Function `score()`**: Internal helper or main execution logic.
+- **Class `PromptTemplate`**: Prompt template with metadata
+- **Class `PromptExperiment`**: A/B test experiment for prompts
+- **Class `PromptOptimizer`**: Optimizes prompts through reinforcement learning and A/B testing
+  - **Function `example_usage()`**: Demonstrate prompt optimization
+  - **Function `render()`**: Render template with variables
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `_init_database()`**: Initialize database
+  - **Function `_load_templates()`**: Load existing templates
+  - **Function `_init_default_templates()`**: Initialize default prompt templates
+  - **Function `_generate_id()`**: Generate unique ID for template
+  - **Function `save_template()`**: Save template to database
+  - **Function `get_best_template()`**: Get best performing template for category
+  - **Function `render_prompt()`**: Render prompt from template
+  - **Function `_enrich_context()`**: Add contextual information to prompt variables
+  - **Function `record_feedback()`**: Record feedback for prompt performance
+  - **Function `create_ab_experiment()`**: Create A/B test experiment
+  - **Function `record_experiment_result()`**: Record A/B test result
+  - **Function `get_optimization_insights()`**: Get insights for prompt optimization
+  - **Function `score()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\ai\adaptive_voice.py`
-- **Class `AdaptiveVoiceRecognition`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `_load_adaptations()`**: Internal helper or main execution logic.
-  - **Function `log_recognition()`**: Internal helper or main execution logic.
-  - **Function `apply_correction()`**: Internal helper or main execution logic.
-  - **Function `_learn_from_correction()`**: Internal helper or main execution logic.
-  - **Function `get_vocabulary_boost()`**: Internal helper or main execution logic.
-  - **Function `suggest_corrections()`**: Internal helper or main execution logic.
-  - **Function `get_confidence_adjustment()`**: Internal helper or main execution logic.
-  - **Function `analyze_accent_patterns()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
+- **Class `AdaptiveVoiceRecognition`**: Application-level adaptive voice recognition Learns user's voice patterns and improves accuracy
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `_init_database()`**: Initialize database
+  - **Function `_load_adaptations()`**: Load user-specific adaptations
+  - **Function `log_recognition()`**: Log voice recognition result
+  - **Function `apply_correction()`**: Apply user correction to improve model
+  - **Function `_learn_from_correction()`**: Learn patterns from user corrections
+  - **Function `get_vocabulary_boost()`**: Get user's frequently used words for recognition boost
+  - **Function `suggest_corrections()`**: Suggest potential corrections based on user patterns
+  - **Function `get_confidence_adjustment()`**: Adjust confidence based on user vocabulary
+  - **Function `analyze_accent_patterns()`**: Analyze user's accent patterns
+  - **Function `get_stats()`**: Get statistics
 
 ### File: `core_ai\src\ai_assistant\ai\advanced_chat_system.py`
-- **Class `ResponseMode`**: Orchestrates logic for this module.
-- **Class `TokenCounter`**: Orchestrates logic for this module.
-- **Class `ToolSchema`**: Orchestrates logic for this module.
-- **Class `AdvancedChatSystem`**: Orchestrates logic for this module.
-  - **Function `create_sample_tools()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `count()`**: Internal helper or main execution logic.
-  - **Function `count_messages()`**: Internal helper or main execution logic.
-  - **Function `fits_in_context()`**: Internal helper or main execution logic.
-  - **Function `trim_history()`**: Internal helper or main execution logic.
-  - **Function `to_dict()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `add_system_prompt()`**: Internal helper or main execution logic.
-  - **Function `add_message()`**: Internal helper or main execution logic.
-  - **Function `get_conversation_history()`**: Internal helper or main execution logic.
-  - **Function `register_tool()`**: Internal helper or main execution logic.
-  - **Function `get_tool_schemas()`**: Internal helper or main execution logic.
-  - **Function `handle_tool_call()`**: Internal helper or main execution logic.
-  - **Function `stream_response()`**: Internal helper or main execution logic.
-  - **Function `get_response()`**: Internal helper or main execution logic.
-  - **Function `regenerate_response()`**: Internal helper or main execution logic.
-  - **Function `get_alternatives()`**: Internal helper or main execution logic.
-  - **Function `edit_message()`**: Internal helper or main execution logic.
-  - **Function `search_history()`**: Internal helper or main execution logic.
-  - **Function `export_conversation()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
-  - **Function `clear_history()`**: Internal helper or main execution logic.
-  - **Function `_generate_cache_key()`**: Internal helper or main execution logic.
-  - **Function `save_to_db()`**: Internal helper or main execution logic.
-  - **Function `load_from_db()`**: Internal helper or main execution logic.
+- **Class `ResponseMode`**: Response generation modes.
+- **Class `TokenCounter`**: Token counter for various models.
+- **Class `ToolSchema`**: Schema for tool/function calling.
+- **Class `AdvancedChatSystem`**: Advanced chat system with streaming, context management, and tool calling.
+  - **Function `create_sample_tools()`**: Create sample tools for demonstration.
+  - **Function `__init__()`**: Initialize advanced chat system.
+  - **Function `count()`**: Count tokens in text.
+  - **Function `count_messages()`**: Count tokens in a message list.
+  - **Function `fits_in_context()`**: Check if message list + new message fits in context window.
+  - **Function `trim_history()`**: Trim message history to fit within token limit.
+  - **Function `to_dict()`**: Convert to dictionary format for API.
+  - **Function `__init__()`**: Initialize advanced chat system.
+  - **Function `_init_database()`**: Initialize SQLite database for chat persistence.
+  - **Function `add_system_prompt()`**: Add or update system prompt.
+  - **Function `add_message()`**: Add a message to conversation history.
+  - **Function `get_conversation_history()`**: Get conversation history, optionally trimmed to fit token limit.
+  - **Function `register_tool()`**: Register a tool/function for tool calling.
+  - **Function `get_tool_schemas()`**: Get tool schemas in API format.
+  - **Function `handle_tool_call()`**: Execute a tool call and return result.
+  - **Function `stream_response()`**: Stream a response token-by-token.
+  - **Function `get_response()`**: Get a response from the chat system.
+  - **Function `regenerate_response()`**: Regenerate the last response (retry with same input).
+  - **Function `get_alternatives()`**: Get alternative responses for the last user message.
+  - **Function `edit_message()`**: Edit a message in the conversation.
+  - **Function `search_history()`**: Search conversation history for relevant messages.
+  - **Function `export_conversation()`**: Export conversation in specified format.
+  - **Function `get_stats()`**: Get conversation statistics.
+  - **Function `clear_history()`**: Clear conversation history (keeping system message if present).
+  - **Function `_generate_cache_key()`**: Generate cache key for a message.
+  - **Function `save_to_db()`**: Save conversation to database.
+  - **Function `load_from_db()`**: Load conversation from database.
 
 ### File: `core_ai\src\ai_assistant\ai\advanced_feedback_learning.py`
-- **Class `FeedbackType`**: Orchestrates logic for this module.
-- **Class `ResponseQuality`**: Orchestrates logic for this module.
-- **Class `FeedbackEntry`**: Orchestrates logic for this module.
-- **Class `PreferencePair`**: Orchestrates logic for this module.
-- **Class `ResponseMetrics`**: Orchestrates logic for this module.
-- **Class `RewardModel`**: Orchestrates logic for this module.
-- **Class `DirectPreferenceOptimizer`**: Orchestrates logic for this module.
-- **Class `FeedbackCollector`**: Orchestrates logic for this module.
-- **Class `AdaptiveLearningEngine`**: Orchestrates logic for this module.
-- **Class `ConceptDriftDetector`**: Orchestrates logic for this module.
-  - **Function `example_usage()`**: Internal helper or main execution logic.
-  - **Function `to_dict()`**: Internal helper or main execution logic.
-  - **Function `overall_score()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_initialize_weights()`**: Internal helper or main execution logic.
-  - **Function `extract_features()`**: Internal helper or main execution logic.
-  - **Function `compute_reward()`**: Internal helper or main execution logic.
-  - **Function `update_from_preference()`**: Internal helper or main execution logic.
-  - **Function `get_preference_accuracy()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `compute_dpo_loss()`**: Internal helper or main execution logic.
-  - **Function `add_preference()`**: Internal helper or main execution logic.
-  - **Function `get_training_signal()`**: Internal helper or main execution logic.
-  - **Function `_extract_patterns()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `record_feedback()`**: Internal helper or main execution logic.
-  - **Function `record_preference_pair()`**: Internal helper or main execution logic.
-  - **Function `get_recent_feedback()`**: Internal helper or main execution logic.
-  - **Function `mark_processed()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `record_interaction()`**: Internal helper or main execution logic.
-  - **Function `process_thumbs_feedback()`**: Internal helper or main execution logic.
-  - **Function `process_preference_comparison()`**: Internal helper or main execution logic.
-  - **Function `collect_feedback()`**: Internal helper or main execution logic.
-  - **Function `collect_preference_pair()`**: Internal helper or main execution logic.
-  - **Function `get_learning_stats()`**: Internal helper or main execution logic.
-  - **Function `_get_performance_trend()`**: Internal helper or main execution logic.
-  - **Function `_background_learning()`**: Internal helper or main execution logic.
-  - **Function `_update_from_feedback()`**: Internal helper or main execution logic.
-  - **Function `shutdown()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `check_drift()`**: Internal helper or main execution logic.
-  - **Function `is_drift_detected()`**: Internal helper or main execution logic.
+- **Class `FeedbackType`**: Types of feedback
+- **Class `ResponseQuality`**: Quality levels for responses
+- **Class `FeedbackEntry`**: Single feedback entry
+- **Class `PreferencePair`**: Pair of responses for preference learning
+- **Class `ResponseMetrics`**: Metrics for evaluating response quality
+- **Class `RewardModel`**: Reward model trained on human preferences Uses implicit reward from preference comparisons
+- **Class `DirectPreferenceOptimizer`**: Direct Preference Optimization (DPO) implementation Bypasses explicit reward modeling for more stable training
+- **Class `FeedbackCollector`**: Collects and manages user feedback
+- **Class `AdaptiveLearningEngine`**: Main engine coordinating all learning components Implements continuous learning with concept drift detection
+- **Class `ConceptDriftDetector`**: Detects concept drift in user preferences using ADWIN algorithm (Adaptive Windowing)
+  - **Function `example_usage()`**: Demonstrate usage of the feedback learning system
+  - **Function `to_dict()`**: Signature: (self)
+  - **Function `overall_score()`**: Compute weighted overall score
+  - **Function `__init__()`**: Signature: (self, delta)
+  - **Function `_initialize_weights()`**: Initialize feature weights for reward calculation
+  - **Function `extract_features()`**: Extract features from prompt-response pair
+  - **Function `compute_reward()`**: Compute reward score for a response Uses learned weights from feedback
+  - **Function `update_from_preference()`**: Update reward model based on preference comparison Uses gradient-based update similar to DPO
+  - **Function `get_preference_accuracy()`**: Calculate how well the reward model predicts preferences
+  - **Function `__init__()`**: Signature: (self, delta)
+  - **Function `compute_dpo_loss()`**: Compute DPO loss as per Rafailov et al., 2023
+  - **Function `add_preference()`**: Add preference pair to training data
+  - **Function `get_training_signal()`**: Get signal for updating language model policy
+  - **Function `_extract_patterns()`**: Extract common patterns from responses
+  - **Function `__init__()`**: Signature: (self, delta)
+  - **Function `_init_database()`**: Initialize feedback database
+  - **Function `record_feedback()`**: Record user feedback
+  - **Function `record_preference_pair()`**: Record preference comparison
+  - **Function `get_recent_feedback()`**: Get recent unprocessed feedback
+  - **Function `mark_processed()`**: Mark feedback as processed
+  - **Function `__init__()`**: Signature: (self, delta)
+  - **Function `record_interaction()`**: Record an interaction for potential feedback
+  - **Function `process_thumbs_feedback()`**: Process thumbs up/down feedback
+  - **Function `process_preference_comparison()`**: Process A/B preference comparison
+  - **Function `collect_feedback()`**: Collect feedback (wrapper for compatibility)
+  - **Function `collect_preference_pair()`**: Collect preference pair (wrapper for compatibility)
+  - **Function `get_learning_stats()`**: Get learning system statistics
+  - **Function `_get_performance_trend()`**: Analyze performance trend
+  - **Function `_background_learning()`**: Background thread for continuous learning
+  - **Function `_update_from_feedback()`**: Update models from feedback item
+  - **Function `shutdown()`**: Cleanup resources
+  - **Function `__init__()`**: Signature: (self, delta)
+  - **Function `check_drift()`**: Check if concept drift occurred
+  - **Function `is_drift_detected()`**: Check if drift was recently detected
 
 ### File: `core_ai\src\ai_assistant\ai\anomaly_detection.py`
-- **Class `AnomalyDetector`**: Orchestrates logic for this module.
-  - **Function `example_usage()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `_load_baseline()`**: Internal helper or main execution logic.
-  - **Function `_extract_command_features()`**: Internal helper or main execution logic.
-  - **Function `_extract_voice_features()`**: Internal helper or main execution logic.
-  - **Function `detect_anomaly()`**: Internal helper or main execution logic.
-  - **Function `_detect_statistical()`**: Internal helper or main execution logic.
-  - **Function `_get_feature_names()`**: Internal helper or main execution logic.
-  - **Function `_analyze_anomaly()`**: Internal helper or main execution logic.
-  - **Function `_record_event()`**: Internal helper or main execution logic.
-  - **Function `_generate_alert()`**: Internal helper or main execution logic.
-  - **Function `_update_baseline()`**: Internal helper or main execution logic.
-  - **Function `_extract_system_features()`**: Internal helper or main execution logic.
-  - **Function `train()`**: Internal helper or main execution logic.
-  - **Function `get_alerts()`**: Internal helper or main execution logic.
-  - **Function `acknowledge_alert()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
+- **Class `AnomalyDetector`**: Detects anomalous behavior patterns
+  - **Function `example_usage()`**: Demonstrate anomaly detection
+  - **Function `__init__()`**: Signature: (self, db_path, contamination)
+  - **Function `_init_database()`**: Initialize database
+  - **Function `_load_baseline()`**: Load baseline statistics
+  - **Function `_extract_command_features()`**: Extract features from command event
+  - **Function `_extract_voice_features()`**: Extract features from voice event
+  - **Function `detect_anomaly()`**: Detect if event is anomalous
+  - **Function `_detect_statistical()`**: Statistical anomaly detection
+  - **Function `_get_feature_names()`**: Get feature names for event type
+  - **Function `_analyze_anomaly()`**: Analyze why event is anomalous
+  - **Function `_record_event()`**: Record event in database
+  - **Function `_generate_alert()`**: Generate security alert
+  - **Function `_update_baseline()`**: Update baseline statistics
+  - **Function `_extract_system_features()`**: Extract system performance features
+  - **Function `train()`**: Train anomaly detection model
+  - **Function `get_alerts()`**: Get recent alerts
+  - **Function `acknowledge_alert()`**: Mark alert as acknowledged
+  - **Function `get_stats()`**: Get anomaly detection statistics
 
 ### File: `core_ai\src\ai_assistant\ai\auto_learning_router.py`
-- **Class `LearningDataRouter`**: Orchestrates logic for this module.
-  - **Function `integrate_with_chat_system()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_initialize_systems()`**: Internal helper or main execution logic.
-  - **Function `route_conversation()`**: Internal helper or main execution logic.
-  - **Function `_route_to_behavior_clustering()`**: Internal helper or main execution logic.
-  - **Function `_route_to_conversation_clustering()`**: Internal helper or main execution logic.
-  - **Function `_route_to_command_sequences()`**: Internal helper or main execution logic.
-  - **Function `_route_to_command_predictor()`**: Internal helper or main execution logic.
-  - **Function `_route_to_context_generator()`**: Internal helper or main execution logic.
-  - **Function `_route_to_smart_commands()`**: Internal helper or main execution logic.
-  - **Function `_route_to_knowledge_graph()`**: Internal helper or main execution logic.
-  - **Function `_route_to_query_cache()`**: Internal helper or main execution logic.
-  - **Function `get_routing_stats()`**: Internal helper or main execution logic.
+- **Class `LearningDataRouter`**: Automatically routes new conversation data to appropriate learning systems Integrate this into your chat interface
+  - **Function `integrate_with_chat_system()`**: Example of how to integrate the router into BOTH chat and voice systems SAME LEARNING, SAME MEMORY for both interfaces
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `_initialize_systems()`**: Initialize all learning systems
+  - **Function `route_conversation()`**: Route a conversation to appropriate learning systems WORKS FOR BOTH CHAT AND VOICE - Same learning, same memory
+  - **Function `_route_to_behavior_clustering()`**: Route to behavior clustering system
+  - **Function `_route_to_conversation_clustering()`**: Route to conversation clustering
+  - **Function `_route_to_command_sequences()`**: Route to command sequence learner
+  - **Function `_route_to_command_predictor()`**: Route to command success predictor
+  - **Function `_route_to_context_generator()`**: Route to context-aware response generator
+  - **Function `_route_to_smart_commands()`**: Route to smart command predictor
+  - **Function `_route_to_knowledge_graph()`**: Route to knowledge graph - extract facts
+  - **Function `_route_to_query_cache()`**: Route to query cache
+  - **Function `get_routing_stats()`**: Get statistics about data routing
 
 ### File: `core_ai\src\ai_assistant\ai\behavior_clustering.py`
-- **Class `BehaviorClusterer`**: Orchestrates logic for this module.
-  - **Function `example_usage()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `_load_clusters()`**: Internal helper or main execution logic.
-  - **Function `extract_session_features()`**: Internal helper or main execution logic.
-  - **Function `add_session()`**: Internal helper or main execution logic.
-  - **Function `cluster_sessions()`**: Internal helper or main execution logic.
-  - **Function `_analyze_clusters()`**: Internal helper or main execution logic.
-  - **Function `_determine_cluster_type()`**: Internal helper or main execution logic.
-  - **Function `classify_user()`**: Internal helper or main execution logic.
-  - **Function `get_cluster_insights()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
+- **Class `BehaviorClusterer`**: Clusters user behavior patterns
+  - **Function `example_usage()`**: Demonstrate behavior clustering
+  - **Function `__init__()`**: Signature: (self, db_path, n_clusters)
+  - **Function `_init_database()`**: Initialize database
+  - **Function `_load_clusters()`**: Load cluster profiles
+  - **Function `extract_session_features()`**: Extract features from session
+  - **Function `add_session()`**: Add session to database
+  - **Function `cluster_sessions()`**: Cluster all sessions using K-Means
+  - **Function `_analyze_clusters()`**: Analyze cluster characteristics
+  - **Function `_determine_cluster_type()`**: Determine cluster type from characteristics
+  - **Function `classify_user()`**: Classify user based on their session history
+  - **Function `get_cluster_insights()`**: Get insights about all clusters
+  - **Function `get_stats()`**: Get clustering statistics
 
 ### File: `core_ai\src\ai_assistant\ai\causal_inference.py`
-- **Class `CausalInference`**: Orchestrates logic for this module.
-  - **Function `example_usage()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `_load_causal_graph()`**: Internal helper or main execution logic.
-  - **Function `add_causal_edge()`**: Internal helper or main execution logic.
-  - **Function `learn_causal_structure()`**: Internal helper or main execution logic.
-  - **Function `get_parents()`**: Internal helper or main execution logic.
-  - **Function `get_children()`**: Internal helper or main execution logic.
-  - **Function `get_ancestors()`**: Internal helper or main execution logic.
-  - **Function `get_descendants()`**: Internal helper or main execution logic.
-  - **Function `backdoor_adjustment()`**: Internal helper or main execution logic.
-  - **Function `estimate_causal_effect()`**: Internal helper or main execution logic.
-  - **Function `do_intervention()`**: Internal helper or main execution logic.
-  - **Function `counterfactual()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
+- **Class `CausalInference`**: Causal inference for understanding cause-effect
+  - **Function `example_usage()`**: Demonstrate causal inference
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `_init_database()`**: Initialize database
+  - **Function `_load_causal_graph()`**: Load causal graph from database
+  - **Function `add_causal_edge()`**: Add causal edge to graph
+  - **Function `learn_causal_structure()`**: Learn causal structure from observational data Uses correlation + temporal ordering as proxy for causation
+  - **Function `get_parents()`**: Get direct causes of variable
+  - **Function `get_children()`**: Get direct effects of variable
+  - **Function `get_ancestors()`**: Get all ancestors (transitive causes)
+  - **Function `get_descendants()`**: Get all descendants (transitive effects)
+  - **Function `backdoor_adjustment()`**: Find variables to adjust for (backdoor criterion) To estimate causal effect of treatment on outcome
+  - **Function `estimate_causal_effect()`**: Estimate causal effect of treatment on outcome Using backdoor adjustment
+  - **Function `do_intervention()`**: Simulate intervention (do-calculus) Predict effects of setting variable to value
+  - **Function `counterfactual()`**: Counterfactual reasoning: what would happen if...?
+  - **Function `get_stats()`**: Get causal inference statistics
 
 ### File: `core_ai\src\ai_assistant\ai\command_predictor.py`
-- **Class `CommandSuccessPredictor`**: Orchestrates logic for this module.
-  - **Function `example_usage()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `_load_stats()`**: Internal helper or main execution logic.
-  - **Function `_serialize_context()`**: Internal helper or main execution logic.
-  - **Function `_extract_features()`**: Internal helper or main execution logic.
-  - **Function `predict_success()`**: Internal helper or main execution logic.
-  - **Function `_predict_rule_based()`**: Internal helper or main execution logic.
-  - **Function `_generate_warnings()`**: Internal helper or main execution logic.
-  - **Function `record_execution()`**: Internal helper or main execution logic.
-  - **Function `train()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
+- **Class `CommandSuccessPredictor`**: Predicts command success probability using ML
+  - **Function `example_usage()`**: Demonstrate command success prediction
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `_init_database()`**: Initialize database
+  - **Function `_load_stats()`**: Load historical statistics
+  - **Function `_serialize_context()`**: Serialize context to string
+  - **Function `_extract_features()`**: Extract features for ML model
+  - **Function `predict_success()`**: Predict if command will succeed
+  - **Function `_predict_rule_based()`**: Rule-based prediction fallback
+  - **Function `_generate_warnings()`**: Generate warnings based on prediction
+  - **Function `record_execution()`**: Record command execution result
+  - **Function `train()`**: Train ML model on historical data
+  - **Function `get_stats()`**: Get prediction statistics
 
 ### File: `core_ai\src\ai_assistant\ai\command_sequences.py`
-- **Class `CommandMarkovChain`**: Orchestrates logic for this module.
-  - **Function `example_usage()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `_load_transitions()`**: Internal helper or main execution logic.
-  - **Function `_serialize_context()`**: Internal helper or main execution logic.
-  - **Function `_get_state()`**: Internal helper or main execution logic.
-  - **Function `record_command()`**: Internal helper or main execution logic.
-  - **Function `predict_next()`**: Internal helper or main execution logic.
-  - **Function `get_common_sequences()`**: Internal helper or main execution logic.
-  - **Function `validate_prediction()`**: Internal helper or main execution logic.
-  - **Function `get_accuracy_stats()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
-  - **Function `clear_old_data()`**: Internal helper or main execution logic.
+- **Class `CommandMarkovChain`**: Predicts next command using Markov chain models
+  - **Function `example_usage()`**: Demonstrate command sequence prediction
+  - **Function `__init__()`**: Signature: (self, db_path, order, context_aware)
+  - **Function `_init_database()`**: Initialize database
+  - **Function `_load_transitions()`**: Load transition matrix from database
+  - **Function `_serialize_context()`**: Serialize context dict to string key
+  - **Function `_get_state()`**: Create state from command history
+  - **Function `record_command()`**: Record a command in the sequence
+  - **Function `predict_next()`**: Predict next likely commands
+  - **Function `get_common_sequences()`**: Find common command sequences
+  - **Function `validate_prediction()`**: Record prediction accuracy
+  - **Function `get_accuracy_stats()`**: Get prediction accuracy statistics
+  - **Function `get_stats()`**: Get command sequence statistics (alias for get_accuracy_stats)
+  - **Function `clear_old_data()`**: Remove old command sequences
 
 ### File: `core_ai\src\ai_assistant\ai\context_aware_response.py`
-- **Class `ContextAwareResponseGenerator`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `_load_templates()`**: Internal helper or main execution logic.
-  - **Function `update_context()`**: Internal helper or main execution logic.
-  - **Function `generate_response()`**: Internal helper or main execution logic.
-  - **Function `_extract_intent()`**: Internal helper or main execution logic.
-  - **Function `_get_conversation_context()`**: Internal helper or main execution logic.
-  - **Function `_generate_contextual_response()`**: Internal helper or main execution logic.
-  - **Function `_log_conversation()`**: Internal helper or main execution logic.
-  - **Function `learn_from_feedback()`**: Internal helper or main execution logic.
-  - **Function `_analyze_feedback_patterns()`**: Internal helper or main execution logic.
-  - **Function `get_personalization_suggestions()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
+- **Class `ContextAwareResponseGenerator`**: Application-level context-aware response generation Generates intelligent responses based on conversation context
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `_init_database()`**: Initialize database
+  - **Function `_load_templates()`**: Load response templates
+  - **Function `update_context()`**: Update conversation context
+  - **Function `generate_response()`**: Generate context-aware response
+  - **Function `_extract_intent()`**: Extract user intent from message
+  - **Function `_get_conversation_context()`**: Get current conversation context
+  - **Function `_generate_contextual_response()`**: Generate response with context awareness
+  - **Function `_log_conversation()`**: Log conversation to database
+  - **Function `learn_from_feedback()`**: Learn from user feedback on responses
+  - **Function `_analyze_feedback_patterns()`**: Analyze patterns in user feedback
+  - **Function `get_personalization_suggestions()`**: Get personalization suggestions based on conversation history
+  - **Function `get_stats()`**: Get statistics
 
 ### File: `core_ai\src\ai_assistant\ai\contrastive_learning.py`
-- **Class `ContrastiveLearner`**: Orchestrates logic for this module.
-  - **Function `example_usage()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `generate_pairs()`**: Internal helper or main execution logic.
-  - **Function `nt_xent_loss()`**: Internal helper or main execution logic.
-  - **Function `triplet_loss()`**: Internal helper or main execution logic.
-  - **Function `train_batch()`**: Internal helper or main execution logic.
-  - **Function `train_epoch()`**: Internal helper or main execution logic.
-  - **Function `encode()`**: Internal helper or main execution logic.
-  - **Function `save_embedding()`**: Internal helper or main execution logic.
-  - **Function `find_similar()`**: Internal helper or main execution logic.
-  - **Function `evaluate_embedding_quality()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
+- **Class `ContrastiveLearner`**: Contrastive learning for better embeddings
+  - **Function `example_usage()`**: Demonstrate contrastive learning
+  - **Function `__init__()`**: Signature: (self, db_path, embedding_dim, temperature)
+  - **Function `_init_database()`**: Initialize database
+  - **Function `generate_pairs()`**: Generate contrastive pairs (anchor, positive, negative)
+  - **Function `nt_xent_loss()`**: NT-Xent (Normalized Temperature-scaled Cross Entropy) Loss Used in SimCLR
+  - **Function `triplet_loss()`**: Triplet loss: ||anchor - positive||^2 - ||anchor - negative||^2 + margin
+  - **Function `train_batch()`**: Train on batch of contrastive pairs
+  - **Function `train_epoch()`**: Train one epoch on samples
+  - **Function `encode()`**: Encode features to embeddings
+  - **Function `save_embedding()`**: Save embedding to database
+  - **Function `find_similar()`**: Find similar samples by embedding
+  - **Function `evaluate_embedding_quality()`**: Evaluate embedding quality using retrieval metrics
+  - **Function `get_stats()`**: Get learning statistics
 
 ### File: `core_ai\src\ai_assistant\ai\conversational_ai.py`
   - *(Documentation parsing failed for this file)*
 
 ### File: `core_ai\src\ai_assistant\ai\conversational_ai_commands.py`
-  - **Function `_try_execute_command()`**: Internal helper or main execution logic.
-  - **Function `_execute_open_command()`**: Internal helper or main execution logic.
-  - **Function `_execute_close_command()`**: Internal helper or main execution logic.
-  - **Function `_execute_search_command()`**: Internal helper or main execution logic.
-  - **Function `_execute_play_command()`**: Internal helper or main execution logic.
-  - **Function `_execute_create_document()`**: Internal helper or main execution logic.
-  - **Function `_execute_volume_command()`**: Internal helper or main execution logic.
-  - **Function `_execute_settings_command()`**: Internal helper or main execution logic.
+  - **Function `_try_execute_command()`**: Try to execute actionable commands and return result.
+  - **Function `_execute_open_command()`**: Execute open application commands.
+  - **Function `_execute_close_command()`**: Execute close application commands.
+  - **Function `_execute_search_command()`**: Execute Google search commands.
+  - **Function `_execute_play_command()`**: Execute play music commands.
+  - **Function `_execute_create_document()`**: Execute document creation commands.
+  - **Function `_execute_volume_command()`**: Execute volume control commands.
+  - **Function `_execute_settings_command()`**: Execute system settings commands.
 
 ### File: `core_ai\src\ai_assistant\ai\conversation_clustering.py`
-- **Class `ConversationClusterer`**: Orchestrates logic for this module.
-  - **Function `example_usage()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `preprocess_text()`**: Internal helper or main execution logic.
-  - **Function `add_conversation()`**: Internal helper or main execution logic.
-  - **Function `cluster_conversations()`**: Internal helper or main execution logic.
-  - **Function `_analyze_clusters()`**: Internal helper or main execution logic.
-  - **Function `_extract_keywords()`**: Internal helper or main execution logic.
-  - **Function `_generate_cluster_name()`**: Internal helper or main execution logic.
-  - **Function `discover_topics()`**: Internal helper or main execution logic.
-  - **Function `find_similar_conversations()`**: Internal helper or main execution logic.
-  - **Function `_find_similar_fallback()`**: Internal helper or main execution logic.
-  - **Function `get_cluster_summary()`**: Internal helper or main execution logic.
-  - **Function `get_cluster_conversations()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
+- **Class `ConversationClusterer`**: Clusters conversations by topics
+  - **Function `example_usage()`**: Demonstrate conversation clustering
+  - **Function `__init__()`**: Signature: (self, db_path, n_clusters, n_topics)
+  - **Function `_init_database()`**: Initialize database
+  - **Function `preprocess_text()`**: Clean and normalize text
+  - **Function `add_conversation()`**: Add conversation to database
+  - **Function `cluster_conversations()`**: Cluster conversations using TF-IDF + K-Means
+  - **Function `_analyze_clusters()`**: Analyze cluster topics
+  - **Function `_extract_keywords()`**: Extract top keywords from texts
+  - **Function `_generate_cluster_name()`**: Generate readable cluster name from keywords
+  - **Function `discover_topics()`**: Discover latent topics using LDA
+  - **Function `find_similar_conversations()`**: Find conversations similar to query
+  - **Function `_find_similar_fallback()`**: Fallback similarity using keyword overlap
+  - **Function `get_cluster_summary()`**: Get summary of a cluster
+  - **Function `get_cluster_conversations()`**: Get conversations in a cluster
+  - **Function `get_stats()`**: Get clustering statistics
 
 ### File: `core_ai\src\ai_assistant\ai\domain_embeddings.py`
-- **Class `DomainExample`**: Orchestrates logic for this module.
-- **Class `DomainAdapter`**: Orchestrates logic for this module.
-- **Class `DomainAdaptedEmbeddings`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `forward()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `register_domain()`**: Internal helper or main execution logic.
-  - **Function `add_domain_example()`**: Internal helper or main execution logic.
-  - **Function `get_base_embedding()`**: Internal helper or main execution logic.
-  - **Function `get_adapted_embedding()`**: Internal helper or main execution logic.
-  - **Function `train_adapter()`**: Internal helper or main execution logic.
-  - **Function `compute_domain_similarity()`**: Internal helper or main execution logic.
-  - **Function `detect_domain()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
+- **Class `DomainExample`**: Training example for domain adaptation
+- **Class `DomainAdapter`**: Adapter network for domain-specific fine-tuning
+- **Class `DomainAdaptedEmbeddings`**: Domain-adapted embeddings system Fine-tunes pre-trained embeddings for specific domains
+  - **Function `__init__()`**: Signature: (self, base_model, adapter_dim, db_path)
+  - **Function `forward()`**: Adapter forward pass
+  - **Function `__init__()`**: Signature: (self, base_model, adapter_dim, db_path)
+  - **Function `_init_database()`**: Initialize database
+  - **Function `register_domain()`**: Register a new domain
+  - **Function `add_domain_example()`**: Add training example for domain adaptation
+  - **Function `get_base_embedding()`**: Get base embedding from pre-trained model
+  - **Function `get_adapted_embedding()`**: Get domain-adapted embedding
+  - **Function `train_adapter()`**: Train adapter on domain examples
+  - **Function `compute_domain_similarity()`**: Compute similarity between text and domain
+  - **Function `detect_domain()`**: Detect most likely domain for text
+  - **Function `get_stats()`**: Get statistics
 
 ### File: `core_ai\src\ai_assistant\ai\enhanced_learning.py`
-- **Class `Skill`**: Orchestrates logic for this module.
-- **Class `BehaviorPattern`**: Orchestrates logic for this module.
-- **Class `KnowledgeNode`**: Orchestrates logic for this module.
-- **Class `EnhancedLearningSystem`**: Orchestrates logic for this module.
-- **Class `BehavioralLearner`**: Orchestrates logic for this module.
-- **Class `SkillAcquisitionManager`**: Orchestrates logic for this module.
-- **Class `PredictiveActionEngine`**: Orchestrates logic for this module.
-- **Class `PersonalKnowledgeGraph`**: Orchestrates logic for this module.
-  - **Function `main()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `init_database()`**: Internal helper or main execution logic.
-  - **Function `learn_from_interaction()`**: Internal helper or main execution logic.
-  - **Function `get_predictions()`**: Internal helper or main execution logic.
-  - **Function `get_skill_recommendations()`**: Internal helper or main execution logic.
-  - **Function `get_knowledge_insights()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `record_behavior()`**: Internal helper or main execution logic.
-  - **Function `_generate_pattern_id()`**: Internal helper or main execution logic.
-  - **Function `get_behavior_patterns()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `update_skill_usage()`**: Internal helper or main execution logic.
-  - **Function `get_skills_by_category()`**: Internal helper or main execution logic.
-  - **Function `get_skill_recommendations()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `predict_actions()`**: Internal helper or main execution logic.
-  - **Function `_calculate_context_similarity()`**: Internal helper or main execution logic.
-  - **Function `update_predictions()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `load_graph()`**: Internal helper or main execution logic.
-  - **Function `add_knowledge_node()`**: Internal helper or main execution logic.
-  - **Function `add_relationship()`**: Internal helper or main execution logic.
-  - **Function `update_from_interaction()`**: Internal helper or main execution logic.
-  - **Function `find_related_concepts()`**: Internal helper or main execution logic.
-  - **Function `generate_insights()`**: Internal helper or main execution logic.
-  - **Function `visualize_graph()`**: Internal helper or main execution logic.
+- **Class `Skill`**: Represents a learned skill
+- **Class `BehaviorPattern`**: Represents a learned behavior pattern
+- **Class `KnowledgeNode`**: Node in the personal knowledge graph
+- **Class `EnhancedLearningSystem`**: Main learning system coordinating all learning components
+- **Class `BehavioralLearner`**: Learns from user behavior patterns
+- **Class `SkillAcquisitionManager`**: Manages skill learning and development
+- **Class `PredictiveActionEngine`**: Predicts likely user actions based on context
+- **Class `PersonalKnowledgeGraph`**: Manages personal knowledge graph and relationships
+  - **Function `main()`**: Example usage of the Enhanced Learning System
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `init_database()`**: Initialize the learning database
+  - **Function `learn_from_interaction()`**: Learn from user interactions
+  - **Function `get_predictions()`**: Get predictions for current context
+  - **Function `get_skill_recommendations()`**: Get recommendations for skills to develop
+  - **Function `get_knowledge_insights()`**: Get insights from knowledge graph
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `record_behavior()`**: Record a behavior instance
+  - **Function `_generate_pattern_id()`**: Generate a unique pattern ID from context and action
+  - **Function `get_behavior_patterns()`**: Get learned behavior patterns above confidence threshold
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `update_skill_usage()`**: Update skill usage statistics
+  - **Function `get_skills_by_category()`**: Get skills, optionally filtered by category
+  - **Function `get_skill_recommendations()`**: Get recommendations for skills to develop
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `predict_actions()`**: Predict likely actions for current context
+  - **Function `_calculate_context_similarity()`**: Calculate similarity between current context and historical patterns
+  - **Function `update_predictions()`**: Update prediction accuracy
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `load_graph()`**: Load knowledge graph from database
+  - **Function `add_knowledge_node()`**: Add a new knowledge node
+  - **Function `add_relationship()`**: Add a relationship between nodes
+  - **Function `update_from_interaction()`**: Update knowledge graph from interaction
+  - **Function `find_related_concepts()`**: Find concepts related to given concept
+  - **Function `generate_insights()`**: Generate insights from the knowledge graph
+  - **Function `visualize_graph()`**: Create a visualization of the knowledge graph
 
 ### File: `core_ai\src\ai_assistant\ai\explainability.py`
-- **Class `ExplainabilityEngine`**: Orchestrates logic for this module.
-  - **Function `example_usage()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `set_feature_names()`**: Internal helper or main execution logic.
-  - **Function `compute_feature_importance()`**: Internal helper or main execution logic.
-  - **Function `_permutation_importance()`**: Internal helper or main execution logic.
-  - **Function `generate_counterfactual()`**: Internal helper or main execution logic.
-  - **Function `find_similar_examples()`**: Internal helper or main execution logic.
-  - **Function `generate_natural_language_explanation()`**: Internal helper or main execution logic.
-  - **Function `explain_prediction()`**: Internal helper or main execution logic.
-  - **Function `get_feature_importance_summary()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
+- **Class `ExplainabilityEngine`**: Provides interpretable explanations for predictions
+  - **Function `example_usage()`**: Demonstrate explainability
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `_init_database()`**: Initialize database
+  - **Function `set_feature_names()`**: Set feature names for interpretability
+  - **Function `compute_feature_importance()`**: Compute feature importance scores (SHAP-style)
+  - **Function `_permutation_importance()`**: Compute permutation importance
+  - **Function `generate_counterfactual()`**: Generate counterfactual: minimal changes to flip prediction
+  - **Function `find_similar_examples()`**: Find similar past examples (case-based reasoning)
+  - **Function `generate_natural_language_explanation()`**: Generate human-readable explanation
+  - **Function `explain_prediction()`**: Generate comprehensive explanation for a prediction
+  - **Function `get_feature_importance_summary()`**: Get aggregate feature importance across all predictions
+  - **Function `get_stats()`**: Get explainability statistics
 
 ### File: `core_ai\src\ai_assistant\ai\federated_learning.py`
-- **Class `ClientUpdate`**: Orchestrates logic for this module.
-- **Class `FederatedRound`**: Orchestrates logic for this module.
-- **Class `FederatedClient`**: Orchestrates logic for this module.
-- **Class `FederatedServer`**: Orchestrates logic for this module.
-- **Class `SecureAggregation`**: Orchestrates logic for this module.
-  - **Function `example_federated_learning()`**: Internal helper or main execution logic.
-- **Class `FederatedModel`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `set_model_parameters()`**: Internal helper or main execution logic.
-  - **Function `train_local_model()`**: Internal helper or main execution logic.
-  - **Function `_simple_train()`**: Internal helper or main execution logic.
-  - **Function `_empty_update()`**: Internal helper or main execution logic.
-  - **Function `add_local_data()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `register_client()`**: Internal helper or main execution logic.
-  - **Function `get_global_parameters()`**: Internal helper or main execution logic.
-  - **Function `federated_averaging()`**: Internal helper or main execution logic.
-  - **Function `federated_round()`**: Internal helper or main execution logic.
-  - **Function `_compute_convergence_delta()`**: Internal helper or main execution logic.
-  - **Function `_save_client_update()`**: Internal helper or main execution logic.
-  - **Function `_save_round()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `clip_update()`**: Internal helper or main execution logic.
-  - **Function `add_noise()`**: Internal helper or main execution logic.
-  - **Function `secure_aggregate()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `forward()`**: Internal helper or main execution logic.
+- **Class `ClientUpdate`**: Update from a federated learning client
+- **Class `FederatedRound`**: Single round of federated learning
+- **Class `FederatedClient`**: Client in federated learning system Trains on local data without sharing raw data
+- **Class `FederatedServer`**: Central server coordinating federated learning Aggregates client updates without accessing raw data
+- **Class `SecureAggregation`**: Secure aggregation for differential privacy Adds noise to protect individual client contributions
+  - **Function `example_federated_learning()`**: Example of federated learning with multiple clients
+- **Class `FederatedModel`**: Core component.
+  - **Function `__init__()`**: Signature: (self, noise_scale, clipping_norm)
+  - **Function `set_model_parameters()`**: Update local model with global parameters
+  - **Function `train_local_model()`**: Train model on local data
+  - **Function `_simple_train()`**: Simplified training for fallback
+  - **Function `_empty_update()`**: Return empty update when no data
+  - **Function `add_local_data()`**: Add more data to client's local dataset
+  - **Function `__init__()`**: Signature: (self, noise_scale, clipping_norm)
+  - **Function `_init_database()`**: Initialize database for federated learning
+  - **Function `register_client()`**: Register a new client
+  - **Function `get_global_parameters()`**: Get current global model parameters
+  - **Function `federated_averaging()`**: FedAvg: Aggregate client updates weighted by number of samples
+  - **Function `federated_round()`**: Execute one round of federated learning
+  - **Function `_compute_convergence_delta()`**: Compute parameter change between rounds
+  - **Function `_save_client_update()`**: Save client update to database
+  - **Function `_save_round()`**: Save round summary to database
+  - **Function `get_stats()`**: Get federated learning statistics
+  - **Function `__init__()`**: Signature: (self, noise_scale, clipping_norm)
+  - **Function `clip_update()`**: Clip update to bounded norm
+  - **Function `add_noise()`**: Add Gaussian noise for differential privacy
+  - **Function `secure_aggregate()`**: Securely aggregate updates with differential privacy
+  - **Function `__init__()`**: Signature: (self, noise_scale, clipping_norm)
+  - **Function `forward()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\ai\full_rl_system.py`
-- **Class `Experience`**: Orchestrates logic for this module.
-- **Class `Episode`**: Orchestrates logic for this module.
-- **Class `PPOAgent`**: Orchestrates logic for this module.
-- **Class `A3CWorker`**: Orchestrates logic for this module.
-- **Class `RLEnvironmentWrapper`**: Orchestrates logic for this module.
-  - **Function `train_ppo_agent()`**: Internal helper or main execution logic.
-- **Class `ActorCriticNetwork`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `select_action()`**: Internal helper or main execution logic.
-  - **Function `store_transition()`**: Internal helper or main execution logic.
-  - **Function `compute_returns()`**: Internal helper or main execution logic.
-  - **Function `update()`**: Internal helper or main execution logic.
-  - **Function `save_episode()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `sync_with_global()`**: Internal helper or main execution logic.
-  - **Function `compute_gradient()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `reset()`**: Internal helper or main execution logic.
-  - **Function `step()`**: Internal helper or main execution logic.
-  - **Function `encode_command()`**: Internal helper or main execution logic.
-  - **Function `decode_action()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `forward()`**: Internal helper or main execution logic.
-  - **Function `act()`**: Internal helper or main execution logic.
-  - **Function `evaluate()`**: Internal helper or main execution logic.
+- **Class `Experience`**: Single experience tuple for RL
+- **Class `Episode`**: Complete episode trajectory
+- **Class `PPOAgent`**: Proximal Policy Optimization agent State-of-the-art policy gradient method with clipped objective
+- **Class `A3CWorker`**: Asynchronous Advantage Actor-Critic Worker For parallel training across multiple environments
+- **Class `RLEnvironmentWrapper`**: Wrapper for converting assistant tasks into RL environments Maps commands/queries to states and actions
+  - **Function `train_ppo_agent()`**: Train PPO agent on environment
+- **Class `ActorCriticNetwork`**: Core component.
+  - **Function `__init__()`**: Signature: (self, state_dim, action_dim)
+  - **Function `_init_database()`**: Initialize SQLite database for experience storage
+  - **Function `select_action()`**: Select action using current policy Returns: (action, log_prob, state_value)
+  - **Function `store_transition()`**: Store experience in memory
+  - **Function `compute_returns()`**: Compute discounted returns
+  - **Function `update()`**: Update policy using PPO algorithm
+  - **Function `save_episode()`**: Save episode to database
+  - **Function `get_stats()`**: Get agent statistics
+  - **Function `__init__()`**: Signature: (self, state_dim, action_dim)
+  - **Function `sync_with_global()`**: Synchronize local network with global network
+  - **Function `compute_gradient()`**: Compute gradients from trajectory
+  - **Function `__init__()`**: Signature: (self, state_dim, action_dim)
+  - **Function `reset()`**: Reset environment to initial state
+  - **Function `step()`**: Take action in environment Returns: (next_state, reward, done, info)
+  - **Function `encode_command()`**: Encode text command into state vector
+  - **Function `decode_action()`**: Decode action to command
+  - **Function `__init__()`**: Signature: (self, state_dim, action_dim)
+  - **Function `forward()`**: Signature: ()
+  - **Function `act()`**: Signature: ()
+  - **Function `evaluate()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\ai\graph_neural_networks.py`
-- **Class `GraphNeuralNetwork`**: Orchestrates logic for this module.
-- **Class `GraphConvLayer`**: Orchestrates logic for this module.
-- **Class `GraphAttentionLayer`**: Orchestrates logic for this module.
-- **Class `GNNModel`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `add_node()`**: Internal helper or main execution logic.
-  - **Function `add_edge()`**: Internal helper or main execution logic.
-  - **Function `get_adjacency_matrix()`**: Internal helper or main execution logic.
-  - **Function `get_feature_matrix()`**: Internal helper or main execution logic.
-  - **Function `train()`**: Internal helper or main execution logic.
-  - **Function `get_node_embedding()`**: Internal helper or main execution logic.
-  - **Function `predict_link()`**: Internal helper or main execution logic.
-  - **Function `find_similar_nodes()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `forward()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `forward()`**: Internal helper or main execution logic.
-  - **Function `_prepare_attentional_mechanism_input()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `forward()`**: Internal helper or main execution logic.
+- **Class `GraphNeuralNetwork`**: Graph Neural Network system for knowledge graph reasoning
+- **Class `GraphConvLayer`**: Core component.
+- **Class `GraphAttentionLayer`**: Core component.
+- **Class `GNNModel`**: Core component.
+  - **Function `__init__()`**: Signature: (self, node_feature_dim, hidden_dim, output_dim, use_attention, db_path)
+  - **Function `_init_database()`**: Initialize database
+  - **Function `add_node()`**: Add node to graph
+  - **Function `add_edge()`**: Add edge to graph
+  - **Function `get_adjacency_matrix()`**: Get adjacency matrix and node list
+  - **Function `get_feature_matrix()`**: Get node feature matrix
+  - **Function `train()`**: Train GNN model
+  - **Function `get_node_embedding()`**: Get learned embedding for a node
+  - **Function `predict_link()`**: Predict likelihood of link between two nodes
+  - **Function `find_similar_nodes()`**: Find most similar nodes based on embeddings
+  - **Function `get_stats()`**: Get GNN statistics
+  - **Function `__init__()`**: Signature: (self, node_feature_dim, hidden_dim, output_dim, use_attention, db_path)
+  - **Function `forward()`**: Signature: ()
+  - **Function `__init__()`**: Signature: (self, node_feature_dim, hidden_dim, output_dim, use_attention, db_path)
+  - **Function `forward()`**: Signature: ()
+  - **Function `_prepare_attentional_mechanism_input()`**: Signature: ()
+  - **Function `__init__()`**: Signature: (self, node_feature_dim, hidden_dim, output_dim, use_attention, db_path)
+  - **Function `forward()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\ai\historical_rag.py`
-- **Class `HistoricalRAG`**: Orchestrates logic for this module.
-  - **Function `example_usage()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `_load_index()`**: Internal helper or main execution logic.
-  - **Function `add_interaction()`**: Internal helper or main execution logic.
-  - **Function `retrieve_similar()`**: Internal helper or main execution logic.
-  - **Function `_retrieve_fallback()`**: Internal helper or main execution logic.
-  - **Function `_record_retrieval()`**: Internal helper or main execution logic.
-  - **Function `augment_prompt()`**: Internal helper or main execution logic.
-  - **Function `update_feedback()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
+- **Class `HistoricalRAG`**: Retrieval-Augmented Generation using historical interactions
+  - **Function `example_usage()`**: Demonstrate historical RAG
+  - **Function `__init__()`**: Signature: (self, db_path, model_name, embedding_dim)
+  - **Function `_init_database()`**: Initialize database
+  - **Function `_load_index()`**: Load existing interactions into FAISS index
+  - **Function `add_interaction()`**: Add an interaction to the RAG database
+  - **Function `retrieve_similar()`**: Retrieve similar past interactions
+  - **Function `_retrieve_fallback()`**: Fallback retrieval using SQL LIKE
+  - **Function `_record_retrieval()`**: Record retrieval statistics
+  - **Function `augment_prompt()`**: Augment prompt with relevant past examples
+  - **Function `update_feedback()`**: Update success score based on user feedback
+  - **Function `get_stats()`**: Get RAG statistics
 
 ### File: `core_ai\src\ai_assistant\ai\intelligent_responder.py`
-- **Class `IntelligentResponder`**: Orchestrates logic for this module.
-  - **Function `get_responder()`**: Internal helper or main execution logic.
-  - **Function `generate_intelligent_response()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `analyze_input()`**: Internal helper or main execution logic.
-  - **Function `_detect_intent()`**: Internal helper or main execution logic.
-  - **Function `_detect_mood()`**: Internal helper or main execution logic.
-  - **Function `_extract_keywords()`**: Internal helper or main execution logic.
-  - **Function `_detect_urgency()`**: Internal helper or main execution logic.
-  - **Function `generate_response()`**: Internal helper or main execution logic.
-  - **Function `_greeting_response()`**: Internal helper or main execution logic.
-  - **Function `_appreciation_response()`**: Internal helper or main execution logic.
-  - **Function `_complaint_response()`**: Internal helper or main execution logic.
-  - **Function `_question_response()`**: Internal helper or main execution logic.
-  - **Function `_command_acknowledgment()`**: Internal helper or main execution logic.
-  - **Function `_default_response()`**: Internal helper or main execution logic.
+- **Class `IntelligentResponder`**: Generates context-aware, mood-sensitive responses
+  - **Function `get_responder()`**: Get global responder instance
+  - **Function `generate_intelligent_response()`**: Main function to generate intelligent response
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `analyze_input()`**: Analyze user input for intent, mood, urgency, and context
+  - **Function `_detect_intent()`**: Detect primary intent from user input
+  - **Function `_detect_mood()`**: Detect user's emotional state
+  - **Function `_extract_keywords()`**: Extract important keywords
+  - **Function `_detect_urgency()`**: Detect urgency level 1-5
+  - **Function `generate_response()`**: Generate appropriate response based on analysis
+  - **Function `_greeting_response()`**: Generate greeting response
+  - **Function `_appreciation_response()`**: Respond to thanks/appreciation
+  - **Function `_complaint_response()`**: Respond to complaints/problems
+  - **Function `_question_response()`**: Acknowledge questions
+  - **Function `_command_acknowledgment()`**: Acknowledge commands
+  - **Function `_default_response()`**: Default fallback response
 
 ### File: `core_ai\src\ai_assistant\ai\intent_classification.py`
-- **Class `Intent`**: Orchestrates logic for this module.
-- **Class `Entity`**: Orchestrates logic for this module.
-- **Class `IntentClassifier`**: Orchestrates logic for this module.
-- **Class `NamedEntityRecognizer`**: Orchestrates logic for this module.
-  - **Function `example_usage()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_initialize_intents()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `_load_user_patterns()`**: Internal helper or main execution logic.
-  - **Function `_precompute_embeddings()`**: Internal helper or main execution logic.
-  - **Function `classify()`**: Internal helper or main execution logic.
-  - **Function `classify_intent()`**: Internal helper or main execution logic.
-  - **Function `_classify_with_transformers()`**: Internal helper or main execution logic.
-  - **Function `_classify_with_keywords()`**: Internal helper or main execution logic.
-  - **Function `_extract_entities()`**: Internal helper or main execution logic.
-  - **Function `correct_intent()`**: Internal helper or main execution logic.
-  - **Function `add_user_vocabulary()`**: Internal helper or main execution logic.
-  - **Function `get_learning_stats()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_patterns()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `_load_custom_entities()`**: Internal helper or main execution logic.
-  - **Function `extract_entities()`**: Internal helper or main execution logic.
-  - **Function `_remove_overlaps()`**: Internal helper or main execution logic.
-  - **Function `add_custom_entity()`**: Internal helper or main execution logic.
+- **Class `Intent`**: Intent classification result
+- **Class `Entity`**: Named entity
+- **Class `IntentClassifier`**: Intent classification using semantic similarity Learns from user corrections and adaptsto personal vocabulary
+- **Class `NamedEntityRecognizer`**: Named Entity Recognition for extracting structured information Learns user-specific entities (custom app names, contact nicknames, etc.)
+  - **Function `example_usage()`**: Demonstrate intent classification and NER
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `_initialize_intents()`**: Initialize intent categories with examples
+  - **Function `_init_database()`**: Initialize database for custom entities
+  - **Function `_load_user_patterns()`**: Load learned user patterns
+  - **Function `_precompute_embeddings()`**: Precompute embeddings for all intent examples
+  - **Function `classify()`**: Classify user intent
+  - **Function `classify_intent()`**: Wrapper for compatibility - returns tuple of (intent, confidence, entities)
+  - **Function `_classify_with_transformers()`**: Classify using sentence transformers
+  - **Function `_classify_with_keywords()`**: Fallback keyword-based classification
+  - **Function `_extract_entities()`**: Extract named entities from text
+  - **Function `correct_intent()`**: Learn from user correction
+  - **Function `add_user_vocabulary()`**: Learn user's personal vocabulary
+  - **Function `get_learning_stats()`**: Get learning statistics
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `_init_patterns()`**: Initialize regex patterns for entity extraction
+  - **Function `_init_database()`**: Initialize database for custom entities
+  - **Function `_load_custom_entities()`**: Load user-defined entities
+  - **Function `extract_entities()`**: Extract all entities from text
+  - **Function `_remove_overlaps()`**: Remove overlapping entities, keeping highest confidence
+  - **Function `add_custom_entity()`**: Add custom entity to knowledge base
 
 ### File: `core_ai\src\ai_assistant\ai\intent_recognizer.py`
-- **Class `IntentRecognizer`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `normalize_text()`**: Internal helper or main execution logic.
-  - **Function `extract_intent()`**: Internal helper or main execution logic.
-  - **Function `extract_app_name()`**: Internal helper or main execution logic.
-  - **Function `normalize_app_name()`**: Internal helper or main execution logic.
-  - **Function `find_app_in_text()`**: Internal helper or main execution logic.
-  - **Function `analyze_sentiment()`**: Internal helper or main execution logic.
-  - **Function `parse_command()`**: Internal helper or main execution logic.
-  - **Function `add_app_alias()`**: Internal helper or main execution logic.
+- **Class `IntentRecognizer`**: Recognizes user intent from natural language commands. Handles English, Hindi, and Hinglish without requiring LLM training.
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `normalize_text()`**: Normalize text by removing special characters and extra spaces.
+  - **Function `extract_intent()`**: Extract intent from command. Returns: (intent_type, context_dict)
+  - **Function `extract_app_name()`**: Extract app name from command, handling various formats.
+  - **Function `normalize_app_name()`**: Normalize app name to canonical form using fuzzy matching. Handles misspellings, spaces, and variations.
+  - **Function `find_app_in_text()`**: Find any known app name in the text.
+  - **Function `analyze_sentiment()`**: Analyze the sentiment/tone of the command to adapt responses.
+  - **Function `parse_command()`**: Parse a natural language command into structured format.
+  - **Function `add_app_alias()`**: Add new app alias dynamically. Useful for learning user-specific app names.
 
 ### File: `core_ai\src\ai_assistant\ai\llm_bandit.py`
-- **Class `LLMBandit`**: Orchestrates logic for this module.
-  - **Function `example_usage()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `_load_performance()`**: Internal helper or main execution logic.
-  - **Function `extract_task_features()`**: Internal helper or main execution logic.
-  - **Function `thompson_sampling()`**: Internal helper or main execution logic.
-  - **Function `select_llm()`**: Internal helper or main execution logic.
-  - **Function `record_outcome()`**: Internal helper or main execution logic.
-  - **Function `get_best_llm_for_task()`**: Internal helper or main execution logic.
-  - **Function `get_performance_summary()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
+- **Class `LLMBandit`**: Multi-armed bandit for optimal LLM selection
+  - **Function `example_usage()`**: Demonstrate LLM bandit
+  - **Function `__init__()`**: Signature: (self, db_path, exploration_rate)
+  - **Function `_init_database()`**: Initialize database
+  - **Function `_load_performance()`**: Load historical performance data
+  - **Function `extract_task_features()`**: Extract features from task
+  - **Function `thompson_sampling()`**: Thompson Sampling: sample from posterior distribution Returns expected reward
+  - **Function `select_llm()`**: Select best LLM for task using contextual bandit
+  - **Function `record_outcome()`**: Record outcome and update performance
+  - **Function `get_best_llm_for_task()`**: Get best performing LLM for task type
+  - **Function `get_performance_summary()`**: Get performance summary for all LLMs
+  - **Function `get_stats()`**: Get bandit statistics
 
 ### File: `core_ai\src\ai_assistant\ai\llm_provider.py`
   - *(Documentation parsing failed for this file)*
 
 ### File: `core_ai\src\ai_assistant\ai\local_ai_manager.py`
-- **Class `LocalModelConfig`**: Orchestrates logic for this module.
-- **Class `LocalAIManager`**: Orchestrates logic for this module.
-  - **Function `quick_test()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `is_ollama_running()`**: Internal helper or main execution logic.
-  - **Function `list_ollama_models()`**: Internal helper or main execution logic.
-  - **Function `find_best_available_model()`**: Internal helper or main execution logic.
-  - **Function `load_model()`**: Internal helper or main execution logic.
-  - **Function `generate()`**: Internal helper or main execution logic.
-  - **Function `_generate_stream()`**: Internal helper or main execution logic.
-  - **Function `chat()`**: Internal helper or main execution logic.
-  - **Function `clear_history()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
+- **Class `LocalModelConfig`**: Configuration for local AI model
+- **Class `LocalAIManager`**: Manages local AI inference with Ollama
+  - **Function `quick_test()`**: Quick test of LocalAIManager with Ollama
+  - **Function `__init__()`**: Signature: (self, models_dir)
+  - **Function `is_ollama_running()`**: Check if Ollama service is running
+  - **Function `list_ollama_models()`**: List available Ollama models
+  - **Function `find_best_available_model()`**: Find the best available model from Ollama. Priority: 1. llama3.2 (Best quality for general tasks) 2. qwen2.5 (Fastest) 3. Any other available model
+  - **Function `load_model()`**: Load model from Ollama
+  - **Function `generate()`**: Generate text using Ollama model
+  - **Function `_generate_stream()`**: Stream tokens as they're generated from Ollama
+  - **Function `chat()`**: Chat with conversation history
+  - **Function `clear_history()`**: Clear conversation history
+  - **Function `get_stats()`**: Get performance statistics
 
 ### File: `core_ai\src\ai_assistant\ai\local_model_manager.py`
-- **Class `LocalModelManager`**: Orchestrates logic for this module.
-  - **Function `demo_local_model()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `download_model()`**: Internal helper or main execution logic.
-  - **Function `load_model()`**: Internal helper or main execution logic.
-  - **Function `unload_model()`**: Internal helper or main execution logic.
-  - **Function `generate()`**: Internal helper or main execution logic.
-  - **Function `get_system_info()`**: Internal helper or main execution logic.
-  - **Function `list_available_models()`**: Internal helper or main execution logic.
-  - **Function `check_system_requirements()`**: Internal helper or main execution logic.
+- **Class `LocalModelManager`**: Manage tiny local models optimized for low-resource systems Target: 8GB RAM, CPU-only inference and training
+  - **Function `demo_local_model()`**: Demo the local model
+  - **Function `__init__()`**: Initialize local model manager
+  - **Function `download_model()`**: Download and cache model locally
+  - **Function `load_model()`**: Load model into memory
+  - **Function `unload_model()`**: Free up memory by unloading model
+  - **Function `generate()`**: Generate text from prompt
+  - **Function `get_system_info()`**: Get current system resource usage
+  - **Function `list_available_models()`**: List all tiny models suitable for 8GB RAM
+  - **Function `check_system_requirements()`**: Check if system meets minimum requirements
 
 ### File: `core_ai\src\ai_assistant\ai\memory.py`
-- **Class `ConnectionPool`**: Orchestrates logic for this module.
-  - **Function `get_encrypted_db()`**: Internal helper or main execution logic.
-  - **Function `get_db_connection()`**: Internal helper or main execution logic.
-  - **Function `get_db_transaction()`**: Internal helper or main execution logic.
-  - **Function `setup_memory()`**: Internal helper or main execution logic.
-  - **Function `save_to_memory()`**: Internal helper or main execution logic.
-  - **Function `get_memory()`**: Internal helper or main execution logic.
-  - **Function `search_memory()`**: Internal helper or main execution logic.
-  - **Function `get_conversation_summary()`**: Internal helper or main execution logic.
-  - **Function `save_knowledge()`**: Internal helper or main execution logic.
-  - **Function `get_knowledge()`**: Internal helper or main execution logic.
-  - **Function `determine_importance()`**: Internal helper or main execution logic.
-  - **Function `categorize_content()`**: Internal helper or main execution logic.
-  - **Function `generate_summary()`**: Internal helper or main execution logic.
-  - **Function `semantic_search_memory()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `get_connection()`**: Internal helper or main execution logic.
-  - **Function `return_connection()`**: Internal helper or main execution logic.
-  - **Function `close_all()`**: Internal helper or main execution logic.
+- **Class `ConnectionPool`**: Simple connection pool for SQLite to reuse connections.
+  - **Function `get_encrypted_db()`**: Get encrypted database instance
+  - **Function `get_db_connection()`**: Context manager for database connections with automatic cleanup.
+  - **Function `get_db_transaction()`**: Context manager for database transactions with automatic commit/rollback.
+  - **Function `setup_memory()`**: Creates the memory databases and tables if they don't exist.
+  - **Function `save_to_memory()`**: Saves a line of dialogue to both memory tables with transaction safety and encryption.
+  - **Function `get_memory()`**: Retrieves the last N messages from the conversation history. :param last_n_messages: The number of recent messages to retrieve.
+  - **Function `search_memory()`**: Searches through conversation history for messages containing the query. :param query: Search term to look for :param limit: Maximum number of resu...
+  - **Function `get_conversation_summary()`**: Gets a summary of conversations for a specific date or today. :param date: Date in YYYY-MM-DD format (optional, defaults to today)
+  - **Function `save_knowledge()`**: Saves important knowledge/facts to the knowledge base. :param topic: The topic or category of the knowledge :param content: The actual knowledge co...
+  - **Function `get_knowledge()`**: Retrieves knowledge from the knowledge base by topic. :param topic: The topic to search for
+  - **Function `determine_importance()`**: Determines importance level (1-5) based on content analysis.
+  - **Function `categorize_content()`**: Categorizes content based on keywords and context.
+  - **Function `generate_summary()`**: Generates a brief summary of the content.
+  - **Function `semantic_search_memory()`**: Perform semantic search on conversation history. Uses simple keyword matching and TF-IDF style scoring. :param query: Search query :param limit: Ma...
+  - **Function `__init__()`**: Signature: (self, database, max_connections)
+  - **Function `get_connection()`**: Get a connection from the pool or create a new one.
+  - **Function `return_connection()`**: Return a connection to the pool.
+  - **Function `close_all()`**: Close all connections in the pool.
 
 ### File: `core_ai\src\ai_assistant\ai\meta_learning.py`
-- **Class `Task`**: Orchestrates logic for this module.
-- **Class `MetaLearningResult`**: Orchestrates logic for this module.
-- **Class `MAMLLearner`**: Orchestrates logic for this module.
-- **Class `FewShotClassifier`**: Orchestrates logic for this module.
-  - **Function `example_meta_learning()`**: Internal helper or main execution logic.
-- **Class `MetaLearnerNetwork`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `register_task()`**: Internal helper or main execution logic.
-  - **Function `inner_loop_adapt()`**: Internal helper or main execution logic.
-  - **Function `evaluate_on_query()`**: Internal helper or main execution logic.
-  - **Function `meta_train_step()`**: Internal helper or main execution logic.
-  - **Function `adapt_to_new_task()`**: Internal helper or main execution logic.
-  - **Function `_save_episode()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `train_on_tasks()`**: Internal helper or main execution logic.
-  - **Function `classify_few_shot()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `forward()`**: Internal helper or main execution logic.
-  - **Function `clone()`**: Internal helper or main execution logic.
+- **Class `Task`**: Single task for meta-learning
+- **Class `MetaLearningResult`**: Result of meta-learning episode
+- **Class `MAMLLearner`**: Model-Agnostic Meta-Learning implementation Learn to learn: meta-optimize for fast adaptation
+- **Class `FewShotClassifier`**: Few-shot classification using MAML Learn to classify with few examples per class
+  - **Function `example_meta_learning()`**: Example of using meta-learning for few-shot tasks
+- **Class `MetaLearnerNetwork`**: Core component.
+  - **Function `__init__()`**: Signature: (self, feature_dim, num_classes)
+  - **Function `_init_database()`**: Initialize database for meta-learning tasks
+  - **Function `register_task()`**: Register a new task
+  - **Function `inner_loop_adapt()`**: Perform inner loop adaptation on a task Returns: (adapted_model, losses)
+  - **Function `evaluate_on_query()`**: Evaluate model on query set
+  - **Function `meta_train_step()`**: Single meta-training step on a batch of tasks
+  - **Function `adapt_to_new_task()`**: Quickly adapt to a new task using meta-learned initialization
+  - **Function `_save_episode()`**: Save meta-learning episode
+  - **Function `get_stats()`**: Get meta-learning statistics
+  - **Function `__init__()`**: Signature: (self, feature_dim, num_classes)
+  - **Function `train_on_tasks()`**: Train on a distribution of tasks
+  - **Function `classify_few_shot()`**: Classify a query example given few support examples
+  - **Function `__init__()`**: Signature: (self, feature_dim, num_classes)
+  - **Function `forward()`**: Signature: ()
+  - **Function `clone()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\ai\model_compression.py`
-- **Class `ModelCompressor`**: Orchestrates logic for this module.
-  - **Function `example_usage()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `quantize_dynamic()`**: Internal helper or main execution logic.
-  - **Function `prune_model()`**: Internal helper or main execution logic.
-  - **Function `distill_model()`**: Internal helper or main execution logic.
-  - **Function `apply_mixed_precision()`**: Internal helper or main execution logic.
-  - **Function `compress_pipeline()`**: Internal helper or main execution logic.
-  - **Function `_get_model_size()`**: Internal helper or main execution logic.
-  - **Function `_save_compression_record()`**: Internal helper or main execution logic.
-  - **Function `get_compression_history()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
+- **Class `ModelCompressor`**: Compress models for efficient deployment
+  - **Function `example_usage()`**: Demonstrate model compression
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `_init_database()`**: Initialize database
+  - **Function `quantize_dynamic()`**: Apply dynamic quantization (CPU inference) Reduces precision of weights/activations at inference time
+  - **Function `prune_model()`**: Apply structured pruning to remove less important weights
+  - **Function `distill_model()`**: Knowledge distillation: train smaller student model from teacher
+  - **Function `apply_mixed_precision()`**: Convert model to mixed precision (FP16/FP32) for faster inference
+  - **Function `compress_pipeline()`**: Apply multiple compression methods in sequence
+  - **Function `_get_model_size()`**: Get model size in MB
+  - **Function `_save_compression_record()`**: Save compression record to database
+  - **Function `get_compression_history()`**: Get history of model compressions
+  - **Function `get_stats()`**: Get compression statistics
 
 ### File: `core_ai\src\ai_assistant\ai\model_router.py`
-- **Class `ModelTier`**: Orchestrates logic for this module.
-- **Class `ModelConfig`**: Orchestrates logic for this module.
-- **Class `QueryAnalysis`**: Orchestrates logic for this module.
-- **Class `IntelligentModelRouter`**: Orchestrates logic for this module.
-  - **Function `get_model_router()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_initialize_models()`**: Internal helper or main execution logic.
-  - **Function `analyze_query()`**: Internal helper or main execution logic.
-  - **Function `_calculate_complexity()`**: Internal helper or main execution logic.
-  - **Function `route()`**: Internal helper or main execution logic.
-  - **Function `record_usage()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
-  - **Function `_calculate_savings()`**: Internal helper or main execution logic.
-  - **Function `recommend_model()`**: Internal helper or main execution logic.
+- **Class `ModelTier`**: Model capability tiers
+- **Class `ModelConfig`**: Configuration for a model
+- **Class `QueryAnalysis`**: Analysis of a query
+- **Class `IntelligentModelRouter`**: Routes queries to optimal model based on analysis
+  - **Function `get_model_router()`**: Get global router instance
+  - **Function `__init__()`**: Initialize router
+  - **Function `_initialize_models()`**: Initialize available models
+  - **Function `analyze_query()`**: Analyze query to determine complexity and requirements
+  - **Function `_calculate_complexity()`**: Calculate query complexity score (0-1)
+  - **Function `route()`**: Route query to best model
+  - **Function `record_usage()`**: Record model usage for stats
+  - **Function `get_stats()`**: Get routing statistics
+  - **Function `_calculate_savings()`**: Calculate cost savings from routing vs always using GPT-4
+  - **Function `recommend_model()`**: Recommend model based on constraints
 
 ### File: `core_ai\src\ai_assistant\ai\multimodal_learning.py`
-- **Class `MultiModalProfile`**: Orchestrates logic for this module.
-- **Class `ModalityInteraction`**: Orchestrates logic for this module.
-- **Class `CrossModalEmbedder`**: Orchestrates logic for this module.
-- **Class `VoiceTextCorrelator`**: Orchestrates logic for this module.
-- **Class `MultiModalLearningEngine`**: Orchestrates logic for this module.
-  - **Function `example_usage()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `embed_voice()`**: Internal helper or main execution logic.
-  - **Function `embed_text()`**: Internal helper or main execution logic.
-  - **Function `embed_behavior()`**: Internal helper or main execution logic.
-  - **Function `fuse_modalities()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `learn_correlation()`**: Internal helper or main execution logic.
-  - **Function `_voice_fingerprint()`**: Internal helper or main execution logic.
-  - **Function `predict_preference()`**: Internal helper or main execution logic.
-  - **Function `detect_emotion_from_voice()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `_load_profiles()`**: Internal helper or main execution logic.
-  - **Function `get_or_create_profile()`**: Internal helper or main execution logic.
-  - **Function `save_profile()`**: Internal helper or main execution logic.
-  - **Function `record_interaction()`**: Internal helper or main execution logic.
-  - **Function `_update_voice_features()`**: Internal helper or main execution logic.
-  - **Function `_update_text_preferences()`**: Internal helper or main execution logic.
-  - **Function `get_unified_embedding()`**: Internal helper or main execution logic.
-  - **Function `predict_user_state()`**: Internal helper or main execution logic.
-  - **Function `get_contextual_insights()`**: Internal helper or main execution logic.
+- **Class `MultiModalProfile`**: Unified user profile across modalities
+- **Class `ModalityInteraction`**: Record of multi-modal interaction
+- **Class `CrossModalEmbedder`**: Creates unified embeddings from multiple modalities
+- **Class `VoiceTextCorrelator`**: Learns correlations between voice patterns and text preferences
+- **Class `MultiModalLearningEngine`**: Main engine for multi-modal learning
+  - **Function `example_usage()`**: Demonstrate multi-modal learning
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `embed_voice()`**: Convert voice features to embedding
+  - **Function `embed_text()`**: Convert text embedding to unified space
+  - **Function `embed_behavior()`**: Convert behavioral features to embedding
+  - **Function `fuse_modalities()`**: Fuse multiple modal embeddings
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `learn_correlation()`**: Learn voice-text correlation
+  - **Function `_voice_fingerprint()`**: Create fingerprint from voice features
+  - **Function `predict_preference()`**: Predict text preference from voice
+  - **Function `detect_emotion_from_voice()`**: Detect likely emotion from voice pattern
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `_init_database()`**: Initialize database
+  - **Function `_load_profiles()`**: Load user profiles
+  - **Function `get_or_create_profile()`**: Get or create user profile
+  - **Function `save_profile()`**: Save profile to database
+  - **Function `record_interaction()`**: Record multi-modal interaction
+  - **Function `_update_voice_features()`**: Update voice feature averages
+  - **Function `_update_text_preferences()`**: Update text preference scores
+  - **Function `get_unified_embedding()`**: Get unified multi-modal embedding for user
+  - **Function `predict_user_state()`**: Predict user state from available modalities
+  - **Function `get_contextual_insights()`**: Get insights from multi-modal data
 
 ### File: `core_ai\src\ai_assistant\ai\multi_step_parser.py`
-- **Class `TaskStep`**: Orchestrates logic for this module.
-- **Class `MultiStepCommandParser`**: Orchestrates logic for this module.
-  - **Function `parse_multi_step_command()`**: Internal helper or main execution logic.
-  - **Function `__post_init__()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `is_multi_step()`**: Internal helper or main execution logic.
-  - **Function `split_into_steps()`**: Internal helper or main execution logic.
-  - **Function `parse_single_step()`**: Internal helper or main execution logic.
-  - **Function `infer_dependencies()`**: Internal helper or main execution logic.
-  - **Function `parse_command()`**: Internal helper or main execution logic.
-  - **Function `extract_message_content()`**: Internal helper or main execution logic.
-  - **Function `extract_contact_name()`**: Internal helper or main execution logic.
-  - **Function `enhance_step_params()`**: Internal helper or main execution logic.
+- **Class `TaskStep`**: Represents a single step in a task chain.
+- **Class `MultiStepCommandParser`**: Parses complex, multi-step commands into sequential tasks.
+  - **Function `parse_multi_step_command()`**: Parse a multi-step command into task steps.
+  - **Function `__post_init__()`**: Signature: (self)
+  - **Function `__init__()`**: Initialize parser with patterns.
+  - **Function `is_multi_step()`**: Check if command contains multiple steps.
+  - **Function `split_into_steps()`**: Split command into individual step strings.
+  - **Function `parse_single_step()`**: Parse a single command step.
+  - **Function `infer_dependencies()`**: Infer dependencies between steps.
+  - **Function `parse_command()`**: Parse a command into task steps.
+  - **Function `extract_message_content()`**: Extract message content from command.
+  - **Function `extract_contact_name()`**: Extract contact/recipient name from command.
+  - **Function `enhance_step_params()`**: Enhance step parameters with extracted information.
 
 ### File: `core_ai\src\ai_assistant\ai\network_aware_llm.py`
-- **Class `OnlineLLMConfig`**: Orchestrates logic for this module.
-  - **Function `get_optimal_llm_config()`**: Internal helper or main execution logic.
-  - **Function `force_online_mode()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_load_api_keys()`**: Internal helper or main execution logic.
-  - **Function `check_internet_connectivity()`**: Internal helper or main execution logic.
-  - **Function `get_optimal_provider()`**: Internal helper or main execution logic.
-  - **Function `_test_provider()`**: Internal helper or main execution logic.
-  - **Function `get_provider_config()`**: Internal helper or main execution logic.
+- **Class `OnlineLLMConfig`**: Configuration for online-only LLM providers.
+  - **Function `get_optimal_llm_config()`**: Get the optimal LLM configuration.
+  - **Function `force_online_mode()`**: Force refresh of online providers.
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `_load_api_keys()`**: Load API keys from secure locations.
+  - **Function `check_internet_connectivity()`**: Check if internet connection is available.
+  - **Function `get_optimal_provider()`**: Get the optimal online provider based on availability.
+  - **Function `_test_provider()`**: Quick test of online provider availability.
+  - **Function `get_provider_config()`**: Get complete provider configuration.
 
 ### File: `core_ai\src\ai_assistant\ai\offline_llm_provider.py`
-- **Class `OfflineLLMProvider`**: Orchestrates logic for this module.
-- **Class `OllamaProvider`**: Orchestrates logic for this module.
-- **Class `TransformersProvider`**: Orchestrates logic for this module.
-- **Class `SimpleOfflineProvider`**: Orchestrates logic for this module.
-- **Class `OfflineLLMManager`**: Orchestrates logic for this module.
-  - **Function `get_offline_llm()`**: Internal helper or main execution logic.
-  - **Function `generate_response()`**: Internal helper or main execution logic.
-  - **Function `stream_response()`**: Internal helper or main execution logic.
-  - **Function `count_tokens()`**: Internal helper or main execution logic.
-  - **Function `is_available()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_check_availability()`**: Internal helper or main execution logic.
-  - **Function `is_available()`**: Internal helper or main execution logic.
-  - **Function `generate_response()`**: Internal helper or main execution logic.
-  - **Function `stream_response()`**: Internal helper or main execution logic.
-  - **Function `count_tokens()`**: Internal helper or main execution logic.
-  - **Function `_format_prompt()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_pipeline()`**: Internal helper or main execution logic.
-  - **Function `is_available()`**: Internal helper or main execution logic.
-  - **Function `generate_response()`**: Internal helper or main execution logic.
-  - **Function `stream_response()`**: Internal helper or main execution logic.
-  - **Function `count_tokens()`**: Internal helper or main execution logic.
-  - **Function `_format_prompt()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_knowledge_base()`**: Internal helper or main execution logic.
-  - **Function `_get_help_text()`**: Internal helper or main execution logic.
-  - **Function `is_available()`**: Internal helper or main execution logic.
-  - **Function `generate_response()`**: Internal helper or main execution logic.
-  - **Function `stream_response()`**: Internal helper or main execution logic.
-  - **Function `count_tokens()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_providers()`**: Internal helper or main execution logic.
-  - **Function `generate_response()`**: Internal helper or main execution logic.
-  - **Function `stream_response()`**: Internal helper or main execution logic.
-  - **Function `count_tokens()`**: Internal helper or main execution logic.
-  - **Function `get_provider_info()`**: Internal helper or main execution logic.
+- **Class `OfflineLLMProvider`**: Abstract base class for offline LLM providers.
+- **Class `OllamaProvider`**: Ollama local model provider - requires Ollama to be installed and running.
+- **Class `TransformersProvider`**: Hugging Face Transformers provider for offline local models.
+- **Class `SimpleOfflineProvider`**: Simple fallback provider for basic text matching and rule-based responses.
+- **Class `OfflineLLMManager`**: Manager for offline LLM providers with fallback chain.
+  - **Function `get_offline_llm()`**: Get the offline LLM manager instance.
+  - **Function `generate_response()`**: Generate response with fallback chain.
+  - **Function `stream_response()`**: Stream response with fallback chain.
+  - **Function `count_tokens()`**: Count tokens using current provider.
+  - **Function `is_available()`**: Simple provider is always available.
+  - **Function `__init__()`**: Initialize with multiple offline providers.
+  - **Function `_check_availability()`**: Check if Ollama server is running and model is available.
+  - **Function `is_available()`**: Simple provider is always available.
+  - **Function `generate_response()`**: Generate response with fallback chain.
+  - **Function `stream_response()`**: Stream response with fallback chain.
+  - **Function `count_tokens()`**: Count tokens using current provider.
+  - **Function `_format_prompt()`**: Format messages into a prompt string.
+  - **Function `__init__()`**: Initialize with multiple offline providers.
+  - **Function `_init_pipeline()`**: Initialize the transformation pipeline.
+  - **Function `is_available()`**: Simple provider is always available.
+  - **Function `generate_response()`**: Generate response with fallback chain.
+  - **Function `stream_response()`**: Stream response with fallback chain.
+  - **Function `count_tokens()`**: Count tokens using current provider.
+  - **Function `_format_prompt()`**: Format messages into a prompt string.
+  - **Function `__init__()`**: Initialize with multiple offline providers.
+  - **Function `_init_knowledge_base()`**: Initialize basic knowledge base for common queries.
+  - **Function `_get_help_text()`**: Get help text.
+  - **Function `is_available()`**: Simple provider is always available.
+  - **Function `generate_response()`**: Generate response with fallback chain.
+  - **Function `stream_response()`**: Stream response with fallback chain.
+  - **Function `count_tokens()`**: Count tokens using current provider.
+  - **Function `__init__()`**: Initialize with multiple offline providers.
+  - **Function `_init_providers()`**: Initialize available providers.
+  - **Function `generate_response()`**: Generate response with fallback chain.
+  - **Function `stream_response()`**: Stream response with fallback chain.
+  - **Function `count_tokens()`**: Count tokens using current provider.
+  - **Function `get_provider_info()`**: Get information about available providers.
 
 ### File: `core_ai\src\ai_assistant\ai\offline_mode.py`
-- **Class `OfflineModeManager`**: Orchestrates logic for this module.
-  - **Function `get_offline_manager()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_check_connectivity()`**: Internal helper or main execution logic.
-  - **Function `start_connectivity_check()`**: Internal helper or main execution logic.
-  - **Function `stop_connectivity_check()`**: Internal helper or main execution logic.
-  - **Function `_connectivity_check_loop()`**: Internal helper or main execution logic.
-  - **Function `set_offline_mode()`**: Internal helper or main execution logic.
-  - **Function `is_connected()`**: Internal helper or main execution logic.
-  - **Function `should_use_offline()`**: Internal helper or main execution logic.
-  - **Function `add_mode_change_callback()`**: Internal helper or main execution logic.
-  - **Function `_trigger_mode_change_callbacks()`**: Internal helper or main execution logic.
-  - **Function `get_status()`**: Internal helper or main execution logic.
-  - **Function `cache_response()`**: Internal helper or main execution logic.
-  - **Function `get_cached_response()`**: Internal helper or main execution logic.
-  - **Function `clear_cache()`**: Internal helper or main execution logic.
-  - **Function `get_cache_info()`**: Internal helper or main execution logic.
+- **Class `OfflineModeManager`**: Manages offline/online mode detection and switching.
+  - **Function `get_offline_manager()`**: Get or create the global offline mode manager instance.
+  - **Function `__init__()`**: Initialize offline mode manager.
+  - **Function `_check_connectivity()`**: Check if device has internet connectivity.
+  - **Function `start_connectivity_check()`**: Start background connectivity check thread.
+  - **Function `stop_connectivity_check()`**: Stop background connectivity check thread.
+  - **Function `_connectivity_check_loop()`**: Background thread for periodic connectivity checks.
+  - **Function `set_offline_mode()`**: Force offline mode regardless of connectivity.
+  - **Function `is_connected()`**: Check if device should be in online mode.
+  - **Function `should_use_offline()`**: Check if offline mode should be used.
+  - **Function `add_mode_change_callback()`**: Add callback for mode changes.
+  - **Function `_trigger_mode_change_callbacks()`**: Trigger all registered mode change callbacks.
+  - **Function `get_status()`**: Get current offline/online status.
+  - **Function `cache_response()`**: Cache a response for offline use.
+  - **Function `get_cached_response()`**: Get cached response if available and not expired.
+  - **Function `clear_cache()`**: Clear cache files.
+  - **Function `get_cache_info()`**: Get information about cached data.
 
 ### File: `core_ai\src\ai_assistant\ai\qlora_trainer.py`
-- **Class `TrainingConfig`**: Orchestrates logic for this module.
-- **Class `QLoRATrainer`**: Orchestrates logic for this module.
-  - **Function `create_sample_training_data()`**: Internal helper or main execution logic.
-  - **Function `demo_training()`**: Internal helper or main execution logic.
-  - **Function `__post_init__()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `prepare_dataset()`**: Internal helper or main execution logic.
-  - **Function `load_training_data()`**: Internal helper or main execution logic.
-  - **Function `tokenize_dataset()`**: Internal helper or main execution logic.
-  - **Function `setup_model_and_tokenizer()`**: Internal helper or main execution logic.
-  - **Function `train()`**: Internal helper or main execution logic.
-  - **Function `tokenize_function()`**: Internal helper or main execution logic.
+- **Class `TrainingConfig`**: Configuration for QLoRA training optimized for 8GB RAM
+- **Class `QLoRATrainer`**: Train tiny models with QLoRA on 8GB RAM systems Can run on CPU-only (slow but works)
+  - **Function `create_sample_training_data()`**: Create a sample training dataset
+  - **Function `demo_training()`**: Demo the QLoRA training process
+  - **Function `__post_init__()`**: Signature: (self)
+  - **Function `__init__()`**: Initialize QLoRA trainer
+  - **Function `prepare_dataset()`**: Prepare dataset for fine-tuning
+  - **Function `load_training_data()`**: Load training data from JSON file
+  - **Function `tokenize_dataset()`**: Tokenize the dataset
+  - **Function `setup_model_and_tokenizer()`**: Load model with 4-bit quantization and prepare for LoRA training
+  - **Function `train()`**: Fine-tune the model with QLoRA
+  - **Function `tokenize_function()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\ai\query_cache.py`
-- **Class `QuerySimilarityCache`**: Orchestrates logic for this module.
-  - **Function `example_usage()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `_load_cache()`**: Internal helper or main execution logic.
-  - **Function `_compute_hash()`**: Internal helper or main execution logic.
-  - **Function `_compute_similarity_sklearn()`**: Internal helper or main execution logic.
-  - **Function `_compute_similarity_fallback()`**: Internal helper or main execution logic.
-  - **Function `get()`**: Internal helper or main execution logic.
-  - **Function `set()`**: Internal helper or main execution logic.
-  - **Function `_record_hit()`**: Internal helper or main execution logic.
-  - **Function `_record_miss()`**: Internal helper or main execution logic.
-  - **Function `clear_expired()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
-  - **Function `invalidate_similar()`**: Internal helper or main execution logic.
+- **Class `QuerySimilarityCache`**: Smart query caching using TF-IDF similarity
+  - **Function `example_usage()`**: Demonstrate query caching
+  - **Function `__init__()`**: Signature: (self, db_path, similarity_threshold, cache_ttl_hours)
+  - **Function `_init_database()`**: Initialize cache database
+  - **Function `_load_cache()`**: Load existing cache entries
+  - **Function `_compute_hash()`**: Compute hash for query
+  - **Function `_compute_similarity_sklearn()`**: Compute similarity using sklearn
+  - **Function `_compute_similarity_fallback()`**: Fallback similarity using word overlap
+  - **Function `get()`**: Get cached response for query
+  - **Function `set()`**: Cache a query-response pair
+  - **Function `_record_hit()`**: Record cache hit
+  - **Function `_record_miss()`**: Record cache miss
+  - **Function `clear_expired()`**: Remove expired cache entries
+  - **Function `get_stats()`**: Get cache statistics
+  - **Function `invalidate_similar()`**: Invalidate cache entries similar to query (for concept drift)
 
 ### File: `core_ai\src\ai_assistant\ai\self_supervised_learning.py`
-- **Class `SelfSupervisedLearner`**: Orchestrates logic for this module.
-  - **Function `example_usage()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `mask_tokens()`**: Internal helper or main execution logic.
-  - **Function `mlm_loss()`**: Internal helper or main execution logic.
-  - **Function `autoencoding_loss()`**: Internal helper or main execution logic.
-  - **Function `rotation_prediction_loss()`**: Internal helper or main execution logic.
-  - **Function `train_task()`**: Internal helper or main execution logic.
-  - **Function `extract_representation()`**: Internal helper or main execution logic.
-  - **Function `save_representation()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
+- **Class `SelfSupervisedLearner`**: Self-supervised learning for data-efficient training
+  - **Function `example_usage()`**: Demonstrate self-supervised learning
+  - **Function `__init__()`**: Signature: (self, db_path, hidden_dim, mask_probability)
+  - **Function `_init_database()`**: Initialize database
+  - **Function `mask_tokens()`**: Mask tokens for MLM (Masked Language Modeling)
+  - **Function `mlm_loss()`**: Masked Language Modeling loss
+  - **Function `autoencoding_loss()`**: Autoencoding: reconstruct input from latent representation
+  - **Function `rotation_prediction_loss()`**: Rotation prediction: predict which rotation was applied (Simulated for generic features)
+  - **Function `train_task()`**: Train on self-supervised task
+  - **Function `extract_representation()`**: Extract learned representation
+  - **Function `save_representation()`**: Save learned representation
+  - **Function `get_stats()`**: Get learning statistics
 
 ### File: `core_ai\src\ai_assistant\ai\semantic_cache.py`
-- **Class `SemanticResponseCache`**: Orchestrates logic for this module.
-  - **Function `get_response_cache()`**: Internal helper or main execution logic.
-  - **Function `cache_response()`**: Internal helper or main execution logic.
-  - **Function `get_cached_response()`**: Internal helper or main execution logic.
-  - **Function `get_cache_stats()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_ensure_embedder_loaded()`**: Internal helper or main execution logic.
-  - **Function `_load_stats()`**: Internal helper or main execution logic.
-  - **Function `_save_stats()`**: Internal helper or main execution logic.
-  - **Function `_load_embedder_if_needed()`**: Internal helper or main execution logic.
-  - **Function `_get_embedding()`**: Internal helper or main execution logic.
-  - **Function `_compute_similarity()`**: Internal helper or main execution logic.
-  - **Function `_get_cache_key()`**: Internal helper or main execution logic.
-  - **Function `get()`**: Internal helper or main execution logic.
-  - **Function `_find_similar()`**: Internal helper or main execution logic.
-  - **Function `set()`**: Internal helper or main execution logic.
-  - **Function `_vary_response()`**: Internal helper or main execution logic.
-  - **Function `invalidate()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
-  - **Function `optimize()`**: Internal helper or main execution logic.
-  - **Function `_download_model()`**: Internal helper or main execution logic.
+- **Class `SemanticResponseCache`**: Intelligent response caching with semantic similarity
+  - **Function `get_response_cache()`**: Get global response cache instance
+  - **Function `cache_response()`**: Cache a response
+  - **Function `get_cached_response()`**: Get cached response
+  - **Function `get_cache_stats()`**: Get cache statistics
+  - **Function `__init__()`**: Initialize semantic cache
+  - **Function `_ensure_embedder_loaded()`**: Lazy load embedder on first use
+  - **Function `_load_stats()`**: Load cache statistics
+  - **Function `_save_stats()`**: Save cache statistics
+  - **Function `_load_embedder_if_needed()`**: Lazy load embedder on first use (background download if needed)
+  - **Function `_get_embedding()`**: Get embedding for text
+  - **Function `_compute_similarity()`**: Compute cosine similarity between embeddings
+  - **Function `_get_cache_key()`**: Generate cache key from text
+  - **Function `get()`**: Get cached response for query
+  - **Function `_find_similar()`**: Find semantically similar cached entry
+  - **Function `set()`**: Cache a response
+  - **Function `_vary_response()`**: Add slight variations to cached responses to feel more natural
+  - **Function `invalidate()`**: Invalidate cache entry or entire cache
+  - **Function `get_stats()`**: Get cache statistics
+  - **Function `optimize()`**: Optimize cache by removing old/unused entries
+  - **Function `_download_model()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\ai\smart_command_prediction.py`
-- **Class `SmartCommandPredictor`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `_load_patterns()`**: Internal helper or main execution logic.
-  - **Function `log_command()`**: Internal helper or main execution logic.
-  - **Function `predict_next_commands()`**: Internal helper or main execution logic.
-  - **Function `autocomplete_command()`**: Internal helper or main execution logic.
-  - **Function `get_popular_commands()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
+- **Class `SmartCommandPredictor`**: Application-level intelligent command prediction Suggests commands based on context, history, and patterns
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `_init_database()`**: Initialize database
+  - **Function `_load_patterns()`**: Load patterns from database
+  - **Function `log_command()`**: Log command usage
+  - **Function `predict_next_commands()`**: Predict most likely next commands
+  - **Function `autocomplete_command()`**: Autocomplete command based on partial input
+  - **Function `get_popular_commands()`**: Get most popular commands in time range
+  - **Function `get_stats()`**: Get statistics
 
 ### File: `core_ai\src\ai_assistant\ai\smart_memory_retrieval.py`
-- **Class `SmartMemoryRetrieval`**: Orchestrates logic for this module.
-  - **Function `enhance_response_with_memory()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `answer_from_memory()`**: Internal helper or main execution logic.
-  - **Function `_extract_date_query()`**: Internal helper or main execution logic.
-  - **Function `_search_for_dates()`**: Internal helper or main execution logic.
-  - **Function `_extract_dates_from_text()`**: Internal helper or main execution logic.
-  - **Function `_extract_app_query()`**: Internal helper or main execution logic.
-  - **Function `_search_app_usage()`**: Internal helper or main execution logic.
-  - **Function `_extract_event_query()`**: Internal helper or main execution logic.
-  - **Function `_search_events()`**: Internal helper or main execution logic.
-  - **Function `_search_general_memory()`**: Internal helper or main execution logic.
+- **Class `SmartMemoryRetrieval`**: Intelligently retrieve information from learned conversations
+  - **Function `enhance_response_with_memory()`**: Enhance AI response by checking memory first
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `answer_from_memory()`**: Try to answer a question from memory
+  - **Function `_extract_date_query()`**: Extract date-related information (exams, appointments, etc.)
+  - **Function `_search_for_dates()`**: Search memory for date-related information
+  - **Function `_extract_dates_from_text()`**: Extract date mentions from text
+  - **Function `_extract_app_query()`**: Extract app usage information
+  - **Function `_search_app_usage()`**: Search for app usage patterns
+  - **Function `_extract_event_query()`**: Extract event-related information
+  - **Function `_search_events()`**: Search for upcoming events
+  - **Function `_search_general_memory()`**: General memory search based on keywords
 
 ### File: `core_ai\src\ai_assistant\ai\streaming_handler.py`
-- **Class `StreamProvider`**: Orchestrates logic for this module.
-- **Class `StreamChunk`**: Orchestrates logic for this module.
-- **Class `StreamingResponseHandler`**: Orchestrates logic for this module.
-  - **Function `get_streaming_handler()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_initialize_providers()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
-  - **Function `print_chunk()`**: Internal helper or main execution logic.
+- **Class `StreamProvider`**: Supported streaming providers
+- **Class `StreamChunk`**: A chunk of streamed response
+- **Class `StreamingResponseHandler`**: Handles streaming responses from multiple LLM providers
+  - **Function `get_streaming_handler()`**: Get global streaming handler
+  - **Function `__init__()`**: Initialize streaming handler
+  - **Function `_initialize_providers()`**: Initialize provider clients
+  - **Function `get_stats()`**: Get streaming statistics
+  - **Function `print_chunk()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\ai\usage_pattern_analyzer.py`
-- **Class `UsagePatternAnalyzer`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `analyze_all()`**: Internal helper or main execution logic.
-  - **Function `_get_conversations()`**: Internal helper or main execution logic.
-  - **Function `_analyze_common_commands()`**: Internal helper or main execution logic.
-  - **Function `_analyze_topics()`**: Internal helper or main execution logic.
-  - **Function `_analyze_time_patterns()`**: Internal helper or main execution logic.
-  - **Function `_analyze_app_usage()`**: Internal helper or main execution logic.
-  - **Function `_analyze_sequences()`**: Internal helper or main execution logic.
-  - **Function `_analyze_preferences()`**: Internal helper or main execution logic.
-  - **Function `_generate_training_data()`**: Internal helper or main execution logic.
-  - **Function `export_for_finetuning()`**: Internal helper or main execution logic.
-  - **Function `generate_report()`**: Internal helper or main execution logic.
+- **Class `UsagePatternAnalyzer`**: Analyzes usage patterns for personalized fine-tuning
+  - **Function `__init__()`**: Initialize analyzer
+  - **Function `analyze_all()`**: Run complete analysis
+  - **Function `_get_conversations()`**: Get conversations from database
+  - **Function `_analyze_common_commands()`**: Identify most common command patterns
+  - **Function `_analyze_topics()`**: Extract frequent topics using TF-IDF
+  - **Function `_analyze_time_patterns()`**: Analyze usage by time of day and day of week
+  - **Function `_analyze_app_usage()`**: Analyze which apps are used most
+  - **Function `_analyze_sequences()`**: Identify common command sequences (workflows)
+  - **Function `_analyze_preferences()`**: Analyze user preferences from feedback
+  - **Function `_generate_training_data()`**: Generate training data in fine-tuning format
+  - **Function `export_for_finetuning()`**: Export training data for fine-tuning
+  - **Function `generate_report()`**: Generate human-readable analysis report
 
 ### File: `core_ai\src\ai_assistant\ai\workflow_recommender.py`
-- **Class `WorkflowRecommender`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `register_workflow()`**: Internal helper or main execution logic.
-  - **Function `log_workflow_execution()`**: Internal helper or main execution logic.
-  - **Function `recommend_workflow()`**: Internal helper or main execution logic.
-  - **Function `identify_automation_opportunities()`**: Internal helper or main execution logic.
-  - **Function `suggest_workflow_optimization()`**: Internal helper or main execution logic.
-  - **Function `get_workflow_analytics()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
+- **Class `WorkflowRecommender`**: Application-level workflow recommendation system Suggests optimal workflows and automation opportunities
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `_init_database()`**: Initialize database
+  - **Function `register_workflow()`**: Register a workflow
+  - **Function `log_workflow_execution()`**: Log workflow execution
+  - **Function `recommend_workflow()`**: Recommend workflows based on context
+  - **Function `identify_automation_opportunities()`**: Identify repetitive patterns that can be automated
+  - **Function `suggest_workflow_optimization()`**: Suggest optimizations for a workflow
+  - **Function `get_workflow_analytics()`**: Get detailed analytics for a workflow
+  - **Function `get_stats()`**: Get statistics
 
 ### File: `core_ai\src\ai_assistant\ai\workflow_scheduler.py`
-- **Class `WorkflowScheduler`**: Orchestrates logic for this module.
-  - **Function `example_usage()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `_load_tasks()`**: Internal helper or main execution logic.
-  - **Function `_load_q_values()`**: Internal helper or main execution logic.
-  - **Function `register_task()`**: Internal helper or main execution logic.
-  - **Function `get_state()`**: Internal helper or main execution logic.
-  - **Function `get_valid_actions()`**: Internal helper or main execution logic.
-  - **Function `select_action()`**: Internal helper or main execution logic.
-  - **Function `update_q_value()`**: Internal helper or main execution logic.
-  - **Function `schedule_workflow()`**: Internal helper or main execution logic.
-  - **Function `_save_schedule()`**: Internal helper or main execution logic.
-  - **Function `record_execution()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
+- **Class `WorkflowScheduler`**: RL-powered workflow scheduler
+  - **Function `example_usage()`**: Demonstrate workflow scheduler
+  - **Function `__init__()`**: Signature: (self, db_path, learning_rate, discount_factor)
+  - **Function `_init_database()`**: Initialize database
+  - **Function `_load_tasks()`**: Load registered tasks
+  - **Function `_load_q_values()`**: Load Q-learning values
+  - **Function `register_task()`**: Register a new task
+  - **Function `get_state()`**: Get current state representation for RL State = (pending_tasks, time_of_day, resources)
+  - **Function `get_valid_actions()`**: Get tasks that can be scheduled (dependencies met)
+  - **Function `select_action()`**: Select action using epsilon-greedy policy
+  - **Function `update_q_value()`**: Update Q-value using Q-learning
+  - **Function `schedule_workflow()`**: Generate optimal schedule using RL
+  - **Function `_save_schedule()`**: Save generated schedule
+  - **Function `record_execution()`**: Record task execution outcome
+  - **Function `get_stats()`**: Get scheduler statistics
 
 ### File: `core_ai\src\ai_assistant\api\voice_api.py`
-  - **Function `get_voice_status()`**: Internal helper or main execution logic.
-  - **Function `get_voice_config()`**: Internal helper or main execution logic.
-  - **Function `speak_text()`**: Internal helper or main execution logic.
-  - **Function `get_available_voices()`**: Internal helper or main execution logic.
-  - **Function `preview_voice()`**: Internal helper or main execution logic.
-  - **Function `listen_for_speech()`**: Internal helper or main execution logic.
-  - **Function `transcribe_audio()`**: Internal helper or main execution logic.
-  - **Function `start_wake_word()`**: Internal helper or main execution logic.
-  - **Function `stop_wake_word()`**: Internal helper or main execution logic.
-  - **Function `configure_wake_word()`**: Internal helper or main execution logic.
-  - **Function `get_voice_history()`**: Internal helper or main execution logic.
-  - **Function `clear_audio_cache()`**: Internal helper or main execution logic.
-  - **Function `get_cache_stats()`**: Internal helper or main execution logic.
-  - **Function `health_check()`**: Internal helper or main execution logic.
-  - **Function `on_wake_word_detected()`**: Internal helper or main execution logic.
+  - **Function `get_voice_status()`**: Get voice system status Returns information about available engines and current state
+  - **Function `get_voice_config()`**: Get current voice configuration
+  - **Function `speak_text()`**: Convert text to speech Body: {     "text": "Text to speak",     "voice": "en-US-AriaNeural" (optional),     "speed": 1.0 (optional),     "volume": ...
+  - **Function `get_available_voices()`**: Get list of available TTS voices
+  - **Function `preview_voice()`**: Generate preview audio for a voice Body: {     "voice_id": "en-US-AriaNeural",     "text": "Sample text" (optional) }
+  - **Function `listen_for_speech()`**: Listen for speech and return transcribed text Body: {     "timeout": 10 (optional),     "phrase_time_limit": 15 (optional) }
+  - **Function `transcribe_audio()`**: Transcribe audio data Body: {     "audio_data": "base64 encoded audio",     "format": "wav" (optional) }
+  - **Function `start_wake_word()`**: Start wake word detection
+  - **Function `stop_wake_word()`**: Stop wake word detection
+  - **Function `configure_wake_word()`**: Get or update wake word configuration
+  - **Function `get_voice_history()`**: Get voice command history
+  - **Function `clear_audio_cache()`**: Clear audio cache
+  - **Function `get_cache_stats()`**: Get audio cache statistics
+  - **Function `health_check()`**: Health check endpoint for voice service
+  - **Function `on_wake_word_detected()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\auth\pin_auth.py`
-- **Class `PINAuth`**: Orchestrates logic for this module.
-  - **Function `authenticate()`**: Internal helper or main execution logic.
-  - **Function `require_pin_auth()`**: Internal helper or main execution logic.
-  - **Function `setup_pin_cli()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_hash_pin()`**: Internal helper or main execution logic.
-  - **Function `is_pin_configured()`**: Internal helper or main execution logic.
-  - **Function `verify_pin()`**: Internal helper or main execution logic.
-  - **Function `prompt_for_pin()`**: Internal helper or main execution logic.
-  - **Function `setup_pin()`**: Internal helper or main execution logic.
-  - **Function `_save_pin_to_env()`**: Internal helper or main execution logic.
-  - **Function `_setup_new_pin()`**: Internal helper or main execution logic.
-  - **Function `change_pin()`**: Internal helper or main execution logic.
+- **Class `PINAuth`**: PIN-based authentication system
+  - **Function `authenticate()`**: Main authentication function to be called at startup
+  - **Function `require_pin_auth()`**: Decorator/helper function to add PIN authentication to any script
+  - **Function `setup_pin_cli()`**: CLI utility for PIN setup
+  - **Function `__init__()`**: Initialize PIN authentication
+  - **Function `_hash_pin()`**: Hash a PIN using PBKDF2
+  - **Function `is_pin_configured()`**: Check if a PIN is already configured
+  - **Function `verify_pin()`**: Verify a PIN against the stored hash
+  - **Function `prompt_for_pin()`**: Prompt user for PIN and verify
+  - **Function `setup_pin()`**: Set up a new PIN for the assistant
+  - **Function `_save_pin_to_env()`**: Save PIN hash and salt to environment file
+  - **Function `_setup_new_pin()`**: Set up a new PIN interactively
+  - **Function `change_pin()`**: Change the current PIN
 
 ### File: `core_ai\src\ai_assistant\automation\analytics.py`
-- **Class `MetricType`**: Orchestrates logic for this module.
-- **Class `AlertLevel`**: Orchestrates logic for this module.
-- **Class `AnalyticsInterval`**: Orchestrates logic for this module.
-- **Class `MetricPoint`**: Orchestrates logic for this module.
-- **Class `PerformanceMetrics`**: Orchestrates logic for this module.
-- **Class `OptimizationSuggestion`**: Orchestrates logic for this module.
-- **Class `AnalyticsAlert`**: Orchestrates logic for this module.
-- **Class `PerformanceReport`**: Orchestrates logic for this module.
-- **Class `MetricStore`**: Orchestrates logic for this module.
-- **Class `PerformanceMonitor`**: Orchestrates logic for this module.
-- **Class `OptimizationAnalyzer`**: Orchestrates logic for this module.
-- **Class `ReportGenerator`**: Orchestrates logic for this module.
-- **Class `AutomationAnalytics`**: Orchestrates logic for this module.
-  - **Function `create_execution_time_collector()`**: Internal helper or main execution logic.
-  - **Function `create_queue_metrics_collector()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `add_metric()`**: Internal helper or main execution logic.
-  - **Function `get_metrics()`**: Internal helper or main execution logic.
-  - **Function `get_latest_value()`**: Internal helper or main execution logic.
-  - **Function `get_aggregated_stats()`**: Internal helper or main execution logic.
-  - **Function `get_all_metric_names()`**: Internal helper or main execution logic.
-  - **Function `clear_old_data()`**: Internal helper or main execution logic.
-  - **Function `_update_aggregated_metrics()`**: Internal helper or main execution logic.
-  - **Function `_recalculate_aggregated_metrics()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `start_monitoring()`**: Internal helper or main execution logic.
-  - **Function `stop_monitoring()`**: Internal helper or main execution logic.
-  - **Function `add_custom_collector()`**: Internal helper or main execution logic.
-  - **Function `set_alert_threshold()`**: Internal helper or main execution logic.
-  - **Function `add_alert_callback()`**: Internal helper or main execution logic.
-  - **Function `record_metric()`**: Internal helper or main execution logic.
-  - **Function `record_execution_time()`**: Internal helper or main execution logic.
-  - **Function `get_performance_snapshot()`**: Internal helper or main execution logic.
-  - **Function `_monitor_loop()`**: Internal helper or main execution logic.
-  - **Function `_collect_system_metrics()`**: Internal helper or main execution logic.
-  - **Function `_check_metric_alerts()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `analyze_performance()`**: Internal helper or main execution logic.
-  - **Function `add_optimization_rule()`**: Internal helper or main execution logic.
-  - **Function `_setup_default_rules()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `generate_report()`**: Internal helper or main execution logic.
-  - **Function `_generate_daily_report()`**: Internal helper or main execution logic.
-  - **Function `_generate_weekly_report()`**: Internal helper or main execution logic.
-  - **Function `_generate_monthly_report()`**: Internal helper or main execution logic.
-  - **Function `_generate_custom_report()`**: Internal helper or main execution logic.
-  - **Function `_calculate_period_metrics()`**: Internal helper or main execution logic.
-  - **Function `_calculate_execution_trends()`**: Internal helper or main execution logic.
-  - **Function `_calculate_resource_trends()`**: Internal helper or main execution logic.
-  - **Function `_analyze_errors()`**: Internal helper or main execution logic.
-  - **Function `_generate_insights()`**: Internal helper or main execution logic.
-  - **Function `_calculate_performance_score()`**: Internal helper or main execution logic.
-  - **Function `_generate_charts()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `start()`**: Internal helper or main execution logic.
-  - **Function `stop()`**: Internal helper or main execution logic.
-  - **Function `record_automation_event()`**: Internal helper or main execution logic.
-  - **Function `get_current_performance()`**: Internal helper or main execution logic.
-  - **Function `generate_optimization_suggestions()`**: Internal helper or main execution logic.
-  - **Function `generate_report()`**: Internal helper or main execution logic.
-  - **Function `add_custom_metric_collector()`**: Internal helper or main execution logic.
-  - **Function `set_performance_alert()`**: Internal helper or main execution logic.
-  - **Function `get_analytics_dashboard_data()`**: Internal helper or main execution logic.
-  - **Function `_calculate_system_health_score()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `collector()`**: Internal helper or main execution logic.
-  - **Function `collector()`**: Internal helper or main execution logic.
-  - **Function `high_cpu_usage_rule()`**: Internal helper or main execution logic.
-  - **Function `high_memory_usage_rule()`**: Internal helper or main execution logic.
-  - **Function `high_error_rate_rule()`**: Internal helper or main execution logic.
-  - **Function `slow_execution_rule()`**: Internal helper or main execution logic.
-  - **Function `queue_buildup_rule()`**: Internal helper or main execution logic.
+- **Class `MetricType`**: Types of metrics
+- **Class `AlertLevel`**: Alert severity levels
+- **Class `AnalyticsInterval`**: Analytics collection intervals
+- **Class `MetricPoint`**: Individual metric data point
+- **Class `PerformanceMetrics`**: Performance metrics snapshot
+- **Class `OptimizationSuggestion`**: Performance optimization suggestion
+- **Class `AnalyticsAlert`**: Analytics alert
+- **Class `PerformanceReport`**: Comprehensive performance report
+- **Class `MetricStore`**: Thread-safe storage for metrics data
+- **Class `PerformanceMonitor`**: Real-time performance monitoring system
+- **Class `OptimizationAnalyzer`**: Analyzes performance data and suggests optimizations
+- **Class `ReportGenerator`**: Generates comprehensive performance reports
+- **Class `AutomationAnalytics`**: Main automation analytics system
+  - **Function `create_execution_time_collector()`**: Create collector for automation execution times
+  - **Function `create_queue_metrics_collector()`**: Create collector for queue metrics
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `add_metric()`**: Add metric point
+  - **Function `get_metrics()`**: Get metric points for a specific metric
+  - **Function `get_latest_value()`**: Get latest value for metric
+  - **Function `get_aggregated_stats()`**: Get aggregated statistics for metric
+  - **Function `get_all_metric_names()`**: Get all metric names
+  - **Function `clear_old_data()`**: Clear old metric data
+  - **Function `_update_aggregated_metrics()`**: Update aggregated metrics for a metric
+  - **Function `_recalculate_aggregated_metrics()`**: Recalculate aggregated metrics after data cleanup
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `start_monitoring()`**: Start performance monitoring
+  - **Function `stop_monitoring()`**: Stop performance monitoring
+  - **Function `add_custom_collector()`**: Add custom metric collector
+  - **Function `set_alert_threshold()`**: Set alert threshold for metric
+  - **Function `add_alert_callback()`**: Add alert callback function
+  - **Function `record_metric()`**: Record custom metric
+  - **Function `record_execution_time()`**: Record operation execution time
+  - **Function `get_performance_snapshot()`**: Get current performance snapshot
+  - **Function `_monitor_loop()`**: Main monitoring loop
+  - **Function `_collect_system_metrics()`**: Collect system resource metrics
+  - **Function `_check_metric_alerts()`**: Check if metric triggers any alerts
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `analyze_performance()`**: Analyze performance and generate optimization suggestions
+  - **Function `add_optimization_rule()`**: Add custom optimization rule
+  - **Function `_setup_default_rules()`**: Set up default optimization rules
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `generate_report()`**: Generate performance report
+  - **Function `_generate_daily_report()`**: Generate daily performance report
+  - **Function `_generate_weekly_report()`**: Generate weekly performance report
+  - **Function `_generate_monthly_report()`**: Generate monthly performance report
+  - **Function `_generate_custom_report()`**: Generate custom performance report
+  - **Function `_calculate_period_metrics()`**: Calculate aggregated metrics for time period
+  - **Function `_calculate_execution_trends()`**: Calculate execution trends over time
+  - **Function `_calculate_resource_trends()`**: Calculate resource usage trends over time
+  - **Function `_analyze_errors()`**: Analyze error patterns
+  - **Function `_generate_insights()`**: Generate key insights from report data
+  - **Function `_calculate_performance_score()`**: Calculate overall performance score (0-100)
+  - **Function `_generate_charts()`**: Generate visualization charts
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `start()`**: Start analytics system
+  - **Function `stop()`**: Stop analytics system
+  - **Function `record_automation_event()`**: Record automation event for analytics
+  - **Function `get_current_performance()`**: Get current performance snapshot
+  - **Function `generate_optimization_suggestions()`**: Get optimization suggestions
+  - **Function `generate_report()`**: Generate performance report
+  - **Function `add_custom_metric_collector()`**: Add custom metric collector
+  - **Function `set_performance_alert()`**: Set performance alert threshold
+  - **Function `get_analytics_dashboard_data()`**: Get data for analytics dashboard
+  - **Function `_calculate_system_health_score()`**: Calculate overall system health score
+  - **Function `_init_database()`**: Initialize analytics database
+  - **Function `collector()`**: Signature: ()
+  - **Function `collector()`**: Signature: ()
+  - **Function `high_cpu_usage_rule()`**: Signature: ()
+  - **Function `high_memory_usage_rule()`**: Signature: ()
+  - **Function `high_error_rate_rule()`**: Signature: ()
+  - **Function `slow_execution_rule()`**: Signature: ()
+  - **Function `queue_buildup_rule()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\automation\app_automation.py`
   - *(Documentation parsing failed for this file)*
@@ -1401,1736 +1477,1736 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - *(Documentation parsing failed for this file)*
 
 ### File: `core_ai\src\ai_assistant\automation\automation_tools_new.py`
-  - **Function `__getattr__()`**: Internal helper or main execution logic.
+  - **Function `__getattr__()`**: Lazy load modules/functions when accessed. This prevents importing all 15+ submodules at startup.
 
 ### File: `core_ai\src\ai_assistant\automation\browser_automation.py`
-- **Class `BrowserConfig`**: Orchestrates logic for this module.
-- **Class `BrowserAutomation`**: Orchestrates logic for this module.
-- **Class `YouTubeAutomation`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `start_browser()`**: Internal helper or main execution logic.
-  - **Function `navigate()`**: Internal helper or main execution logic.
-  - **Function `find_element_by_description()`**: Internal helper or main execution logic.
-  - **Function `_find_by_common_patterns()`**: Internal helper or main execution logic.
-  - **Function `_find_by_text()`**: Internal helper or main execution logic.
-  - **Function `_find_by_attributes()`**: Internal helper or main execution logic.
-  - **Function `_try_selectors()`**: Internal helper or main execution logic.
-  - **Function `click_element()`**: Internal helper or main execution logic.
-  - **Function `type_text()`**: Internal helper or main execution logic.
-  - **Function `select_option()`**: Internal helper or main execution logic.
-  - **Function `scroll()`**: Internal helper or main execution logic.
-  - **Function `wait_for_element()`**: Internal helper or main execution logic.
-  - **Function `take_screenshot()`**: Internal helper or main execution logic.
-  - **Function `_save_screenshot()`**: Internal helper or main execution logic.
-  - **Function `get_page_text()`**: Internal helper or main execution logic.
-  - **Function `close()`**: Internal helper or main execution logic.
-  - **Function `go_to_history()`**: Internal helper or main execution logic.
-  - **Function `clear_watch_history()`**: Internal helper or main execution logic.
-  - **Function `search()`**: Internal helper or main execution logic.
+- **Class `BrowserConfig`**: Browser configuration
+- **Class `BrowserAutomation`**: Enhanced browser automation with AI-powered element detection
+- **Class `YouTubeAutomation`**: Specialized automation for YouTube with common actions
+  - **Function `__init__()`**: Initialize browser automation
+  - **Function `start_browser()`**: Start the browser
+  - **Function `navigate()`**: Navigate to URL
+  - **Function `find_element_by_description()`**: Find element by natural language description
+  - **Function `_find_by_common_patterns()`**: Find element using common patterns
+  - **Function `_find_by_text()`**: Find element containing the description text
+  - **Function `_find_by_attributes()`**: Find element by attributes (aria-label, title, etc.)
+  - **Function `_try_selectors()`**: Try multiple selectors
+  - **Function `click_element()`**: Click element by description
+  - **Function `type_text()`**: Type text into an input field
+  - **Function `select_option()`**: Select dropdown option
+  - **Function `scroll()`**: Scroll page
+  - **Function `wait_for_element()`**: Wait for element to appear
+  - **Function `take_screenshot()`**: Take screenshot
+  - **Function `_save_screenshot()`**: Save error screenshot
+  - **Function `get_page_text()`**: Get all visible text from page
+  - **Function `close()`**: Close browser
+  - **Function `go_to_history()`**: Navigate to YouTube history page
+  - **Function `clear_watch_history()`**: Clear watch history
+  - **Function `search()`**: Search YouTube
 
 ### File: `core_ai\src\ai_assistant\automation\complex_workflows.py`
   - *(Documentation parsing failed for this file)*
 
 ### File: `core_ai\src\ai_assistant\automation\context_aware.py`
-- **Class `ContextType`**: Orchestrates logic for this module.
-- **Class `AdaptationStrategy`**: Orchestrates logic for this module.
-- **Class `LearningMode`**: Orchestrates logic for this module.
-- **Class `ContextData`**: Orchestrates logic for this module.
-- **Class `ContextPattern`**: Orchestrates logic for this module.
-- **Class `AdaptationRule`**: Orchestrates logic for this module.
-- **Class `ContextCollector`**: Orchestrates logic for this module.
-- **Class `PatternDetector`**: Orchestrates logic for this module.
-- **Class `AdaptationEngine`**: Orchestrates logic for this module.
-- **Class `ContextAwareAutomation`**: Orchestrates logic for this module.
-  - **Function `create_context_collector()`**: Internal helper or main execution logic.
-  - **Function `create_adaptation_callback()`**: Internal helper or main execution logic.
-  - **Function `get_signature()`**: Internal helper or main execution logic.
-  - **Function `matches_context()`**: Internal helper or main execution logic.
-  - **Function `_evaluate_condition()`**: Internal helper or main execution logic.
-  - **Function `_get_nested_value()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `start_collection()`**: Internal helper or main execution logic.
-  - **Function `stop_collection()`**: Internal helper or main execution logic.
-  - **Function `register_collector()`**: Internal helper or main execution logic.
-  - **Function `get_current_context()`**: Internal helper or main execution logic.
-  - **Function `collect_context_now()`**: Internal helper or main execution logic.
-  - **Function `_collection_loop()`**: Internal helper or main execution logic.
-  - **Function `_setup_default_collectors()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `add_context_sample()`**: Internal helper or main execution logic.
-  - **Function `get_detected_patterns()`**: Internal helper or main execution logic.
-  - **Function `get_patterns_by_type()`**: Internal helper or main execution logic.
-  - **Function `predict_next_context()`**: Internal helper or main execution logic.
-  - **Function `_detect_patterns()`**: Internal helper or main execution logic.
-  - **Function `_update_pattern()`**: Internal helper or main execution logic.
-  - **Function `_find_similar_contexts()`**: Internal helper or main execution logic.
-  - **Function `_create_context_signature()`**: Internal helper or main execution logic.
-  - **Function `_calculate_similarity()`**: Internal helper or main execution logic.
-  - **Function `_setup_default_detection_rules()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `start_engine()`**: Internal helper or main execution logic.
-  - **Function `stop_engine()`**: Internal helper or main execution logic.
-  - **Function `add_adaptation_rule()`**: Internal helper or main execution logic.
-  - **Function `remove_adaptation_rule()`**: Internal helper or main execution logic.
-  - **Function `register_adaptation_callback()`**: Internal helper or main execution logic.
-  - **Function `force_adaptation_check()`**: Internal helper or main execution logic.
-  - **Function `get_adaptation_stats()`**: Internal helper or main execution logic.
-  - **Function `_adaptation_loop()`**: Internal helper or main execution logic.
-  - **Function `_evaluate_adaptations()`**: Internal helper or main execution logic.
-  - **Function `_trigger_adaptation()`**: Internal helper or main execution logic.
-  - **Function `_execute_adaptation_actions()`**: Internal helper or main execution logic.
-  - **Function `_resolve_action_parameters()`**: Internal helper or main execution logic.
-  - **Function `_get_nested_value()`**: Internal helper or main execution logic.
-  - **Function `_setup_default_adaptation_rules()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `start()`**: Internal helper or main execution logic.
-  - **Function `stop()`**: Internal helper or main execution logic.
-  - **Function `get_current_context()`**: Internal helper or main execution logic.
-  - **Function `get_detected_patterns()`**: Internal helper or main execution logic.
-  - **Function `get_adaptation_rules()`**: Internal helper or main execution logic.
-  - **Function `predict_context()`**: Internal helper or main execution logic.
-  - **Function `register_context_collector()`**: Internal helper or main execution logic.
-  - **Function `add_adaptation_rule()`**: Internal helper or main execution logic.
-  - **Function `register_adaptation_callback()`**: Internal helper or main execution logic.
-  - **Function `get_system_stats()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `_load_saved_data()`**: Internal helper or main execution logic.
-  - **Function `_save_current_state()`**: Internal helper or main execution logic.
-  - **Function `collector()`**: Internal helper or main execution logic.
-  - **Function `callback()`**: Internal helper or main execution logic.
-  - **Function `collect_system_context()`**: Internal helper or main execution logic.
-  - **Function `collect_temporal_context()`**: Internal helper or main execution logic.
-  - **Function `collect_performance_context()`**: Internal helper or main execution logic.
-  - **Function `high_cpu_pattern()`**: Internal helper or main execution logic.
-  - **Function `temporal_pattern()`**: Internal helper or main execution logic.
-  - **Function `performance_degradation_pattern()`**: Internal helper or main execution logic.
+- **Class `ContextType`**: Types of context information
+- **Class `AdaptationStrategy`**: Strategies for adaptation
+- **Class `LearningMode`**: Machine learning modes
+- **Class `ContextData`**: Context information snapshot
+- **Class `ContextPattern`**: Detected context pattern
+- **Class `AdaptationRule`**: Rule for context-based adaptation
+- **Class `ContextCollector`**: Collects context information from various sources
+- **Class `PatternDetector`**: Detects patterns in context data
+- **Class `AdaptationEngine`**: Engine for context-based automation adaptation
+- **Class `ContextAwareAutomation`**: Main context-aware automation system
+  - **Function `create_context_collector()`**: Create custom context collector
+  - **Function `create_adaptation_callback()`**: Create adaptation callback for automation system integration
+  - **Function `get_signature()`**: Get context signature for similarity comparison
+  - **Function `matches_context()`**: Check if current context matches trigger conditions
+  - **Function `_evaluate_condition()`**: Evaluate a single condition
+  - **Function `_get_nested_value()`**: Get nested value from data using dot notation
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `start_collection()`**: Start context collection
+  - **Function `stop_collection()`**: Stop context collection
+  - **Function `register_collector()`**: Register context collector
+  - **Function `get_current_context()`**: Get current context information
+  - **Function `collect_context_now()`**: Force immediate context collection
+  - **Function `_collection_loop()`**: Context collection loop for specific type
+  - **Function `_setup_default_collectors()`**: Setup default context collectors
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `add_context_sample()`**: Add context sample for pattern detection
+  - **Function `get_detected_patterns()`**: Get detected context patterns
+  - **Function `get_patterns_by_type()`**: Get patterns by type
+  - **Function `predict_next_context()`**: Predict likely next context based on patterns
+  - **Function `_detect_patterns()`**: Run pattern detection on current contexts
+  - **Function `_update_pattern()`**: Update detected pattern
+  - **Function `_find_similar_contexts()`**: Find historically similar contexts
+  - **Function `_create_context_signature()`**: Create numerical signature for contexts
+  - **Function `_calculate_similarity()`**: Calculate similarity between context signatures
+  - **Function `_setup_default_detection_rules()`**: Setup default pattern detection rules
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `start_engine()`**: Start adaptation engine
+  - **Function `stop_engine()`**: Stop adaptation engine
+  - **Function `add_adaptation_rule()`**: Add custom adaptation rule
+  - **Function `remove_adaptation_rule()`**: Remove adaptation rule
+  - **Function `register_adaptation_callback()`**: Register callback for adaptation actions
+  - **Function `force_adaptation_check()`**: Force immediate adaptation check
+  - **Function `get_adaptation_stats()`**: Get adaptation engine statistics
+  - **Function `_adaptation_loop()`**: Main adaptation engine loop
+  - **Function `_evaluate_adaptations()`**: Evaluate adaptation rules against current context
+  - **Function `_trigger_adaptation()`**: Trigger adaptation rule
+  - **Function `_execute_adaptation_actions()`**: Execute adaptation actions
+  - **Function `_resolve_action_parameters()`**: Resolve action parameters from context
+  - **Function `_get_nested_value()`**: Get nested value from data using dot notation
+  - **Function `_setup_default_adaptation_rules()`**: Setup default adaptation rules
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `start()`**: Start context-aware automation system
+  - **Function `stop()`**: Stop context-aware automation system
+  - **Function `get_current_context()`**: Get current context information
+  - **Function `get_detected_patterns()`**: Get detected context patterns
+  - **Function `get_adaptation_rules()`**: Get adaptation rules
+  - **Function `predict_context()`**: Predict context for future time
+  - **Function `register_context_collector()`**: Register custom context collector
+  - **Function `add_adaptation_rule()`**: Add custom adaptation rule
+  - **Function `register_adaptation_callback()`**: Register callback for adaptation actions
+  - **Function `get_system_stats()`**: Get system statistics
+  - **Function `_init_database()`**: Initialize context database
+  - **Function `_load_saved_data()`**: Load saved patterns and rules from database
+  - **Function `_save_current_state()`**: Save current state to database
+  - **Function `collector()`**: Signature: ()
+  - **Function `callback()`**: Signature: ()
+  - **Function `collect_system_context()`**: Signature: ()
+  - **Function `collect_temporal_context()`**: Signature: ()
+  - **Function `collect_performance_context()`**: Signature: ()
+  - **Function `high_cpu_pattern()`**: Signature: ()
+  - **Function `temporal_pattern()`**: Signature: ()
+  - **Function `performance_degradation_pattern()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\automation\file_automation.py`
-- **Class `FileAutomation`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `get_standard_folder()`**: Internal helper or main execution logic.
-  - **Function `open_explorer()`**: Internal helper or main execution logic.
-  - **Function `find_file()`**: Internal helper or main execution logic.
-  - **Function `move_file()`**: Internal helper or main execution logic.
-  - **Function `copy_file()`**: Internal helper or main execution logic.
+- **Class `FileAutomation`**: Handles file system interactions and automation
+  - **Function `__init__()`**: Initialize file automation
+  - **Function `get_standard_folder()`**: Get path to standard user folders
+  - **Function `open_explorer()`**: Open File Explorer at specific path
+  - **Function `find_file()`**: Find a file by name
+  - **Function `move_file()`**: Move a file to a destination folder
+  - **Function `copy_file()`**: Copy a file to a destination folder
 
 ### File: `core_ai\src\ai_assistant\automation\live_taskbar_analysis.py`
-  - **Function `analyze_current_taskbar()`**: Internal helper or main execution logic.
-  - **Function `check_specific_app()`**: Internal helper or main execution logic.
-  - **Function `enum_window_callback()`**: Internal helper or main execution logic.
+  - **Function `analyze_current_taskbar()`**: Analyze what's currently visible on the taskbar
+  - **Function `check_specific_app()`**: Check if a specific application is running
+  - **Function `enum_window_callback()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\automation\main_interface.py`
-- **Class `AutomationStatus`**: Orchestrates logic for this module.
-- **Class `AutomationConfig`**: Orchestrates logic for this module.
-- **Class `AutomationAPI`**: Orchestrates logic for this module.
-- **Class `AutomationCLI`**: Orchestrates logic for this module.
-- **Class `AutomationDashboard`**: Orchestrates logic for this module.
-- **Class `AutomationManager`**: Orchestrates logic for this module.
-  - **Function `create_automation_manager()`**: Internal helper or main execution logic.
-  - **Function `main()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_setup_routes()`**: Internal helper or main execution logic.
-  - **Function `run()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_setup_commands()`**: Internal helper or main execution logic.
-  - **Function `run()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `get_dashboard_data()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_initialize_components()`**: Internal helper or main execution logic.
-  - **Function `start()`**: Internal helper or main execution logic.
-  - **Function `stop()`**: Internal helper or main execution logic.
-  - **Function `get_status()`**: Internal helper or main execution logic.
-  - **Function `create_task()`**: Internal helper or main execution logic.
-  - **Function `execute_task()`**: Internal helper or main execution logic.
-  - **Function `get_task()`**: Internal helper or main execution logic.
-  - **Function `list_tasks()`**: Internal helper or main execution logic.
-  - **Function `delete_task()`**: Internal helper or main execution logic.
-  - **Function `create_schedule()`**: Internal helper or main execution logic.
-  - **Function `list_schedules()`**: Internal helper or main execution logic.
-  - **Function `list_templates()`**: Internal helper or main execution logic.
-  - **Function `instantiate_template()`**: Internal helper or main execution logic.
-  - **Function `get_analytics_metrics()`**: Internal helper or main execution logic.
-  - **Function `get_report()`**: Internal helper or main execution logic.
-  - **Function `get_context_info()`**: Internal helper or main execution logic.
-  - **Function `get_security_dashboard()`**: Internal helper or main execution logic.
-  - **Function `authenticate_user()`**: Internal helper or main execution logic.
-  - **Function `get_config()`**: Internal helper or main execution logic.
-  - **Function `update_config()`**: Internal helper or main execution logic.
-  - **Function `start_web_interface()`**: Internal helper or main execution logic.
-  - **Function `add_status_subscriber()`**: Internal helper or main execution logic.
-  - **Function `remove_status_subscriber()`**: Internal helper or main execution logic.
-  - **Function `_start_status_monitoring()`**: Internal helper or main execution logic.
-  - **Function `_stop_status_monitoring()`**: Internal helper or main execution logic.
-  - **Function `_status_monitor_loop()`**: Internal helper or main execution logic.
-  - **Function `get_status()`**: Internal helper or main execution logic.
-  - **Function `list_tasks()`**: Internal helper or main execution logic.
-  - **Function `create_task()`**: Internal helper or main execution logic.
-  - **Function `get_task()`**: Internal helper or main execution logic.
-  - **Function `execute_task()`**: Internal helper or main execution logic.
-  - **Function `delete_task()`**: Internal helper or main execution logic.
-  - **Function `list_schedules()`**: Internal helper or main execution logic.
-  - **Function `create_schedule()`**: Internal helper or main execution logic.
-  - **Function `list_templates()`**: Internal helper or main execution logic.
-  - **Function `instantiate_template()`**: Internal helper or main execution logic.
-  - **Function `get_metrics()`**: Internal helper or main execution logic.
-  - **Function `get_report()`**: Internal helper or main execution logic.
-  - **Function `get_context()`**: Internal helper or main execution logic.
-  - **Function `security_dashboard()`**: Internal helper or main execution logic.
-  - **Function `login()`**: Internal helper or main execution logic.
-  - **Function `get_config()`**: Internal helper or main execution logic.
-  - **Function `update_config()`**: Internal helper or main execution logic.
-  - **Function `handle_connect()`**: Internal helper or main execution logic.
-  - **Function `handle_disconnect()`**: Internal helper or main execution logic.
-  - **Function `handle_subscribe_status()`**: Internal helper or main execution logic.
-  - **Function `handle_unsubscribe_status()`**: Internal helper or main execution logic.
-  - **Function `automation()`**: Internal helper or main execution logic.
-  - **Function `status()`**: Internal helper or main execution logic.
-  - **Function `start()`**: Internal helper or main execution logic.
-  - **Function `stop()`**: Internal helper or main execution logic.
-  - **Function `task()`**: Internal helper or main execution logic.
-  - **Function `list()`**: Internal helper or main execution logic.
-  - **Function `show()`**: Internal helper or main execution logic.
-  - **Function `execute()`**: Internal helper or main execution logic.
-  - **Function `template()`**: Internal helper or main execution logic.
-  - **Function `list()`**: Internal helper or main execution logic.
-  - **Function `analytics()`**: Internal helper or main execution logic.
-  - **Function `metrics()`**: Internal helper or main execution logic.
-  - **Function `serve()`**: Internal helper or main execution logic.
+- **Class `AutomationStatus`**: Overall automation system status
+- **Class `AutomationConfig`**: Automation system configuration
+- **Class `AutomationAPI`**: RESTful API interface for automation system
+- **Class `AutomationCLI`**: Command-line interface for automation system
+- **Class `AutomationDashboard`**: Web dashboard for automation system
+- **Class `AutomationManager`**: Main automation system manager
+  - **Function `create_automation_manager()`**: Factory function to create automation manager
+  - **Function `main()`**: Main CLI entry point
+  - **Function `__init__()`**: Signature: (self, config)
+  - **Function `_setup_routes()`**: Setup API routes
+  - **Function `run()`**: Run CLI
+  - **Function `__init__()`**: Signature: (self, config)
+  - **Function `_setup_commands()`**: Setup CLI commands
+  - **Function `run()`**: Run CLI
+  - **Function `__init__()`**: Signature: (self, config)
+  - **Function `get_dashboard_data()`**: Get dashboard data
+  - **Function `__init__()`**: Signature: (self, config)
+  - **Function `_initialize_components()`**: Initialize all automation components
+  - **Function `start()`**: Start the automation system
+  - **Function `stop()`**: Stop the automation system
+  - **Function `get_status()`**: Get current system status
+  - **Function `create_task()`**: Create a new automation task
+  - **Function `execute_task()`**: Execute a task
+  - **Function `get_task()`**: Get task details
+  - **Function `list_tasks()`**: List tasks with optional filtering
+  - **Function `delete_task()`**: Delete a task
+  - **Function `create_schedule()`**: Create a new schedule
+  - **Function `list_schedules()`**: List schedules
+  - **Function `list_templates()`**: List available templates
+  - **Function `instantiate_template()`**: Instantiate a template
+  - **Function `get_analytics_metrics()`**: Get analytics metrics
+  - **Function `get_report()`**: Generate analytics report
+  - **Function `get_context_info()`**: Get context information
+  - **Function `get_security_dashboard()`**: Get security dashboard data
+  - **Function `authenticate_user()`**: Authenticate user
+  - **Function `get_config()`**: Get system configuration
+  - **Function `update_config()`**: Update system configuration
+  - **Function `start_web_interface()`**: Start web interface
+  - **Function `add_status_subscriber()`**: Add status update subscriber
+  - **Function `remove_status_subscriber()`**: Remove status update subscriber
+  - **Function `_start_status_monitoring()`**: Start status monitoring thread
+  - **Function `_stop_status_monitoring()`**: Stop status monitoring thread
+  - **Function `_status_monitor_loop()`**: Status monitoring loop
+  - **Function `get_status()`**: Get current system status
+  - **Function `list_tasks()`**: List tasks with optional filtering
+  - **Function `create_task()`**: Create a new automation task
+  - **Function `get_task()`**: Get task details
+  - **Function `execute_task()`**: Execute a task
+  - **Function `delete_task()`**: Delete a task
+  - **Function `list_schedules()`**: List schedules
+  - **Function `create_schedule()`**: Create a new schedule
+  - **Function `list_templates()`**: List available templates
+  - **Function `instantiate_template()`**: Instantiate a template
+  - **Function `get_metrics()`**: Signature: ()
+  - **Function `get_report()`**: Generate analytics report
+  - **Function `get_context()`**: Signature: ()
+  - **Function `security_dashboard()`**: Signature: ()
+  - **Function `login()`**: Signature: ()
+  - **Function `get_config()`**: Get system configuration
+  - **Function `update_config()`**: Update system configuration
+  - **Function `handle_connect()`**: Signature: ()
+  - **Function `handle_disconnect()`**: Signature: ()
+  - **Function `handle_subscribe_status()`**: Signature: ()
+  - **Function `handle_unsubscribe_status()`**: Signature: ()
+  - **Function `automation()`**: Signature: ()
+  - **Function `status()`**: Signature: ()
+  - **Function `start()`**: Start the automation system
+  - **Function `stop()`**: Stop the automation system
+  - **Function `task()`**: Signature: ()
+  - **Function `list()`**: Signature: ()
+  - **Function `show()`**: Signature: ()
+  - **Function `execute()`**: Signature: ()
+  - **Function `template()`**: Signature: ()
+  - **Function `list()`**: Signature: ()
+  - **Function `analytics()`**: Signature: ()
+  - **Function `metrics()`**: Signature: ()
+  - **Function `serve()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\automation\orchestrator.py`
-- **Class `TaskPriority`**: Orchestrates logic for this module.
-- **Class `TaskStatus`**: Orchestrates logic for this module.
-- **Class `ResourceType`**: Orchestrates logic for this module.
-- **Class `ExecutionMode`**: Orchestrates logic for this module.
-- **Class `ResourceRequirements`**: Orchestrates logic for this module.
-- **Class `TaskDependency`**: Orchestrates logic for this module.
-- **Class `TaskMetrics`**: Orchestrates logic for this module.
-- **Class `AutomationTask`**: Orchestrates logic for this module.
-- **Class `SystemResources`**: Orchestrates logic for this module.
-- **Class `ExecutionContext`**: Orchestrates logic for this module.
-- **Class `ResourceManager`**: Orchestrates logic for this module.
-- **Class `TaskQueue`**: Orchestrates logic for this module.
-- **Class `TaskExecutor`**: Orchestrates logic for this module.
-- **Class `AutomationOrchestrator`**: Orchestrates logic for this module.
-  - **Function `create_automation_orchestrator()`**: Internal helper or main execution logic.
-  - **Function `create_automation_task()`**: Internal helper or main execution logic.
-  - **Function `quick_submit_task()`**: Internal helper or main execution logic.
-  - **Function `get_orchestrator_status()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `start_monitoring()`**: Internal helper or main execution logic.
-  - **Function `stop_monitoring()`**: Internal helper or main execution logic.
-  - **Function `_monitor_resources()`**: Internal helper or main execution logic.
-  - **Function `get_current_resources()`**: Internal helper or main execution logic.
-  - **Function `get_resource_history()`**: Internal helper or main execution logic.
-  - **Function `can_allocate_resources()`**: Internal helper or main execution logic.
-  - **Function `reserve_resources()`**: Internal helper or main execution logic.
-  - **Function `release_resources()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `add_task()`**: Internal helper or main execution logic.
-  - **Function `get_next_task()`**: Internal helper or main execution logic.
-  - **Function `complete_task()`**: Internal helper or main execution logic.
-  - **Function `_validate_task()`**: Internal helper or main execution logic.
-  - **Function `_update_dependencies()`**: Internal helper or main execution logic.
-  - **Function `_can_queue_task()`**: Internal helper or main execution logic.
-  - **Function `_can_execute_task()`**: Internal helper or main execution logic.
-  - **Function `_calculate_priority_score()`**: Internal helper or main execution logic.
-  - **Function `_check_dependent_tasks()`**: Internal helper or main execution logic.
-  - **Function `get_queue_status()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `start()`**: Internal helper or main execution logic.
-  - **Function `stop()`**: Internal helper or main execution logic.
-  - **Function `_execution_coordinator()`**: Internal helper or main execution logic.
-  - **Function `_execute_task_async()`**: Internal helper or main execution logic.
-  - **Function `_execute_task()`**: Internal helper or main execution logic.
-  - **Function `_execute_sequential()`**: Internal helper or main execution logic.
-  - **Function `_execute_parallel()`**: Internal helper or main execution logic.
-  - **Function `_execute_batch()`**: Internal helper or main execution logic.
-  - **Function `_execute_streaming()`**: Internal helper or main execution logic.
-  - **Function `_task_completion_callback()`**: Internal helper or main execution logic.
-  - **Function `_cleanup_completed_executions()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `start()`**: Internal helper or main execution logic.
-  - **Function `stop()`**: Internal helper or main execution logic.
-  - **Function `submit_task()`**: Internal helper or main execution logic.
-  - **Function `get_task_status()`**: Internal helper or main execution logic.
-  - **Function `cancel_task()`**: Internal helper or main execution logic.
-  - **Function `get_system_status()`**: Internal helper or main execution logic.
-  - **Function `get_performance_metrics()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `_save_task()`**: Internal helper or main execution logic.
+- **Class `TaskPriority`**: Task execution priority levels
+- **Class `TaskStatus`**: Task execution status
+- **Class `ResourceType`**: System resource types
+- **Class `ExecutionMode`**: Task execution modes
+- **Class `ResourceRequirements`**: Resource requirements for task execution
+- **Class `TaskDependency`**: Task dependency definition
+- **Class `TaskMetrics`**: Task execution metrics
+- **Class `AutomationTask`**: Comprehensive automation task definition
+- **Class `SystemResources`**: Current system resource state
+- **Class `ExecutionContext`**: Task execution context
+- **Class `ResourceManager`**: Manages system resources and allocation for tasks
+- **Class `TaskQueue`**: Intelligent task queue with priority handling and resource awareness
+- **Class `TaskExecutor`**: Executes automation tasks with intelligent resource management
+- **Class `AutomationOrchestrator`**: Main automation orchestration layer that coordinates all automation subsystems
+  - **Function `create_automation_orchestrator()`**: Create and configure automation orchestrator
+  - **Function `create_automation_task()`**: Create automation task with default settings
+  - **Function `quick_submit_task()`**: Quick task submission
+  - **Function `get_orchestrator_status()`**: Get orchestrator status summary
+  - **Function `__init__()`**: Signature: (self, config)
+  - **Function `start_monitoring()`**: Start system resource monitoring
+  - **Function `stop_monitoring()`**: Stop resource monitoring
+  - **Function `_monitor_resources()`**: Monitor system resources continuously
+  - **Function `get_current_resources()`**: Get current system resources
+  - **Function `get_resource_history()`**: Get resource history for specified duration
+  - **Function `can_allocate_resources()`**: Check if resources can be allocated for task
+  - **Function `reserve_resources()`**: Reserve resources for task execution
+  - **Function `release_resources()`**: Release reserved resources
+  - **Function `__init__()`**: Signature: (self, config)
+  - **Function `add_task()`**: Add task to queue
+  - **Function `get_next_task()`**: Get next task for execution
+  - **Function `complete_task()`**: Mark task as completed and update dependents
+  - **Function `_validate_task()`**: Validate task before adding to queue
+  - **Function `_update_dependencies()`**: Update task dependency tracking
+  - **Function `_can_queue_task()`**: Check if task can be queued (dependencies satisfied)
+  - **Function `_can_execute_task()`**: Check if task can be executed (resources available)
+  - **Function `_calculate_priority_score()`**: Calculate dynamic priority score for task
+  - **Function `_check_dependent_tasks()`**: Check and queue dependent tasks that are now ready
+  - **Function `get_queue_status()`**: Get current queue status
+  - **Function `__init__()`**: Signature: (self, config)
+  - **Function `start()`**: Start automation orchestration
+  - **Function `stop()`**: Stop automation orchestration
+  - **Function `_execution_coordinator()`**: Coordinate task execution
+  - **Function `_execute_task_async()`**: Execute task asynchronously
+  - **Function `_execute_task()`**: Execute single task
+  - **Function `_execute_sequential()`**: Execute task in sequential mode
+  - **Function `_execute_parallel()`**: Execute task in parallel mode
+  - **Function `_execute_batch()`**: Execute task in batch mode
+  - **Function `_execute_streaming()`**: Execute task in streaming mode
+  - **Function `_task_completion_callback()`**: Handle task completion
+  - **Function `_cleanup_completed_executions()`**: Clean up completed task executions
+  - **Function `__init__()`**: Signature: (self, config)
+  - **Function `start()`**: Start automation orchestration
+  - **Function `stop()`**: Stop automation orchestration
+  - **Function `submit_task()`**: Submit automation task for execution
+  - **Function `get_task_status()`**: Get task status and details
+  - **Function `cancel_task()`**: Cancel pending or running task
+  - **Function `get_system_status()`**: Get overall system status
+  - **Function `get_performance_metrics()`**: Get performance metrics and analytics
+  - **Function `_init_database()`**: Initialize SQLite database for persistence
+  - **Function `_save_task()`**: Save task to database
 
 ### File: `core_ai\src\ai_assistant\automation\rule_engine.py`
-- **Class `RuleType`**: Orchestrates logic for this module.
-- **Class `ConditionOperator`**: Orchestrates logic for this module.
-- **Class `ActionType`**: Orchestrates logic for this module.
-- **Class `RuleStatus`**: Orchestrates logic for this module.
-- **Class `EventType`**: Orchestrates logic for this module.
-- **Class `RuleCondition`**: Orchestrates logic for this module.
-- **Class `RuleAction`**: Orchestrates logic for this module.
-- **Class `RuleEvent`**: Orchestrates logic for this module.
-- **Class `RuleContext`**: Orchestrates logic for this module.
-- **Class `AutomationRule`**: Orchestrates logic for this module.
-- **Class `EventManager`**: Orchestrates logic for this module.
-- **Class `FactDatabase`**: Orchestrates logic for this module.
-- **Class `RuleExecutor`**: Orchestrates logic for this module.
-- **Class `AutomationRuleEngine`**: Orchestrates logic for this module.
-  - **Function `create_condition_rule()`**: Internal helper or main execution logic.
-  - **Function `create_event_rule()`**: Internal helper or main execution logic.
-  - **Function `create_simple_condition()`**: Internal helper or main execution logic.
-  - **Function `create_function_action()`**: Internal helper or main execution logic.
-  - **Function `evaluate()`**: Internal helper or main execution logic.
-  - **Function `_get_field_value()`**: Internal helper or main execution logic.
-  - **Function `evaluate_conditions()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `start_processing()`**: Internal helper or main execution logic.
-  - **Function `stop_processing()`**: Internal helper or main execution logic.
-  - **Function `emit_event()`**: Internal helper or main execution logic.
-  - **Function `register_handler()`**: Internal helper or main execution logic.
-  - **Function `unregister_handler()`**: Internal helper or main execution logic.
-  - **Function `get_recent_events()`**: Internal helper or main execution logic.
-  - **Function `_process_events()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `set_fact()`**: Internal helper or main execution logic.
-  - **Function `get_fact()`**: Internal helper or main execution logic.
-  - **Function `delete_fact()`**: Internal helper or main execution logic.
-  - **Function `get_facts_matching()`**: Internal helper or main execution logic.
-  - **Function `get_fact_history()`**: Internal helper or main execution logic.
-  - **Function `get_all_facts()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `register_function()`**: Internal helper or main execution logic.
-  - **Function `execute_actions()`**: Internal helper or main execution logic.
-  - **Function `_execute_single_action()`**: Internal helper or main execution logic.
-  - **Function `_execute_function_call()`**: Internal helper or main execution logic.
-  - **Function `_execute_set_property()`**: Internal helper or main execution logic.
-  - **Function `_execute_send_event()`**: Internal helper or main execution logic.
-  - **Function `_execute_log_message()`**: Internal helper or main execution logic.
-  - **Function `_execute_conditional()`**: Internal helper or main execution logic.
-  - **Function `_execute_loop()`**: Internal helper or main execution logic.
-  - **Function `_execute_custom()`**: Internal helper or main execution logic.
-  - **Function `_register_builtin_functions()`**: Internal helper or main execution logic.
-  - **Function `_resolve_parameters()`**: Internal helper or main execution logic.
-  - **Function `_get_context_value()`**: Internal helper or main execution logic.
-  - **Function `_set_context_value()`**: Internal helper or main execution logic.
-  - **Function `_resolve_template()`**: Internal helper or main execution logic.
-  - **Function `_evaluate_action_condition()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `start()`**: Internal helper or main execution logic.
-  - **Function `stop()`**: Internal helper or main execution logic.
-  - **Function `add_rule()`**: Internal helper or main execution logic.
-  - **Function `remove_rule()`**: Internal helper or main execution logic.
-  - **Function `enable_rule()`**: Internal helper or main execution logic.
-  - **Function `disable_rule()`**: Internal helper or main execution logic.
-  - **Function `trigger_rule()`**: Internal helper or main execution logic.
-  - **Function `set_fact()`**: Internal helper or main execution logic.
-  - **Function `get_fact()`**: Internal helper or main execution logic.
-  - **Function `emit_event()`**: Internal helper or main execution logic.
-  - **Function `register_function()`**: Internal helper or main execution logic.
-  - **Function `get_rule_status()`**: Internal helper or main execution logic.
-  - **Function `list_rules()`**: Internal helper or main execution logic.
-  - **Function `get_engine_stats()`**: Internal helper or main execution logic.
-  - **Function `_engine_loop()`**: Internal helper or main execution logic.
-  - **Function `_build_context()`**: Internal helper or main execution logic.
-  - **Function `_evaluate_condition_rules()`**: Internal helper or main execution logic.
-  - **Function `_should_evaluate_rule()`**: Internal helper or main execution logic.
-  - **Function `_execute_rule()`**: Internal helper or main execution logic.
-  - **Function `_setup_event_handlers()`**: Internal helper or main execution logic.
-  - **Function `_setup_rule_triggers()`**: Internal helper or main execution logic.
-  - **Function `_validate_rule()`**: Internal helper or main execution logic.
-  - **Function `_cleanup_expired_rules()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `_save_rule()`**: Internal helper or main execution logic.
-  - **Function `_load_rules()`**: Internal helper or main execution logic.
-  - **Function `_delete_rule()`**: Internal helper or main execution logic.
-  - **Function `handle_event()`**: Internal helper or main execution logic.
+- **Class `RuleType`**: Types of automation rules
+- **Class `ConditionOperator`**: Operators for rule conditions
+- **Class `ActionType`**: Types of rule actions
+- **Class `RuleStatus`**: Rule execution status
+- **Class `EventType`**: System event types
+- **Class `RuleCondition`**: Individual rule condition
+- **Class `RuleAction`**: Rule action definition
+- **Class `RuleEvent`**: Rule event definition
+- **Class `RuleContext`**: Context for rule evaluation
+- **Class `AutomationRule`**: Complete automation rule definition
+- **Class `EventManager`**: Manages events and event-driven rule triggers
+- **Class `FactDatabase`**: Database for storing and querying facts
+- **Class `RuleExecutor`**: Executes rule actions
+- **Class `AutomationRuleEngine`**: Main automation rule engine
+  - **Function `create_condition_rule()`**: Create condition-based rule
+  - **Function `create_event_rule()`**: Create event-triggered rule
+  - **Function `create_simple_condition()`**: Create simple rule condition
+  - **Function `create_function_action()`**: Create function call action
+  - **Function `evaluate()`**: Evaluate condition against context
+  - **Function `_get_field_value()`**: Get field value from context using dot notation
+  - **Function `evaluate_conditions()`**: Evaluate rule conditions
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `start_processing()`**: Start event processing
+  - **Function `stop_processing()`**: Stop event processing
+  - **Function `emit_event()`**: Emit system event
+  - **Function `register_handler()`**: Register event handler
+  - **Function `unregister_handler()`**: Unregister event handler
+  - **Function `get_recent_events()`**: Get recent events
+  - **Function `_process_events()`**: Process events from queue
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `set_fact()`**: Set fact in fact database
+  - **Function `get_fact()`**: Get fact from fact database
+  - **Function `delete_fact()`**: Delete fact
+  - **Function `get_facts_matching()`**: Get facts matching pattern
+  - **Function `get_fact_history()`**: Get fact history
+  - **Function `get_all_facts()`**: Get all facts
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `register_function()`**: Register function for rule actions
+  - **Function `execute_actions()`**: Execute list of rule actions
+  - **Function `_execute_single_action()`**: Execute single rule action
+  - **Function `_execute_function_call()`**: Execute function call action
+  - **Function `_execute_set_property()`**: Execute set property action
+  - **Function `_execute_send_event()`**: Execute send event action
+  - **Function `_execute_log_message()`**: Execute log message action
+  - **Function `_execute_conditional()`**: Execute conditional action
+  - **Function `_execute_loop()`**: Execute loop action
+  - **Function `_execute_custom()`**: Execute custom action
+  - **Function `_register_builtin_functions()`**: Register built-in functions
+  - **Function `_resolve_parameters()`**: Resolve parameter values from context
+  - **Function `_get_context_value()`**: Get value from context using dot notation
+  - **Function `_set_context_value()`**: Set value in context using dot notation
+  - **Function `_resolve_template()`**: Resolve template string with context values
+  - **Function `_evaluate_action_condition()`**: Evaluate action condition
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `start()`**: Start rule engine
+  - **Function `stop()`**: Stop rule engine
+  - **Function `add_rule()`**: Add automation rule
+  - **Function `remove_rule()`**: Remove automation rule
+  - **Function `enable_rule()`**: Enable rule
+  - **Function `disable_rule()`**: Disable rule
+  - **Function `trigger_rule()`**: Manually trigger rule execution
+  - **Function `set_fact()`**: Set fact in fact database
+  - **Function `get_fact()`**: Get fact from fact database
+  - **Function `emit_event()`**: Emit system event
+  - **Function `register_function()`**: Register function for rule actions
+  - **Function `get_rule_status()`**: Get rule status and information
+  - **Function `list_rules()`**: List all rules
+  - **Function `get_engine_stats()`**: Get rule engine statistics
+  - **Function `_engine_loop()`**: Main engine evaluation loop
+  - **Function `_build_context()`**: Build current rule context
+  - **Function `_evaluate_condition_rules()`**: Evaluate condition-based rules
+  - **Function `_should_evaluate_rule()`**: Check if rule should be evaluated
+  - **Function `_execute_rule()`**: Execute automation rule
+  - **Function `_setup_event_handlers()`**: Set up event handlers for rule triggers
+  - **Function `_setup_rule_triggers()`**: Set up triggers for rule
+  - **Function `_validate_rule()`**: Validate rule before adding
+  - **Function `_cleanup_expired_rules()`**: Clean up expired rules
+  - **Function `_init_database()`**: Initialize database for rule storage
+  - **Function `_save_rule()`**: Save rule to database
+  - **Function `_load_rules()`**: Load rules from database
+  - **Function `_delete_rule()`**: Delete rule from database
+  - **Function `handle_event()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\automation\security.py`
-- **Class `SecurityLevel`**: Orchestrates logic for this module.
-- **Class `PermissionType`**: Orchestrates logic for this module.
-- **Class `ResourceType`**: Orchestrates logic for this module.
-- **Class `AuditEventType`**: Orchestrates logic for this module.
-- **Class `Permission`**: Orchestrates logic for this module.
-- **Class `Role`**: Orchestrates logic for this module.
-- **Class `User`**: Orchestrates logic for this module.
-- **Class `SecurityCredential`**: Orchestrates logic for this module.
-- **Class `AuditEvent`**: Orchestrates logic for this module.
-- **Class `SecurityPolicy`**: Orchestrates logic for this module.
-- **Class `SecuritySession`**: Orchestrates logic for this module.
-- **Class `CredentialManager`**: Orchestrates logic for this module.
-- **Class `AccessController`**: Orchestrates logic for this module.
-- **Class `AuditLogger`**: Orchestrates logic for this module.
-- **Class `SecurityPolicyEngine`**: Orchestrates logic for this module.
-- **Class `AutomationSecurity`**: Orchestrates logic for this module.
-  - **Function `require_permission()`**: Internal helper or main execution logic.
-  - **Function `secure_operation()`**: Internal helper or main execution logic.
-  - **Function `matches_request()`**: Internal helper or main execution logic.
-  - **Function `has_permission()`**: Internal helper or main execution logic.
-  - **Function `is_locked()`**: Internal helper or main execution logic.
-  - **Function `verify_password()`**: Internal helper or main execution logic.
-  - **Function `is_expired()`**: Internal helper or main execution logic.
-  - **Function `is_idle()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `store_credential()`**: Internal helper or main execution logic.
-  - **Function `retrieve_credential()`**: Internal helper or main execution logic.
-  - **Function `list_credentials()`**: Internal helper or main execution logic.
-  - **Function `delete_credential()`**: Internal helper or main execution logic.
-  - **Function `_check_credential_access()`**: Internal helper or main execution logic.
-  - **Function `_derive_key()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `create_user()`**: Internal helper or main execution logic.
-  - **Function `authenticate_user()`**: Internal helper or main execution logic.
-  - **Function `validate_session()`**: Internal helper or main execution logic.
-  - **Function `check_permission()`**: Internal helper or main execution logic.
-  - **Function `logout_user()`**: Internal helper or main execution logic.
-  - **Function `create_role()`**: Internal helper or main execution logic.
-  - **Function `assign_role_to_user()`**: Internal helper or main execution logic.
-  - **Function `revoke_role_from_user()`**: Internal helper or main execution logic.
-  - **Function `_hash_password()`**: Internal helper or main execution logic.
-  - **Function `_calculate_effective_permissions()`**: Internal helper or main execution logic.
-  - **Function `_update_user_sessions()`**: Internal helper or main execution logic.
-  - **Function `_invalidate_session()`**: Internal helper or main execution logic.
-  - **Function `_create_default_roles()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `log_event()`**: Internal helper or main execution logic.
-  - **Function `get_recent_events()`**: Internal helper or main execution logic.
-  - **Function `get_security_violations()`**: Internal helper or main execution logic.
-  - **Function `get_user_activity()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `_store_audit_event()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `add_policy()`**: Internal helper or main execution logic.
-  - **Function `evaluate_policies()`**: Internal helper or main execution logic.
-  - **Function `_evaluate_policy()`**: Internal helper or main execution logic.
-  - **Function `_evaluate_rule()`**: Internal helper or main execution logic.
-  - **Function `_evaluate_ip_whitelist_rule()`**: Internal helper or main execution logic.
-  - **Function `_evaluate_time_restriction_rule()`**: Internal helper or main execution logic.
-  - **Function `_evaluate_resource_limit_rule()`**: Internal helper or main execution logic.
-  - **Function `_evaluate_session_limit_rule()`**: Internal helper or main execution logic.
-  - **Function `_create_default_policies()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `start_security()`**: Internal helper or main execution logic.
-  - **Function `stop_security()`**: Internal helper or main execution logic.
-  - **Function `authenticate()`**: Internal helper or main execution logic.
-  - **Function `check_access()`**: Internal helper or main execution logic.
-  - **Function `store_credential()`**: Internal helper or main execution logic.
-  - **Function `retrieve_credential()`**: Internal helper or main execution logic.
-  - **Function `get_security_dashboard()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `_create_default_admin()`**: Internal helper or main execution logic.
-  - **Function `decorator()`**: Internal helper or main execution logic.
-  - **Function `decorator()`**: Internal helper or main execution logic.
-  - **Function `wrapper()`**: Internal helper or main execution logic.
-  - **Function `wrapper()`**: Internal helper or main execution logic.
+- **Class `SecurityLevel`**: Security levels for automation operations
+- **Class `PermissionType`**: Types of permissions
+- **Class `ResourceType`**: Types of protected resources
+- **Class `AuditEventType`**: Types of audit events
+- **Class `Permission`**: Individual permission definition
+- **Class `Role`**: Security role definition
+- **Class `User`**: User account definition
+- **Class `SecurityCredential`**: Secure credential storage
+- **Class `AuditEvent`**: Security audit event
+- **Class `SecurityPolicy`**: Security policy definition
+- **Class `SecuritySession`**: User security session
+- **Class `CredentialManager`**: Secure credential storage and management
+- **Class `AccessController`**: Role-based access control system
+- **Class `AuditLogger`**: Security audit logging system
+- **Class `SecurityPolicyEngine`**: Security policy enforcement engine
+- **Class `AutomationSecurity`**: Main automation security system
+  - **Function `require_permission()`**: Decorator for permission checking
+  - **Function `secure_operation()`**: Decorator for marking operations with security levels
+  - **Function `matches_request()`**: Check if permission matches request
+  - **Function `has_permission()`**: Check if role has specific permission
+  - **Function `is_locked()`**: Check if user account is locked
+  - **Function `verify_password()`**: Verify password against hash
+  - **Function `is_expired()`**: Check if session is expired
+  - **Function `is_idle()`**: Check if session is idle
+  - **Function `__init__()`**: Signature: (self, db_path, master_key)
+  - **Function `store_credential()`**: Store secure credential
+  - **Function `retrieve_credential()`**: Retrieve secure credential
+  - **Function `list_credentials()`**: List available credentials for user
+  - **Function `delete_credential()`**: Delete credential
+  - **Function `_check_credential_access()`**: Check if user can access credential
+  - **Function `_derive_key()`**: Derive encryption key from master key
+  - **Function `__init__()`**: Signature: (self, db_path, master_key)
+  - **Function `create_user()`**: Create new user account
+  - **Function `authenticate_user()`**: Authenticate user and create session
+  - **Function `validate_session()`**: Validate and refresh session
+  - **Function `check_permission()`**: Check if session has required permission
+  - **Function `logout_user()`**: Logout user and invalidate session
+  - **Function `create_role()`**: Create new role
+  - **Function `assign_role_to_user()`**: Assign role to user
+  - **Function `revoke_role_from_user()`**: Revoke role from user
+  - **Function `_hash_password()`**: Hash password securely
+  - **Function `_calculate_effective_permissions()`**: Calculate effective permissions from roles
+  - **Function `_update_user_sessions()`**: Update all active sessions for user
+  - **Function `_invalidate_session()`**: Invalidate session
+  - **Function `_create_default_roles()`**: Create default system roles
+  - **Function `__init__()`**: Signature: (self, db_path, master_key)
+  - **Function `log_event()`**: Log security audit event
+  - **Function `get_recent_events()`**: Get recent audit events with filtering
+  - **Function `get_security_violations()`**: Get security violations within time window
+  - **Function `get_user_activity()`**: Get user activity within time window
+  - **Function `_init_database()`**: Initialize security database
+  - **Function `_store_audit_event()`**: Store audit event in database
+  - **Function `__init__()`**: Signature: (self, db_path, master_key)
+  - **Function `add_policy()`**: Add security policy
+  - **Function `evaluate_policies()`**: Evaluate all policies against context
+  - **Function `_evaluate_policy()`**: Evaluate single policy
+  - **Function `_evaluate_rule()`**: Evaluate single policy rule
+  - **Function `_evaluate_ip_whitelist_rule()`**: Evaluate IP whitelist rule
+  - **Function `_evaluate_time_restriction_rule()`**: Evaluate time restriction rule
+  - **Function `_evaluate_resource_limit_rule()`**: Evaluate resource limit rule
+  - **Function `_evaluate_session_limit_rule()`**: Evaluate session limit rule
+  - **Function `_create_default_policies()`**: Create default security policies
+  - **Function `__init__()`**: Signature: (self, db_path, master_key)
+  - **Function `start_security()`**: Start security system
+  - **Function `stop_security()`**: Stop security system
+  - **Function `authenticate()`**: Authenticate user
+  - **Function `check_access()`**: Check access permissions
+  - **Function `store_credential()`**: Store secure credential
+  - **Function `retrieve_credential()`**: Retrieve secure credential
+  - **Function `get_security_dashboard()`**: Get security dashboard data
+  - **Function `_init_database()`**: Initialize security database
+  - **Function `_create_default_admin()`**: Create default admin user if none exists
+  - **Function `decorator()`**: Signature: ()
+  - **Function `decorator()`**: Signature: ()
+  - **Function `wrapper()`**: Signature: ()
+  - **Function `wrapper()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\automation\smart_automation.py`
-- **Class `WorkflowStatus`**: Orchestrates logic for this module.
-- **Class `TaskType`**: Orchestrates logic for this module.
-- **Class `TriggerType`**: Orchestrates logic for this module.
-- **Class `WorkflowTask`**: Orchestrates logic for this module.
-- **Class `WorkflowTrigger`**: Orchestrates logic for this module.
-- **Class `WorkflowDefinition`**: Orchestrates logic for this module.
-- **Class `WorkflowExecution`**: Orchestrates logic for this module.
-- **Class `SmartAutomationEngine`**: Orchestrates logic for this module.
-- **Class `PatternDetector`**: Orchestrates logic for this module.
-  - **Function `create_simple_workflow()`**: Internal helper or main execution logic.
-  - **Function `execute_workflow_by_name()`**: Internal helper or main execution logic.
-  - **Function `suggest_automation_from_pattern()`**: Internal helper or main execution logic.
-  - **Function `get_workflow_status_simple()`**: Internal helper or main execution logic.
-  - **Function `to_dict()`**: Internal helper or main execution logic.
-  - **Function `from_dict()`**: Internal helper or main execution logic.
-  - **Function `to_dict()`**: Internal helper or main execution logic.
-  - **Function `from_dict()`**: Internal helper or main execution logic.
-  - **Function `to_dict()`**: Internal helper or main execution logic.
-  - **Function `from_dict()`**: Internal helper or main execution logic.
-  - **Function `add_log()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `_register_built_in_functions()`**: Internal helper or main execution logic.
-  - **Function `register_function()`**: Internal helper or main execution logic.
-  - **Function `create_workflow()`**: Internal helper or main execution logic.
-  - **Function `execute_workflow()`**: Internal helper or main execution logic.
-  - **Function `_execute_workflow_thread()`**: Internal helper or main execution logic.
-  - **Function `_execute_task()`**: Internal helper or main execution logic.
-  - **Function `_execute_action_task()`**: Internal helper or main execution logic.
-  - **Function `_execute_condition_task()`**: Internal helper or main execution logic.
-  - **Function `_execute_delay_task()`**: Internal helper or main execution logic.
-  - **Function `_execute_loop_task()`**: Internal helper or main execution logic.
-  - **Function `_resolve_parameters()`**: Internal helper or main execution logic.
-  - **Function `_build_task_graph()`**: Internal helper or main execution logic.
-  - **Function `suggest_workflow_from_pattern()`**: Internal helper or main execution logic.
-  - **Function `create_workflow_from_pattern()`**: Internal helper or main execution logic.
-  - **Function `pause_workflow()`**: Internal helper or main execution logic.
-  - **Function `cancel_workflow()`**: Internal helper or main execution logic.
-  - **Function `get_workflow_status()`**: Internal helper or main execution logic.
-  - **Function `list_workflows()`**: Internal helper or main execution logic.
-  - **Function `delete_workflow()`**: Internal helper or main execution logic.
-  - **Function `_schedule_workflow_triggers()`**: Internal helper or main execution logic.
-  - **Function `_add_scheduled_workflow()`**: Internal helper or main execution logic.
-  - **Function `_run_scheduler()`**: Internal helper or main execution logic.
-  - **Function `_save_workflow()`**: Internal helper or main execution logic.
-  - **Function `_save_execution()`**: Internal helper or main execution logic.
-  - **Function `_load_workflows()`**: Internal helper or main execution logic.
-  - **Function `cleanup()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `record_action()`**: Internal helper or main execution logic.
-  - **Function `detect_patterns()`**: Internal helper or main execution logic.
-  - **Function `_detect_time_patterns()`**: Internal helper or main execution logic.
-  - **Function `_detect_sequence_patterns()`**: Internal helper or main execution logic.
+- **Class `WorkflowStatus`**: Workflow execution status.
+- **Class `TaskType`**: Types of tasks in workflows.
+- **Class `TriggerType`**: Types of workflow triggers.
+- **Class `WorkflowTask`**: Individual task within a workflow.
+- **Class `WorkflowTrigger`**: Workflow trigger configuration.
+- **Class `WorkflowDefinition`**: Complete workflow definition.
+- **Class `WorkflowExecution`**: Workflow execution instance.
+- **Class `SmartAutomationEngine`**: Advanced automation and workflow management system.
+- **Class `PatternDetector`**: Detects automation patterns from user behavior.
+  - **Function `create_simple_workflow()`**: Create a simple workflow from action names.
+  - **Function `execute_workflow_by_name()`**: Execute a workflow by name.
+  - **Function `suggest_automation_from_pattern()`**: Get automation suggestions based on pattern description.
+  - **Function `get_workflow_status_simple()`**: Get simple workflow status description.
+  - **Function `to_dict()`**: Signature: (self)
+  - **Function `from_dict()`**: Signature: (cls, data)
+  - **Function `to_dict()`**: Signature: (self)
+  - **Function `from_dict()`**: Signature: (cls, data)
+  - **Function `to_dict()`**: Signature: (self)
+  - **Function `from_dict()`**: Signature: (cls, data)
+  - **Function `add_log()`**: Add log entry with timestamp.
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `_init_database()`**: Initialize SQLite database for workflow storage.
+  - **Function `_register_built_in_functions()`**: Register built-in functions for workflows.
+  - **Function `register_function()`**: Register a function for use in workflows.
+  - **Function `create_workflow()`**: Create a new workflow.
+  - **Function `execute_workflow()`**: Execute a workflow.
+  - **Function `_execute_workflow_thread()`**: Execute workflow in separate thread.
+  - **Function `_execute_task()`**: Execute a single task.
+  - **Function `_execute_action_task()`**: Execute an action task.
+  - **Function `_execute_condition_task()`**: Execute a condition task.
+  - **Function `_execute_delay_task()`**: Execute a delay task.
+  - **Function `_execute_loop_task()`**: Execute a loop task.
+  - **Function `_resolve_parameters()`**: Resolve parameter placeholders.
+  - **Function `_build_task_graph()`**: Build task dependency graph.
+  - **Function `suggest_workflow_from_pattern()`**: Suggest a workflow based on detected patterns.
+  - **Function `create_workflow_from_pattern()`**: Create a workflow from a detected pattern.
+  - **Function `pause_workflow()`**: Pause a running workflow.
+  - **Function `cancel_workflow()`**: Cancel a running workflow.
+  - **Function `get_workflow_status()`**: Get status of workflow execution.
+  - **Function `list_workflows()`**: List all workflows.
+  - **Function `delete_workflow()`**: Delete a workflow.
+  - **Function `_schedule_workflow_triggers()`**: Schedule workflow triggers.
+  - **Function `_add_scheduled_workflow()`**: Add scheduled workflow to scheduler.
+  - **Function `_run_scheduler()`**: Run the scheduler in background thread.
+  - **Function `_save_workflow()`**: Save workflow to database.
+  - **Function `_save_execution()`**: Save execution results to database.
+  - **Function `_load_workflows()`**: Load workflows from database.
+  - **Function `cleanup()`**: Cleanup resources.
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `record_action()`**: Record user action for pattern detection.
+  - **Function `detect_patterns()`**: Detect automation patterns from action history.
+  - **Function `_detect_time_patterns()`**: Detect time-based patterns.
+  - **Function `_detect_sequence_patterns()`**: Detect action sequence patterns.
 
 ### File: `core_ai\src\ai_assistant\automation\system_automation.py`
   - *(Documentation parsing failed for this file)*
 
 ### File: `core_ai\src\ai_assistant\automation\taskbar_detection.py`
-- **Class `TaskbarDetector`**: Orchestrates logic for this module.
-  - **Function `detect_taskbar_apps()`**: Internal helper or main execution logic.
-  - **Function `can_see_taskbar()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `get_running_applications()`**: Internal helper or main execution logic.
-  - **Function `_get_window_information()`**: Internal helper or main execution logic.
-  - **Function `get_taskbar_apps_visual()`**: Internal helper or main execution logic.
-  - **Function `get_taskbar_region_analysis()`**: Internal helper or main execution logic.
-  - **Function `get_complete_desktop_analysis()`**: Internal helper or main execution logic.
-  - **Function `find_specific_app_in_taskbar()`**: Internal helper or main execution logic.
-  - **Function `enum_window_callback()`**: Internal helper or main execution logic.
+- **Class `TaskbarDetector`**: Detects and analyzes Windows taskbar and running applications.
+  - **Function `detect_taskbar_apps()`**: Main function to detect and describe taskbar applications.
+  - **Function `can_see_taskbar()`**: Check if the assistant can see and analyze the taskbar.
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `get_running_applications()`**: Get detailed information about all running applications.
+  - **Function `_get_window_information()`**: Get information about all visible windows using win32gui.
+  - **Function `get_taskbar_apps_visual()`**: Use computer vision to analyze the taskbar and identify apps.
+  - **Function `get_taskbar_region_analysis()`**: Capture and analyze just the taskbar region for more focused results.
+  - **Function `get_complete_desktop_analysis()`**: Provide a complete analysis combining process detection and visual analysis.
+  - **Function `find_specific_app_in_taskbar()`**: Look for a specific application in the taskbar.
+  - **Function `enum_window_callback()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\automation\task_planner.py`
   - *(Documentation parsing failed for this file)*
 
 ### File: `core_ai\src\ai_assistant\automation\task_scheduler.py`
-- **Class `ScheduleType`**: Orchestrates logic for this module.
-- **Class `ScheduleStatus`**: Orchestrates logic for this module.
-- **Class `BusinessHours`**: Orchestrates logic for this module.
-- **Class `ScheduleCondition`**: Orchestrates logic for this module.
-- **Class `ScheduleConstraint`**: Orchestrates logic for this module.
-- **Class `ScheduledTask`**: Orchestrates logic for this module.
-- **Class `ExecutionRecord`**: Orchestrates logic for this module.
-- **Class `CronParser`**: Orchestrates logic for this module.
-- **Class `ScheduleEvaluator`**: Orchestrates logic for this module.
-- **Class `LoadBalancer`**: Orchestrates logic for this module.
-- **Class `AdvancedTaskScheduler`**: Orchestrates logic for this module.
-  - **Function `create_cron_task()`**: Internal helper or main execution logic.
-  - **Function `create_interval_task()`**: Internal helper or main execution logic.
-  - **Function `create_daily_task()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `parse_pattern()`**: Internal helper or main execution logic.
-  - **Function `_validate_pattern()`**: Internal helper or main execution logic.
-  - **Function `_validate_field()`**: Internal helper or main execution logic.
-  - **Function `get_next_execution()`**: Internal helper or main execution logic.
-  - **Function `describe_pattern()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `should_execute()`**: Internal helper or main execution logic.
-  - **Function `_is_business_hours()`**: Internal helper or main execution logic.
-  - **Function `_is_holiday()`**: Internal helper or main execution logic.
-  - **Function `_get_daily_execution_count()`**: Internal helper or main execution logic.
-  - **Function `_evaluate_condition()`**: Internal helper or main execution logic.
-  - **Function `_compare_values()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `calculate_optimal_delay()`**: Internal helper or main execution logic.
-  - **Function `_calculate_historical_delay()`**: Internal helper or main execution logic.
-  - **Function `should_defer_execution()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `start()`**: Internal helper or main execution logic.
-  - **Function `stop()`**: Internal helper or main execution logic.
-  - **Function `schedule_task()`**: Internal helper or main execution logic.
-  - **Function `unschedule_task()`**: Internal helper or main execution logic.
-  - **Function `pause_task()`**: Internal helper or main execution logic.
-  - **Function `resume_task()`**: Internal helper or main execution logic.
-  - **Function `get_task_info()`**: Internal helper or main execution logic.
-  - **Function `list_tasks()`**: Internal helper or main execution logic.
-  - **Function `get_execution_history()`**: Internal helper or main execution logic.
-  - **Function `get_scheduler_stats()`**: Internal helper or main execution logic.
-  - **Function `_scheduler_loop()`**: Internal helper or main execution logic.
-  - **Function `_executor_loop()`**: Internal helper or main execution logic.
-  - **Function `_execute_task()`**: Internal helper or main execution logic.
-  - **Function `_calculate_next_execution()`**: Internal helper or main execution logic.
-  - **Function `_parse_interval()`**: Internal helper or main execution logic.
-  - **Function `_validate_task()`**: Internal helper or main execution logic.
-  - **Function `_add_to_queue()`**: Internal helper or main execution logic.
-  - **Function `_reschedule_recurring_tasks()`**: Internal helper or main execution logic.
-  - **Function `_cleanup_expired_tasks()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `_save_task()`**: Internal helper or main execution logic.
-  - **Function `_load_tasks()`**: Internal helper or main execution logic.
-  - **Function `_delete_task()`**: Internal helper or main execution logic.
+- **Class `ScheduleType`**: Types of schedule patterns
+- **Class `ScheduleStatus`**: Schedule status
+- **Class `BusinessHours`**: Business hour patterns
+- **Class `ScheduleCondition`**: Condition for conditional scheduling
+- **Class `ScheduleConstraint`**: Constraints for schedule execution
+- **Class `ScheduledTask`**: Scheduled task definition
+- **Class `ExecutionRecord`**: Record of task execution
+- **Class `CronParser`**: Advanced cron pattern parser with extended features
+- **Class `ScheduleEvaluator`**: Evaluates schedule conditions and constraints
+- **Class `LoadBalancer`**: Intelligent load balancer for scheduled tasks
+- **Class `AdvancedTaskScheduler`**: Advanced task scheduler with intelligent scheduling and load management
+  - **Function `create_cron_task()`**: Create a cron-scheduled task
+  - **Function `create_interval_task()`**: Create an interval-scheduled task
+  - **Function `create_daily_task()`**: Create a daily scheduled task
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `parse_pattern()`**: Parse cron pattern and return croniter object
+  - **Function `_validate_pattern()`**: Validate cron pattern format
+  - **Function `_validate_field()`**: Validate individual cron field
+  - **Function `get_next_execution()`**: Get next execution time for pattern
+  - **Function `describe_pattern()`**: Get human-readable description of cron pattern
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `should_execute()`**: Determine if task should execute now
+  - **Function `_is_business_hours()`**: Check if current time is within business hours
+  - **Function `_is_holiday()`**: Check if current date is a holiday
+  - **Function `_get_daily_execution_count()`**: Get number of executions today (simplified - would need execution history)
+  - **Function `_evaluate_condition()`**: Evaluate custom condition
+  - **Function `_compare_values()`**: Compare values based on operator
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `calculate_optimal_delay()`**: Calculate optimal delay before execution based on system load
+  - **Function `_calculate_historical_delay()`**: Calculate delay based on historical performance
+  - **Function `should_defer_execution()`**: Determine if execution should be deferred due to high load
+  - **Function `__init__()`**: Signature: (self, db_path)
+  - **Function `start()`**: Start the scheduler
+  - **Function `stop()`**: Stop the scheduler
+  - **Function `schedule_task()`**: Schedule a new task
+  - **Function `unschedule_task()`**: Remove scheduled task
+  - **Function `pause_task()`**: Pause scheduled task
+  - **Function `resume_task()`**: Resume paused task
+  - **Function `get_task_info()`**: Get information about scheduled task
+  - **Function `list_tasks()`**: List all scheduled tasks
+  - **Function `get_execution_history()`**: Get execution history for task
+  - **Function `get_scheduler_stats()`**: Get scheduler statistics
+  - **Function `_scheduler_loop()`**: Main scheduler loop
+  - **Function `_executor_loop()`**: Main executor loop
+  - **Function `_execute_task()`**: Execute scheduled task
+  - **Function `_calculate_next_execution()`**: Calculate next execution time for task
+  - **Function `_parse_interval()`**: Parse interval string to seconds
+  - **Function `_validate_task()`**: Validate task before scheduling
+  - **Function `_add_to_queue()`**: Add task to execution queue
+  - **Function `_reschedule_recurring_tasks()`**: Reschedule recurring tasks that need updating
+  - **Function `_cleanup_expired_tasks()`**: Remove expired tasks
+  - **Function `_init_database()`**: Initialize database for task storage
+  - **Function `_save_task()`**: Save task to database
+  - **Function `_load_tasks()`**: Load tasks from database
+  - **Function `_delete_task()`**: Delete task from database
 
 ### File: `core_ai\src\ai_assistant\automation\templates.py`
-- **Class `TemplateCategory`**: Orchestrates logic for this module.
-- **Class `TemplateType`**: Orchestrates logic for this module.
-- **Class `ParameterType`**: Orchestrates logic for this module.
-- **Class `TemplateParameter`**: Orchestrates logic for this module.
-- **Class `TemplateStep`**: Orchestrates logic for this module.
-- **Class `AutomationTemplate`**: Orchestrates logic for this module.
-- **Class `RenderedTemplate`**: Orchestrates logic for this module.
-- **Class `TemplateLibrary`**: Orchestrates logic for this module.
-- **Class `TemplateManager`**: Orchestrates logic for this module.
-  - **Function `create_simple_task_template()`**: Internal helper or main execution logic.
-  - **Function `create_workflow_template()`**: Internal helper or main execution logic.
-  - **Function `validate()`**: Internal helper or main execution logic.
-  - **Function `_validate_type()`**: Internal helper or main execution logic.
-  - **Function `_validate_rules()`**: Internal helper or main execution logic.
-  - **Function `validate_parameters()`**: Internal helper or main execution logic.
-  - **Function `render_with_parameters()`**: Internal helper or main execution logic.
-  - **Function `_render_step()`**: Internal helper or main execution logic.
-  - **Function `_render_data()`**: Internal helper or main execution logic.
-  - **Function `_render_string()`**: Internal helper or main execution logic.
-  - **Function `to_automation_definition()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `add_template()`**: Internal helper or main execution logic.
-  - **Function `get_template()`**: Internal helper or main execution logic.
-  - **Function `search_templates()`**: Internal helper or main execution logic.
-  - **Function `list_categories()`**: Internal helper or main execution logic.
-  - **Function `get_popular_templates()`**: Internal helper or main execution logic.
-  - **Function `create_template_from_workflow()`**: Internal helper or main execution logic.
-  - **Function `export_template()`**: Internal helper or main execution logic.
-  - **Function `import_template()`**: Internal helper or main execution logic.
-  - **Function `_validate_template()`**: Internal helper or main execution logic.
-  - **Function `_load_builtin_templates()`**: Internal helper or main execution logic.
-  - **Function `_discover_user_templates()`**: Internal helper or main execution logic.
-  - **Function `_save_template_file()`**: Internal helper or main execution logic.
-  - **Function `_extract_parameters_from_workflow()`**: Internal helper or main execution logic.
-  - **Function `_convert_workflow_steps()`**: Internal helper or main execution logic.
-  - **Function `_create_file_copy_template()`**: Internal helper or main execution logic.
-  - **Function `_create_backup_template()`**: Internal helper or main execution logic.
-  - **Function `_create_log_analysis_template()`**: Internal helper or main execution logic.
-  - **Function `_create_api_monitoring_template()`**: Internal helper or main execution logic.
-  - **Function `_create_database_backup_template()`**: Internal helper or main execution logic.
-  - **Function `_create_email_notification_template()`**: Internal helper or main execution logic.
-  - **Function `_create_system_health_check_template()`**: Internal helper or main execution logic.
-  - **Function `_create_file_cleanup_template()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `create_automation_from_template()`**: Internal helper or main execution logic.
-  - **Function `validate_template_parameters()`**: Internal helper or main execution logic.
-  - **Function `get_template_info()`**: Internal helper or main execution logic.
-  - **Function `search_templates()`**: Internal helper or main execution logic.
-  - **Function `get_template_categories()`**: Internal helper or main execution logic.
-  - **Function `get_popular_templates()`**: Internal helper or main execution logic.
-  - **Function `create_custom_template()`**: Internal helper or main execution logic.
-  - **Function `clone_template()`**: Internal helper or main execution logic.
-  - **Function `_update_usage_stats()`**: Internal helper or main execution logic.
-  - **Function `_setup_validators()`**: Internal helper or main execution logic.
-  - **Function `_get_category_description()`**: Internal helper or main execution logic.
+- **Class `TemplateCategory`**: Template categories
+- **Class `TemplateType`**: Template types
+- **Class `ParameterType`**: Parameter types for templates
+- **Class `TemplateParameter`**: Template parameter definition
+- **Class `TemplateStep`**: Individual step in template workflow
+- **Class `AutomationTemplate`**: Automation template definition
+- **Class `RenderedTemplate`**: Rendered template ready for execution
+- **Class `TemplateLibrary`**: Library of automation templates
+- **Class `TemplateManager`**: Main template management system
+  - **Function `create_simple_task_template()`**: Create simple single-task template
+  - **Function `create_workflow_template()`**: Create workflow template from step definitions
+  - **Function `validate()`**: Validate parameter value
+  - **Function `_validate_type()`**: Validate parameter type
+  - **Function `_validate_rules()`**: Validate custom rules
+  - **Function `validate_parameters()`**: Validate template parameters
+  - **Function `render_with_parameters()`**: Render template with parameter values
+  - **Function `_render_step()`**: Render template step with parameters
+  - **Function `_render_data()`**: Render data structure with parameters
+  - **Function `_render_string()`**: Render string template with parameters
+  - **Function `to_automation_definition()`**: Convert to automation system definition
+  - **Function `__init__()`**: Signature: (self, library)
+  - **Function `add_template()`**: Add template to library
+  - **Function `get_template()`**: Get template by ID
+  - **Function `search_templates()`**: Search templates with enhanced filtering
+  - **Function `list_categories()`**: List template categories with counts
+  - **Function `get_popular_templates()`**: Get popular templates
+  - **Function `create_template_from_workflow()`**: Create template from existing workflow
+  - **Function `export_template()`**: Export template to file
+  - **Function `import_template()`**: Import template from file
+  - **Function `_validate_template()`**: Validate template structure
+  - **Function `_load_builtin_templates()`**: Load built-in automation templates
+  - **Function `_discover_user_templates()`**: Discover user-created templates
+  - **Function `_save_template_file()`**: Save template to file
+  - **Function `_extract_parameters_from_workflow()`**: Extract parameterizable values from workflow
+  - **Function `_convert_workflow_steps()`**: Convert workflow steps to template steps
+  - **Function `_create_file_copy_template()`**: Create file copy template
+  - **Function `_create_backup_template()`**: Create backup template
+  - **Function `_create_log_analysis_template()`**: Create log analysis template
+  - **Function `_create_api_monitoring_template()`**: Create API monitoring template
+  - **Function `_create_database_backup_template()`**: Create database backup template
+  - **Function `_create_email_notification_template()`**: Create email notification template
+  - **Function `_create_system_health_check_template()`**: Create system health check template
+  - **Function `_create_file_cleanup_template()`**: Create file cleanup template
+  - **Function `__init__()`**: Signature: (self, library)
+  - **Function `create_automation_from_template()`**: Create automation instance from template
+  - **Function `validate_template_parameters()`**: Validate template parameters
+  - **Function `get_template_info()`**: Get template information
+  - **Function `search_templates()`**: Search templates with enhanced filtering
+  - **Function `get_template_categories()`**: Get template categories with metadata
+  - **Function `get_popular_templates()`**: Get popular templates
+  - **Function `create_custom_template()`**: Create custom template
+  - **Function `clone_template()`**: Clone existing template
+  - **Function `_update_usage_stats()`**: Update template usage statistics
+  - **Function `_setup_validators()`**: Setup template validators
+  - **Function `_get_category_description()`**: Get description for template category
 
 ### File: `core_ai\src\ai_assistant\automation\visual_automation.py`
-- **Class `VisualAutomationEngine`**: Orchestrates logic for this module.
-  - **Function `click_element()`**: Internal helper or main execution logic.
-  - **Function `type_into_field()`**: Internal helper or main execution logic.
-  - **Function `automate_task()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `find_and_click()`**: Internal helper or main execution logic.
-  - **Function `find_and_type()`**: Internal helper or main execution logic.
-  - **Function `execute_visual_workflow()`**: Internal helper or main execution logic.
-  - **Function `plan_and_execute()`**: Internal helper or main execution logic.
-  - **Function `_verify_action_result()`**: Internal helper or main execution logic.
-  - **Function `get_action_history()`**: Internal helper or main execution logic.
-  - **Function `clear_history()`**: Internal helper or main execution logic.
+- **Class `VisualAutomationEngine`**: VLM-powered visual automation engine.
+  - **Function `click_element()`**: Quick function to click an element by description.
+  - **Function `type_into_field()`**: Quick function to type into a field.
+  - **Function `automate_task()`**: Quick function to plan and execute a task.
+  - **Function `__init__()`**: Initialize visual automation engine.
+  - **Function `find_and_click()`**: Find UI element by description and click it.
+  - **Function `find_and_type()`**: Find input field and type text.
+  - **Function `execute_visual_workflow()`**: Execute multi-step visual workflow.
+  - **Function `plan_and_execute()`**: Use VLM to plan a task and optionally execute it.
+  - **Function `_verify_action_result()`**: Verify that an action had the expected effect.
+  - **Function `get_action_history()`**: Get recent action history.
+  - **Function `clear_history()`**: Clear action history.
 
 ### File: `core_ai\src\ai_assistant\automation\visual_verification.py`
-- **Class `VerificationResult`**: Orchestrates logic for this module.
-- **Class `VisualAutomationVerifier`**: Orchestrates logic for this module.
-  - **Function `get_visual_verifier()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `capture_screenshot()`**: Internal helper or main execution logic.
-  - **Function `verify_action()`**: Internal helper or main execution logic.
-  - **Function `verify_app_launched()`**: Internal helper or main execution logic.
-  - **Function `_detect_error_dialogs()`**: Internal helper or main execution logic.
-  - **Function `_check_window_title()`**: Internal helper or main execution logic.
-  - **Function `_calculate_confidence()`**: Internal helper or main execution logic.
-  - **Function `_save_diff_image()`**: Internal helper or main execution logic.
-  - **Function `_get_unknown_result()`**: Internal helper or main execution logic.
-  - **Function `get_success_rate()`**: Internal helper or main execution logic.
+- **Class `VerificationResult`**: Result of visual verification
+- **Class `VisualAutomationVerifier`**: Verifies automation success using computer vision
+  - **Function `get_visual_verifier()`**: Get global verifier instance
+  - **Function `__init__()`**: Initialize verifier
+  - **Function `capture_screenshot()`**: Capture current screen
+  - **Function `verify_action()`**: Verify that an automation action succeeded
+  - **Function `verify_app_launched()`**: Verify that an application was launched successfully
+  - **Function `_detect_error_dialogs()`**: Detect if error dialogs are present
+  - **Function `_check_window_title()`**: Check if expected window title is visible
+  - **Function `_calculate_confidence()`**: Calculate confidence score for verification
+  - **Function `_save_diff_image()`**: Save difference image with highlighting
+  - **Function `_get_unknown_result()`**: Get result for failed verification
+  - **Function `get_success_rate()`**: Get verification success statistics
 
 ### File: `core_ai\src\ai_assistant\cli\app_manager.py`
-  - **Function `register_app_interactive()`**: Internal helper or main execution logic.
-  - **Function `list_apps()`**: Internal helper or main execution logic.
-  - **Function `launch_app()`**: Internal helper or main execution logic.
-  - **Function `stop_app()`**: Internal helper or main execution logic.
-  - **Function `remove_app()`**: Internal helper or main execution logic.
-  - **Function `app_status()`**: Internal helper or main execution logic.
-  - **Function `main()`**: Internal helper or main execution logic.
+  - **Function `register_app_interactive()`**: Interactive app registration process.
+  - **Function `list_apps()`**: List all registered apps.
+  - **Function `launch_app()`**: Launch an app.
+  - **Function `stop_app()`**: Stop an app.
+  - **Function `remove_app()`**: Remove an app.
+  - **Function `app_status()`**: Show detailed app status.
+  - **Function `main()`**: Main CLI entry point.
 
 ### File: `core_ai\src\ai_assistant\cli\launch_assistant.py`
-- **Class `SystemChecker`**: Orchestrates logic for this module.
-  - **Function `install_missing_dependencies()`**: Internal helper or main execution logic.
-  - **Function `download_voice_models()`**: Internal helper or main execution logic.
-  - **Function `start_assistant()`**: Internal helper or main execution logic.
-  - **Function `main()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `check_python_version()`**: Internal helper or main execution logic.
-  - **Function `check_dependencies()`**: Internal helper or main execution logic.
-  - **Function `check_models()`**: Internal helper or main execution logic.
-  - **Function `check_audio_system()`**: Internal helper or main execution logic.
-  - **Function `check_config_files()`**: Internal helper or main execution logic.
-  - **Function `run_full_check()`**: Internal helper or main execution logic.
+- **Class `SystemChecker`**: Comprehensive system compatibility checker
+  - **Function `install_missing_dependencies()`**: Install missing critical dependencies
+  - **Function `download_voice_models()`**: Download required voice models
+  - **Function `start_assistant()`**: Start the YourDaddy Assistant
+  - **Function `main()`**: Main launcher function
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `check_python_version()`**: Check Python version compatibility
+  - **Function `check_dependencies()`**: Check critical dependencies
+  - **Function `check_models()`**: Check if AI models are available
+  - **Function `check_audio_system()`**: Check audio system compatibility
+  - **Function `check_config_files()`**: Check configuration files
+  - **Function `run_full_check()`**: Run complete system check
 
 ### File: `core_ai\src\ai_assistant\cli\mcp_cli.py`
-- **Class `MCPCli`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
+- **Class `MCPCli`**: CLI interface for MCP management
+  - **Function `__init__()`**: Signature: (self)
 
 ### File: `core_ai\src\ai_assistant\core\access_control.py`
-- **Class `Permission`**: Orchestrates logic for this module.
-- **Class `Role`**: Orchestrates logic for this module.
-- **Class `User`**: Orchestrates logic for this module.
-- **Class `AccessControlManager`**: Orchestrates logic for this module.
-  - **Function `get_role_permissions()`**: Internal helper or main execution logic.
-  - **Function `get_access_control()`**: Internal helper or main execution logic.
-  - **Function `require_permission()`**: Internal helper or main execution logic.
-  - **Function `require_admin()`**: Internal helper or main execution logic.
-  - **Function `require_system_access()`**: Internal helper or main execution logic.
-  - **Function `require_file_write()`**: Internal helper or main execution logic.
-  - **Function `require_data_access()`**: Internal helper or main execution logic.
-  - **Function `has_permission()`**: Internal helper or main execution logic.
-  - **Function `to_dict()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_load_config()`**: Internal helper or main execution logic.
-  - **Function `_save_config()`**: Internal helper or main execution logic.
-  - **Function `_ensure_admin_user()`**: Internal helper or main execution logic.
-  - **Function `create_user()`**: Internal helper or main execution logic.
-  - **Function `get_user()`**: Internal helper or main execution logic.
-  - **Function `get_user_by_session()`**: Internal helper or main execution logic.
-  - **Function `create_session()`**: Internal helper or main execution logic.
-  - **Function `end_session()`**: Internal helper or main execution logic.
-  - **Function `check_permission()`**: Internal helper or main execution logic.
-  - **Function `grant_permission()`**: Internal helper or main execution logic.
-  - **Function `revoke_permission()`**: Internal helper or main execution logic.
-  - **Function `change_user_role()`**: Internal helper or main execution logic.
-  - **Function `decorator()`**: Internal helper or main execution logic.
-  - **Function `wrapper()`**: Internal helper or main execution logic.
-  - **Function `test_system_command()`**: Internal helper or main execution logic.
-  - **Function `wrapper()`**: Internal helper or main execution logic.
+- **Class `Permission`**: System permissions
+- **Class `Role`**: User roles with predefined permission sets
+- **Class `User`**: User with role and permissions
+- **Class `AccessControlManager`**: Central access control manager for the AI Assistant
+  - **Function `get_role_permissions()`**: Get default permissions for a role
+  - **Function `get_access_control()`**: Get global access control manager
+  - **Function `require_permission()`**: Decorator to require permission for function execution
+  - **Function `require_admin()`**: Require admin role
+  - **Function `require_system_access()`**: Require system command execution permission
+  - **Function `require_file_write()`**: Require file write permission
+  - **Function `require_data_access()`**: Require data read permission
+  - **Function `has_permission()`**: Check if user has specific permission
+  - **Function `to_dict()`**: Convert to dictionary for serialization
+  - **Function `__init__()`**: Initialize access control manager
+  - **Function `_load_config()`**: Load access control configuration
+  - **Function `_save_config()`**: Save access control configuration
+  - **Function `_ensure_admin_user()`**: Ensure at least one admin user exists
+  - **Function `create_user()`**: Create a new user
+  - **Function `get_user()`**: Get user by ID
+  - **Function `get_user_by_session()`**: Get user by session ID
+  - **Function `create_session()`**: Create user session
+  - **Function `end_session()`**: End user session
+  - **Function `check_permission()`**: Check if user has specific permission
+  - **Function `grant_permission()`**: Grant custom permission to user
+  - **Function `revoke_permission()`**: Revoke custom permission from user
+  - **Function `change_user_role()`**: Change user role
+  - **Function `decorator()`**: Signature: ()
+  - **Function `wrapper()`**: Signature: ()
+  - **Function `test_system_command()`**: Signature: ()
+  - **Function `wrapper()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\core\action_chain_models.py`
-- **Class `ChainStatus`**: Orchestrates logic for this module.
-- **Class `ActionType`**: Orchestrates logic for this module.
-- **Class `Action`**: Orchestrates logic for this module.
-- **Class `ActionChain`**: Orchestrates logic for this module.
-- **Class `ExecutionReport`**: Orchestrates logic for this module.
-- **Class `ProgressReport`**: Orchestrates logic for this module.
-  - **Function `generate_chain_id()`**: Internal helper or main execution logic.
-  - **Function `generate_action_id()`**: Internal helper or main execution logic.
-  - **Function `to_dict()`**: Internal helper or main execution logic.
-  - **Function `total_actions()`**: Internal helper or main execution logic.
-  - **Function `progress_percentage()`**: Internal helper or main execution logic.
-  - **Function `duration_seconds()`**: Internal helper or main execution logic.
-  - **Function `to_dict()`**: Internal helper or main execution logic.
-  - **Function `to_dict()`**: Internal helper or main execution logic.
-  - **Function `to_dict()`**: Internal helper or main execution logic.
+- **Class `ChainStatus`**: Status of action chain execution
+- **Class `ActionType`**: Types of actions in a chain
+- **Class `Action`**: Single action in a chain
+- **Class `ActionChain`**: Complete chain of actions
+- **Class `ExecutionReport`**: Report of chain execution
+- **Class `ProgressReport`**: Real-time progress report
+  - **Function `generate_chain_id()`**: Generate unique chain ID
+  - **Function `generate_action_id()`**: Generate unique action ID
+  - **Function `to_dict()`**: Convert to dictionary
+  - **Function `total_actions()`**: Total number of actions
+  - **Function `progress_percentage()`**: Overall progress percentage
+  - **Function `duration_seconds()`**: Total execution duration
+  - **Function `to_dict()`**: Convert to dictionary
+  - **Function `to_dict()`**: Convert to dictionary
+  - **Function `to_dict()`**: Convert to dictionary
 
 ### File: `core_ai\src\ai_assistant\core\app_discovery.py`
   - *(Documentation parsing failed for this file)*
 
 ### File: `core_ai\src\ai_assistant\core\app_integrator.py`
-- **Class `AppIntegration`**: Orchestrates logic for this module.
-- **Class `SecureAppIntegrator`**: Orchestrates logic for this module.
-  - **Function `__post_init__()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `register_app()`**: Internal helper or main execution logic.
-  - **Function `_determine_security_level()`**: Internal helper or main execution logic.
-  - **Function `launch_app()`**: Internal helper or main execution logic.
-  - **Function `_delayed_launch()`**: Internal helper or main execution logic.
-  - **Function `_launch_process()`**: Internal helper or main execution logic.
-  - **Function `stop_app()`**: Internal helper or main execution logic.
-  - **Function `list_running_apps()`**: Internal helper or main execution logic.
-  - **Function `cleanup_terminated_processes()`**: Internal helper or main execution logic.
-  - **Function `get_app_status()`**: Internal helper or main execution logic.
-  - **Function `auto_start_apps()`**: Internal helper or main execution logic.
+- **Class `AppIntegration`**: Represents an app integration configuration.
+- **Class `SecureAppIntegrator`**: Manages secure integration with third-party applications.
+  - **Function `__post_init__()`**: Signature: (self)
+  - **Function `__init__()`**: Signature: (self, assistant_config)
+  - **Function `register_app()`**: Register a new app integration.
+  - **Function `_determine_security_level()`**: Determine security level based on permissions and integration type.
+  - **Function `launch_app()`**: Securely launch an integrated application.
+  - **Function `_delayed_launch()`**: Launch app after delay.
+  - **Function `_launch_process()`**: Actually launch the process.
+  - **Function `stop_app()`**: Stop a running integrated application.
+  - **Function `list_running_apps()`**: List currently running integrated applications.
+  - **Function `cleanup_terminated_processes()`**: Clean up terminated processes from running integrations.
+  - **Function `get_app_status()`**: Get detailed status of an integrated application.
+  - **Function `auto_start_apps()`**: Auto-start applications that are configured for auto-start.
 
 ### File: `core_ai\src\ai_assistant\core\app_security.py`
-- **Class `SecureAppManager`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_initialize_encryption()`**: Internal helper or main execution logic.
-  - **Function `encrypt_data()`**: Internal helper or main execution logic.
-  - **Function `decrypt_data()`**: Internal helper or main execution logic.
-  - **Function `store_app_credentials()`**: Internal helper or main execution logic.
-  - **Function `load_app_credentials()`**: Internal helper or main execution logic.
-  - **Function `register_secure_app()`**: Internal helper or main execution logic.
-  - **Function `get_app_access_token()`**: Internal helper or main execution logic.
-  - **Function `validate_app_permissions()`**: Internal helper or main execution logic.
-  - **Function `list_registered_apps()`**: Internal helper or main execution logic.
-  - **Function `remove_app()`**: Internal helper or main execution logic.
+- **Class `SecureAppManager`**: Manages secure app integrations with encryption and access controls.
+  - **Function `__init__()`**: Signature: (self, config_dir)
+  - **Function `_initialize_encryption()`**: Initialize encryption for sensitive data.
+  - **Function `encrypt_data()`**: Encrypt sensitive data.
+  - **Function `decrypt_data()`**: Decrypt sensitive data.
+  - **Function `store_app_credentials()`**: Securely store app credentials.
+  - **Function `load_app_credentials()`**: Load and decrypt app credentials.
+  - **Function `register_secure_app()`**: Register an app with secure configuration.
+  - **Function `get_app_access_token()`**: Get access token for an app (if available).
+  - **Function `validate_app_permissions()`**: Validate if an app has required permissions.
+  - **Function `list_registered_apps()`**: List all registered apps (without sensitive data).
+  - **Function `remove_app()`**: Remove an app and its credentials.
 
 ### File: `core_ai\src\ai_assistant\core\assistant.py`
   - *(Documentation parsing failed for this file)*
 
 ### File: `core_ai\src\ai_assistant\core\audit_logger.py`
-- **Class `EventType`**: Orchestrates logic for this module.
-- **Class `SeverityLevel`**: Orchestrates logic for this module.
-- **Class `AuditEvent`**: Orchestrates logic for this module.
-- **Class `AuditLogger`**: Orchestrates logic for this module.
-  - **Function `get_audit_logger()`**: Internal helper or main execution logic.
-  - **Function `audit_auth_success()`**: Internal helper or main execution logic.
-  - **Function `audit_auth_failure()`**: Internal helper or main execution logic.
-  - **Function `audit_system_command()`**: Internal helper or main execution logic.
-  - **Function `audit_api_request()`**: Internal helper or main execution logic.
-  - **Function `audit_data_access()`**: Internal helper or main execution logic.
-  - **Function `audit_security_event()`**: Internal helper or main execution logic.
-  - **Function `to_dict()`**: Internal helper or main execution logic.
-  - **Function `from_dict()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_database()`**: Internal helper or main execution logic.
-  - **Function `_generate_event_id()`**: Internal helper or main execution logic.
-  - **Function `_calculate_checksum()`**: Internal helper or main execution logic.
-  - **Function `log_event()`**: Internal helper or main execution logic.
-  - **Function `start_processing()`**: Internal helper or main execution logic.
-  - **Function `_process_events()`**: Internal helper or main execution logic.
-  - **Function `_store_event()`**: Internal helper or main execution logic.
-  - **Function `_write_file_log()`**: Internal helper or main execution logic.
-  - **Function `_check_security_patterns()`**: Internal helper or main execution logic.
-  - **Function `_generate_security_alert()`**: Internal helper or main execution logic.
-  - **Function `query_events()`**: Internal helper or main execution logic.
-  - **Function `get_security_alerts()`**: Internal helper or main execution logic.
-  - **Function `generate_compliance_report()`**: Internal helper or main execution logic.
-  - **Function `cleanup_old_logs()`**: Internal helper or main execution logic.
-  - **Function `stop()`**: Internal helper or main execution logic.
+- **Class `EventType`**: Types of audit events
+- **Class `SeverityLevel`**: Event severity levels
+- **Class `AuditEvent`**: Audit event structure
+- **Class `AuditLogger`**: Comprehensive audit logging system
+  - **Function `get_audit_logger()`**: Get global audit logger instance
+  - **Function `audit_auth_success()`**: Log successful authentication
+  - **Function `audit_auth_failure()`**: Log failed authentication
+  - **Function `audit_system_command()`**: Log system command execution
+  - **Function `audit_api_request()`**: Log API request
+  - **Function `audit_data_access()`**: Log data access
+  - **Function `audit_security_event()`**: Log security event
+  - **Function `to_dict()`**: Convert to dictionary for serialization
+  - **Function `from_dict()`**: Create from dictionary
+  - **Function `__init__()`**: Initialize audit logger
+  - **Function `_init_database()`**: Initialize audit database
+  - **Function `_generate_event_id()`**: Generate unique event ID
+  - **Function `_calculate_checksum()`**: Calculate integrity checksum for event data
+  - **Function `log_event()`**: Log an audit event
+  - **Function `start_processing()`**: Start background event processing
+  - **Function `_process_events()`**: Background thread for processing audit events
+  - **Function `_store_event()`**: Store event in database
+  - **Function `_write_file_log()`**: Write event to daily log file
+  - **Function `_check_security_patterns()`**: Check for security patterns and generate alerts
+  - **Function `_generate_security_alert()`**: Generate security alert
+  - **Function `query_events()`**: Query audit events with filters
+  - **Function `get_security_alerts()`**: Get security alerts
+  - **Function `generate_compliance_report()`**: Generate compliance report for given date range
+  - **Function `cleanup_old_logs()`**: Clean up old audit logs
+  - **Function `stop()`**: Stop audit logging
 
 ### File: `core_ai\src\ai_assistant\core\auto_updater.py`
-- **Class `Version`**: Orchestrates logic for this module.
-- **Class `AutoUpdater`**: Orchestrates logic for this module.
-  - **Function `get_updater()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `__str__()`**: Internal helper or main execution logic.
-  - **Function `__gt__()`**: Internal helper or main execution logic.
-  - **Function `__eq__()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_load_config()`**: Internal helper or main execution logic.
-  - **Function `_save_config()`**: Internal helper or main execution logic.
-  - **Function `should_check_for_updates()`**: Internal helper or main execution logic.
-  - **Function `check_for_updates()`**: Internal helper or main execution logic.
-  - **Function `download_update()`**: Internal helper or main execution logic.
-  - **Function `install_update()`**: Internal helper or main execution logic.
-  - **Function `ignore_version()`**: Internal helper or main execution logic.
-  - **Function `get_update_info()`**: Internal helper or main execution logic.
-  - **Function `check_for_updates_async()`**: Internal helper or main execution logic.
-  - **Function `_check()`**: Internal helper or main execution logic.
+- **Class `Version`**: Semantic version comparison
+- **Class `AutoUpdater`**: Automatic update checker and installer
+  - **Function `get_updater()`**: Get singleton updater instance
+  - **Function `__init__()`**: Initialize auto-updater
+  - **Function `__str__()`**: Signature: (self)
+  - **Function `__gt__()`**: Signature: (self, other)
+  - **Function `__eq__()`**: Signature: (self, other)
+  - **Function `__init__()`**: Initialize auto-updater
+  - **Function `_load_config()`**: Load update configuration
+  - **Function `_save_config()`**: Save update configuration
+  - **Function `should_check_for_updates()`**: Check if it's time to check for updates
+  - **Function `check_for_updates()`**: Check for updates from GitHub Releases
+  - **Function `download_update()`**: Download update ZIP file
+  - **Function `install_update()`**: Install downloaded update
+  - **Function `ignore_version()`**: Ignore a specific version
+  - **Function `get_update_info()`**: Get current update information
+  - **Function `check_for_updates_async()`**: Check for updates in background thread
+  - **Function `_check()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\core\backup_manager.py`
-- **Class `BackupManager`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `backup_settings()`**: Internal helper or main execution logic.
-  - **Function `list_backups()`**: Internal helper or main execution logic.
+- **Class `BackupManager`**: Core component.
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `backup_settings()`**: Create a zip backup of the config directory
+  - **Function `list_backups()`**: List all available backups
 
 ### File: `core_ai\src\ai_assistant\core\biometric_encryption.py`
-- **Class `BiometricEncryptionError`**: Orchestrates logic for this module.
-- **Class `BiometricEncryption`**: Orchestrates logic for this module.
-  - **Function `get_biometric_encryptor()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_initialize_cipher()`**: Internal helper or main execution logic.
-  - **Function `_derive_key()`**: Internal helper or main execution logic.
-  - **Function `encrypt_biometric()`**: Internal helper or main execution logic.
-  - **Function `decrypt_biometric()`**: Internal helper or main execution logic.
-  - **Function `save_encrypted_model()`**: Internal helper or main execution logic.
-  - **Function `load_encrypted_model()`**: Internal helper or main execution logic.
-  - **Function `migrate_legacy_model()`**: Internal helper or main execution logic.
-  - **Function `rotate_keys()`**: Internal helper or main execution logic.
-  - **Function `get_encryption_info()`**: Internal helper or main execution logic.
+- **Class `BiometricEncryptionError`**: Base exception for biometric encryption errors
+- **Class `BiometricEncryption`**: Manages encryption/decryption of biometric data with secure key management.
+  - **Function `get_biometric_encryptor()`**: Get global BiometricEncryption instance (singleton pattern).
+  - **Function `__init__()`**: Initialize biometric encryption manager.
+  - **Function `_initialize_cipher()`**: Initialize Fernet cipher with derived key.
+  - **Function `_derive_key()`**: Derive encryption key from password using PBKDF2.
+  - **Function `encrypt_biometric()`**: Encrypt biometric data (model, fingerprint, embedding, etc.).
+  - **Function `decrypt_biometric()`**: Decrypt biometric data.
+  - **Function `save_encrypted_model()`**: Save encrypted biometric model to disk.
+  - **Function `load_encrypted_model()`**: Load and decrypt biometric model from disk.
+  - **Function `migrate_legacy_model()`**: Migrate unencrypted legacy model to encrypted format.
+  - **Function `rotate_keys()`**: Rotate encryption keys by re-encrypting all models with new key.
+  - **Function `get_encryption_info()`**: Get information about encryption configuration.
 
 ### File: `core_ai\src\ai_assistant\core\chain_of_actions_manager.py`
-- **Class `ChainOfActionsManager`**: Orchestrates logic for this module.
-  - **Function `get_chain_manager()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_map_action_type()`**: Internal helper or main execution logic.
-  - **Function `_infer_intent()`**: Internal helper or main execution logic.
-  - **Function `_estimate_remaining_time()`**: Internal helper or main execution logic.
-  - **Function `subscribe_progress()`**: Internal helper or main execution logic.
-  - **Function `get_chain()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
-  - **Function `_run_browser_task()`**: Internal helper or main execution logic.
-  - **Function `_run_app_task()`**: Internal helper or main execution logic.
+- **Class `ChainOfActionsManager`**: Central manager for chain-of-actions execution
+  - **Function `get_chain_manager()`**: Get singleton chain manager
+  - **Function `__init__()`**: Initialize manager
+  - **Function `_map_action_type()`**: Map TaskPlanner action type to ActionType enum
+  - **Function `_infer_intent()`**: Infer intent from action type
+  - **Function `_estimate_remaining_time()`**: Estimate remaining execution time
+  - **Function `subscribe_progress()`**: Subscribe to progress updates
+  - **Function `get_chain()`**: Get chain by ID
+  - **Function `get_stats()`**: Get manager statistics
+  - **Function `_run_browser_task()`**: Signature: ()
+  - **Function `_run_app_task()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\core\config_loader.py`
-- **Class `ConfigurationError`**: Orchestrates logic for this module.
-- **Class `Config`**: Orchestrates logic for this module.
-  - **Function `get_config()`**: Internal helper or main execution logic.
-  - **Function `load_config()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_load_config()`**: Internal helper or main execution logic.
-  - **Function `_validate_config()`**: Internal helper or main execution logic.
-  - **Function `get()`**: Internal helper or main execution logic.
-  - **Function `__getitem__()`**: Internal helper or main execution logic.
-  - **Function `__contains__()`**: Internal helper or main execution logic.
-  - **Function `to_dict()`**: Internal helper or main execution logic.
-  - **Function `reload()`**: Internal helper or main execution logic.
+- **Class `ConfigurationError`**: Configuration related errors
+- **Class `Config`**: Configuration manager for AI Assistant
+  - **Function `get_config()`**: Get global configuration instance (singleton)
+  - **Function `load_config()`**: Load configuration from .env file
+  - **Function `__init__()`**: Initialize configuration loader
+  - **Function `_load_config()`**: Load configuration from .env file
+  - **Function `_validate_config()`**: Validate configuration has required values
+  - **Function `get()`**: Get configuration value
+  - **Function `__getitem__()`**: Get configuration value using dict syntax
+  - **Function `__contains__()`**: Check if configuration key exists
+  - **Function `to_dict()`**: Get all configuration as dictionary
+  - **Function `reload()`**: Reload configuration from .env file
 
 ### File: `core_ai\src\ai_assistant\core\config_validator.py`
-- **Class `ConfigValidator`**: Orchestrates logic for this module.
-  - **Function `validate_config()`**: Internal helper or main execution logic.
-  - **Function `quick_check()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `load_environment()`**: Internal helper or main execution logic.
-  - **Function `validate_required_keys()`**: Internal helper or main execution logic.
-  - **Function `validate_optional_keys()`**: Internal helper or main execution logic.
-  - **Function `validate_feature_dependencies()`**: Internal helper or main execution logic.
-  - **Function `validate_file_paths()`**: Internal helper or main execution logic.
-  - **Function `validate_google_credentials()`**: Internal helper or main execution logic.
-  - **Function `validate()`**: Internal helper or main execution logic.
-  - **Function `_print_results()`**: Internal helper or main execution logic.
-  - **Function `get_config()`**: Internal helper or main execution logic.
+- **Class `ConfigValidator`**: Validates application configuration and API keys
+  - **Function `validate_config()`**: Validate configuration and optionally exit on failure
+  - **Function `quick_check()`**: Quick validation check without detailed output
+  - **Function `__init__()`**: Initialize configuration validator
+  - **Function `load_environment()`**: Load environment variables from .env file
+  - **Function `validate_required_keys()`**: Validate all required configuration keys
+  - **Function `validate_optional_keys()`**: Check which optional features are configured
+  - **Function `validate_feature_dependencies()`**: Validate that enabled features have required configuration
+  - **Function `validate_file_paths()`**: Validate required directories exist and create them if needed
+  - **Function `validate_google_credentials()`**: Check if Google credentials.json exists for Calendar/Gmail
+  - **Function `validate()`**: Run complete validation
+  - **Function `_print_results()`**: Print validation results
+  - **Function `get_config()`**: Get configuration value
 
 ### File: `core_ai\src\ai_assistant\core\context_optimizer.py`
   - *(Documentation parsing failed for this file)*
 
 ### File: `core_ai\src\ai_assistant\core\conversation_context.py`
-- **Class `ExecutionState`**: Orchestrates logic for this module.
-- **Class `ConversationContext`**: Orchestrates logic for this module.
-- **Class `ContextManager`**: Orchestrates logic for this module.
-  - **Function `get_context_manager()`**: Internal helper or main execution logic.
-  - **Function `__post_init__()`**: Internal helper or main execution logic.
-  - **Function `to_dict()`**: Internal helper or main execution logic.
-  - **Function `from_dict()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `set_var()`**: Internal helper or main execution logic.
-  - **Function `get_var()`**: Internal helper or main execution logic.
-  - **Function `has_var()`**: Internal helper or main execution logic.
-  - **Function `delete_var()`**: Internal helper or main execution logic.
-  - **Function `clear_vars()`**: Internal helper or main execution logic.
-  - **Function `set_state()`**: Internal helper or main execution logic.
-  - **Function `get_state()`**: Internal helper or main execution logic.
-  - **Function `set_task_chain()`**: Internal helper or main execution logic.
-  - **Function `get_task_chain()`**: Internal helper or main execution logic.
-  - **Function `advance_step()`**: Internal helper or main execution logic.
-  - **Function `get_current_step()`**: Internal helper or main execution logic.
-  - **Function `clear_task_chain()`**: Internal helper or main execution logic.
-  - **Function `add_command()`**: Internal helper or main execution logic.
-  - **Function `get_last_command()`**: Internal helper or main execution logic.
-  - **Function `get_command_history()`**: Internal helper or main execution logic.
-  - **Function `is_override()`**: Internal helper or main execution logic.
-  - **Function `handle_override()`**: Internal helper or main execution logic.
-  - **Function `infer_missing_params()`**: Internal helper or main execution logic.
-  - **Function `save_context()`**: Internal helper or main execution logic.
-  - **Function `load_context()`**: Internal helper or main execution logic.
-  - **Function `reset()`**: Internal helper or main execution logic.
-  - **Function `get_summary()`**: Internal helper or main execution logic.
+- **Class `ExecutionState`**: States of task execution.
+- **Class `ConversationContext`**: Container for conversation context.
+- **Class `ContextManager`**: Manages conversation context with persistence.
+  - **Function `get_context_manager()`**: Get singleton context manager.
+  - **Function `__post_init__()`**: Signature: (self)
+  - **Function `to_dict()`**: Convert to dictionary.
+  - **Function `from_dict()`**: Create from dictionary.
+  - **Function `__init__()`**: Initialize context manager.
+  - **Function `set_var()`**: Set a context variable.
+  - **Function `get_var()`**: Get a context variable.
+  - **Function `has_var()`**: Check if context variable exists.
+  - **Function `delete_var()`**: Delete a context variable.
+  - **Function `clear_vars()`**: Clear all context variables.
+  - **Function `set_state()`**: Set execution state.
+  - **Function `get_state()`**: Get current execution state.
+  - **Function `set_task_chain()`**: Set current task chain.
+  - **Function `get_task_chain()`**: Get current task chain.
+  - **Function `advance_step()`**: Move to next step in task chain.
+  - **Function `get_current_step()`**: Get current step number.
+  - **Function `clear_task_chain()`**: Clear task chain.
+  - **Function `add_command()`**: Add command to history.
+  - **Function `get_last_command()`**: Get last command from history.
+  - **Function `get_command_history()`**: Get recent command history.
+  - **Function `is_override()`**: Detect if new command is an override of current task.
+  - **Function `handle_override()`**: Handle command override.
+  - **Function `infer_missing_params()`**: Infer missing parameters from context.
+  - **Function `save_context()`**: Save context to disk.
+  - **Function `load_context()`**: Load context from disk.
+  - **Function `reset()`**: Reset context to initial state.
+  - **Function `get_summary()`**: Get context summary.
 
 ### File: `core_ai\src\ai_assistant\core\core.py`
-  - **Function `extract_number()`**: Internal helper or main execution logic.
-  - **Function `write_a_note()`**: Internal helper or main execution logic.
-  - **Function `open_application()`**: Internal helper or main execution logic.
-  - **Function `open_settings_page()`**: Internal helper or main execution logic.
-  - **Function `search_google()`**: Internal helper or main execution logic.
-  - **Function `search_youtube()`**: Internal helper or main execution logic.
-  - **Function `close_application()`**: Internal helper or main execution logic.
-  - **Function `speak()`**: Internal helper or main execution logic.
-  - **Function `set_system_volume()`**: Internal helper or main execution logic.
-  - **Function `get_system_volume()`**: Internal helper or main execution logic.
-  - **Function `volume_up()`**: Internal helper or main execution logic.
-  - **Function `volume_down()`**: Internal helper or main execution logic.
-  - **Function `mute_volume()`**: Internal helper or main execution logic.
-  - **Function `unmute_volume()`**: Internal helper or main execution logic.
-  - **Function `make_phone_call()`**: Internal helper or main execution logic.
-  - **Function `process_hinglish_command()`**: Internal helper or main execution logic.
-  - **Function `scan_and_save_apps()`**: Internal helper or main execution logic.
-  - **Function `get_app_path_from_name()`**: Internal helper or main execution logic.
-  - **Function `write_to_file()`**: Internal helper or main execution logic.
+  - **Function `extract_number()`**: Extract a number from text (supports both digits and words).
+  - **Function `write_a_note()`**: Opens Notepad, types a message, and closes it without saving.
+  - **Function `open_application()`**: Opens any application on the computer using intelligent discovery.
+  - **Function `open_settings_page()`**: Opens a specific Windows settings page using ms-settings URI.
+  - **Function `search_google()`**: Searches for a query on Google in the default web browser.
+  - **Function `search_youtube()`**: Searches for a query on YouTube in the default web browser.
+  - **Function `close_application()`**: Closes an open application by its window name.
+  - **Function `speak()`**: Speaks a given text string out loud.
+  - **Function `set_system_volume()`**: Sets the system's master volume to a specific level (0-100).
+  - **Function `get_system_volume()`**: Gets the current system volume level (0-100).
+  - **Function `volume_up()`**: Increases system volume by specified increment.
+  - **Function `volume_down()`**: Decreases system volume by specified decrement.
+  - **Function `mute_volume()`**: Mutes system volume.
+  - **Function `unmute_volume()`**: Unmutes system volume.
+  - **Function `make_phone_call()`**: Initiates a phone call (stub function for future implementation). This is a placeholder for phone calling functionality.
+  - **Function `process_hinglish_command()`**: Processes Hinglish commands and maps them to appropriate functions.
+  - **Function `scan_and_save_apps()`**: Scans the Windows Start Menu for.lnk shortcuts and saves them to apps.json.
+  - **Function `get_app_path_from_name()`**: Loads the apps.json file and finds the path for a given app name.
+  - **Function `write_to_file()`**: Creates a new text file (like.txt or.md) or a simple PDF and writes the given content to it. :param filename: The name of the file to create (e.g.,...
 
 ### File: `core_ai\src\ai_assistant\core\custom_commands.py`
-- **Class `CustomCommandManager`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_load_commands()`**: Internal helper or main execution logic.
-  - **Function `_save_commands()`**: Internal helper or main execution logic.
-  - **Function `add_alias()`**: Internal helper or main execution logic.
-  - **Function `remove_alias()`**: Internal helper or main execution logic.
-  - **Function `resolve_command()`**: Internal helper or main execution logic.
+- **Class `CustomCommandManager`**: Core component.
+  - **Function `__init__()`**: Signature: (self, data_dir)
+  - **Function `_load_commands()`**: Signature: (self)
+  - **Function `_save_commands()`**: Signature: (self)
+  - **Function `add_alias()`**: Signature: (self, alias, commands)
+  - **Function `remove_alias()`**: Signature: (self, alias)
+  - **Function `resolve_command()`**: Returns a list of commands. If it's an alias, returns the mapped commands.
 
 ### File: `core_ai\src\ai_assistant\core\database_config.py`
-  - **Function `get_db_path()`**: Internal helper or main execution logic.
-  - **Function `get_db_path_str()`**: Internal helper or main execution logic.
-  - **Function `list_databases()`**: Internal helper or main execution logic.
-  - **Function `database_exists()`**: Internal helper or main execution logic.
-  - **Function `get_database_size()`**: Internal helper or main execution logic.
-  - **Function `migrate_legacy_databases()`**: Internal helper or main execution logic.
+  - **Function `get_db_path()`**: Get the path to a database file.
+  - **Function `get_db_path_str()`**: Get the path to a database file as a string.
+  - **Function `list_databases()`**: List all configured databases and their paths.
+  - **Function `database_exists()`**: Check if a database file exists.
+  - **Function `get_database_size()`**: Get the size of a database file in bytes.
+  - **Function `migrate_legacy_databases()`**: Migrate databases from root directory to data/ directory. This should be called once during application startup.
 
 ### File: `core_ai\src\ai_assistant\core\encrypted_database.py`
-- **Class `EncryptedDatabase`**: Orchestrates logic for this module.
-  - **Function `create_encrypted_memory_db()`**: Internal helper or main execution logic.
-  - **Function `create_encrypted_conversation_db()`**: Internal helper or main execution logic.
-  - **Function `create_encrypted_credentials_db()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `add_encrypted_field()`**: Internal helper or main execution logic.
-  - **Function `_is_encrypted_field()`**: Internal helper or main execution logic.
-  - **Function `_encrypt_value()`**: Internal helper or main execution logic.
-  - **Function `_decrypt_value()`**: Internal helper or main execution logic.
-  - **Function `_process_row_for_encryption()`**: Internal helper or main execution logic.
-  - **Function `get_connection()`**: Internal helper or main execution logic.
-  - **Function `execute()`**: Internal helper or main execution logic.
-  - **Function `insert()`**: Internal helper or main execution logic.
-  - **Function `select()`**: Internal helper or main execution logic.
-  - **Function `update()`**: Internal helper or main execution logic.
-  - **Function `delete()`**: Internal helper or main execution logic.
-  - **Function `migrate_to_encrypted()`**: Internal helper or main execution logic.
+- **Class `EncryptedDatabase`**: Database wrapper that provides transparent encryption for sensitive fields.
+  - **Function `create_encrypted_memory_db()`**: Create encrypted database for conversation memory
+  - **Function `create_encrypted_conversation_db()`**: Create encrypted database for conversation AI
+  - **Function `create_encrypted_credentials_db()`**: Create encrypted database for API credentials
+  - **Function `__init__()`**: Initialize encrypted database wrapper.
+  - **Function `add_encrypted_field()`**: Mark a field as encrypted for automatic handling
+  - **Function `_is_encrypted_field()`**: Check if a field should be encrypted
+  - **Function `_encrypt_value()`**: Encrypt a field value
+  - **Function `_decrypt_value()`**: Decrypt a field value
+  - **Function `_process_row_for_encryption()`**: Process a row for encryption/decryption
+  - **Function `get_connection()`**: Get database connection with proper cleanup
+  - **Function `execute()`**: Execute a SQL command with automatic encryption
+  - **Function `insert()`**: Insert data with automatic encryption
+  - **Function `select()`**: Select data with automatic decryption
+  - **Function `update()`**: Update data with automatic encryption
+  - **Function `delete()`**: Delete records (no encryption needed)
+  - **Function `migrate_to_encrypted()`**: Migrate existing table data to encrypted format
 
 ### File: `core_ai\src\ai_assistant\core\encryption.py`
-- **Class `EncryptionError`**: Orchestrates logic for this module.
-- **Class `SecureEncryption`**: Orchestrates logic for this module.
-- **Class `DatabaseEncryption`**: Orchestrates logic for this module.
-- **Class `ConfigEncryption`**: Orchestrates logic for this module.
-  - **Function `get_encryption()`**: Internal helper or main execution logic.
-  - **Function `get_db_encryption()`**: Internal helper or main execution logic.
-  - **Function `get_config_encryption()`**: Internal helper or main execution logic.
-  - **Function `encrypt_sensitive_data()`**: Internal helper or main execution logic.
-  - **Function `decrypt_sensitive_data()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_get_master_key()`**: Internal helper or main execution logic.
-  - **Function `_generate_master_key()`**: Internal helper or main execution logic.
-  - **Function `_save_master_key()`**: Internal helper or main execution logic.
-  - **Function `_derive_key()`**: Internal helper or main execution logic.
-  - **Function `encrypt()`**: Internal helper or main execution logic.
-  - **Function `decrypt()`**: Internal helper or main execution logic.
-  - **Function `encrypt_file()`**: Internal helper or main execution logic.
-  - **Function `decrypt_file()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `encrypt_field()`**: Internal helper or main execution logic.
-  - **Function `decrypt_field()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `encrypt_config()`**: Internal helper or main execution logic.
-  - **Function `decrypt_config()`**: Internal helper or main execution logic.
-  - **Function `encrypt_api_keys()`**: Internal helper or main execution logic.
-  - **Function `decrypt_api_keys()`**: Internal helper or main execution logic.
+- **Class `EncryptionError`**: Custom exception for encryption-related errors
+- **Class `SecureEncryption`**: Secure encryption/decryption utility for AI Assistant data.
+- **Class `DatabaseEncryption`**: Encryption helper for database fields
+- **Class `ConfigEncryption`**: Encryption helper for configuration files
+  - **Function `get_encryption()`**: Get global encryption instance
+  - **Function `get_db_encryption()`**: Get database encryption helper
+  - **Function `get_config_encryption()`**: Get configuration encryption helper
+  - **Function `encrypt_sensitive_data()`**: Convenience function to encrypt sensitive data
+  - **Function `decrypt_sensitive_data()`**: Convenience function to decrypt sensitive data
+  - **Function `__init__()`**: Signature: (self, encryption)
+  - **Function `_get_master_key()`**: Get master key from environment or generate new one
+  - **Function `_generate_master_key()`**: Generate a new cryptographically secure master key
+  - **Function `_save_master_key()`**: Save master key to secure location
+  - **Function `_derive_key()`**: Derive encryption key from master key using PBKDF2
+  - **Function `encrypt()`**: Encrypt data with AES-256-GCM
+  - **Function `decrypt()`**: Decrypt AES-256-GCM encrypted data
+  - **Function `encrypt_file()`**: Encrypt entire file contents
+  - **Function `decrypt_file()`**: Decrypt and save file contents
+  - **Function `__init__()`**: Signature: (self, encryption)
+  - **Function `encrypt_field()`**: Encrypt a database field value
+  - **Function `decrypt_field()`**: Decrypt a database field value
+  - **Function `__init__()`**: Signature: (self, encryption)
+  - **Function `encrypt_config()`**: Encrypt entire configuration dictionary
+  - **Function `decrypt_config()`**: Decrypt configuration dictionary
+  - **Function `encrypt_api_keys()`**: Encrypt API keys while preserving structure
+  - **Function `decrypt_api_keys()`**: Decrypt API keys
 
 ### File: `core_ai\src\ai_assistant\core\enhanced_integration.py`
-- **Class `EnhancedAI`**: Orchestrates logic for this module.
-  - **Function `get_enhanced_ai()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_log_available_features()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
-  - **Function `optimize()`**: Internal helper or main execution logic.
-  - **Function `print_chunk()`**: Internal helper or main execution logic.
+- **Class `EnhancedAI`**: Enhanced AI with all optimizations integrated
+  - **Function `get_enhanced_ai()`**: Get global enhanced AI instance
+  - **Function `__init__()`**: Initialize enhanced AI
+  - **Function `_log_available_features()`**: Log which features are available
+  - **Function `get_stats()`**: Get comprehensive statistics
+  - **Function `optimize()`**: Run optimization on all components
+  - **Function `print_chunk()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\core\input_sanitizer.py`
-- **Class `InputSanitizer`**: Orchestrates logic for this module.
-  - **Function `get_input_sanitizer()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `sanitize_sql()`**: Internal helper or main execution logic.
-  - **Function `validate_sql_input()`**: Internal helper or main execution logic.
-  - **Function `sanitize_html()`**: Internal helper or main execution logic.
-  - **Function `sanitize_command()`**: Internal helper or main execution logic.
-  - **Function `validate_file_path()`**: Internal helper or main execution logic.
-  - **Function `sanitize_file_path()`**: Internal helper or main execution logic.
-  - **Function `sanitize_filename()`**: Internal helper or main execution logic.
-  - **Function `sanitize_url()`**: Internal helper or main execution logic.
-  - **Function `sanitize_prompt()`**: Internal helper or main execution logic.
-  - **Function `sanitize_json()`**: Internal helper or main execution logic.
-  - **Function `validate_email()`**: Internal helper or main execution logic.
-  - **Function `validate_integer()`**: Internal helper or main execution logic.
-  - **Function `sanitize_dict()`**: Internal helper or main execution logic.
-  - **Function `_sanitize_recursive()`**: Internal helper or main execution logic.
+- **Class `InputSanitizer`**: Comprehensive input validation and sanitization
+  - **Function `get_input_sanitizer()`**: Get global input sanitizer instance (singleton)
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `sanitize_sql()`**: Sanitize input for SQL queries
+  - **Function `validate_sql_input()`**: Validate if input is safe for SQL
+  - **Function `sanitize_html()`**: Sanitize HTML input to prevent XSS
+  - **Function `sanitize_command()`**: Sanitize system command to prevent command injection
+  - **Function `validate_file_path()`**: Validate file path to prevent path traversal attacks
+  - **Function `sanitize_file_path()`**: Sanitize file path
+  - **Function `sanitize_filename()`**: Sanitize filename to remove dangerous characters
+  - **Function `sanitize_url()`**: Sanitize and validate URL
+  - **Function `sanitize_prompt()`**: Sanitize AI prompt to prevent prompt injection
+  - **Function `sanitize_json()`**: Sanitize JSON data recursively
+  - **Function `validate_email()`**: Validate email address format
+  - **Function `validate_integer()`**: Validate integer input with optional range
+  - **Function `sanitize_dict()`**: Sanitize dictionary by filtering keys and sanitizing values
+  - **Function `_sanitize_recursive()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\core\input_validation.py`
-- **Class `ValidationError`**: Orchestrates logic for this module.
-- **Class `InputType`**: Orchestrates logic for this module.
-- **Class `ValidationRule`**: Orchestrates logic for this module.
-- **Class `InputValidator`**: Orchestrates logic for this module.
-- **Class `WebSocketValidator`**: Orchestrates logic for this module.
-- **Class `CLIValidator`**: Orchestrates logic for this module.
-  - **Function `get_input_validator()`**: Internal helper or main execution logic.
-  - **Function `get_websocket_validator()`**: Internal helper or main execution logic.
-  - **Function `get_cli_validator()`**: Internal helper or main execution logic.
-  - **Function `validate_api_input()`**: Internal helper or main execution logic.
-  - **Function `validate_websocket_message()`**: Internal helper or main execution logic.
-  - **Function `validate_cli_command()`**: Internal helper or main execution logic.
-  - **Function `validate_pin()`**: Internal helper or main execution logic.
-  - **Function `validate_email()`**: Internal helper or main execution logic.
-  - **Function `validate_file_upload()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `validate_field()`**: Internal helper or main execution logic.
-  - **Function `_validate_type()`**: Internal helper or main execution logic.
-  - **Function `_check_security_threats()`**: Internal helper or main execution logic.
-  - **Function `_sanitize_string()`**: Internal helper or main execution logic.
-  - **Function `validate_dict()`**: Internal helper or main execution logic.
-  - **Function `validate_api_request()`**: Internal helper or main execution logic.
-  - **Function `_get_api_rules()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `validate_message()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `validate_command_args()`**: Internal helper or main execution logic.
-  - **Function `validate_file_path()`**: Internal helper or main execution logic.
+- **Class `ValidationError`**: Custom exception for validation failures
+- **Class `InputType`**: Types of input validation
+- **Class `ValidationRule`**: Validation rule configuration
+- **Class `InputValidator`**: Comprehensive input validation system
+- **Class `WebSocketValidator`**: Specialized validator for WebSocket messages
+- **Class `CLIValidator`**: Specialized validator for CLI command inputs
+  - **Function `get_input_validator()`**: Get global input validator instance
+  - **Function `get_websocket_validator()`**: Get WebSocket validator instance
+  - **Function `get_cli_validator()`**: Get CLI validator instance
+  - **Function `validate_api_input()`**: Validate API input data
+  - **Function `validate_websocket_message()`**: Validate WebSocket message
+  - **Function `validate_cli_command()`**: Validate CLI command arguments
+  - **Function `validate_pin()`**: Validate PIN format
+  - **Function `validate_email()`**: Validate email address
+  - **Function `validate_file_upload()`**: Validate file upload parameters
+  - **Function `__init__()`**: Signature: (self, input_validator)
+  - **Function `__init__()`**: Signature: (self, input_validator)
+  - **Function `validate_field()`**: Validate a single field against its rule
+  - **Function `_validate_type()`**: Validate and convert value to expected type
+  - **Function `_check_security_threats()`**: Check for common security threats in string inputs
+  - **Function `_sanitize_string()`**: Sanitize string input based on type
+  - **Function `validate_dict()`**: Validate a dictionary against a set of rules
+  - **Function `validate_api_request()`**: Validate API request data based on endpoint
+  - **Function `_get_api_rules()`**: Get validation rules for specific API endpoints
+  - **Function `__init__()`**: Signature: (self, input_validator)
+  - **Function `validate_message()`**: Validate WebSocket message
+  - **Function `__init__()`**: Signature: (self, input_validator)
+  - **Function `validate_command_args()`**: Validate CLI command arguments
+  - **Function `validate_file_path()`**: Validate file path for CLI operations
 
 ### File: `core_ai\src\ai_assistant\core\interaction.py`
-- **Class `InteractionManager`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
+- **Class `InteractionManager`**: Manages direct interaction with the human user. Supports asking questions and requesting approval.
+  - **Function `__init__()`**: Signature: (self)
 
 ### File: `core_ai\src\ai_assistant\core\memory_manager.py`
-- **Class `MemoryManager`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_load()`**: Internal helper or main execution logic.
-  - **Function `_save()`**: Internal helper or main execution logic.
-  - **Function `set()`**: Internal helper or main execution logic.
-  - **Function `get()`**: Internal helper or main execution logic.
-  - **Function `delete()`**: Internal helper or main execution logic.
-  - **Function `list_keys()`**: Internal helper or main execution logic.
-  - **Function `clear()`**: Internal helper or main execution logic.
+- **Class `MemoryManager`**: Manages shared context and memory for the agent system. Persists data to a JSON file.
+  - **Function `__init__()`**: Signature: (self, storage_path)
+  - **Function `_load()`**: Load memory from disk
+  - **Function `_save()`**: Save memory to disk
+  - **Function `set()`**: Set a value in memory
+  - **Function `get()`**: Get a value from memory
+  - **Function `delete()`**: Remove a key from memory
+  - **Function `list_keys()`**: List all keys
+  - **Function `clear()`**: Clear all memory
 
 ### File: `core_ai\src\ai_assistant\core\multi_agent_coordinator.py`
-- **Class `MultiAgentCoordinator`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
+- **Class `MultiAgentCoordinator`**: Central coordinator for the Multi-Agent System. Handles task routing, agent assignment, and progress tracking.
+  - **Function `__init__()`**: Signature: (self, registry)
 
 ### File: `core_ai\src\ai_assistant\core\onboarding.py`
-- **Class `OnboardingManager`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_load_settings()`**: Internal helper or main execution logic.
-  - **Function `_save_settings()`**: Internal helper or main execution logic.
-  - **Function `is_onboarded()`**: Internal helper or main execution logic.
-  - **Function `set_onboarded()`**: Internal helper or main execution logic.
-  - **Function `get_onboarding_system_prompt()`**: Internal helper or main execution logic.
-  - **Function `process_onboarding_response()`**: Internal helper or main execution logic.
+- **Class `OnboardingManager`**: Core component.
+  - **Function `__init__()`**: Signature: (self, settings_path)
+  - **Function `_load_settings()`**: Signature: (self)
+  - **Function `_save_settings()`**: Signature: (self)
+  - **Function `is_onboarded()`**: Signature: (self)
+  - **Function `set_onboarded()`**: Signature: (self, status)
+  - **Function `get_onboarding_system_prompt()`**: Signature: (self)
+  - **Function `process_onboarding_response()`**: Check if the onboarding is complete based on the LLM response. Returns (cleaned_response, is_complete)
 
 ### File: `core_ai\src\ai_assistant\core\performance_optimization.py`
-- **Class `PerformanceLevel`**: Orchestrates logic for this module.
-- **Class `ResourceType`**: Orchestrates logic for this module.
-- **Class `CacheType`**: Orchestrates logic for this module.
-- **Class `PerformanceMetrics`**: Orchestrates logic for this module.
-- **Class `OptimizationSettings`**: Orchestrates logic for this module.
-- **Class `SmartCache`**: Orchestrates logic for this module.
-- **Class `MemoryManager`**: Orchestrates logic for this module.
-- **Class `AsyncTaskManager`**: Orchestrates logic for this module.
-- **Class `DatabaseOptimizer`**: Orchestrates logic for this module.
-- **Class `PerformanceProfiler`**: Orchestrates logic for this module.
-- **Class `ResourceMonitor`**: Orchestrates logic for this module.
-- **Class `PerformanceOptimizer`**: Orchestrates logic for this module.
-  - **Function `create_performance_decorator()`**: Internal helper or main execution logic.
-  - **Function `main()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `get()`**: Internal helper or main execution logic.
-  - **Function `set()`**: Internal helper or main execution logic.
-  - **Function `delete()`**: Internal helper or main execution logic.
-  - **Function `_evict()`**: Internal helper or main execution logic.
-  - **Function `clear()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `monitor_memory()`**: Internal helper or main execution logic.
-  - **Function `optimize_memory()`**: Internal helper or main execution logic.
-  - **Function `auto_memory_management()`**: Internal helper or main execution logic.
-  - **Function `get_memory_recommendations()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
-  - **Function `cleanup()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `initialize_loop()`**: Internal helper or main execution logic.
-  - **Function `cleanup_completed_tasks()`**: Internal helper or main execution logic.
-  - **Function `submit_task()`**: Internal helper or main execution logic.
-  - **Function `get_task_status()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
-  - **Function `stop()`**: Internal helper or main execution logic.
-  - **Function `get_task_stats()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `get_connection()`**: Internal helper or main execution logic.
-  - **Function `execute_query_cached()`**: Internal helper or main execution logic.
-  - **Function `optimize_database()`**: Internal helper or main execution logic.
-  - **Function `get_database_stats()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `profile_function()`**: Internal helper or main execution logic.
-  - **Function `start_cpu_profile()`**: Internal helper or main execution logic.
-  - **Function `stop_cpu_profile()`**: Internal helper or main execution logic.
-  - **Function `get_function_stats()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `collect_metrics()`**: Internal helper or main execution logic.
-  - **Function `check_thresholds()`**: Internal helper or main execution logic.
-  - **Function `start_monitoring()`**: Internal helper or main execution logic.
-  - **Function `stop_monitoring()`**: Internal helper or main execution logic.
-  - **Function `_monitor_loop()`**: Internal helper or main execution logic.
-  - **Function `get_current_status()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `register_database()`**: Internal helper or main execution logic.
-  - **Function `optimize_all_systems()`**: Internal helper or main execution logic.
-  - **Function `auto_optimize_check()`**: Internal helper or main execution logic.
-  - **Function `get_performance_summary()`**: Internal helper or main execution logic.
-  - **Function `start_monitoring()`**: Internal helper or main execution logic.
-  - **Function `stop_monitoring()`**: Internal helper or main execution logic.
-  - **Function `performance_optimized()`**: Internal helper or main execution logic.
-  - **Function `wrapper()`**: Internal helper or main execution logic.
-  - **Function `wrapper()`**: Internal helper or main execution logic.
+- **Class `PerformanceLevel`**: Performance optimization levels
+- **Class `ResourceType`**: System resource types
+- **Class `CacheType`**: Cache implementation types
+- **Class `PerformanceMetrics`**: Performance metrics data structure
+- **Class `OptimizationSettings`**: Performance optimization settings
+- **Class `SmartCache`**: Advanced caching system with multiple strategies
+- **Class `MemoryManager`**: Advanced memory management and optimization
+- **Class `AsyncTaskManager`**: Asynchronous task management and optimization
+- **Class `DatabaseOptimizer`**: Database performance optimization
+- **Class `PerformanceProfiler`**: Performance profiling and analysis
+- **Class `ResourceMonitor`**: System resource monitoring and alerting
+- **Class `PerformanceOptimizer`**: Main performance optimization manager
+  - **Function `create_performance_decorator()`**: Create a performance optimization decorator
+  - **Function `main()`**: Example usage of Performance Optimization
+  - **Function `__init__()`**: Signature: (self, settings)
+  - **Function `get()`**: Get value from cache
+  - **Function `set()`**: Set value in cache
+  - **Function `delete()`**: Delete key from cache
+  - **Function `_evict()`**: Evict items based on cache type strategy
+  - **Function `clear()`**: Clear entire cache
+  - **Function `get_stats()`**: Get task manager statistics
+  - **Function `__init__()`**: Signature: (self, settings)
+  - **Function `monitor_memory()`**: Monitor current memory usage
+  - **Function `optimize_memory()`**: Perform memory optimization
+  - **Function `auto_memory_management()`**: Automatic memory management in background
+  - **Function `get_memory_recommendations()`**: Get memory optimization recommendations
+  - **Function `get_stats()`**: Get task manager statistics
+  - **Function `cleanup()`**: Cleanup memory and return freed amount
+  - **Function `__init__()`**: Signature: (self, settings)
+  - **Function `initialize_loop()`**: Initialize async event loop
+  - **Function `cleanup_completed_tasks()`**: Clean up completed task references
+  - **Function `submit_task()`**: Submit a task for execution
+  - **Function `get_task_status()`**: Get status of a specific task
+  - **Function `get_stats()`**: Get task manager statistics
+  - **Function `stop()`**: Stop the task manager
+  - **Function `get_task_stats()`**: Get task execution statistics
+  - **Function `__init__()`**: Signature: (self, settings)
+  - **Function `get_connection()`**: Get database connection from pool
+  - **Function `execute_query_cached()`**: Execute query with caching
+  - **Function `optimize_database()`**: Optimize database performance
+  - **Function `get_database_stats()`**: Get database performance statistics
+  - **Function `__init__()`**: Signature: (self, settings)
+  - **Function `profile_function()`**: Decorator to profile function performance
+  - **Function `start_cpu_profile()`**: Start CPU profiling
+  - **Function `stop_cpu_profile()`**: Stop CPU profiling and return results
+  - **Function `get_function_stats()`**: Get statistics for a specific function
+  - **Function `__init__()`**: Signature: (self, settings)
+  - **Function `collect_metrics()`**: Collect current performance metrics
+  - **Function `check_thresholds()`**: Check if metrics exceed thresholds and generate alerts
+  - **Function `start_monitoring()`**: Start all monitoring systems
+  - **Function `stop_monitoring()`**: Stop all monitoring systems
+  - **Function `_monitor_loop()`**: Background monitoring loop
+  - **Function `get_current_status()`**: Get current system status
+  - **Function `__init__()`**: Signature: (self, settings)
+  - **Function `register_database()`**: Register a database for optimization
+  - **Function `optimize_all_systems()`**: Perform comprehensive system optimization
+  - **Function `auto_optimize_check()`**: Check if auto-optimization should run
+  - **Function `get_performance_summary()`**: Get comprehensive performance summary
+  - **Function `start_monitoring()`**: Start all monitoring systems
+  - **Function `stop_monitoring()`**: Stop all monitoring systems
+  - **Function `performance_optimized()`**: Signature: ()
+  - **Function `wrapper()`**: Signature: ()
+  - **Function `wrapper()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\core\permission_system.py`
-- **Class `PermissionLevel`**: Orchestrates logic for this module.
-- **Class `RiskLevel`**: Orchestrates logic for this module.
-- **Class `OperationRequest`**: Orchestrates logic for this module.
-- **Class `PermissionResult`**: Orchestrates logic for this module.
-- **Class `PermissionPolicy`**: Orchestrates logic for this module.
-- **Class `PermissionSystem`**: Orchestrates logic for this module.
-  - **Function `get_permission_system()`**: Internal helper or main execution logic.
-  - **Function `require_permission()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_load_default_policies()`**: Internal helper or main execution logic.
-  - **Function `get_policy()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_load_permissions()`**: Internal helper or main execution logic.
-  - **Function `_save_permissions()`**: Internal helper or main execution logic.
-  - **Function `check_permission()`**: Internal helper or main execution logic.
-  - **Function `_is_blacklisted()`**: Internal helper or main execution logic.
-  - **Function `_is_whitelisted()`**: Internal helper or main execution logic.
-  - **Function `_generate_confirmation_message()`**: Internal helper or main execution logic.
-  - **Function `grant_user_permission()`**: Internal helper or main execution logic.
-  - **Function `revoke_user_permission()`**: Internal helper or main execution logic.
-  - **Function `add_to_whitelist()`**: Internal helper or main execution logic.
-  - **Function `add_to_blacklist()`**: Internal helper or main execution logic.
-  - **Function `request_user_confirmation()`**: Internal helper or main execution logic.
-  - **Function `decorator()`**: Internal helper or main execution logic.
-  - **Function `wrapper()`**: Internal helper or main execution logic.
+- **Class `PermissionLevel`**: Permission levels for operations
+- **Class `RiskLevel`**: Risk levels for operations
+- **Class `OperationRequest`**: Represents a request to perform an operation
+- **Class `PermissionResult`**: Result of a permission check
+- **Class `PermissionPolicy`**: Defines permission policies for different operation types
+- **Class `PermissionSystem`**: Centralized permission and authorization system
+  - **Function `get_permission_system()`**: Get global permission system instance (singleton)
+  - **Function `require_permission()`**: Decorator to require permission for a function
+  - **Function `__init__()`**: Signature: (self, config_path)
+  - **Function `_load_default_policies()`**: Load default permission policies
+  - **Function `get_policy()`**: Get policy for an operation type
+  - **Function `__init__()`**: Signature: (self, config_path)
+  - **Function `_load_permissions()`**: Load user permissions from config file
+  - **Function `_save_permissions()`**: Save user permissions to config file
+  - **Function `check_permission()`**: Check if an operation is permitted
+  - **Function `_is_blacklisted()`**: Check if operation/resource is blacklisted
+  - **Function `_is_whitelisted()`**: Check if operation/resource is whitelisted
+  - **Function `_generate_confirmation_message()`**: Generate user-friendly confirmation message
+  - **Function `grant_user_permission()`**: Grant a permission level to a user
+  - **Function `revoke_user_permission()`**: Revoke a permission level from a user
+  - **Function `add_to_whitelist()`**: Add an operation/resource to whitelist
+  - **Function `add_to_blacklist()`**: Add an operation/resource to blacklist
+  - **Function `request_user_confirmation()`**: Request user confirmation for an operation
+  - **Function `decorator()`**: Signature: ()
+  - **Function `wrapper()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\core\privacy_consent.py`
-- **Class `ConsentType`**: Orchestrates logic for this module.
-- **Class `ConsentStatus`**: Orchestrates logic for this module.
-- **Class `ConsentRecord`**: Orchestrates logic for this module.
-- **Class `UserConsent`**: Orchestrates logic for this module.
-- **Class `PrivacyConsentManager`**: Orchestrates logic for this module.
-  - **Function `get_consent_manager()`**: Internal helper or main execution logic.
-  - **Function `is_valid()`**: Internal helper or main execution logic.
-  - **Function `to_dict()`**: Internal helper or main execution logic.
-  - **Function `from_dict()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `has_consent()`**: Internal helper or main execution logic.
-  - **Function `grant_consent()`**: Internal helper or main execution logic.
-  - **Function `deny_consent()`**: Internal helper or main execution logic.
-  - **Function `withdraw_consent()`**: Internal helper or main execution logic.
-  - **Function `get_user_consents()`**: Internal helper or main execution logic.
-  - **Function `get_consent_summary()`**: Internal helper or main execution logic.
-  - **Function `export_user_data()`**: Internal helper or main execution logic.
-  - **Function `delete_user_data()`**: Internal helper or main execution logic.
-  - **Function `_save_user_consent()`**: Internal helper or main execution logic.
-  - **Function `_load_all_consents()`**: Internal helper or main execution logic.
-  - **Function `require_consent()`**: Internal helper or main execution logic.
-  - **Function `decorator()`**: Internal helper or main execution logic.
-  - **Function `wrapper()`**: Internal helper or main execution logic.
+- **Class `ConsentType`**: Types of consent that can be requested
+- **Class `ConsentStatus`**: Status of consent
+- **Class `ConsentRecord`**: Record of a single consent decision
+- **Class `UserConsent`**: Complete consent profile for a user
+- **Class `PrivacyConsentManager`**: Manages privacy consent for all users and data processing activities.
+  - **Function `get_consent_manager()`**: Get global PrivacyConsentManager instance (singleton pattern)
+  - **Function `is_valid()`**: Check if consent is currently valid
+  - **Function `to_dict()`**: Convert to dictionary for JSON storage
+  - **Function `from_dict()`**: Create from dictionary
+  - **Function `__init__()`**: Initialize consent manager.
+  - **Function `has_consent()`**: Check if user has granted valid consent for a specific type.
+  - **Function `grant_consent()`**: Grant consent for a user.
+  - **Function `deny_consent()`**: Explicitly deny consent (user said no).
+  - **Function `withdraw_consent()`**: Withdraw previously granted consent (user changed mind).
+  - **Function `get_user_consents()`**: Get all consent records for a user.
+  - **Function `get_consent_summary()`**: Get summary of user's consent status.
+  - **Function `export_user_data()`**: Export all consent data for a user (GDPR right to access).
+  - **Function `delete_user_data()`**: Delete all consent data for a user (GDPR right to erasure).
+  - **Function `_save_user_consent()`**: Save user consent to disk
+  - **Function `_load_all_consents()`**: Load all existing consent records from disk
+  - **Function `require_consent()`**: Decorator to require consent before executing a function.
+  - **Function `decorator()`**: Signature: ()
+  - **Function `wrapper()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\core\privacy_protection.py`
-- **Class `DataSensitivity`**: Orchestrates logic for this module.
-- **Class `ThreatLevel`**: Orchestrates logic for this module.
-- **Class `PrivacyRule`**: Orchestrates logic for this module.
-- **Class `SensitiveLocation`**: Orchestrates logic for this module.
-- **Class `PrivacyProtectionSystem`**: Orchestrates logic for this module.
-  - **Function `get_privacy_protection()`**: Internal helper or main execution logic.
-  - **Function `is_request_safe()`**: Internal helper or main execution logic.
-  - **Function `check_file_access_allowed()`**: Internal helper or main execution logic.
-  - **Function `sanitize_ai_response()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_load_config()`**: Internal helper or main execution logic.
-  - **Function `_setup_default_sensitive_locations()`**: Internal helper or main execution logic.
-  - **Function `analyze_request()`**: Internal helper or main execution logic.
-  - **Function `check_file_access()`**: Internal helper or main execution logic.
-  - **Function `redact_pii()`**: Internal helper or main execution logic.
-  - **Function `sanitize_response()`**: Internal helper or main execution logic.
-  - **Function `require_confirmation()`**: Internal helper or main execution logic.
-  - **Function `generate_confirmation_prompt()`**: Internal helper or main execution logic.
+- **Class `DataSensitivity`**: Data sensitivity classification
+- **Class `ThreatLevel`**: Threat detection levels
+- **Class `PrivacyRule`**: Privacy protection rule
+- **Class `SensitiveLocation`**: Sensitive file/folder location
+- **Class `PrivacyProtectionSystem`**: Advanced privacy protection system
+  - **Function `get_privacy_protection()`**: Get global privacy protection instance (singleton)
+  - **Function `is_request_safe()`**: Check if user request is safe
+  - **Function `check_file_access_allowed()`**: Check if file access is allowed
+  - **Function `sanitize_ai_response()`**: Sanitize AI response for privacy
+  - **Function `__init__()`**: Initialize privacy protection system
+  - **Function `_load_config()`**: Load privacy rules from config
+  - **Function `_setup_default_sensitive_locations()`**: Setup default sensitive file/folder locations
+  - **Function `analyze_request()`**: Analyze user request for privacy/security threats
+  - **Function `check_file_access()`**: Check if file access should be allowed
+  - **Function `redact_pii()`**: Redact personal identifiable information from text
+  - **Function `sanitize_response()`**: Sanitize AI response to prevent data leakage
+  - **Function `require_confirmation()`**: Check if action requires user confirmation
+  - **Function `generate_confirmation_prompt()`**: Generate user-friendly confirmation prompt
 
 ### File: `core_ai\src\ai_assistant\core\proactive_anticipator.py`
-- **Class `ProactiveAnticipator`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `start()`**: Internal helper or main execution logic.
-  - **Function `stop()`**: Internal helper or main execution logic.
-  - **Function `_schedule_loop()`**: Internal helper or main execution logic.
-  - **Function `_check_for_proactive_actions()`**: Internal helper or main execution logic.
+- **Class `ProactiveAnticipator`**: Core component.
+  - **Function `__init__()`**: Signature: (self, chat_interface)
+  - **Function `start()`**: Signature: (self)
+  - **Function `stop()`**: Signature: (self)
+  - **Function `_schedule_loop()`**: Signature: (self)
+  - **Function `_check_for_proactive_actions()`**: Signature: (self, now)
 
 ### File: `core_ai\src\ai_assistant\core\progress_tracker.py`
-- **Class `PersistentProgressTracker`**: Orchestrates logic for this module.
-  - **Function `get_progress_tracker()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_db()`**: Internal helper or main execution logic.
-  - **Function `start_chain()`**: Internal helper or main execution logic.
-  - **Function `update_chain_status()`**: Internal helper or main execution logic.
-  - **Function `record_action_start()`**: Internal helper or main execution logic.
-  - **Function `update_action_status()`**: Internal helper or main execution logic.
-  - **Function `save_chain_result()`**: Internal helper or main execution logic.
-  - **Function `_calculate_duration()`**: Internal helper or main execution logic.
-  - **Function `get_recent_chains()`**: Internal helper or main execution logic.
-  - **Function `get_chain_details()`**: Internal helper or main execution logic.
+- **Class `PersistentProgressTracker`**: Persistent progress tracker using SQLite. Stores chain execution history and real-time status.
+  - **Function `get_progress_tracker()`**: Get singleton progress tracker
+  - **Function `__init__()`**: Initialize tracker with database path
+  - **Function `_init_db()`**: Initialize database schema
+  - **Function `start_chain()`**: Record start of a new chain
+  - **Function `update_chain_status()`**: Update chain status and progress
+  - **Function `record_action_start()`**: Record start of an action
+  - **Function `update_action_status()`**: Update action status
+  - **Function `save_chain_result()`**: Save final chain results
+  - **Function `_calculate_duration()`**: Calculate duration for a chain
+  - **Function `get_recent_chains()`**: Get list of recent execution chains
+  - **Function `get_chain_details()`**: Get full details for a chain including actions
 
 ### File: `core_ai\src\ai_assistant\core\secrets_manager.py`
-- **Class `SecretsValidationError`**: Orchestrates logic for this module.
-- **Class `SecretsManager`**: Orchestrates logic for this module.
-  - **Function `get_secrets_manager()`**: Internal helper or main execution logic.
-  - **Function `get_secret()`**: Internal helper or main execution logic.
-  - **Function `generate_secret()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_load_environment()`**: Internal helper or main execution logic.
-  - **Function `get_required()`**: Internal helper or main execution logic.
-  - **Function `get_optional()`**: Internal helper or main execution logic.
-  - **Function `get_or_generate()`**: Internal helper or main execution logic.
-  - **Function `_is_insecure_value()`**: Internal helper or main execution logic.
-  - **Function `validate_all_required()`**: Internal helper or main execution logic.
-  - **Function `generate_secure_value()`**: Internal helper or main execution logic.
-  - **Function `hash_value()`**: Internal helper or main execution logic.
-  - **Function `print_setup_instructions()`**: Internal helper or main execution logic.
+- **Class `SecretsValidationError`**: Raised when required secrets are missing or invalid.
+- **Class `SecretsManager`**: Centralized secrets management with validation and secure defaults.
+  - **Function `get_secrets_manager()`**: Get the global secrets manager instance.
+  - **Function `get_secret()`**: Convenience function to get a secret.
+  - **Function `generate_secret()`**: Generate a secure random secret.
+  - **Function `__init__()`**: Initialize secrets manager.
+  - **Function `_load_environment()`**: Load environment variables from .env file.
+  - **Function `get_required()`**: Get a required secret. Raises error if not set or insecure.
+  - **Function `get_optional()`**: Get an optional secret with fallback to default.
+  - **Function `get_or_generate()`**: Get a secret or generate a secure one if not set.
+  - **Function `_is_insecure_value()`**: Check if a value appears to be an insecure default.
+  - **Function `validate_all_required()`**: Validate all required secrets are properly set.
+  - **Function `generate_secure_value()`**: Generate a cryptographically secure random value.
+  - **Function `hash_value()`**: Hash a value securely using PBKDF2.
+  - **Function `print_setup_instructions()`**: Print instructions for setting up secrets.
 
 ### File: `core_ai\src\ai_assistant\core\system.py`
-  - **Function `get_system_status()`**: Internal helper or main execution logic.
-  - **Function `get_running_processes()`**: Internal helper or main execution logic.
-  - **Function `cleanup_temp_files()`**: Internal helper or main execution logic.
-  - **Function `get_network_info()`**: Internal helper or main execution logic.
-  - **Function `monitor_system_alerts()`**: Internal helper or main execution logic.
-  - **Function `get_system_info()`**: Internal helper or main execution logic.
-  - **Function `get_battery_status()`**: Internal helper or main execution logic.
+  - **Function `get_system_status()`**: Gets comprehensive system status including CPU, RAM, disk, and network info.
+  - **Function `get_running_processes()`**: Gets information about currently running processes. :param limit: Number of top processes to show (by CPU usage)
+  - **Function `cleanup_temp_files()`**: Cleans up temporary files and system cache.
+  - **Function `get_network_info()`**: Gets detailed network information including active connections.
+  - **Function `monitor_system_alerts()`**: Monitors system for potential issues and alerts.
+  - **Function `get_system_info()`**: Gets detailed system information including OS, hardware, and Python environment.
+  - **Function `get_battery_status()`**: Gets detailed battery status if available.
 
 ### File: `core_ai\src\ai_assistant\core\task_chain_orchestrator.py`
-- **Class `ExecutionResult`**: Orchestrates logic for this module.
-- **Class `TaskChainOrchestrator`**: Orchestrates logic for this module.
-  - **Function `get_orchestrator()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `execute_command()`**: Internal helper or main execution logic.
-  - **Function `execute_chain()`**: Internal helper or main execution logic.
-  - **Function `execute_step()`**: Internal helper or main execution logic.
-  - **Function `_verify_step()`**: Internal helper or main execution logic.
-  - **Function `_check_dependencies()`**: Internal helper or main execution logic.
-  - **Function `_rollback_steps()`**: Internal helper or main execution logic.
-  - **Function `handle_override()`**: Internal helper or main execution logic.
-  - **Function `get_current_status()`**: Internal helper or main execution logic.
-  - **Function `pause()`**: Internal helper or main execution logic.
-  - **Function `resume()`**: Internal helper or main execution logic.
-  - **Function `cancel()`**: Internal helper or main execution logic.
+- **Class `ExecutionResult`**: Result of task chain execution.
+- **Class `TaskChainOrchestrator`**: Orchestrates execution of multi-step task chains.
+  - **Function `get_orchestrator()`**: Get singleton orchestrator.
+  - **Function `__init__()`**: Initialize orchestrator.
+  - **Function `execute_command()`**: Execute a command (single or multi-step).
+  - **Function `execute_chain()`**: Execute a chain of task steps.
+  - **Function `execute_step()`**: Execute a single task step.
+  - **Function `_verify_step()`**: Verify that a step was ACTUALLY successful using 3-layer check: 1. Code Return (already checked) 2. System State (os.exists, process list) 3. Visua...
+  - **Function `_check_dependencies()`**: Check if step dependencies are met.
+  - **Function `_rollback_steps()`**: Attempt to rollback executed steps.
+  - **Function `handle_override()`**: Handle a command override during execution.
+  - **Function `get_current_status()`**: Get current execution status.
+  - **Function `pause()`**: Pause current execution.
+  - **Function `resume()`**: Resume paused execution.
+  - **Function `cancel()`**: Cancel current execution.
 
 ### File: `core_ai\src\ai_assistant\core\tool_executor.py`
-- **Class `ToolType`**: Orchestrates logic for this module.
-- **Class `ToolResult`**: Orchestrates logic for this module.
-- **Class `ToolExecutor`**: Orchestrates logic for this module.
-  - **Function `web_search()`**: Internal helper or main execution logic.
-  - **Function `execute_code()`**: Internal helper or main execution logic.
-  - **Function `get_current_time()`**: Internal helper or main execution logic.
-  - **Function `calculator()`**: Internal helper or main execution logic.
-  - **Function `get_default_executor()`**: Internal helper or main execution logic.
-  - **Function `to_dict()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `register_tool()`**: Internal helper or main execution logic.
-  - **Function `get_tool_definitions()`**: Internal helper or main execution logic.
-  - **Function `execute_tool()`**: Internal helper or main execution logic.
-  - **Function `execute_tool_call()`**: Internal helper or main execution logic.
-  - **Function `format_tool_result_for_llm()`**: Internal helper or main execution logic.
-  - **Function `get_execution_history()`**: Internal helper or main execution logic.
-  - **Function `clear_history()`**: Internal helper or main execution logic.
-  - **Function `evaluate()`**: Internal helper or main execution logic.
+- **Class `ToolType`**: Tool execution type.
+- **Class `ToolResult`**: Result from tool execution.
+- **Class `ToolExecutor`**: Executes tools/functions called by LLM.
+  - **Function `web_search()`**: Search the web for information.
+  - **Function `execute_code()`**: Execute code (sandboxed).
+  - **Function `get_current_time()`**: Get current date and time.
+  - **Function `calculator()`**: Evaluate a mathematical expression.
+  - **Function `get_default_executor()`**: Create executor with default tools.
+  - **Function `to_dict()`**: Convert to dictionary.
+  - **Function `__init__()`**: Initialize tool executor.
+  - **Function `register_tool()`**: Register a tool that can be called by LLM.
+  - **Function `get_tool_definitions()`**: Get all registered tool definitions in OpenAI format.
+  - **Function `execute_tool()`**: Execute a registered tool.
+  - **Function `execute_tool_call()`**: Execute a tool call from LLM response.
+  - **Function `format_tool_result_for_llm()`**: Format tool result for sending back to LLM.
+  - **Function `get_execution_history()`**: Get recent tool execution history.
+  - **Function `clear_history()`**: Clear execution history.
+  - **Function `evaluate()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\core\universal_app_controller.py`
   - *(Documentation parsing failed for this file)*
 
 ### File: `core_ai\src\ai_assistant\core\voice_access_control.py`
-- **Class `Role`**: Orchestrates logic for this module.
-- **Class `Permission`**: Orchestrates logic for this module.
-- **Class `User`**: Orchestrates logic for this module.
-- **Class `Session`**: Orchestrates logic for this module.
-- **Class `VoiceAccessControl`**: Orchestrates logic for this module.
-  - **Function `get_voice_access_control()`**: Internal helper or main execution logic.
-  - **Function `require_permission()`**: Internal helper or main execution logic.
-  - **Function `has_permission()`**: Internal helper or main execution logic.
-  - **Function `owns_speaker()`**: Internal helper or main execution logic.
-  - **Function `is_valid()`**: Internal helper or main execution logic.
-  - **Function `is_expired()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `create_user()`**: Internal helper or main execution logic.
-  - **Function `get_user()`**: Internal helper or main execution logic.
-  - **Function `check_permission()`**: Internal helper or main execution logic.
-  - **Function `can_modify_speaker()`**: Internal helper or main execution logic.
-  - **Function `register_speaker_ownership()`**: Internal helper or main execution logic.
-  - **Function `remove_speaker_ownership()`**: Internal helper or main execution logic.
-  - **Function `create_session()`**: Internal helper or main execution logic.
-  - **Function `verify_mfa()`**: Internal helper or main execution logic.
-  - **Function `invalidate_session()`**: Internal helper or main execution logic.
-  - **Function `cleanup_expired_sessions()`**: Internal helper or main execution logic.
-  - **Function `_save_user()`**: Internal helper or main execution logic.
-  - **Function `_load_users()`**: Internal helper or main execution logic.
-  - **Function `decorator()`**: Internal helper or main execution logic.
-  - **Function `wrapper()`**: Internal helper or main execution logic.
+- **Class `Role`**: User roles with hierarchical permissions
+- **Class `Permission`**: Granular permissions for voice operations
+- **Class `User`**: User account with role and permissions
+- **Class `Session`**: User session for authentication
+- **Class `VoiceAccessControl`**: Manages access control for voice biometric operations.
+  - **Function `get_voice_access_control()`**: Get global VoiceAccessControl instance
+  - **Function `require_permission()`**: Decorator to require permission for a function.
+  - **Function `has_permission()`**: Check if user has a specific permission
+  - **Function `owns_speaker()`**: Check if user owns a speaker
+  - **Function `is_valid()`**: Check if session is still valid
+  - **Function `is_expired()`**: Check if session has expired
+  - **Function `__init__()`**: Initialize access control system.
+  - **Function `create_user()`**: Create a new user.
+  - **Function `get_user()`**: Get user by ID
+  - **Function `check_permission()`**: Check if user has permission.
+  - **Function `can_modify_speaker()`**: Check if user can modify a speaker.
+  - **Function `register_speaker_ownership()`**: Register speaker ownership.
+  - **Function `remove_speaker_ownership()`**: Remove speaker ownership.
+  - **Function `create_session()`**: Create a new session for user.
+  - **Function `verify_mfa()`**: Mark session as MFA verified.
+  - **Function `invalidate_session()`**: Invalidate a session (logout).
+  - **Function `cleanup_expired_sessions()`**: Remove expired sessions.
+  - **Function `_save_user()`**: Save user to disk
+  - **Function `_load_users()`**: Load users from disk
+  - **Function `decorator()`**: Signature: ()
+  - **Function `wrapper()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\core\voice_audit_logger.py`
-- **Class `AuditEventType`**: Orchestrates logic for this module.
-- **Class `AuditSeverity`**: Orchestrates logic for this module.
-- **Class `AuditEvent`**: Orchestrates logic for this module.
-- **Class `VoiceAuditLogger`**: Orchestrates logic for this module.
-  - **Function `get_voice_audit_logger()`**: Internal helper or main execution logic.
-  - **Function `to_dict()`**: Internal helper or main execution logic.
-  - **Function `to_log_line()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_generate_event_id()`**: Internal helper or main execution logic.
-  - **Function `_write_event()`**: Internal helper or main execution logic.
-  - **Function `_rotate_logs()`**: Internal helper or main execution logic.
-  - **Function `log_event()`**: Internal helper or main execution logic.
-  - **Function `log_speaker_enrollment()`**: Internal helper or main execution logic.
-  - **Function `log_verification_attempt()`**: Internal helper or main execution logic.
-  - **Function `log_speaker_deletion()`**: Internal helper or main execution logic.
-  - **Function `log_permission_check()`**: Internal helper or main execution logic.
-  - **Function `log_consent_change()`**: Internal helper or main execution logic.
-  - **Function `log_api_usage()`**: Internal helper or main execution logic.
-  - **Function `_check_suspicious_activity()`**: Internal helper or main execution logic.
-  - **Function `get_user_audit_trail()`**: Internal helper or main execution logic.
-  - **Function `get_resource_audit_trail()`**: Internal helper or main execution logic.
-  - **Function `get_recent_events()`**: Internal helper or main execution logic.
+- **Class `AuditEventType`**: Types of events that can be audited
+- **Class `AuditSeverity`**: Severity levels for audit events
+- **Class `AuditEvent`**: Single audit log entry
+- **Class `VoiceAuditLogger`**: Audit logger for voice biometric operations.
+  - **Function `get_voice_audit_logger()`**: Get global VoiceAuditLogger instance
+  - **Function `to_dict()`**: Convert to dictionary for JSON storage
+  - **Function `to_log_line()`**: Convert to single-line log format
+  - **Function `__init__()`**: Initialize audit logger.
+  - **Function `_generate_event_id()`**: Generate unique event ID
+  - **Function `_write_event()`**: Write event to log file (append-only)
+  - **Function `_rotate_logs()`**: Rotate log files when max size reached
+  - **Function `log_event()`**: Log a general audit event.
+  - **Function `log_speaker_enrollment()`**: Log speaker enrollment
+  - **Function `log_verification_attempt()`**: Log speaker verification attempt
+  - **Function `log_speaker_deletion()`**: Log speaker deletion
+  - **Function `log_permission_check()`**: Log permission check
+  - **Function `log_consent_change()`**: Log consent grant/withdrawal
+  - **Function `log_api_usage()`**: Log external API usage
+  - **Function `_check_suspicious_activity()`**: Check for suspicious activity patterns
+  - **Function `get_user_audit_trail()`**: Get audit trail for a user (GDPR right to access).
+  - **Function `get_resource_audit_trail()`**: Get audit trail for a specific resource (e.g., speaker).
+  - **Function `get_recent_events()`**: Get recent audit events.
 
 ### File: `core_ai\src\ai_assistant\core\services\ai_service_manager.py`
-- **Class `AIServiceManager`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `multimodal_ai()`**: Internal helper or main execution logic.
-  - **Function `conversational_ai()`**: Internal helper or main execution logic.
-  - **Function `llm_chat()`**: Internal helper or main execution logic.
-  - **Function `get_status()`**: Internal helper or main execution logic.
+- **Class `AIServiceManager`**: Manages AI services with lazy initialization
+  - **Function `__init__()`**: Initialize AI service manager
+  - **Function `multimodal_ai()`**: Get multimodal AI service (lazy loaded)
+  - **Function `conversational_ai()`**: Get conversational AI service (lazy loaded)
+  - **Function `llm_chat()`**: Get LLM chat service (lazy loaded)
+  - **Function `get_status()`**: Get initialization status of all AI services
 
 ### File: `core_ai\src\ai_assistant\core\services\command_processor.py`
-- **Class `CommandProcessor`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `process_command()`**: Internal helper or main execution logic.
-  - **Function `_fallback_response()`**: Internal helper or main execution logic.
-  - **Function `clear_history()`**: Internal helper or main execution logic.
-  - **Function `get_history()`**: Internal helper or main execution logic.
+- **Class `CommandProcessor`**: Process user commands with multilingual support
+  - **Function `__init__()`**: Initialize command processor
+  - **Function `process_command()`**: Main command processing entry point
+  - **Function `_fallback_response()`**: Fallback response when AI is not available
+  - **Function `clear_history()`**: Clear conversation history
+  - **Function `get_history()`**: Get recent conversation history
 
 ### File: `core_ai\src\ai_assistant\core\services\initialization_service.py`
-- **Class `InitializationService`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `initialize_memory()`**: Internal helper or main execution logic.
-  - **Function `background_initialize()`**: Internal helper or main execution logic.
-  - **Function `eager_initialize()`**: Internal helper or main execution logic.
-  - **Function `get_status()`**: Internal helper or main execution logic.
-  - **Function `init()`**: Internal helper or main execution logic.
+- **Class `InitializationService`**: Manages initialization of assistant services
+  - **Function `__init__()`**: Initialize service manager
+  - **Function `initialize_memory()`**: Initialize memory system
+  - **Function `background_initialize()`**: Background initialization of services
+  - **Function `eager_initialize()`**: Eager initialization - load everything immediately
+  - **Function `get_status()`**: Get initialization status
+  - **Function `init()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\core\services\monitoring_service.py`
-- **Class `MonitoringService`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `get_real_time_system_stats()`**: Internal helper or main execution logic.
-  - **Function `start_monitoring()`**: Internal helper or main execution logic.
-  - **Function `get_process_info()`**: Internal helper or main execution logic.
-  - **Function `monitor()`**: Internal helper or main execution logic.
+- **Class `MonitoringService`**: System monitoring and statistics service
+  - **Function `__init__()`**: Initialize monitoring service
+  - **Function `get_real_time_system_stats()`**: Get real-time system statistics
+  - **Function `start_monitoring()`**: Start background system monitoring
+  - **Function `get_process_info()`**: Get current process information
+  - **Function `monitor()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\core\services\voice_service_manager.py`
-- **Class `VoiceServiceManager`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `voice_recognizer()`**: Internal helper or main execution logic.
-  - **Function `tts_engine()`**: Internal helper or main execution logic.
-  - **Function `wake_word_detector()`**: Internal helper or main execution logic.
-  - **Function `start_listening()`**: Internal helper or main execution logic.
-  - **Function `stop_listening()`**: Internal helper or main execution logic.
-  - **Function `speak()`**: Internal helper or main execution logic.
-  - **Function `get_status()`**: Internal helper or main execution logic.
+- **Class `VoiceServiceManager`**: Manages voice services with lazy initialization
+  - **Function `__init__()`**: Initialize voice service manager
+  - **Function `voice_recognizer()`**: Get voice recognizer (lazy loaded)
+  - **Function `tts_engine()`**: Get TTS engine (lazy loaded)
+  - **Function `wake_word_detector()`**: Get wake word detector (lazy loaded)
+  - **Function `start_listening()`**: Start voice listening
+  - **Function `stop_listening()`**: Stop voice listening
+  - **Function `speak()`**: Speak text using TTS
+  - **Function `get_status()`**: Get initialization status of all voice services
 
 ### File: `core_ai\src\ai_assistant\integrations\email_handler.py`
-- **Class `GmailManager`**: Orchestrates logic for this module.
-  - **Function `setup_email_auth()`**: Internal helper or main execution logic.
-  - **Function `get_gmail_service()`**: Internal helper or main execution logic.
-  - **Function `get_inbox_summary()`**: Internal helper or main execution logic.
-  - **Function `send_email()`**: Internal helper or main execution logic.
-  - **Function `search_emails()`**: Internal helper or main execution logic.
-  - **Function `read_email_content()`**: Internal helper or main execution logic.
-  - **Function `get_unread_count()`**: Internal helper or main execution logic.
-  - **Function `mark_email_read()`**: Internal helper or main execution logic.
-  - **Function `delete_email()`**: Internal helper or main execution logic.
-  - **Function `compose_quick_reply()`**: Internal helper or main execution logic.
-  - **Function `extract_email_address()`**: Internal helper or main execution logic.
-  - **Function `extract_display_name()`**: Internal helper or main execution logic.
-  - **Function `extract_email_body()`**: Internal helper or main execution logic.
-  - **Function `__new__()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `setup_auth()`**: Internal helper or main execution logic.
-  - **Function `_get_setup_instructions()`**: Internal helper or main execution logic.
-  - **Function `get_service()`**: Internal helper or main execution logic.
-  - **Function `is_authenticated()`**: Internal helper or main execution logic.
+- **Class `GmailManager`**: Manages Gmail API authentication and operations
+  - **Function `setup_email_auth()`**: Sets up Gmail API authentication. Returns status message. User needs to run this once to authenticate.
+  - **Function `get_gmail_service()`**: Helper function to get authenticated Gmail service.
+  - **Function `get_inbox_summary()`**: Gets a summary of recent emails in the inbox. :param max_emails: Maximum number of emails to retrieve (default 10)
+  - **Function `send_email()`**: Sends an email using Gmail API. :param to: Recipient email address :param subject: Email subject :param body: Email body content :param cc: CC reci...
+  - **Function `search_emails()`**: Searches emails using Gmail search syntax. :param query: Search query (e.g., "from:someone@example.com", "subject:meeting") :param max_results: Max...
+  - **Function `read_email_content()`**: Reads the full content of a specific email. :param email_id: Specific Gmail message ID :param sender: Filter by sender email/name :param subject_co...
+  - **Function `get_unread_count()`**: Gets the count of unread emails in inbox.
+  - **Function `mark_email_read()`**: Marks an email as read. :param email_id: Specific Gmail message ID :param sender: Filter by sender email/name   :param subject_contains: Filter by ...
+  - **Function `delete_email()`**: Deletes an email (moves to trash). :param email_id: Specific Gmail message ID :param sender: Filter by sender email/name :param subject_contains: F...
+  - **Function `compose_quick_reply()`**: Sends a quick reply with predefined templates. :param to: Recipient email address :param reply_type: Type of reply (acknowledge, thanks, meeting_ac...
+  - **Function `extract_email_address()`**: Extracts email address from 'Name <email@domain.com>' format.
+  - **Function `extract_display_name()`**: Extracts display name from 'Name <email@domain.com>' format.
+  - **Function `extract_email_body()`**: Recursively extracts email body from Gmail API payload.
+  - **Function `__new__()`**: Signature: (cls)
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `setup_auth()`**: Sets up Gmail API authentication Returns status message
+  - **Function `_get_setup_instructions()`**: Returns setup instructions for Gmail API
+  - **Function `get_service()`**: Get authenticated Gmail service, initialize if needed
+  - **Function `is_authenticated()`**: Check if Gmail is authenticated
 
 ### File: `core_ai\src\ai_assistant\integrations\google_calendar.py`
-- **Class `CalendarManager`**: Orchestrates logic for this module.
-  - **Function `setup_calendar_auth()`**: Internal helper or main execution logic.
-  - **Function `get_calendar_service()`**: Internal helper or main execution logic.
-  - **Function `get_upcoming_events()`**: Internal helper or main execution logic.
-  - **Function `create_calendar_event()`**: Internal helper or main execution logic.
-  - **Function `get_todays_schedule()`**: Internal helper or main execution logic.
-  - **Function `search_calendar_events()`**: Internal helper or main execution logic.
-  - **Function `delete_calendar_event()`**: Internal helper or main execution logic.
-  - **Function `update_calendar_event()`**: Internal helper or main execution logic.
-  - **Function `__new__()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `setup_auth()`**: Internal helper or main execution logic.
-  - **Function `_get_setup_instructions()`**: Internal helper or main execution logic.
-  - **Function `get_service()`**: Internal helper or main execution logic.
-  - **Function `is_authenticated()`**: Internal helper or main execution logic.
+- **Class `CalendarManager`**: Manages Google Calendar API authentication and operations
+  - **Function `setup_calendar_auth()`**: Sets up Google Calendar authentication. Returns status message. User needs to run this once to authenticate.
+  - **Function `get_calendar_service()`**: Helper function to get authenticated calendar service.
+  - **Function `get_upcoming_events()`**: Gets upcoming calendar events for the next N days. :param days_ahead: Number of days to look ahead (default 7)
+  - **Function `create_calendar_event()`**: Creates a new calendar event. :param title: Event title :param date: Date in format 'YYYY-MM-DD' or 'MM/DD/YYYY' :param time: Time in format 'HH:MM...
+  - **Function `get_todays_schedule()`**: Gets today's calendar schedule with a nice formatted view.
+  - **Function `search_calendar_events()`**: Searches for calendar events containing the query. :param query: Search term to look for in event titles and descriptions :param days_back: How man...
+  - **Function `delete_calendar_event()`**: Deletes a calendar event by title and optional date. :param event_title: Title of the event to delete :param date: Optional date to narrow down sea...
+  - **Function `update_calendar_event()`**: Updates an existing calendar event. :param event_title: Title of the event to update :param date: Optional date to narrow down search (YYYY-MM-DD o...
+  - **Function `__new__()`**: Signature: (cls)
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `setup_auth()`**: Sets up Google Calendar authentication Returns status message
+  - **Function `_get_setup_instructions()`**: Returns setup instructions for Google Calendar API
+  - **Function `get_service()`**: Get authenticated calendar service, initialize if needed
+  - **Function `is_authenticated()`**: Check if calendar is authenticated
 
 ### File: `core_ai\src\ai_assistant\integrations\learning_automation.py`
-  - **Function `with_learning()`**: Internal helper or main execution logic.
-  - **Function `get_smart_suggestion()`**: Internal helper or main execution logic.
-  - **Function `predict_next_action()`**: Internal helper or main execution logic.
-  - **Function `enhance_voice_recognition()`**: Internal helper or main execution logic.
-  - **Function `log_automation_workflow()`**: Internal helper or main execution logic.
-  - **Function `wrapper()`**: Internal helper or main execution logic.
+  - **Function `with_learning()`**: Decorator to add learning capabilities to automation functions Logs execution for learning and provides intelligent suggestions
+  - **Function `get_smart_suggestion()`**: Get smart suggestion based on current task
+  - **Function `predict_next_action()`**: Predict next action based on command history
+  - **Function `enhance_voice_recognition()`**: Enhance voice recognition using adaptive learning
+  - **Function `log_automation_workflow()`**: Log complete automation workflow for learning
+  - **Function `wrapper()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\integrations\learning_integration.py`
-- **Class `LearningAssistant`**: Orchestrates logic for this module.
-  - **Function `get_learning_assistant()`**: Internal helper or main execution logic.
-  - **Function `initialize_learning_integration()`**: Internal helper or main execution logic.
-  - **Function `predict_command()`**: Internal helper or main execution logic.
-  - **Function `log_interaction()`**: Internal helper or main execution logic.
-  - **Function `get_smart_response()`**: Internal helper or main execution logic.
-  - **Function `recommend_workflows()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `predict_next_command()`**: Internal helper or main execution logic.
-  - **Function `get_command_suggestions()`**: Internal helper or main execution logic.
-  - **Function `generate_intelligent_response()`**: Internal helper or main execution logic.
-  - **Function `log_command_execution()`**: Internal helper or main execution logic.
-  - **Function `log_voice_recognition()`**: Internal helper or main execution logic.
-  - **Function `get_workflow_suggestions()`**: Internal helper or main execution logic.
-  - **Function `log_conversation()`**: Internal helper or main execution logic.
-  - **Function `select_best_llm()`**: Internal helper or main execution logic.
-  - **Function `get_explanation()`**: Internal helper or main execution logic.
-  - **Function `update_context()`**: Internal helper or main execution logic.
-  - **Function `get_session_stats()`**: Internal helper or main execution logic.
+- **Class `LearningAssistant`**: Intelligent assistant that learns from interactions Integrates all 27 learning systems into a unified interface
+  - **Function `get_learning_assistant()`**: Get or create learning assistant instance
+  - **Function `initialize_learning_integration()`**: Initialize learning systems integration
+  - **Function `predict_command()`**: Quick command prediction
+  - **Function `log_interaction()`**: Quick interaction logging
+  - **Function `get_smart_response()`**: Quick intelligent response generation
+  - **Function `recommend_workflows()`**: Quick workflow recommendations
+  - **Function `__init__()`**: Signature: (self, user_id)
+  - **Function `predict_next_command()`**: Predict the next command user might want to execute
+  - **Function `get_command_suggestions()`**: Get autocomplete suggestions for partial command
+  - **Function `generate_intelligent_response()`**: Generate context-aware response using learning
+  - **Function `log_command_execution()`**: Log command execution for learning
+  - **Function `log_voice_recognition()`**: Log voice recognition for adaptive learning
+  - **Function `get_workflow_suggestions()`**: Get workflow recommendations based on current task
+  - **Function `log_conversation()`**: Log conversation for learning
+  - **Function `select_best_llm()`**: Select the best LLM for the task using multi-armed bandit
+  - **Function `get_explanation()`**: Get explanation for a prediction
+  - **Function `update_context()`**: Update current context
+  - **Function `get_session_stats()`**: Get statistics for current session
 
 ### File: `core_ai\src\ai_assistant\integrations\mcp_client.py`
-- **Class `MCPServerConfig`**: Orchestrates logic for this module.
-- **Class `MCPClient`**: Orchestrates logic for this module.
-  - **Function `get_mcp_client()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `get_connected_servers()`**: Internal helper or main execution logic.
-  - **Function `get_server_info()`**: Internal helper or main execution logic.
-  - **Function `get_all_servers()`**: Internal helper or main execution logic.
+- **Class `MCPServerConfig`**: Configuration for an MCP server connection
+- **Class `MCPClient`**: Client for interacting with Model Context Protocol servers
+  - **Function `get_mcp_client()`**: Get or create the global MCP client instance
+  - **Function `__init__()`**: Initialize MCP client
+  - **Function `get_connected_servers()`**: Get list of connected server names
+  - **Function `get_server_info()`**: Get information about a specific server
+  - **Function `get_all_servers()`**: Get information about all configured servers
 
 ### File: `core_ai\src\ai_assistant\integrations\mcp_conversational.py`
-- **Class `MCPConversationalEnhancer`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `get_available_mcp_tools_description()`**: Internal helper or main execution logic.
-  - **Function `enhanced_process_message()`**: Internal helper or main execution logic.
+- **Class `MCPConversationalEnhancer`**: Enhances conversational AI with MCP tool calling capabilities
+  - **Function `__init__()`**: Initialize MCP enhancer
+  - **Function `get_available_mcp_tools_description()`**: Get a description of available MCP tools for the AI to use
+  - **Function `enhanced_process_message()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\integrations\mcp_manager.py`
-- **Class `MCPManager`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_load_config()`**: Internal helper or main execution logic.
-  - **Function `_create_default_config()`**: Internal helper or main execution logic.
-  - **Function `_replace_env_vars()`**: Internal helper or main execution logic.
-  - **Function `get_server_info()`**: Internal helper or main execution logic.
-  - **Function `get_enabled_servers()`**: Internal helper or main execution logic.
-  - **Function `get_failed_servers()`**: Internal helper or main execution logic.
-  - **Function `get_status()`**: Internal helper or main execution logic.
-  - **Function `clear_cache()`**: Internal helper or main execution logic.
+- **Class `MCPManager`**: High-level manager for MCP server connections and tool execution
+  - **Function `__init__()`**: Initialize MCP Manager
+  - **Function `_load_config()`**: Load MCP server configuration from JSON file
+  - **Function `_create_default_config()`**: Create a default configuration file
+  - **Function `_replace_env_vars()`**: Replace ${VAR} placeholders with environment variables
+  - **Function `get_server_info()`**: Get configuration info for a specific server
+  - **Function `get_enabled_servers()`**: Get list of enabled server names
+  - **Function `get_failed_servers()`**: Get list of servers that failed to connect
+  - **Function `get_status()`**: Get overall status of the MCP manager
+  - **Function `clear_cache()`**: Clear the tools and resources cache
 
 ### File: `core_ai\src\ai_assistant\integrations\music.py`
-- **Class `SpotifyController`**: Orchestrates logic for this module.
-- **Class `YouTubeMusicController`**: Orchestrates logic for this module.
-  - **Function `search_youtube_music()`**: Internal helper or main execution logic.
-  - **Function `play_youtube_music()`**: Internal helper or main execution logic.
-  - **Function `get_ytmusic_playlists()`**: Internal helper or main execution logic.
-  - **Function `get_spotify_status()`**: Internal helper or main execution logic.
-  - **Function `spotify_play_pause()`**: Internal helper or main execution logic.
-  - **Function `spotify_next_track()`**: Internal helper or main execution logic.
-  - **Function `spotify_previous_track()`**: Internal helper or main execution logic.
-  - **Function `search_and_play_spotify()`**: Internal helper or main execution logic.
-  - **Function `get_media_players()`**: Internal helper or main execution logic.
-  - **Function `control_media_player()`**: Internal helper or main execution logic.
-  - **Function `get_system_volume()`**: Internal helper or main execution logic.
-  - **Function `set_system_volume()`**: Internal helper or main execution logic.
-  - **Function `create_spotify_playlist()`**: Internal helper or main execution logic.
-  - **Function `add_to_spotify_playlist()`**: Internal helper or main execution logic.
-  - **Function `get_music_recommendations()`**: Internal helper or main execution logic.
-  - **Function `get_spotify_playlists()`**: Internal helper or main execution logic.
-  - **Function `__new__()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `setup_spotify_auth()`**: Internal helper or main execution logic.
-  - **Function `_ensure_authenticated()`**: Internal helper or main execution logic.
-  - **Function `__new__()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `setup_ytmusic_auth()`**: Internal helper or main execution logic.
-  - **Function `_ensure_authenticated()`**: Internal helper or main execution logic.
+- **Class `SpotifyController`**: Spotify Web API integration with proper OAuth2 authentication
+- **Class `YouTubeMusicController`**: YouTube Music integration using ytmusicapi
+  - **Function `search_youtube_music()`**: Search for songs on YouTube Music
+  - **Function `play_youtube_music()`**: Play a song on YouTube Music (opens in browser)
+  - **Function `get_ytmusic_playlists()`**: Get user's YouTube Music playlists
+  - **Function `get_spotify_status()`**: Get current Spotify playback status Alias for _get_current_spotify_track() for backward compatibility
+  - **Function `spotify_play_pause()`**: Toggle Spotify play/pause
+  - **Function `spotify_next_track()`**: Skip to next track on Spotify
+  - **Function `spotify_previous_track()`**: Go to previous track on Spotify
+  - **Function `search_and_play_spotify()`**: Search for music on Spotify and play it Args:     query: Search term (song, artist, album)
+  - **Function `get_media_players()`**: Get list of running media players
+  - **Function `control_media_player()`**: Control local media players using Windows media keys Args:     action: play_pause, next, previous, volume_up, volume_down     player: specific play...
+  - **Function `get_system_volume()`**: Get current system volume level
+  - **Function `set_system_volume()`**: Set system volume level Args:     level: Volume level (0-100)
+  - **Function `create_spotify_playlist()`**: Create a new Spotify playlist Args:     name: Playlist name     description: Playlist description (optional)
+  - **Function `add_to_spotify_playlist()`**: Add a track to a Spotify playlist Args:     playlist_name: Name of the playlist     track_query: Search query for the track to add
+  - **Function `get_music_recommendations()`**: Get music recommendations from Spotify Args:     seed_type: 'genre', 'artist', or 'track'     seed_value: The seed value (genre name, artist name, ...
+  - **Function `get_spotify_playlists()`**: Get user's Spotify playlists
+  - **Function `__new__()`**: Signature: (cls)
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `setup_spotify_auth()`**: Set up Spotify API authentication using OAuth2 Returns status message
+  - **Function `_ensure_authenticated()`**: Ensure we have valid authentication
+  - **Function `__new__()`**: Signature: (cls)
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `setup_ytmusic_auth()`**: Set up YouTube Music authentication
+  - **Function `_ensure_authenticated()`**: Ensure we have valid authentication
 
 ### File: `core_ai\src\ai_assistant\integrations\orchestrator_integration.py`
-  - **Function `should_use_orchestrator()`**: Internal helper or main execution logic.
-  - **Function `process_with_orchestrator()`**: Internal helper or main execution logic.
-  - **Function `get_orchestrator_status()`**: Internal helper or main execution logic.
+  - **Function `should_use_orchestrator()`**: Determine if command should use multi-step orchestration.
+  - **Function `process_with_orchestrator()`**: Process command using task chain orchestrator.
+  - **Function `get_orchestrator_status()`**: Get current orchestrator status.
 
 ### File: `core_ai\src\ai_assistant\integrations\research.py`
   - *(Documentation parsing failed for this file)*
 
 ### File: `core_ai\src\ai_assistant\integrations\web_scraping.py`
-- **Class `WebScrapingManager`**: Orchestrates logic for this module.
-  - **Function `get_weather_info()`**: Internal helper or main execution logic.
-  - **Function `get_weather_forecast()`**: Internal helper or main execution logic.
-  - **Function `get_latest_news()`**: Internal helper or main execution logic.
-  - **Function `search_web()`**: Internal helper or main execution logic.
-  - **Function `get_stock_price()`**: Internal helper or main execution logic.
-  - **Function `get_crypto_price()`**: Internal helper or main execution logic.
-  - **Function `scrape_website_content()`**: Internal helper or main execution logic.
-  - **Function `get_trending_topics()`**: Internal helper or main execution logic.
-  - **Function `monitor_rss_feeds()`**: Internal helper or main execution logic.
-  - **Function `get_product_price()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `ensure_cache_dir()`**: Internal helper or main execution logic.
+- **Class `WebScrapingManager`**: Advanced web scraping and data aggregation manager
+  - **Function `get_weather_info()`**: Get current weather information for a location Args:     location: City name or coordinates     api_key: OpenWeatherMap API key (optional, uses fre...
+  - **Function `get_weather_forecast()`**: Get weather forecast for upcoming days Args:     location: City name     days: Number of days to forecast (1-7)
+  - **Function `get_latest_news()`**: Get latest news headlines from various sources Args:     category: News category (general, business, technology, sports, etc.)     country: Country...
+  - **Function `search_web()`**: Perform web search and return summarized results Args:     query: Search query     num_results: Number of results to return     safe_search: Enable...
+  - **Function `get_stock_price()`**: Get current stock price and basic information Args:     symbol: Stock symbol (e.g., AAPL, GOOGL)
+  - **Function `get_crypto_price()`**: Get cryptocurrency price information Args:     symbol: Crypto symbol or name (bitcoin, ethereum, etc.)
+  - **Function `scrape_website_content()`**: Extract and summarize content from a website Args:     url: Website URL to scrape     extract_text: Whether to extract readable text     max_length...
+  - **Function `get_trending_topics()`**: Get trending topics from various platforms Args:     platform: Platform to check (general, reddit, github)
+  - **Function `monitor_rss_feeds()`**: Monitor multiple RSS feeds and return latest updates Args:     feed_urls: List of RSS feed URLs to monitor     max_items: Maximum items per feed
+  - **Function `get_product_price()`**: Get product pricing information (simplified version for demonstration) Args:     product_name: Product name to search for     marketplace: Marketpl...
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `ensure_cache_dir()`**: Ensure cache directory exists
 
 ### File: `core_ai\src\ai_assistant\integrations\web_search_integration.py`
-- **Class `SearchTriggerType`**: Orchestrates logic for this module.
-- **Class `SearchResult`**: Orchestrates logic for this module.
-- **Class `SearchResponse`**: Orchestrates logic for this module.
-- **Class `WebSearchTrigger`**: Orchestrates logic for this module.
-- **Class `WebSearchCache`**: Orchestrates logic for this module.
-- **Class `WebSearchIntegration`**: Orchestrates logic for this module.
-  - **Function `integrate_search_into_chat()`**: Internal helper or main execution logic.
-  - **Function `to_dict()`**: Internal helper or main execution logic.
-  - **Function `to_dict()`**: Internal helper or main execution logic.
-  - **Function `should_search()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `get()`**: Internal helper or main execution logic.
-  - **Function `set()`**: Internal helper or main execution logic.
-  - **Function `clear()`**: Internal helper or main execution logic.
-  - **Function `cleanup()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `should_search_for_message()`**: Internal helper or main execution logic.
-  - **Function `search_web()`**: Internal helper or main execution logic.
-  - **Function `_search_duckduckgo()`**: Internal helper or main execution logic.
-  - **Function `format_results_for_llm()`**: Internal helper or main execution logic.
-  - **Function `enhance_prompt_with_search()`**: Internal helper or main execution logic.
-  - **Function `get_search_stats()`**: Internal helper or main execution logic.
+- **Class `SearchTriggerType`**: Triggers for web search.
+- **Class `SearchResult`**: A single search result.
+- **Class `SearchResponse`**: Response from web search.
+- **Class `WebSearchTrigger`**: Detects when web search should be used.
+- **Class `WebSearchCache`**: Cache for web search results to reduce API calls.
+- **Class `WebSearchIntegration`**: Integrates web search into chat.
+  - **Function `integrate_search_into_chat()`**: Integrate web search into a chat system.
+  - **Function `to_dict()`**: Convert to dictionary.
+  - **Function `to_dict()`**: Convert to dictionary.
+  - **Function `should_search()`**: Determine if message should trigger web search.
+  - **Function `__init__()`**: Initialize web search integration.
+  - **Function `get()`**: Get cached search results.
+  - **Function `set()`**: Cache search results.
+  - **Function `clear()`**: Clear cache.
+  - **Function `cleanup()`**: Remove expired entries.
+  - **Function `__init__()`**: Initialize web search integration.
+  - **Function `should_search_for_message()`**: Check if message should trigger search.
+  - **Function `search_web()`**: Perform web search.
+  - **Function `_search_duckduckgo()`**: Fallback search using DuckDuckGo.
+  - **Function `format_results_for_llm()`**: Format search results for inclusion in LLM prompt.
+  - **Function `enhance_prompt_with_search()`**: Enhance user prompt with search results context.
+  - **Function `get_search_stats()`**: Get search statistics.
 
 ### File: `core_ai\src\ai_assistant\integrations\whatsapp.py`
-  - **Function `load_contacts()`**: Internal helper or main execution logic.
-  - **Function `get_contact_number()`**: Internal helper or main execution logic.
-  - **Function `send_whatsapp_message()`**: Internal helper or main execution logic.
+  - **Function `load_contacts()`**: Signature: ()
+  - **Function `get_contact_number()`**: Signature: (name)
+  - **Function `send_whatsapp_message()`**: Sends a WhatsApp message to a contact. 1. Looks up contact number. 2. Opens WhatsApp (Web or App) with pre-filled message. 3. Simulates 'Enter' to ...
 
 ### File: `core_ai\src\ai_assistant\integrations\youtube_ops.py`
-- **Class `YouTubeDownloader`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `search_and_download_audio()`**: Internal helper or main execution logic.
+- **Class `YouTubeDownloader`**: Core component.
+  - **Function `__init__()`**: Signature: (self, download_path)
+  - **Function `search_and_download_audio()`**: Searches for a video on YouTube and downloads the audio. Returns a dictionary with the result status and details.
 
 ### File: `core_ai\src\ai_assistant\nlp\generate_dataset.py`
-  - **Function `main()`**: Internal helper or main execution logic.
+  - **Function `main()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\nlp\intent_extractor.py`
-- **Class `IntentResult`**: Orchestrates logic for this module.
-- **Class `IntentExtractor`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `extract()`**: Internal helper or main execution logic.
+- **Class `IntentResult`**: Core component.
+- **Class `IntentExtractor`**: A simple rule-based intent and entity extractor for natural language commands. Uses regex patterns to identify intents and extract entities.
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `extract()`**: Extract intent and entities from the given text. Returns an IntentResult with the best match.
 
 ### File: `core_ai\src\ai_assistant\nlp\predict_command.py`
-- **Class `OfflineCommandPredictor`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `predict()`**: Internal helper or main execution logic.
+- **Class `OfflineCommandPredictor`**: Core component.
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `predict()`**: Takes a natural language command (English, Hindi, or Bhojpuri)  and returns the corresponding INTENT tag.
 
 ### File: `core_ai\src\ai_assistant\nlp\train_model.py`
-  - **Function `main()`**: Internal helper or main execution logic.
-  - **Function `tokenize_function()`**: Internal helper or main execution logic.
+  - **Function `main()`**: Signature: ()
+  - **Function `tokenize_function()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\tests\test_personalization.py`
-  - **Function `test_context_optimizer()`**: Internal helper or main execution logic.
-  - **Function `test_intent_recognizer()`**: Internal helper or main execution logic.
+  - **Function `test_context_optimizer()`**: Signature: ()
+  - **Function `test_intent_recognizer()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\utils\advanced_logging.py`
-  - **Function `log_performance()`**: Internal helper or main execution logic.
-- **Class `ContextualErrorLogger`**: Orchestrates logic for this module.
-- **Class `APIRequestLogger`**: Orchestrates logic for this module.
-- **Class `SecurityLogger`**: Orchestrates logic for this module.
-- **Class `UserActivityLogger`**: Orchestrates logic for this module.
-- **Class `LogAggregator`**: Orchestrates logic for this module.
-  - **Function `log_error_with_context()`**: Internal helper or main execution logic.
-  - **Function `log_api_call()`**: Internal helper or main execution logic.
-  - **Function `log_user_action()`**: Internal helper or main execution logic.
-  - **Function `decorator()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `log_exception()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `log_request()`**: Internal helper or main execution logic.
-  - **Function `log_response()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `log_auth_attempt()`**: Internal helper or main execution logic.
-  - **Function `log_suspicious_activity()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `log_user_action()`**: Internal helper or main execution logic.
-  - **Function `log_voice_command()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `generate_daily_summary()`**: Internal helper or main execution logic.
-  - **Function `slow_function()`**: Internal helper or main execution logic.
-  - **Function `wrapper()`**: Internal helper or main execution logic.
+  - **Function `log_performance()`**: Decorator to log function performance
+- **Class `ContextualErrorLogger`**: Enhanced error logger with context information
+- **Class `APIRequestLogger`**: Logger for API requests and responses
+- **Class `SecurityLogger`**: Logger for security-related events
+- **Class `UserActivityLogger`**: Logger for user activity and interactions
+- **Class `LogAggregator`**: Aggregates and analyzes log data
+  - **Function `log_error_with_context()`**: Convenience function for logging errors with context
+  - **Function `log_api_call()`**: Convenience function for logging API calls
+  - **Function `log_user_action()`**: Convenience function for logging user actions
+  - **Function `decorator()`**: Signature: ()
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `log_exception()`**: Log exception with full context
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `log_request()`**: Log incoming API request
+  - **Function `log_response()`**: Log API response
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `log_auth_attempt()`**: Log authentication attempt
+  - **Function `log_suspicious_activity()`**: Log suspicious activity
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `log_user_action()`**: Convenience function for logging user actions
+  - **Function `log_voice_command()`**: Log voice command interaction
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `generate_daily_summary()`**: Generate daily log summary
+  - **Function `slow_function()`**: Signature: ()
+  - **Function `wrapper()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\utils\backend_utils.py`
-  - **Function `validate_input()`**: Internal helper or main execution logic.
-  - **Function `sanitize_command()`**: Internal helper or main execution logic.
+  - **Function `validate_input()`**: Validate input data against pattern
+  - **Function `sanitize_command()`**: Sanitize command input to prevent injection
 
 ### File: `core_ai\src\ai_assistant\utils\convert_prints.py`
-- **Class `PrintToLoggerConverter`**: Orchestrates logic for this module.
-  - **Function `main()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `convert_project()`**: Internal helper or main execution logic.
-  - **Function `_should_skip_file()`**: Internal helper or main execution logic.
-  - **Function `_convert_file()`**: Internal helper or main execution logic.
+- **Class `PrintToLoggerConverter`**: Converts print statements to logger calls throughout the project
+  - **Function `main()`**: Run the conversion
+  - **Function `__init__()`**: Signature: (self, project_root)
+  - **Function `convert_project()`**: Convert all Python files in the project
+  - **Function `_should_skip_file()`**: Check if file should be skipped
+  - **Function `_convert_file()`**: Convert a single file
 
 ### File: `core_ai\src\ai_assistant\utils\dataset_generator.py`
-  - **Function `generate_dataset()`**: Internal helper or main execution logic.
+  - **Function `generate_dataset()`**: Signature: (num_samples)
 
 ### File: `core_ai\src\ai_assistant\utils\embeddings.py`
-- **Class `EmbeddingStore`**: Orchestrates logic for this module.
-  - **Function `get_openai_embedding()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `add()`**: Internal helper or main execution logic.
-  - **Function `search()`**: Internal helper or main execution logic.
+- **Class `EmbeddingStore`**: Core component.
+  - **Function `get_openai_embedding()`**: Get OpenAI embedding for text.
+  - **Function `__init__()`**: Signature: (self, dim)
+  - **Function `add()`**: Signature: (self, text, embedding)
+  - **Function `search()`**: Signature: (self, query_embedding, top_k)
 
 ### File: `core_ai\src\ai_assistant\utils\file_ops.py`
-- **Class `FileOperationsManager`**: Orchestrates logic for this module.
-  - **Function `organize_files_by_type()`**: Internal helper or main execution logic.
-  - **Function `find_duplicate_files()`**: Internal helper or main execution logic.
-  - **Function `remove_duplicate_files()`**: Internal helper or main execution logic.
-  - **Function `create_backup_archive()`**: Internal helper or main execution logic.
-  - **Function `smart_file_search()`**: Internal helper or main execution logic.
-  - **Function `batch_rename_files()`**: Internal helper or main execution logic.
-  - **Function `analyze_directory_structure()`**: Internal helper or main execution logic.
-  - **Function `sync_directories()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `ensure_backup_dir()`**: Internal helper or main execution logic.
+- **Class `FileOperationsManager`**: Advanced file operations manager with intelligent features
+  - **Function `organize_files_by_type()`**: Organize files in a directory by their type/extension Args:     directory: Target directory to organize     create_subfolders: Whether to create su...
+  - **Function `find_duplicate_files()`**: Find duplicate files in a directory based on file content hash Args:     directory: Directory to scan for duplicates     include_subdirs: Whether t...
+  - **Function `remove_duplicate_files()`**: Remove duplicate files, keeping either oldest or newest Args:     directory: Directory to clean     keep_oldest: If True, keep oldest files; if Fal...
+  - **Function `create_backup_archive()`**: Create a compressed backup archive of a directory Args:     source_dir: Directory to backup     backup_name: Custom backup name (optional)     comp...
+  - **Function `smart_file_search()`**: Advanced file search with content search and filtering Args:     directory: Directory to search in     pattern: Search pattern (filename or content...
+  - **Function `batch_rename_files()`**: Batch rename files using pattern matching Args:     directory: Directory containing files to rename     pattern: Pattern to match (supports wildcar...
+  - **Function `analyze_directory_structure()`**: Analyze directory structure and provide insights Args:     directory: Directory to analyze     max_depth: Maximum depth to analyze
+  - **Function `sync_directories()`**: Synchronize two directories (one-way sync from source to destination) Args:     source_dir: Source directory     dest_dir: Destination directory   ...
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `ensure_backup_dir()`**: Ensure backup directory exists
 
 ### File: `core_ai\src\ai_assistant\utils\logging_analyzer.py`
-- **Class `LoggingAnalyzer`**: Orchestrates logic for this module.
-  - **Function `main()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `analyze_project()`**: Internal helper or main execution logic.
-  - **Function `_analyze_python_files()`**: Internal helper or main execution logic.
-  - **Function `_analyze_python_file()`**: Internal helper or main execution logic.
-  - **Function `_analyze_frontend_files()`**: Internal helper or main execution logic.
-  - **Function `_analyze_js_file()`**: Internal helper or main execution logic.
-  - **Function `_analyze_config_files()`**: Internal helper or main execution logic.
-  - **Function `_should_skip_file()`**: Internal helper or main execution logic.
-  - **Function `_generate_recommendations()`**: Internal helper or main execution logic.
+- **Class `LoggingAnalyzer`**: Analyzes the entire project for logging issues and improvements.
+  - **Function `main()`**: Run comprehensive logging analysis.
+  - **Function `__init__()`**: Signature: (self, project_root)
+  - **Function `analyze_project()`**: Perform comprehensive logging analysis.
+  - **Function `_analyze_python_files()`**: Analyze all Python files for logging issues.
+  - **Function `_analyze_python_file()`**: Analyze a single Python file.
+  - **Function `_analyze_frontend_files()`**: Analyze frontend files for console.log statements.
+  - **Function `_analyze_js_file()`**: Analyze a JavaScript/TypeScript file.
+  - **Function `_analyze_config_files()`**: Analyze configuration files.
+  - **Function `_should_skip_file()`**: Check if file should be skipped.
+  - **Function `_generate_recommendations()`**: Generate recommendations for logging improvements.
 
 ### File: `core_ai\src\ai_assistant\utils\logging_completion.py`
-- **Class `LoggingSystemValidator`**: Orchestrates logic for this module.
-  - **Function `create_logging_utilities()`**: Internal helper or main execution logic.
-  - **Function `main()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `validate_all()`**: Internal helper or main execution logic.
-  - **Function `_validate_directories()`**: Internal helper or main execution logic.
-  - **Function `_validate_configuration()`**: Internal helper or main execution logic.
-  - **Function `_test_loggers()`**: Internal helper or main execution logic.
-  - **Function `_validate_rotation()`**: Internal helper or main execution logic.
-  - **Function `_test_performance_logging()`**: Internal helper or main execution logic.
-  - **Function `_test_error_handling()`**: Internal helper or main execution logic.
-  - **Function `_test_api_logging()`**: Internal helper or main execution logic.
-  - **Function `_validate_frontend_logging()`**: Internal helper or main execution logic.
-  - **Function `_validate_documentation()`**: Internal helper or main execution logic.
-  - **Function `generate_report()`**: Internal helper or main execution logic.
-  - **Function `test_performance_function()`**: Internal helper or main execution logic.
+- **Class `LoggingSystemValidator`**: Validates the complete logging system
+  - **Function `create_logging_utilities()`**: Create helpful logging utilities
+  - **Function `main()`**: Main function to complete logging system
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `validate_all()`**: Run comprehensive validation
+  - **Function `_validate_directories()`**: Validate log directory structure
+  - **Function `_validate_configuration()`**: Validate logging configuration
+  - **Function `_test_loggers()`**: Test all logger types
+  - **Function `_validate_rotation()`**: Validate log rotation settings
+  - **Function `_test_performance_logging()`**: Test performance logging decorator
+  - **Function `_test_error_handling()`**: Test error logging
+  - **Function `_test_api_logging()`**: Test API logging
+  - **Function `_validate_frontend_logging()`**: Validate frontend logging integration
+  - **Function `_validate_documentation()`**: Validate logging documentation
+  - **Function `generate_report()`**: Generate comprehensive validation report
+  - **Function `test_performance_function()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\utils\logging_config.py`
 
 ### File: `core_ai\src\ai_assistant\utils\multilingual.py`
-- **Class `Language`**: Orchestrates logic for this module.
-- **Class `TranslationEngine`**: Orchestrates logic for this module.
-- **Class `LanguageContext`**: Orchestrates logic for this module.
-- **Class `MultilingualSupport`**: Orchestrates logic for this module.
-  - **Function `voice_listen_loop()`**: Internal helper or main execution logic.
-  - **Function `_voice_listen_loop_vosk()`**: Internal helper or main execution logic.
-  - **Function `_voice_listen_loop_google()`**: Internal helper or main execution logic.
-  - **Function `test_voice_recognition()`**: Internal helper or main execution logic.
-  - **Function `detect_text_language()`**: Internal helper or main execution logic.
-  - **Function `translate_quick()`**: Internal helper or main execution logic.
-  - **Function `speak_in_language()`**: Internal helper or main execution logic.
-  - **Function `process_hinglish_input()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_default_config()`**: Internal helper or main execution logic.
-  - **Function `_setup_translation()`**: Internal helper or main execution logic.
-  - **Function `_setup_speech_recognition()`**: Internal helper or main execution logic.
-  - **Function `_load_vosk_models()`**: Internal helper or main execution logic.
-  - **Function `_setup_tts()`**: Internal helper or main execution logic.
-  - **Function `_setup_database()`**: Internal helper or main execution logic.
-  - **Function `_load_language_patterns()`**: Internal helper or main execution logic.
-  - **Function `detect_language()`**: Internal helper or main execution logic.
-  - **Function `translate_text()`**: Internal helper or main execution logic.
-  - **Function `_translate_hinglish()`**: Internal helper or main execution logic.
-  - **Function `_create_hinglish_output()`**: Internal helper or main execution logic.
-  - **Function `_get_cached_translation()`**: Internal helper or main execution logic.
-  - **Function `_cache_translation()`**: Internal helper or main execution logic.
-  - **Function `recognize_speech_multilingual()`**: Internal helper or main execution logic.
-  - **Function `speak_multilingual()`**: Internal helper or main execution logic.
-  - **Function `process_hinglish_command()`**: Internal helper or main execution logic.
-  - **Function `_extract_hinglish_parameters()`**: Internal helper or main execution logic.
-  - **Function `set_language_preference()`**: Internal helper or main execution logic.
-  - **Function `get_language_preference()`**: Internal helper or main execution logic.
-  - **Function `get_language_stats()`**: Internal helper or main execution logic.
-  - **Function `callback()`**: Internal helper or main execution logic.
+- **Class `Language`**: Supported languages.
+- **Class `TranslationEngine`**: Available translation engines.
+- **Class `LanguageContext`**: Context information for language processing.
+- **Class `MultilingualSupport`**: Advanced multilingual support system.
+  - **Function `voice_listen_loop()`**: Main voice listening loop with wake word detection and multilingual support.
+  - **Function `_voice_listen_loop_vosk()`**: Voice loop using Vosk for offline recognition.
+  - **Function `_voice_listen_loop_google()`**: Voice loop using Google Speech Recognition (online, fallback).
+  - **Function `test_voice_recognition()`**: Test voice recognition for a specified duration.
+  - **Function `detect_text_language()`**: Quick function to detect language of text.
+  - **Function `translate_quick()`**: Quick translation function.
+  - **Function `speak_in_language()`**: Quick TTS function with language support.
+  - **Function `process_hinglish_input()`**: Quick function to process Hinglish input.
+  - **Function `__init__()`**: Initialize multilingual support.
+  - **Function `_default_config()`**: Default configuration for multilingual support.
+  - **Function `_setup_translation()`**: Setup translation services.
+  - **Function `_setup_speech_recognition()`**: Setup speech recognition for multiple languages.
+  - **Function `_load_vosk_models()`**: Load Vosk models for offline speech recognition.
+  - **Function `_setup_tts()`**: Setup text-to-speech for multiple languages.
+  - **Function `_setup_database()`**: Setup language database for caching and learning.
+  - **Function `_load_language_patterns()`**: Load language patterns for detection.
+  - **Function `detect_language()`**: Detect language of input text with confidence score.
+  - **Function `translate_text()`**: Translate text between languages.
+  - **Function `_translate_hinglish()`**: Handle Hinglish to other language translation.
+  - **Function `_create_hinglish_output()`**: Create natural Hinglish by mixing Hindi and English.
+  - **Function `_get_cached_translation()`**: Get cached translation if available.
+  - **Function `_cache_translation()`**: Cache translation for future use.
+  - **Function `recognize_speech_multilingual()`**: Recognize speech in multiple languages.
+  - **Function `speak_multilingual()`**: Speak text in the appropriate language using Edge-TTS, gTTS, or pyttsx3 fallback.
+  - **Function `process_hinglish_command()`**: Process Hinglish commands with cultural context.
+  - **Function `_extract_hinglish_parameters()`**: Extract parameters from Hinglish text.
+  - **Function `set_language_preference()`**: Set user language preference.
+  - **Function `get_language_preference()`**: Get user language preference.
+  - **Function `get_language_stats()`**: Get language usage statistics.
+  - **Function `callback()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\utils\secure_storage.py`
-  - **Function `save_secure_key()`**: Internal helper or main execution logic.
-  - **Function `get_secure_key()`**: Internal helper or main execution logic.
-  - **Function `delete_secure_key()`**: Internal helper or main execution logic.
+  - **Function `save_secure_key()`**: Save a secure key (like an API key) to the OS keychain.
+  - **Function `get_secure_key()`**: Retrieve a secure key from the OS keychain. Returns empty string if not found.
+  - **Function `delete_secure_key()`**: Delete a secure key from the OS keychain.
 
 ### File: `core_ai\src\ai_assistant\utils\session_activity_logger.py`
 
@@ -3141,1076 +3217,1076 @@ Below is the auto-generated AST documentation of all major Python modules in the
 ### File: `core_ai\src\ai_assistant\utils\tool_schemas.py`
 
 ### File: `core_ai\src\ai_assistant\utils\update_logging.py`
-  - **Function `update_logging_calls()`**: Internal helper or main execution logic.
-  - **Function `main()`**: Internal helper or main execution logic.
+  - **Function `update_logging_calls()`**: Update logging calls in a file
+  - **Function `main()`**: Update all module files
 
 ### File: `core_ai\src\ai_assistant\utils\user_data_logger.py`
-  - **Function `get_timestamp()`**: Internal helper or main execution logic.
-  - **Function `save_data()`**: Internal helper or main execution logic.
-  - **Function `log_action()`**: Internal helper or main execution logic.
-  - **Function `log_query()`**: Internal helper or main execution logic.
-  - **Function `log_reply()`**: Internal helper or main execution logic.
-  - **Function `log_module_usage()`**: Internal helper or main execution logic.
+  - **Function `get_timestamp()`**: Signature: ()
+  - **Function `save_data()`**: Saves data to the appropriate folder with a timestamp.
+  - **Function `log_action()`**: Logs a user action.
+  - **Function `log_query()`**: Logs a user query.
+  - **Function `log_reply()`**: Logs an assistant reply.
+  - **Function `log_module_usage()`**: Logs the usage of a module and function.
 
 ### File: `core_ai\src\ai_assistant\vision\document_ocr.py`
-- **Class `DocumentAnalyzer`**: Orchestrates logic for this module.
-  - **Function `check_ocr_dependencies()`**: Internal helper or main execution logic.
-  - **Function `extract_text_from_image()`**: Internal helper or main execution logic.
-  - **Function `extract_text_from_pdf()`**: Internal helper or main execution logic.
-  - **Function `analyze_document_structure()`**: Internal helper or main execution logic.
-  - **Function `preprocess_image_for_ocr()`**: Internal helper or main execution logic.
-  - **Function `extract_key_information()`**: Internal helper or main execution logic.
-  - **Function `batch_ocr_directory()`**: Internal helper or main execution logic.
-  - **Function `summarize_document_content()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `ensure_cache_dir()`**: Internal helper or main execution logic.
+- **Class `DocumentAnalyzer`**: Advanced document analysis and OCR manager
+  - **Function `check_ocr_dependencies()`**: Check which OCR dependencies are available
+  - **Function `extract_text_from_image()`**: Extract text from an image using OCR Args:     image_path: Path to the image file     language: OCR language (eng, fra, deu, spa, etc.)     enhance...
+  - **Function `extract_text_from_pdf()`**: Extract text from a PDF document Args:     pdf_path: Path to the PDF file     page_range: Optional tuple (start_page, end_page) to limit extraction
+  - **Function `analyze_document_structure()`**: Analyze document structure and extract metadata Args:     file_path: Path to the document file
+  - **Function `preprocess_image_for_ocr()`**: Preprocess image to improve OCR accuracy Args:     image_path: Path to the input image     output_path: Path for the processed image (optional)
+  - **Function `extract_key_information()`**: Extract key information from extracted text based on type Args:     text: Extracted text to analyze     info_type: Type of information to extract (...
+  - **Function `batch_ocr_directory()`**: Perform OCR on multiple files in a directory Args:     directory: Directory containing files     file_pattern: File pattern to match (e.g., *.jpg, ...
+  - **Function `summarize_document_content()`**: Create a simple summary of extracted document text Args:     text: Text to summarize     max_sentences: Maximum sentences in summary
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `ensure_cache_dir()`**: Ensure OCR cache directory exists
 
 ### File: `core_ai\src\ai_assistant\vision\gemini_vision_provider.py`
-- **Class `GeminiVisionProvider`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_load_image()`**: Internal helper or main execution logic.
-  - **Function `_optimize_image()`**: Internal helper or main execution logic.
-  - **Function `analyze_image()`**: Internal helper or main execution logic.
-  - **Function `extract_text()`**: Internal helper or main execution logic.
-  - **Function `detect_objects()`**: Internal helper or main execution logic.
-  - **Function `analyze_document()`**: Internal helper or main execution logic.
-  - **Function `analyze_table()`**: Internal helper or main execution logic.
-  - **Function `provider_name()`**: Internal helper or main execution logic.
-  - **Function `supported_features()`**: Internal helper or main execution logic.
+- **Class `GeminiVisionProvider`**: Google Gemini Vision API implementation.
+  - **Function `__init__()`**: Initialize Gemini Vision provider.
+  - **Function `_load_image()`**: Load image from path or return PIL Image as-is.
+  - **Function `_optimize_image()`**: Optimize image for API while maintaining quality.
+  - **Function `analyze_image()`**: Analyze an image with Gemini Vision.
+  - **Function `extract_text()`**: Extract text from image using Gemini Vision OCR.
+  - **Function `detect_objects()`**: Detect and describe objects in the image.
+  - **Function `analyze_document()`**: Analyze a document image with structure understanding.
+  - **Function `analyze_table()`**: Extract table data from image.
+  - **Function `provider_name()`**: Return provider name.
+  - **Function `supported_features()`**: Return list of supported features.
 
 ### File: `core_ai\src\ai_assistant\vision\image_utils.py`
-- **Class `ImageProcessor`**: Orchestrates logic for this module.
-  - **Function `optimize_for_vlm()`**: Internal helper or main execution logic.
-  - **Function `enhance_for_ocr()`**: Internal helper or main execution logic.
-  - **Function `draw_bounding_box()`**: Internal helper or main execution logic.
-  - **Function `annotate_screenshot()`**: Internal helper or main execution logic.
-  - **Function `convert_to_base64()`**: Internal helper or main execution logic.
-  - **Function `from_base64()`**: Internal helper or main execution logic.
-  - **Function `convert_pdf_page_to_image()`**: Internal helper or main execution logic.
-  - **Function `convert_pdf_to_images()`**: Internal helper or main execution logic.
-  - **Function `crop_region()`**: Internal helper or main execution logic.
-  - **Function `resize_maintaining_aspect()`**: Internal helper or main execution logic.
-  - **Function `get_image_info()`**: Internal helper or main execution logic.
+- **Class `ImageProcessor`**: Utilities for image processing and optimization.
+  - **Function `optimize_for_vlm()`**: Optimize image for VLM processing.
+  - **Function `enhance_for_ocr()`**: Enhance image for better OCR results.
+  - **Function `draw_bounding_box()`**: Draw a bounding box on the image.
+  - **Function `annotate_screenshot()`**: Annotate screenshot with multiple elements.
+  - **Function `convert_to_base64()`**: Convert PIL Image to base64 string.
+  - **Function `from_base64()`**: Create PIL Image from base64 string.
+  - **Function `convert_pdf_page_to_image()`**: Convert a PDF page to image.
+  - **Function `convert_pdf_to_images()`**: Convert all PDF pages to images.
+  - **Function `crop_region()`**: Crop a region from the image.
+  - **Function `resize_maintaining_aspect()`**: Resize image maintaining aspect ratio.
+  - **Function `get_image_info()`**: Get information about an image.
 
 ### File: `core_ai\src\ai_assistant\vision\multimodal.py`
-- **Class `MultiModalAI`**: Orchestrates logic for this module.
-  - **Function `analyze_current_screen()`**: Internal helper or main execution logic.
-  - **Function `answer_visual_question_quick()`**: Internal helper or main execution logic.
-  - **Function `extract_screen_text()`**: Internal helper or main execution logic.
-  - **Function `describe_current_screen()`**: Internal helper or main execution logic.
-  - **Function `analyze_video_file()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `capture_screen()`**: Internal helper or main execution logic.
-  - **Function `image_to_base64()`**: Internal helper or main execution logic.
-  - **Function `_image_hash()`**: Internal helper or main execution logic.
-  - **Function `_cleanup_old_cache()`**: Internal helper or main execution logic.
-  - **Function `analyze_image()`**: Internal helper or main execution logic.
-  - **Function `analyze_screen()`**: Internal helper or main execution logic.
-  - **Function `answer_visual_question()`**: Internal helper or main execution logic.
-  - **Function `extract_text_from_screen()`**: Internal helper or main execution logic.
-  - **Function `describe_ui_elements()`**: Internal helper or main execution logic.
-  - **Function `find_ui_element()`**: Internal helper or main execution logic.
-  - **Function `monitor_screen_changes()`**: Internal helper or main execution logic.
-  - **Function `stop_monitoring()`**: Internal helper or main execution logic.
-  - **Function `generate_image_description()`**: Internal helper or main execution logic.
-  - **Function `save_screenshot_with_analysis()`**: Internal helper or main execution logic.
-  - **Function `get_analysis_history()`**: Internal helper or main execution logic.
-  - **Function `clear_analysis_history()`**: Internal helper or main execution logic.
-  - **Function `_optimize_image()`**: Internal helper or main execution logic.
-  - **Function `clear_cache()`**: Internal helper or main execution logic.
-  - **Function `analyze_video()`**: Internal helper or main execution logic.
-- **Class `Image`**: Orchestrates logic for this module.
-  - **Function `monitor_loop()`**: Internal helper or main execution logic.
-- **Class `Image`**: Orchestrates logic for this module.
+- **Class `MultiModalAI`**: Advanced multi-modal AI system for visual understanding and generation.
+  - **Function `analyze_current_screen()`**: Quick function to analyze current screen.
+  - **Function `answer_visual_question_quick()`**: Quick function to answer visual questions about current screen.
+  - **Function `extract_screen_text()`**: Quick function to extract text from current screen.
+  - **Function `describe_current_screen()`**: Quick function to describe current screen.
+  - **Function `analyze_video_file()`**: Quick function to analyze a video file.
+  - **Function `__init__()`**: Initialize the multi-modal AI system with API key validation.
+  - **Function `capture_screen()`**: Capture screenshot of the entire screen or specific region with caching.
+  - **Function `image_to_base64()`**: Convert PIL Image to base64 string.
+  - **Function `_image_hash()`**: Generate hash for image to check cache.
+  - **Function `_cleanup_old_cache()`**: Remove expired items from screenshot cache.
+  - **Function `analyze_image()`**: Analyze an image using Gemini Vision with caching support.
+  - **Function `analyze_screen()`**: Analyze current screen content.
+  - **Function `answer_visual_question()`**: Answer questions about visual content.
+  - **Function `extract_text_from_screen()`**: Extract text from screen using AI vision.
+  - **Function `describe_ui_elements()`**: Describe UI elements on the current screen.
+  - **Function `find_ui_element()`**: Find and locate specific UI elements on screen.
+  - **Function `monitor_screen_changes()`**: Monitor screen for changes and trigger callback.
+  - **Function `stop_monitoring()`**: Stop screen monitoring.
+  - **Function `generate_image_description()`**: Generate a comprehensive description of current screen.
+  - **Function `save_screenshot_with_analysis()`**: Save current screenshot with optional AI analysis.
+  - **Function `get_analysis_history()`**: Get recent analysis history.
+  - **Function `clear_analysis_history()`**: Clear analysis history.
+  - **Function `_optimize_image()`**: Optimize image size for API processing while maintaining quality.
+  - **Function `clear_cache()`**: Clear screenshot and analysis cache.
+  - **Function `analyze_video()`**: Analyze a video by extracting and analyzing key frames.
+- **Class `Image`**: Core component.
+  - **Function `monitor_loop()`**: Signature: ()
+- **Class `Image`**: Core component.
 
 ### File: `core_ai\src\ai_assistant\vision\vlm_provider.py`
-- **Class `VLMResponse`**: Orchestrates logic for this module.
-- **Class `VLMProvider`**: Orchestrates logic for this module.
-  - **Function `to_dict()`**: Internal helper or main execution logic.
-  - **Function `extract_json()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `analyze_image()`**: Internal helper or main execution logic.
-  - **Function `extract_text()`**: Internal helper or main execution logic.
-  - **Function `detect_objects()`**: Internal helper or main execution logic.
-  - **Function `extract_ui_elements()`**: Internal helper or main execution logic.
-  - **Function `find_element_coordinates()`**: Internal helper or main execution logic.
-  - **Function `compare_images()`**: Internal helper or main execution logic.
-  - **Function `_get_cache_key()`**: Internal helper or main execution logic.
-  - **Function `_check_cache()`**: Internal helper or main execution logic.
-  - **Function `_add_to_cache()`**: Internal helper or main execution logic.
-  - **Function `clear_cache()`**: Internal helper or main execution logic.
-  - **Function `provider_name()`**: Internal helper or main execution logic.
-  - **Function `supported_features()`**: Internal helper or main execution logic.
+- **Class `VLMResponse`**: Standardized response from VLM providers.
+- **Class `VLMProvider`**: Abstract base class for Vision Language Model providers.
+  - **Function `to_dict()`**: Convert response to dictionary.
+  - **Function `extract_json()`**: Attempt to extract JSON from text response.
+  - **Function `__init__()`**: Initialize the VLM provider.
+  - **Function `analyze_image()`**: Analyze an image with a text prompt.
+  - **Function `extract_text()`**: Extract text from an image (OCR).
+  - **Function `detect_objects()`**: Detect objects in an image.
+  - **Function `extract_ui_elements()`**: Extract UI elements from a screenshot.
+  - **Function `find_element_coordinates()`**: Find pixel coordinates of a specific UI element.
+  - **Function `compare_images()`**: Compare two images and describe differences.
+  - **Function `_get_cache_key()`**: Generate cache key for image + prompt combination.
+  - **Function `_check_cache()`**: Check if response is in cache and still valid.
+  - **Function `_add_to_cache()`**: Add response to cache.
+  - **Function `clear_cache()`**: Clear the response cache.
+  - **Function `provider_name()`**: Return the name of this provider.
+  - **Function `supported_features()`**: Return list of supported features.
 
 ### File: `core_ai\src\ai_assistant\voice\advanced_speech_recognizer.py`
-- **Class `RecognitionModel`**: Orchestrates logic for this module.
-- **Class `AdvancedSpeechRecognizer`**: Orchestrates logic for this module.
-  - **Function `get_advanced_speech_recognizer()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_initialize_recognizers()`**: Internal helper or main execution logic.
-  - **Function `_legacy_vosk_init()`**: Internal helper or main execution logic.
-  - **Function `reduce_noise()`**: Internal helper or main execution logic.
-  - **Function `recognize_google_cloud_speech()`**: Internal helper or main execution logic.
-  - **Function `recognize_speech_recognition()`**: Internal helper or main execution logic.
-  - **Function `recognize_vosk()`**: Internal helper or main execution logic.
-  - **Function `recognize()`**: Internal helper or main execution logic.
-  - **Function `get_recognition_stats()`**: Internal helper or main execution logic.
-- **Class `sr`**: Orchestrates logic for this module.
-  - **Function `_resolve_model_path()`**: Internal helper or main execution logic.
-- **Class `AudioSource`**: Orchestrates logic for this module.
+- **Class `RecognitionModel`**: Available recognition models
+- **Class `AdvancedSpeechRecognizer`**: Advanced speech recognition engine matching Google Assistant accuracy Multi-model approach with automatic fallback
+  - **Function `get_advanced_speech_recognizer()`**: Get or create the advanced speech recognizer instance
+  - **Function `__init__()`**: Signature: (self, whisper_api_key, google_cloud_key, prefer_online, noise_reduction, cache_dir, user_id, require_consent)
+  - **Function `_initialize_recognizers()`**: Initialize all available recognition engines
+  - **Function `_legacy_vosk_init()`**: Signature: ()
+  - **Function `reduce_noise()`**: Apply noise reduction to audio data
+  - **Function `recognize_google_cloud_speech()`**: Signature: ()
+  - **Function `recognize_speech_recognition()`**: Signature: ()
+  - **Function `recognize_vosk()`**: Signature: ()
+  - **Function `recognize()`**: Recognize speech with automatic model selection and fallback
+  - **Function `get_recognition_stats()`**: Get recognition performance statistics
+- **Class `sr`**: Core component.
+  - **Function `_resolve_model_path()`**: Signature: ()
+- **Class `AudioSource`**: Core component.
 
 ### File: `core_ai\src\ai_assistant\voice\advanced_voice.py`
-- **Class `VoiceProfileManager`**: Orchestrates logic for this module.
-- **Class `AdvancedWakeWordDetector`**: Orchestrates logic for this module.
-- **Class `ContinuousListeningManager`**: Orchestrates logic for this module.
-- **Class `VoiceCommandRegistry`**: Orchestrates logic for this module.
-  - **Function `get_voice_features()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `extract_voice_features()`**: Internal helper or main execution logic.
-  - **Function `add_voice_sample()`**: Internal helper or main execution logic.
-  - **Function `identify_speaker()`**: Internal helper or main execution logic.
-  - **Function `save_profiles()`**: Internal helper or main execution logic.
-  - **Function `load_profiles()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_build_phonetic_patterns()`**: Internal helper or main execution logic.
-  - **Function `calculate_similarity()`**: Internal helper or main execution logic.
-  - **Function `detect_wake_word()`**: Internal helper or main execution logic.
-  - **Function `report_false_positive()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_initialize_audio()`**: Internal helper or main execution logic.
-  - **Function `start_listening()`**: Internal helper or main execution logic.
-  - **Function `stop_listening()`**: Internal helper or main execution logic.
-  - **Function `pause_listening()`**: Internal helper or main execution logic.
-  - **Function `resume_listening()`**: Internal helper or main execution logic.
-  - **Function `_listen_loop()`**: Internal helper or main execution logic.
-  - **Function `_process_audio()`**: Internal helper or main execution logic.
-  - **Function `_recognize_speech()`**: Internal helper or main execution logic.
-  - **Function `_extract_command()`**: Internal helper or main execution logic.
-  - **Function `get_statistics()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `register_command()`**: Internal helper or main execution logic.
-  - **Function `register_alias()`**: Internal helper or main execution logic.
-  - **Function `register_context_handler()`**: Internal helper or main execution logic.
-  - **Function `find_command()`**: Internal helper or main execution logic.
-  - **Function `_register_default_commands()`**: Internal helper or main execution logic.
-  - **Function `_handle_time_command()`**: Internal helper or main execution logic.
-  - **Function `_handle_date_command()`**: Internal helper or main execution logic.
-  - **Function `_handle_stop_listening()`**: Internal helper or main execution logic.
-  - **Function `_handle_help_command()`**: Internal helper or main execution logic.
-- **Class `sr`**: Orchestrates logic for this module.
-  - **Function `levenshtein_distance()`**: Internal helper or main execution logic.
-- **Class `AudioSource`**: Orchestrates logic for this module.
-- **Class `Microphone`**: Orchestrates logic for this module.
-- **Class `AudioData`**: Orchestrates logic for this module.
-- **Class `UnknownValueError`**: Orchestrates logic for this module.
-- **Class `RequestError`**: Orchestrates logic for this module.
+- **Class `VoiceProfileManager`**: Manages voice profiles and speaker identification
+- **Class `AdvancedWakeWordDetector`**: Enhanced wake word detection with fuzzy matching and learning
+- **Class `ContinuousListeningManager`**: Manages continuous listening with smart activation/deactivation
+- **Class `VoiceCommandRegistry`**: Registry for voice commands and their handlers
+  - **Function `get_voice_features()`**: Get comprehensive voice feature set
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `extract_voice_features()`**: Extract voice features from audio data
+  - **Function `add_voice_sample()`**: Add voice sample for speaker training
+  - **Function `identify_speaker()`**: Identify speaker from audio sample
+  - **Function `save_profiles()`**: Save voice profiles to disk
+  - **Function `load_profiles()`**: Load voice profiles from disk
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `_build_phonetic_patterns()`**: Build phonetic patterns for wake words
+  - **Function `calculate_similarity()`**: Calculate similarity between two text strings
+  - **Function `detect_wake_word()`**: Detect wake word in text with confidence score
+  - **Function `report_false_positive()`**: Report a false positive to improve detection
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `_initialize_audio()`**: Initialize audio system
+  - **Function `start_listening()`**: Start continuous listening
+  - **Function `stop_listening()`**: Stop continuous listening
+  - **Function `pause_listening()`**: Pause listening temporarily
+  - **Function `resume_listening()`**: Resume listening
+  - **Function `_listen_loop()`**: Main listening loop
+  - **Function `_process_audio()`**: Process captured audio
+  - **Function `_recognize_speech()`**: Recognize speech from audio
+  - **Function `_extract_command()`**: Extract command text after wake word
+  - **Function `get_statistics()`**: Get listening statistics
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `register_command()`**: Register a voice command
+  - **Function `register_alias()`**: Register an alias for an existing command
+  - **Function `register_context_handler()`**: Register a context-aware handler
+  - **Function `find_command()`**: Find matching command for text
+  - **Function `_register_default_commands()`**: Register default voice commands
+  - **Function `_handle_time_command()`**: Handle time request
+  - **Function `_handle_date_command()`**: Handle date request
+  - **Function `_handle_stop_listening()`**: Handle stop listening request
+  - **Function `_handle_help_command()`**: Handle help request
+- **Class `sr`**: Core component.
+  - **Function `levenshtein_distance()`**: Signature: ()
+- **Class `AudioSource`**: Core component.
+- **Class `Microphone`**: Core component.
+- **Class `AudioData`**: Core component.
+- **Class `UnknownValueError`**: Core component.
+- **Class `RequestError`**: Core component.
 
 ### File: `core_ai\src\ai_assistant\voice\async_recognizer.py`
-  - **Function `init_async_recognizer()`**: Internal helper or main execution logic.
-  - **Function `recognize_background()`**: Internal helper or main execution logic.
-- **Class `RecognitionMetrics`**: Orchestrates logic for this module.
-  - **Function `get_recognition_stats()`**: Internal helper or main execution logic.
-  - **Function `shutdown_async_recognizer()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `record_success()`**: Internal helper or main execution logic.
-  - **Function `record_failure()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
+  - **Function `init_async_recognizer()`**: Initialize the async recognizer singleton
+  - **Function `recognize_background()`**: Start recognition in background and return Future
+- **Class `RecognitionMetrics`**: Track async recognition performance metrics
+  - **Function `get_recognition_stats()`**: Get recognition performance statistics
+  - **Function `shutdown_async_recognizer()`**: Shutdown thread pool gracefully
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `record_success()`**: Signature: (self, latency)
+  - **Function `record_failure()`**: Signature: (self)
+  - **Function `get_stats()`**: Signature: (self)
 
 ### File: `core_ai\src\ai_assistant\voice\emotion_detection.py`
-- **Class `Emotion`**: Orchestrates logic for this module.
-- **Class `EmotionResult`**: Orchestrates logic for this module.
-- **Class `SpeechEmotionDetector`**: Orchestrates logic for this module.
-  - **Function `get_emotion_detector()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `analyze_audio()`**: Internal helper or main execution logic.
-  - **Function `analyze_realtime()`**: Internal helper or main execution logic.
-  - **Function `_extract_features()`**: Internal helper or main execution logic.
-  - **Function `_classify_emotion()`**: Internal helper or main execution logic.
-  - **Function `_get_neutral_result()`**: Internal helper or main execution logic.
-  - **Function `get_mood_trend()`**: Internal helper or main execution logic.
-  - **Function `adapt_response_style()`**: Internal helper or main execution logic.
+- **Class `Emotion`**: Detected emotions
+- **Class `EmotionResult`**: Emotion detection result
+- **Class `SpeechEmotionDetector`**: Detects emotions from speech audio
+  - **Function `get_emotion_detector()`**: Get global emotion detector
+  - **Function `__init__()`**: Initialize emotion detector
+  - **Function `analyze_audio()`**: Analyze emotion from audio file
+  - **Function `analyze_realtime()`**: Analyze emotion from real-time audio buffer
+  - **Function `_extract_features()`**: Extract audio features for emotion detection
+  - **Function `_classify_emotion()`**: Classify emotion based on features
+  - **Function `_get_neutral_result()`**: Get default neutral result
+  - **Function `get_mood_trend()`**: Analyze mood trend over recent history
+  - **Function `adapt_response_style()`**: Get response adaptation recommendations based on emotion
 
 ### File: `core_ai\src\ai_assistant\voice\enhanced_wake_word.py`
-  - **Function `enhanced_wake_word_detection()`**: Internal helper or main execution logic.
+  - **Function `enhanced_wake_word_detection()`**: Enhanced wake word detection with fuzzy matching for better accuracy
 
 ### File: `core_ai\src\ai_assistant\voice\ml_features.py`
-- **Class `SileroVAD`**: Orchestrates logic for this module.
-- **Class `VoiceCloner`**: Orchestrates logic for this module.
-- **Class `SpeakerDiarizer`**: Orchestrates logic for this module.
-  - **Function `example_ml_pipeline()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `detect()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `train_voice_profile()`**: Internal helper or main execution logic.
-  - **Function `clone_voice()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `diarize()`**: Internal helper or main execution logic.
-  - **Function `identify_speakers()`**: Internal helper or main execution logic.
+- **Class `SileroVAD`**: Deep learning-based VAD using Silero models
+- **Class `VoiceCloner`**: Voice cloning using Coqui TTS
+- **Class `SpeakerDiarizer`**: Speaker diarization using pyannote.audio
+  - **Function `example_ml_pipeline()`**: Example of how to use all ML features together
+  - **Function `__init__()`**: Initialize speaker diarization
+  - **Function `detect()`**: Detect voice activity with high accuracy
+  - **Function `__init__()`**: Initialize speaker diarization
+  - **Function `train_voice_profile()`**: Train a voice profile from audio samples
+  - **Function `clone_voice()`**: Synthesize speech with cloned voice
+  - **Function `__init__()`**: Initialize speaker diarization
+  - **Function `diarize()`**: Perform speaker diarization on audio
+  - **Function `identify_speakers()`**: Match diarized speakers to known voice profiles
 
 ### File: `core_ai\src\ai_assistant\voice\multilingual_wake_words.py`
-- **Class `SupportedLanguage`**: Orchestrates logic for this module.
-- **Class `WakeWordConfidence`**: Orchestrates logic for this module.
-- **Class `PhonemeSequence`**: Orchestrates logic for this module.
-- **Class `WakeWordTemplate`**: Orchestrates logic for this module.
-- **Class `DetectionResult`**: Orchestrates logic for this module.
-- **Class `MultilingualConfig`**: Orchestrates logic for this module.
-- **Class `PhonemeExtractor`**: Orchestrates logic for this module.
-- **Class `AcousticFeatureExtractor`**: Orchestrates logic for this module.
-- **Class `PhoneticMatcher`**: Orchestrates logic for this module.
-- **Class `MultilingualWakeWordDetector`**: Orchestrates logic for this module.
-  - **Function `create_multilingual_detector()`**: Internal helper or main execution logic.
-  - **Function `quick_wake_word_detection()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_initialize_processors()`**: Internal helper or main execution logic.
-  - **Function `_init_fallback_processors()`**: Internal helper or main execution logic.
-  - **Function `extract_phonemes()`**: Internal helper or main execution logic.
-  - **Function `_fallback_phoneme_extraction()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `extract_features()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `calculate_similarity()`**: Internal helper or main execution logic.
-  - **Function `_create_distance_matrix()`**: Internal helper or main execution logic.
-  - **Function `_phoneme_similarity()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `register_wake_word()`**: Internal helper or main execution logic.
-  - **Function `detect_wake_word()`**: Internal helper or main execution logic.
-  - **Function `_calculate_acoustic_similarity()`**: Internal helper or main execution logic.
-  - **Function `start_continuous_detection()`**: Internal helper or main execution logic.
-  - **Function `stop_continuous_detection()`**: Internal helper or main execution logic.
-  - **Function `_continuous_detection_loop()`**: Internal helper or main execution logic.
-  - **Function `add_audio_data()`**: Internal helper or main execution logic.
-  - **Function `get_latest_detection()`**: Internal helper or main execution logic.
-  - **Function `_save_wake_word_template()`**: Internal helper or main execution logic.
-  - **Function `_load_wake_word_templates()`**: Internal helper or main execution logic.
-  - **Function `delete_wake_word()`**: Internal helper or main execution logic.
-  - **Function `get_registered_wake_words()`**: Internal helper or main execution logic.
-  - **Function `update_confidence_threshold()`**: Internal helper or main execution logic.
+- **Class `SupportedLanguage`**: Supported languages for wake word detection
+- **Class `WakeWordConfidence`**: Wake word detection confidence levels
+- **Class `PhonemeSequence`**: Phonemic representation of a wake word
+- **Class `WakeWordTemplate`**: Template for wake word detection
+- **Class `DetectionResult`**: Result of wake word detection
+- **Class `MultilingualConfig`**: Configuration for multilingual wake word detection
+- **Class `PhonemeExtractor`**: Extract phonemes from text in different languages
+- **Class `AcousticFeatureExtractor`**: Extract acoustic features for wake word matching
+- **Class `PhoneticMatcher`**: Match phoneme sequences with similarity scoring
+- **Class `MultilingualWakeWordDetector`**: Advanced multilingual wake word detection system
+  - **Function `create_multilingual_detector()`**: Create multilingual wake word detector with specified languages
+  - **Function `quick_wake_word_detection()`**: Quick wake word detection function
+  - **Function `__init__()`**: Signature: (self, config)
+  - **Function `_initialize_processors()`**: Initialize language-specific phoneme processors
+  - **Function `_init_fallback_processors()`**: Initialize simple fallback phoneme processors
+  - **Function `extract_phonemes()`**: Extract phoneme sequence from text
+  - **Function `_fallback_phoneme_extraction()`**: Simple fallback phoneme extraction
+  - **Function `__init__()`**: Signature: (self, config)
+  - **Function `extract_features()`**: Extract acoustic features from audio
+  - **Function `__init__()`**: Signature: (self, config)
+  - **Function `calculate_similarity()`**: Calculate phonetic similarity between two sequences
+  - **Function `_create_distance_matrix()`**: Create distance matrix for phoneme comparison
+  - **Function `_phoneme_similarity()`**: Calculate similarity between individual phonemes
+  - **Function `__init__()`**: Signature: (self, config)
+  - **Function `register_wake_word()`**: Register a new wake word with audio samples
+  - **Function `detect_wake_word()`**: Detect wake words in audio data
+  - **Function `_calculate_acoustic_similarity()`**: Calculate acoustic similarity between feature vectors
+  - **Function `start_continuous_detection()`**: Start continuous wake word detection
+  - **Function `stop_continuous_detection()`**: Stop continuous detection
+  - **Function `_continuous_detection_loop()`**: Continuous detection loop
+  - **Function `add_audio_data()`**: Add audio data for continuous detection
+  - **Function `get_latest_detection()`**: Get latest detection result
+  - **Function `_save_wake_word_template()`**: Save wake word template to disk
+  - **Function `_load_wake_word_templates()`**: Load wake word templates from disk
+  - **Function `delete_wake_word()`**: Delete a wake word template
+  - **Function `get_registered_wake_words()`**: Get list of registered wake words
+  - **Function `update_confidence_threshold()`**: Update confidence threshold for a specific wake word
 
 ### File: `core_ai\src\ai_assistant\voice\neural_voice_engine.py`
-- **Class `VoiceGender`**: Orchestrates logic for this module.
-- **Class `SpeakingStyle`**: Orchestrates logic for this module.
-- **Class `NeuralVoiceEngine`**: Orchestrates logic for this module.
-  - **Function `get_neural_voice_engine()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_initialize_engines()`**: Internal helper or main execution logic.
-  - **Function `synthesize_kitten_tts()`**: Internal helper or main execution logic.
-  - **Function `synthesize_edge_tts_sync()`**: Internal helper or main execution logic.
-  - **Function `speak()`**: Internal helper or main execution logic.
+- **Class `VoiceGender`**: Voice gender options
+- **Class `SpeakingStyle`**: Speaking style options for natural conversation
+- **Class `NeuralVoiceEngine`**: High-quality neural voice synthesis engine
+  - **Function `get_neural_voice_engine()`**: Get or create the neural voice engine singleton
+  - **Function `__init__()`**: Signature: (self, cache_dir, gpu)
+  - **Function `_initialize_engines()`**: Initialize all available TTS engines
+  - **Function `synthesize_kitten_tts()`**: Synthesize speech using KittenTTS (offline, ultra-lightweight)
+  - **Function `synthesize_edge_tts_sync()`**: Signature: ()
+  - **Function `speak()`**: Generate audio using KittenTTS, falling back to Edge-TTS. Returns the path to the audio file.
 
 ### File: `core_ai\src\ai_assistant\voice\noise_reduction.py`
-- **Class `NoiseReductionMethod`**: Orchestrates logic for this module.
-- **Class `NoiseLevel`**: Orchestrates logic for this module.
-- **Class `NoiseReductionConfig`**: Orchestrates logic for this module.
-- **Class `NoiseProfile`**: Orchestrates logic for this module.
-- **Class `AudioQualityMetrics`**: Orchestrates logic for this module.
-- **Class `SpectralSubtractionProcessor`**: Orchestrates logic for this module.
-- **Class `WienerFilterProcessor`**: Orchestrates logic for this module.
-- **Class `AdaptiveNoiseReducer`**: Orchestrates logic for this module.
-- **Class `NoiseReductionSystem`**: Orchestrates logic for this module.
-  - **Function `create_noise_reducer()`**: Internal helper or main execution logic.
-  - **Function `reduce_audio_noise()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `estimate_noise()`**: Internal helper or main execution logic.
-  - **Function `process()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `initialize()`**: Internal helper or main execution logic.
-  - **Function `process()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `process()`**: Internal helper or main execution logic.
-  - **Function `_estimate_snr()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_initialize_processors()`**: Internal helper or main execution logic.
-  - **Function `reduce_noise()`**: Internal helper or main execution logic.
-  - **Function `_apply_spectral_subtraction()`**: Internal helper or main execution logic.
-  - **Function `_apply_wiener_filter()`**: Internal helper or main execution logic.
-  - **Function `_apply_adaptive_filter()`**: Internal helper or main execution logic.
-  - **Function `_apply_hybrid_method()`**: Internal helper or main execution logic.
-  - **Function `_calculate_quality_metrics()`**: Internal helper or main execution logic.
-  - **Function `start_realtime_processing()`**: Internal helper or main execution logic.
-  - **Function `stop_realtime_processing()`**: Internal helper or main execution logic.
-  - **Function `_realtime_processing_loop()`**: Internal helper or main execution logic.
-  - **Function `add_audio_for_processing()`**: Internal helper or main execution logic.
-  - **Function `get_processed_audio()`**: Internal helper or main execution logic.
-  - **Function `estimate_noise_profile()`**: Internal helper or main execution logic.
-  - **Function `get_quality_metrics()`**: Internal helper or main execution logic.
-  - **Function `update_config()`**: Internal helper or main execution logic.
+- **Class `NoiseReductionMethod`**: Available noise reduction methods
+- **Class `NoiseLevel`**: Noise reduction intensity levels
+- **Class `NoiseReductionConfig`**: Configuration for noise reduction system
+- **Class `NoiseProfile`**: Noise characteristics profile
+- **Class `AudioQualityMetrics`**: Audio quality assessment metrics
+- **Class `SpectralSubtractionProcessor`**: Spectral subtraction noise reduction processor
+- **Class `WienerFilterProcessor`**: Wiener filter noise reduction processor
+- **Class `AdaptiveNoiseReducer`**: Adaptive noise reduction that adjusts parameters based on  current noise conditions and signal characteristics
+- **Class `NoiseReductionSystem`**: Complete noise reduction system with multiple algorithms and real-time processing capabilities
+  - **Function `create_noise_reducer()`**: Create noise reduction system with specified method and level
+  - **Function `reduce_audio_noise()`**: Quick noise reduction function
+  - **Function `__init__()`**: Signature: (self, config)
+  - **Function `estimate_noise()`**: Estimate noise profile from audio data
+  - **Function `process()`**: Process audio with adaptive noise reduction
+  - **Function `__init__()`**: Signature: (self, config)
+  - **Function `initialize()`**: Initialize Wiener filter with noise and optional speech samples
+  - **Function `process()`**: Process audio with adaptive noise reduction
+  - **Function `__init__()`**: Signature: (self, config)
+  - **Function `process()`**: Process audio with adaptive noise reduction
+  - **Function `_estimate_snr()`**: Estimate signal-to-noise ratio
+  - **Function `__init__()`**: Signature: (self, config)
+  - **Function `_initialize_processors()`**: Initialize noise reduction processors
+  - **Function `reduce_noise()`**: Apply noise reduction to audio data
+  - **Function `_apply_spectral_subtraction()`**: Apply spectral subtraction
+  - **Function `_apply_wiener_filter()`**: Apply Wiener filter
+  - **Function `_apply_adaptive_filter()`**: Apply adaptive filter
+  - **Function `_apply_hybrid_method()`**: Apply hybrid noise reduction method
+  - **Function `_calculate_quality_metrics()`**: Calculate audio quality metrics
+  - **Function `start_realtime_processing()`**: Start real-time noise reduction processing
+  - **Function `stop_realtime_processing()`**: Stop real-time processing
+  - **Function `_realtime_processing_loop()`**: Real-time processing loop
+  - **Function `add_audio_for_processing()`**: Add audio data for real-time processing
+  - **Function `get_processed_audio()`**: Get processed audio from real-time processing
+  - **Function `estimate_noise_profile()`**: Estimate noise profile from audio sample
+  - **Function `get_quality_metrics()`**: Get latest quality metrics
+  - **Function `update_config()`**: Update noise reduction configuration
 
 ### File: `core_ai\src\ai_assistant\voice\speaker_verification.py`
-- **Class `VerificationResult`**: Orchestrates logic for this module.
-- **Class `SecurityLevel`**: Orchestrates logic for this module.
-- **Class `VerificationConfig`**: Orchestrates logic for this module.
-- **Class `SpeakerProfile`**: Orchestrates logic for this module.
-- **Class `VerificationAttempt`**: Orchestrates logic for this module.
-- **Class `SpeakerVerificationSystem`**: Orchestrates logic for this module.
-  - **Function `create_speaker_verifier()`**: Internal helper or main execution logic.
-  - **Function `quick_verify_speaker()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `enroll_speaker()`**: Internal helper or main execution logic.
-  - **Function `verify_speaker()`**: Internal helper or main execution logic.
-  - **Function `identify_speaker()`**: Internal helper or main execution logic.
-  - **Function `_extract_features()`**: Internal helper or main execution logic.
-  - **Function `_calculate_audio_quality()`**: Internal helper or main execution logic.
-  - **Function `_create_anti_spoofing_profile()`**: Internal helper or main execution logic.
-  - **Function `_check_anti_spoofing()`**: Internal helper or main execution logic.
-  - **Function `_convert_likelihood_to_confidence()`**: Internal helper or main execution logic.
-  - **Function `_save_speaker_profile()`**: Internal helper or main execution logic.
-  - **Function `_load_speaker_profiles()`**: Internal helper or main execution logic.
-  - **Function `delete_speaker()`**: Internal helper or main execution logic.
-  - **Function `get_enrolled_speakers()`**: Internal helper or main execution logic.
-  - **Function `get_speaker_info()`**: Internal helper or main execution logic.
-  - **Function `update_security_level()`**: Internal helper or main execution logic.
+- **Class `VerificationResult`**: Speaker verification results
+- **Class `SecurityLevel`**: Security levels for speaker verification
+- **Class `VerificationConfig`**: Configuration for speaker verification system
+- **Class `SpeakerProfile`**: Speaker biometric profile
+- **Class `VerificationAttempt`**: Result of speaker verification attempt
+- **Class `SpeakerVerificationSystem`**: Advanced speaker verification system using voice biometrics
+  - **Function `create_speaker_verifier()`**: Create speaker verification system with specified security level
+  - **Function `quick_verify_speaker()`**: Quick speaker verification function
+  - **Function `__init__()`**: Signature: (self, config)
+  - **Function `enroll_speaker()`**: Enroll a new speaker with multiple audio samples
+  - **Function `verify_speaker()`**: Verify if audio matches enrolled speaker
+  - **Function `identify_speaker()`**: Identify which enrolled speaker matches the audio
+  - **Function `_extract_features()`**: Extract MFCC features from audio
+  - **Function `_calculate_audio_quality()`**: Calculate audio quality score
+  - **Function `_create_anti_spoofing_profile()`**: Create anti-spoofing profile for speaker
+  - **Function `_check_anti_spoofing()`**: Check for potential spoofing attempts
+  - **Function `_convert_likelihood_to_confidence()`**: Convert log-likelihood to confidence score 0-1
+  - **Function `_save_speaker_profile()`**: Save speaker profile to disk with encryption
+  - **Function `_load_speaker_profiles()`**: Load existing speaker profiles from disk (encrypted or legacy)
+  - **Function `delete_speaker()`**: Delete speaker profile and associated files (encrypted and legacy)
+  - **Function `get_enrolled_speakers()`**: Get list of enrolled speaker IDs
+  - **Function `get_speaker_info()`**: Get information about enrolled speaker
+  - **Function `update_security_level()`**: Update security level for verification
 
 ### File: `core_ai\src\ai_assistant\voice\test_voice_recognition.py`
-  - **Function `test_voice_callback()`**: Internal helper or main execution logic.
-  - **Function `test_vosk_models()`**: Internal helper or main execution logic.
-  - **Function `main()`**: Internal helper or main execution logic.
+  - **Function `test_voice_callback()`**: Callback function for voice recognition
+  - **Function `test_vosk_models()`**: Test if Vosk models are available
+  - **Function `main()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\voice\voice_activity_detection.py`
-- **Class `VADSensitivity`**: Orchestrates logic for this module.
-- **Class `VADAlgorithm`**: Orchestrates logic for this module.
-- **Class `VADConfig`**: Orchestrates logic for this module.
-- **Class `VADResult`**: Orchestrates logic for this module.
-- **Class `VoiceActivityDetector`**: Orchestrates logic for this module.
-- **Class `VADProcessor`**: Orchestrates logic for this module.
-  - **Function `create_vad_detector()`**: Internal helper or main execution logic.
-  - **Function `detect_voice_activity()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_init_webrtc_vad()`**: Internal helper or main execution logic.
-  - **Function `_init_energy_detector()`**: Internal helper or main execution logic.
-  - **Function `_init_spectral_detector()`**: Internal helper or main execution logic.
-  - **Function `detect_voice_activity()`**: Internal helper or main execution logic.
-  - **Function `_calculate_energy()`**: Internal helper or main execution logic.
-  - **Function `_update_noise_estimation()`**: Internal helper or main execution logic.
-  - **Function `_webrtc_detect()`**: Internal helper or main execution logic.
-  - **Function `_energy_detect()`**: Internal helper or main execution logic.
-  - **Function `_spectral_detect()`**: Internal helper or main execution logic.
-  - **Function `_extract_spectral_features()`**: Internal helper or main execution logic.
-  - **Function `_combine_results()`**: Internal helper or main execution logic.
-  - **Function `_temporal_filter()`**: Internal helper or main execution logic.
-  - **Function `start_continuous_detection()`**: Internal helper or main execution logic.
-  - **Function `stop_continuous_detection()`**: Internal helper or main execution logic.
-  - **Function `_continuous_processing_loop()`**: Internal helper or main execution logic.
-  - **Function `add_audio_data()`**: Internal helper or main execution logic.
-  - **Function `get_latest_result()`**: Internal helper or main execution logic.
-  - **Function `calibrate()`**: Internal helper or main execution logic.
-  - **Function `reset_calibration()`**: Internal helper or main execution logic.
-  - **Function `get_status()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `is_speech_detected()`**: Internal helper or main execution logic.
-  - **Function `process_audio_stream()`**: Internal helper or main execution logic.
-  - **Function `calibrate_with_silence()`**: Internal helper or main execution logic.
+- **Class `VADSensitivity`**: Voice Activity Detection sensitivity levels
+- **Class `VADAlgorithm`**: Available VAD algorithms
+- **Class `VADConfig`**: Voice Activity Detection configuration
+- **Class `VADResult`**: Voice Activity Detection result
+- **Class `VoiceActivityDetector`**: Advanced Voice Activity Detection system with multiple algorithms
+- **Class `VADProcessor`**: High-level VAD processor for easy integration
+  - **Function `create_vad_detector()`**: Create a VAD detector with specified settings
+  - **Function `detect_voice_activity()`**: Quick voice activity detection for audio data
+  - **Function `__init__()`**: Signature: (self, sensitivity)
+  - **Function `_init_webrtc_vad()`**: Initialize WebRTC VAD
+  - **Function `_init_energy_detector()`**: Initialize energy-based detection
+  - **Function `_init_spectral_detector()`**: Initialize spectral analysis detector
+  - **Function `detect_voice_activity()`**: Quick voice activity detection for audio data
+  - **Function `_calculate_energy()`**: Calculate RMS energy of audio frame
+  - **Function `_update_noise_estimation()`**: Update background noise level estimation
+  - **Function `_webrtc_detect()`**: WebRTC VAD detection
+  - **Function `_energy_detect()`**: Energy-based VAD detection
+  - **Function `_spectral_detect()`**: Spectral analysis-based VAD detection
+  - **Function `_extract_spectral_features()`**: Extract spectral features for voice detection
+  - **Function `_combine_results()`**: Combine results from multiple VAD algorithms
+  - **Function `_temporal_filter()`**: Apply temporal filtering to reduce false positives/negatives
+  - **Function `start_continuous_detection()`**: Start continuous VAD processing in background thread
+  - **Function `stop_continuous_detection()`**: Stop continuous VAD processing
+  - **Function `_continuous_processing_loop()`**: Continuous processing loop for real-time VAD
+  - **Function `add_audio_data()`**: Add audio data for continuous processing
+  - **Function `get_latest_result()`**: Get latest VAD result from processing
+  - **Function `calibrate()`**: Manually calibrate with noise sample
+  - **Function `reset_calibration()`**: Reset calibration to start fresh
+  - **Function `get_status()`**: Get current VAD status and statistics
+  - **Function `__init__()`**: Signature: (self, sensitivity)
+  - **Function `is_speech_detected()`**: Simple speech detection interface
+  - **Function `process_audio_stream()`**: Process continuous audio stream with callback
+  - **Function `calibrate_with_silence()`**: Auto-calibrate by recording silence
 
 ### File: `core_ai\src\ai_assistant\voice\voice_fingerprinting.py`
-- **Class `RecognitionConfidence`**: Orchestrates logic for this module.
-- **Class `VoiceQuality`**: Orchestrates logic for this module.
-- **Class `VoiceEmbedding`**: Orchestrates logic for this module.
-- **Class `UserVoiceProfile`**: Orchestrates logic for this module.
-- **Class `RecognitionResult`**: Orchestrates logic for this module.
-- **Class `VoiceFingerprintConfig`**: Orchestrates logic for this module.
-- **Class `VoiceEmbeddingExtractor`**: Orchestrates logic for this module.
-- **Class `VoiceQualityAssessor`**: Orchestrates logic for this module.
-- **Class `AntiSpoofingDetector`**: Orchestrates logic for this module.
-- **Class `VoiceFingerprintingSystem`**: Orchestrates logic for this module.
-  - **Function `create_voice_fingerprinting_system()`**: Internal helper or main execution logic.
-  - **Function `quick_user_recognition()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_initialize_models()`**: Internal helper or main execution logic.
-  - **Function `_create_mfcc_extractor()`**: Internal helper or main execution logic.
-  - **Function `extract_embedding()`**: Internal helper or main execution logic.
-  - **Function `_validate_audio()`**: Internal helper or main execution logic.
-  - **Function `_extract_speechbrain_embedding()`**: Internal helper or main execution logic.
-  - **Function `_extract_mfcc_embedding()`**: Internal helper or main execution logic.
-  - **Function `assess_quality()`**: Internal helper or main execution logic.
-  - **Function `_assess_snr()`**: Internal helper or main execution logic.
-  - **Function `_assess_spectral_clarity()`**: Internal helper or main execution logic.
-  - **Function `_assess_speech_activity()`**: Internal helper or main execution logic.
-  - **Function `_assess_clipping()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `detect_spoofing()`**: Internal helper or main execution logic.
-  - **Function `_analyze_spectral_artifacts()`**: Internal helper or main execution logic.
-  - **Function `_analyze_temporal_artifacts()`**: Internal helper or main execution logic.
-  - **Function `_analyze_harmonic_structure()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `enroll_user()`**: Internal helper or main execution logic.
-  - **Function `recognize_user()`**: Internal helper or main execution logic.
-  - **Function `_preprocess_audio()`**: Internal helper or main execution logic.
-  - **Function `_calculate_embedding_similarity()`**: Internal helper or main execution logic.
-  - **Function `_adapt_user_profile()`**: Internal helper or main execution logic.
-  - **Function `_optimize_profile_embeddings()`**: Internal helper or main execution logic.
-  - **Function `start_continuous_recognition()`**: Internal helper or main execution logic.
-  - **Function `stop_continuous_recognition()`**: Internal helper or main execution logic.
-  - **Function `_continuous_recognition_loop()`**: Internal helper or main execution logic.
-  - **Function `add_recognition_audio()`**: Internal helper or main execution logic.
-  - **Function `get_latest_recognition()`**: Internal helper or main execution logic.
-  - **Function `delete_user_profile()`**: Internal helper or main execution logic.
-  - **Function `get_user_profiles()`**: Internal helper or main execution logic.
-  - **Function `_save_user_profile()`**: Internal helper or main execution logic.
-  - **Function `_load_user_profiles()`**: Internal helper or main execution logic.
+- **Class `RecognitionConfidence`**: Voice recognition confidence levels
+- **Class `VoiceQuality`**: Voice sample quality assessment
+- **Class `VoiceEmbedding`**: Voice embedding representation
+- **Class `UserVoiceProfile`**: User voice profile with multiple embeddings
+- **Class `RecognitionResult`**: Voice recognition result
+- **Class `VoiceFingerprintConfig`**: Configuration for voice fingerprinting
+- **Class `VoiceEmbeddingExtractor`**: Extract voice embeddings using various models
+- **Class `VoiceQualityAssessor`**: Assess voice sample quality for fingerprinting
+- **Class `AntiSpoofingDetector`**: Detect voice spoofing and liveness
+- **Class `VoiceFingerprintingSystem`**: Complete voice fingerprinting and user recognition system
+  - **Function `create_voice_fingerprinting_system()`**: Create voice fingerprinting system with configuration
+  - **Function `quick_user_recognition()`**: Quick user recognition function
+  - **Function `__init__()`**: Signature: (self, config)
+  - **Function `_initialize_models()`**: Initialize embedding models
+  - **Function `_create_mfcc_extractor()`**: Create MFCC-based fallback extractor
+  - **Function `extract_embedding()`**: Extract voice embedding from audio
+  - **Function `_validate_audio()`**: Validate audio data
+  - **Function `_extract_speechbrain_embedding()`**: Extract embedding using SpeechBrain model
+  - **Function `_extract_mfcc_embedding()`**: Extract MFCC-based embedding
+  - **Function `assess_quality()`**: Assess overall quality score (0-1)
+  - **Function `_assess_snr()`**: Assess signal-to-noise ratio
+  - **Function `_assess_spectral_clarity()`**: Assess spectral clarity and definition
+  - **Function `_assess_speech_activity()`**: Assess speech activity level
+  - **Function `_assess_clipping()`**: Assess audio clipping
+  - **Function `__init__()`**: Signature: (self, config)
+  - **Function `detect_spoofing()`**: Detect voice spoofing
+  - **Function `_analyze_spectral_artifacts()`**: Analyze spectral artifacts common in synthetic speech
+  - **Function `_analyze_temporal_artifacts()`**: Analyze temporal artifacts for replay detection
+  - **Function `_analyze_harmonic_structure()`**: Analyze harmonic structure naturalness
+  - **Function `__init__()`**: Signature: (self, config)
+  - **Function `enroll_user()`**: Enroll a new user with voice samples
+  - **Function `recognize_user()`**: Recognize user from voice sample
+  - **Function `_preprocess_audio()`**: Preprocess audio for fingerprinting
+  - **Function `_calculate_embedding_similarity()`**: Calculate similarity between embeddings
+  - **Function `_adapt_user_profile()`**: Adaptively update user profile with new embedding
+  - **Function `_optimize_profile_embeddings()`**: Optimize profile embeddings using clustering
+  - **Function `start_continuous_recognition()`**: Start continuous user recognition
+  - **Function `stop_continuous_recognition()`**: Stop continuous recognition
+  - **Function `_continuous_recognition_loop()`**: Continuous recognition loop
+  - **Function `add_recognition_audio()`**: Add audio for continuous recognition
+  - **Function `get_latest_recognition()`**: Get latest recognition result
+  - **Function `delete_user_profile()`**: Delete a user profile
+  - **Function `get_user_profiles()`**: Get list of enrolled user profiles
+  - **Function `_save_user_profile()`**: Save user profile to disk
+  - **Function `_load_user_profiles()`**: Load user profiles from disk
 
 ### File: `core_ai\src\ai_assistant\voice\voice_settings_manager.py`
   - *(Documentation parsing failed for this file)*
 
 ### File: `core_ai\src\ai_assistant\voice\wake_word_detector.py`
-- **Class `WakeWordDetectionMode`**: Orchestrates logic for this module.
-- **Class `SmartWakeWordDetector`**: Orchestrates logic for this module.
-- **Class `WakeWordManager`**: Orchestrates logic for this module.
-  - **Function `get_wake_word_manager()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_initialize_decoder()`**: Internal helper or main execution logic.
-  - **Function `start_listening()`**: Internal helper or main execution logic.
-  - **Function `stop_listening()`**: Internal helper or main execution logic.
-  - **Function `_listen_loop()`**: Internal helper or main execution logic.
-  - **Function `_process_audio_chunk()`**: Internal helper or main execution logic.
-  - **Function `_on_detection()`**: Internal helper or main execution logic.
-  - **Function `add_custom_wake_word()`**: Internal helper or main execution logic.
-  - **Function `remove_wake_word()`**: Internal helper or main execution logic.
-  - **Function `get_detection_stats()`**: Internal helper or main execution logic.
-  - **Function `simulate_wake_word()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_on_wake_word()`**: Internal helper or main execution logic.
-  - **Function `start()`**: Internal helper or main execution logic.
-  - **Function `stop()`**: Internal helper or main execution logic.
-  - **Function `get_stats()`**: Internal helper or main execution logic.
-  - **Function `set_custom_wake_words()`**: Internal helper or main execution logic.
-  - **Function `on_wake_word()`**: Internal helper or main execution logic.
+- **Class `WakeWordDetectionMode`**: Wake word detection modes
+- **Class `SmartWakeWordDetector`**: Always-on wake word detection like Google Assistant Low latency, works completely offline using PocketSphinx
+- **Class `WakeWordManager`**: Manages wake word detection and integration with main assistant Handles custom wake words, profiles, and learning
+  - **Function `get_wake_word_manager()`**: Get or create wake word manager instance
+  - **Function `__init__()`**: Initialize wake word manager
+  - **Function `_initialize_decoder()`**: Initialize Vosk decoder for wake word detection
+  - **Function `start_listening()`**: Start continuous listening for wake words
+  - **Function `stop_listening()`**: Stop listening for wake words
+  - **Function `_listen_loop()`**: Main listening loop
+  - **Function `_process_audio_chunk()`**: Process audio chunk for wake word detection
+  - **Function `_on_detection()`**: Handle wake word detection
+  - **Function `add_custom_wake_word()`**: Add custom wake word at runtime
+  - **Function `remove_wake_word()`**: Remove wake word
+  - **Function `get_detection_stats()`**: Get detection statistics
+  - **Function `simulate_wake_word()`**: Simulate wake word for testing
+  - **Function `__init__()`**: Initialize wake word manager
+  - **Function `_on_wake_word()`**: Handle wake word detection
+  - **Function `start()`**: Start wake word detection
+  - **Function `stop()`**: Stop wake word detection
+  - **Function `get_stats()`**: Get manager statistics
+  - **Function `set_custom_wake_words()`**: Set custom wake words
+  - **Function `on_wake_word()`**: Signature: ()
 
 ### File: `core_ai\src\ai_assistant\workflow\intent_registry.py`
-- **Class `IntentMapping`**: Orchestrates logic for this module.
-- **Class `IntentRegistry`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_load_templates()`**: Internal helper or main execution logic.
-  - **Function `_load_template_file()`**: Internal helper or main execution logic.
-  - **Function `get_intent_mapping()`**: Internal helper or main execution logic.
-  - **Function `get_all_intents()`**: Internal helper or main execution logic.
-  - **Function `reload_templates()`**: Internal helper or main execution logic.
+- **Class `IntentMapping`**: Represents a mapping from intent to workflow template.
+- **Class `IntentRegistry`**: Registry for mapping natural language intents to workflow templates.
+  - **Function `__init__()`**: Initialize the intent registry.
+  - **Function `_load_templates()`**: Load all workflow templates from the templates directory.
+  - **Function `_load_template_file()`**: Load a single workflow template file and extract intent information.
+  - **Function `get_intent_mapping()`**: Get the intent mapping for a given intent string.
+  - **Function `get_all_intents()`**: Get a list of all registered intents.
+  - **Function `reload_templates()`**: Reload all template files.
 
 ### File: `core_ai\src\ai_assistant\workflow\intent_router.py`
-- **Class `IntentRouter`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_define_routes()`**: Internal helper or main execution logic.
-  - **Function `determine_intent()`**: Internal helper or main execution logic.
+- **Class `IntentRouter`**: Semantic Router for advanced intent classification. Uses local embeddings to map user queries to actionable routes.
+  - **Function `__init__()`**: Signature: (self, threshold)
+  - **Function `_define_routes()`**: Define the semantic routes for the system.
+  - **Function `determine_intent()`**: Determine the intent of a query. Returns: (route_name, confidence_score)
 
 ### File: `core_ai\src\ai_assistant\workflow\orchestrator.py`
-- **Class `WorkflowOrchestrator`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
+- **Class `WorkflowOrchestrator`**: Manages high-level workflows that require coordination between multiple agents.
+  - **Function `__init__()`**: Signature: (self, registry)
 
 ### File: `backend\app_integration_api.py`
-  - **Function `require_auth()`**: Internal helper or main execution logic.
-  - **Function `login()`**: Internal helper or main execution logic.
-  - **Function `logout()`**: Internal helper or main execution logic.
-  - **Function `list_apps()`**: Internal helper or main execution logic.
-  - **Function `register_app()`**: Internal helper or main execution logic.
-  - **Function `get_app_details()`**: Internal helper or main execution logic.
-  - **Function `launch_app()`**: Internal helper or main execution logic.
-  - **Function `stop_app()`**: Internal helper or main execution logic.
-  - **Function `remove_app()`**: Internal helper or main execution logic.
-  - **Function `toggle_app_enabled()`**: Internal helper or main execution logic.
-  - **Function `trigger_autostart()`**: Internal helper or main execution logic.
-  - **Function `cleanup_processes()`**: Internal helper or main execution logic.
-  - **Function `system_status()`**: Internal helper or main execution logic.
-  - **Function `get_categories()`**: Internal helper or main execution logic.
-  - **Function `get_integration_types()`**: Internal helper or main execution logic.
-  - **Function `not_found()`**: Internal helper or main execution logic.
-  - **Function `internal_error()`**: Internal helper or main execution logic.
-  - **Function `decorated_function()`**: Internal helper or main execution logic.
+  - **Function `require_auth()`**: Decorator to require authentication for API endpoints.
+  - **Function `login()`**: Authenticate user for web interface.
+  - **Function `logout()`**: Logout user.
+  - **Function `list_apps()`**: List all registered applications.
+  - **Function `register_app()`**: Register a new application.
+  - **Function `get_app_details()`**: Get detailed information about a specific app.
+  - **Function `launch_app()`**: Launch an application.
+  - **Function `stop_app()`**: Stop an application.
+  - **Function `remove_app()`**: Remove an application registration.
+  - **Function `toggle_app_enabled()`**: Enable or disable an application.
+  - **Function `trigger_autostart()`**: Trigger auto-start for all configured apps.
+  - **Function `cleanup_processes()`**: Clean up terminated processes.
+  - **Function `system_status()`**: Get overall system status.
+  - **Function `get_categories()`**: Get available app categories and their default permissions.
+  - **Function `get_integration_types()`**: Get available integration types.
+  - **Function `not_found()`**: Signature: (error)
+  - **Function `internal_error()`**: Signature: (error)
+  - **Function `decorated_function()`**: Signature: ()
 
 ### File: `backend\google_speech_websocket_handler.py`
-  - **Function `register_google_speech_handlers()`**: Internal helper or main execution logic.
-  - **Function `handle_start_google()`**: Internal helper or main execution logic.
-  - **Function `handle_google_audio()`**: Internal helper or main execution logic.
-  - **Function `handle_stop_google()`**: Internal helper or main execution logic.
+  - **Function `register_google_speech_handlers()`**: Signature: ()
+  - **Function `handle_start_google()`**: Signature: ()
+  - **Function `handle_google_audio()`**: Signature: ()
+  - **Function `handle_stop_google()`**: Signature: ()
 
 ### File: `backend\insights_engine.py`
-- **Class `InsightsEngine`**: Orchestrates logic for this module.
-  - **Function `get_insights_engine()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `get_daily_briefing()`**: Internal helper or main execution logic.
-  - **Function `get_upcoming_events()`**: Internal helper or main execution logic.
-  - **Function `get_pending_tasks()`**: Internal helper or main execution logic.
-  - **Function `get_weather_summary()`**: Internal helper or main execution logic.
-  - **Function `get_top_news()`**: Internal helper or main execution logic.
-  - **Function `calculate_daily_focus()`**: Internal helper or main execution logic.
+- **Class `InsightsEngine`**: Aggregates contextual data for the Proactive Insights Dashboard. Manages Calendar, Tasks, Weather, and News data.
+  - **Function `get_insights_engine()`**: Signature: ()
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `get_daily_briefing()`**: Aggregates all insights into a daily briefing object.
+  - **Function `get_upcoming_events()`**: Fetches upcoming calendar events. Currently returns mock data for demonstration.
+  - **Function `get_pending_tasks()`**: Fetches pending tasks. Currently returns mock data.
+  - **Function `get_weather_summary()`**: Fetches weather summary. Tries to use automation_tools_new if available, else mock.
+  - **Function `get_top_news()`**: Fetches top news headlines.
+  - **Function `calculate_daily_focus()`**: Determines the 'Focus of the Day' based on schedule and tasks.
 
 ### File: `backend\learning_api.py`
-- **Class `SampleData`**: Orchestrates logic for this module.
-- **Class `LabelRequest`**: Orchestrates logic for this module.
-- **Class `ExplainRequest`**: Orchestrates logic for this module.
-- **Class `SessionData`**: Orchestrates logic for this module.
-- **Class `ConversationData`**: Orchestrates logic for this module.
-- **Class `TaskRequest`**: Orchestrates logic for this module.
-- **Class `WorkflowRequest`**: Orchestrates logic for this module.
-- **Class `CausalEdge`**: Orchestrates logic for this module.
-- **Class `InterventionRequest`**: Orchestrates logic for this module.
-- **Class `RLStateAction`**: Orchestrates logic for this module.
-- **Class `MetaTaskRequest`**: Orchestrates logic for this module.
-- **Class `FederatedClientRequest`**: Orchestrates logic for this module.
-- **Class `GNNNodeRequest`**: Orchestrates logic for this module.
-- **Class `GNNEdgeRequest`**: Orchestrates logic for this module.
-- **Class `DomainRequest`**: Orchestrates logic for this module.
-- **Class `CommandContext`**: Orchestrates logic for this module.
-- **Class `VoiceRecognition`**: Orchestrates logic for this module.
-- **Class `WorkflowContext`**: Orchestrates logic for this module.
-- **Class `ContextRequest`**: Orchestrates logic for this module.
-  - **Function `get_active_learner()`**: Internal helper or main execution logic.
-  - **Function `get_explainability()`**: Internal helper or main execution logic.
-  - **Function `get_behavior_clusterer()`**: Internal helper or main execution logic.
-  - **Function `get_conversation_clusterer()`**: Internal helper or main execution logic.
-  - **Function `get_llm_bandit()`**: Internal helper or main execution logic.
-  - **Function `get_model_compressor()`**: Internal helper or main execution logic.
-  - **Function `get_workflow_scheduler()`**: Internal helper or main execution logic.
-  - **Function `get_contrastive_learner()`**: Internal helper or main execution logic.
-  - **Function `get_self_supervised()`**: Internal helper or main execution logic.
-  - **Function `get_causal_inference()`**: Internal helper or main execution logic.
-  - **Function `get_query_cache()`**: Internal helper or main execution logic.
-  - **Function `get_command_sequences()`**: Internal helper or main execution logic.
-  - **Function `get_historical_rag()`**: Internal helper or main execution logic.
-  - **Function `get_command_predictor()`**: Internal helper or main execution logic.
-  - **Function `get_anomaly_detector()`**: Internal helper or main execution logic.
-  - **Function `get_knowledge_graph()`**: Internal helper or main execution logic.
-  - **Function `get_ppo_agent()`**: Internal helper or main execution logic.
-  - **Function `get_maml_learner()`**: Internal helper or main execution logic.
-  - **Function `get_federated_server()`**: Internal helper or main execution logic.
-  - **Function `get_gnn()`**: Internal helper or main execution logic.
-  - **Function `get_domain_embeddings()`**: Internal helper or main execution logic.
-  - **Function `get_smart_commands()`**: Internal helper or main execution logic.
-  - **Function `get_adaptive_voice()`**: Internal helper or main execution logic.
-  - **Function `get_workflow_recommender()`**: Internal helper or main execution logic.
-  - **Function `get_context_generator()`**: Internal helper or main execution logic.
+- **Class `SampleData`**: Core component.
+- **Class `LabelRequest`**: Core component.
+- **Class `ExplainRequest`**: Core component.
+- **Class `SessionData`**: Core component.
+- **Class `ConversationData`**: Core component.
+- **Class `TaskRequest`**: Core component.
+- **Class `WorkflowRequest`**: Core component.
+- **Class `CausalEdge`**: Core component.
+- **Class `InterventionRequest`**: Core component.
+- **Class `RLStateAction`**: Core component.
+- **Class `MetaTaskRequest`**: Core component.
+- **Class `FederatedClientRequest`**: Core component.
+- **Class `GNNNodeRequest`**: Core component.
+- **Class `GNNEdgeRequest`**: Core component.
+- **Class `DomainRequest`**: Core component.
+- **Class `CommandContext`**: Core component.
+- **Class `VoiceRecognition`**: Core component.
+- **Class `WorkflowContext`**: Core component.
+- **Class `ContextRequest`**: Core component.
+  - **Function `get_active_learner()`**: Signature: ()
+  - **Function `get_explainability()`**: Signature: ()
+  - **Function `get_behavior_clusterer()`**: Signature: ()
+  - **Function `get_conversation_clusterer()`**: Signature: ()
+  - **Function `get_llm_bandit()`**: Signature: ()
+  - **Function `get_model_compressor()`**: Signature: ()
+  - **Function `get_workflow_scheduler()`**: Signature: ()
+  - **Function `get_contrastive_learner()`**: Signature: ()
+  - **Function `get_self_supervised()`**: Signature: ()
+  - **Function `get_causal_inference()`**: Signature: ()
+  - **Function `get_query_cache()`**: Signature: ()
+  - **Function `get_command_sequences()`**: Signature: ()
+  - **Function `get_historical_rag()`**: Signature: ()
+  - **Function `get_command_predictor()`**: Signature: ()
+  - **Function `get_anomaly_detector()`**: Signature: ()
+  - **Function `get_knowledge_graph()`**: Signature: ()
+  - **Function `get_ppo_agent()`**: Signature: ()
+  - **Function `get_maml_learner()`**: Signature: ()
+  - **Function `get_federated_server()`**: Signature: ()
+  - **Function `get_gnn()`**: Signature: ()
+  - **Function `get_domain_embeddings()`**: Signature: ()
+  - **Function `get_smart_commands()`**: Signature: ()
+  - **Function `get_adaptive_voice()`**: Signature: ()
+  - **Function `get_workflow_recommender()`**: Signature: ()
+  - **Function `get_context_generator()`**: Signature: ()
 
 ### File: `backend\learning_dashboard_api.py`
-- **Class `LearningDashboardAPI`**: Orchestrates logic for this module.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_get_all_databases()`**: Internal helper or main execution logic.
-  - **Function `get_dashboard_data()`**: Internal helper or main execution logic.
-  - **Function `get_summary_stats()`**: Internal helper or main execution logic.
-  - **Function `get_database_stats()`**: Internal helper or main execution logic.
-  - **Function `get_recent_activity()`**: Internal helper or main execution logic.
-  - **Function `get_growth_trend()`**: Internal helper or main execution logic.
-  - **Function `get_system_breakdown()`**: Internal helper or main execution logic.
-  - **Function `search_memory()`**: Internal helper or main execution logic.
-  - **Function `get_database_content()`**: Internal helper or main execution logic.
-  - **Function `_count_records()`**: Internal helper or main execution logic.
-  - **Function `_count_active_systems()`**: Internal helper or main execution logic.
-  - **Function `_aggregate_weekly()`**: Internal helper or main execution logic.
-  - **Function `_aggregate_monthly()`**: Internal helper or main execution logic.
+- **Class `LearningDashboardAPI`**: Provides data for the learning dashboard
+  - **Function `__init__()`**: Signature: (self, data_dir)
+  - **Function `_get_all_databases()`**: Get list of all learning databases
+  - **Function `get_dashboard_data()`**: Get complete dashboard data
+  - **Function `get_summary_stats()`**: Get summary statistics
+  - **Function `get_database_stats()`**: Get detailed stats for each database
+  - **Function `get_recent_activity()`**: Get recent learning activity
+  - **Function `get_growth_trend()`**: Get growth trend over time
+  - **Function `get_system_breakdown()`**: Get breakdown by learning system
+  - **Function `search_memory()`**: Search memory database
+  - **Function `get_database_content()`**: Get content from a specific database table
+  - **Function `_count_records()`**: Count records in a table
+  - **Function `_count_active_systems()`**: Count how many learning systems have data
+  - **Function `_aggregate_weekly()`**: Aggregate daily stats to weekly
+  - **Function `_aggregate_monthly()`**: Aggregate daily stats to monthly
 
 ### File: `backend\learning_integration.py`
   - *(Documentation parsing failed for this file)*
 
 ### File: `backend\modern_web_backend.py`
-  - **Function `_get_learning_router_lazy()`**: Internal helper or main execution logic.
-  - **Function `_get_memory_retriever_lazy()`**: Internal helper or main execution logic.
-  - **Function `_get_enhanced_ai_lazy()`**: Internal helper or main execution logic.
-  - **Function `_get_usage_analyzer_lazy()`**: Internal helper or main execution logic.
-  - **Function `_load_voice_modules()`**: Internal helper or main execution logic.
-  - **Function `initialize_heavy_ai_models()`**: Internal helper or main execution logic.
-  - **Function `start_ai_background_thread()`**: Internal helper or main execution logic.
-  - **Function `get_or_create_env_secret()`**: Internal helper or main execution logic.
-  - **Function `exempt_localhost()`**: Internal helper or main execution logic.
-  - **Function `initialize_local_ai()`**: Internal helper or main execution logic.
-  - **Function `get_current_context()`**: Internal helper or main execution logic.
-  - **Function `get_user_preferences()`**: Internal helper or main execution logic.
-  - **Function `get_user_profile_status()`**: Internal helper or main execution logic.
-  - **Function `setup_user_profile()`**: Internal helper or main execution logic.
-  - **Function `save_user_preferences()`**: Internal helper or main execution logic.
-  - **Function `get_initialization_status()`**: Internal helper or main execution logic.
-  - **Function `validate_input()`**: Internal helper or main execution logic.
-  - **Function `sanitize_command()`**: Internal helper or main execution logic.
-  - **Function `index()`**: Internal helper or main execution logic.
-  - **Function `serve_static_or_react()`**: Internal helper or main execution logic.
-  - **Function `enhanced_chat()`**: Internal helper or main execution logic.
-  - **Function `download_page()`**: Internal helper or main execution logic.
-  - **Function `download_windows_app()`**: Internal helper or main execution logic.
-  - **Function `test_page()`**: Internal helper or main execution logic.
-  - **Function `api_register()`**: Internal helper or main execution logic.
-  - **Function `api_login()`**: Internal helper or main execution logic.
-  - **Function `api_verify_token()`**: Internal helper or main execution logic.
-  - **Function `api_status()`**: Internal helper or main execution logic.
-  - **Function `api_learning_stats()`**: Internal helper or main execution logic.
-  - **Function `learning_dashboard()`**: Internal helper or main execution logic.
-  - **Function `api_learning_dashboard()`**: Internal helper or main execution logic.
-  - **Function `api_learning_databases()`**: Internal helper or main execution logic.
-  - **Function `api_database_content()`**: Internal helper or main execution logic.
-  - **Function `api_memory_search()`**: Internal helper or main execution logic.
-  - **Function `api_learning_documentation()`**: Internal helper or main execution logic.
-  - **Function `api_logs_recent()`**: Internal helper or main execution logic.
-  - **Function `api_all_learning_stats()`**: Internal helper or main execution logic.
-  - **Function `api_smart_command_predict()`**: Internal helper or main execution logic.
-  - **Function `api_context_generate()`**: Internal helper or main execution logic.
-  - **Function `api_workflow_recommend()`**: Internal helper or main execution logic.
-  - **Function `api_anomaly_detect()`**: Internal helper or main execution logic.
-  - **Function `api_causal_query()`**: Internal helper or main execution logic.
-  - **Function `api_knowledge_graph_query()`**: Internal helper or main execution logic.
-  - **Function `api_adaptive_voice_log()`**: Internal helper or main execution logic.
-  - **Function `api_rl_select_action()`**: Internal helper or main execution logic.
-  - **Function `api_single_system_stats()`**: Internal helper or main execution logic.
-  - **Function `api_local_ai_status()`**: Internal helper or main execution logic.
-  - **Function `api_chat()`**: Internal helper or main execution logic.
-  - **Function `api_command()`**: Internal helper or main execution logic.
-  - **Function `api_startup_sequence()`**: Internal helper or main execution logic.
-  - **Function `api_startup_diagnostics()`**: Internal helper or main execution logic.
-  - **Function `api_startup_briefing()`**: Internal helper or main execution logic.
-  - **Function `api_enhanced_stats()`**: Internal helper or main execution logic.
-  - **Function `api_clear_cache()`**: Internal helper or main execution logic.
-  - **Function `api_usage_analysis()`**: Internal helper or main execution logic.
-  - **Function `api_export_training_data()`**: Internal helper or main execution logic.
-  - **Function `api_chat_stream()`**: Internal helper or main execution logic.
-  - **Function `api_get_session()`**: Internal helper or main execution logic.
-  - **Function `api_delete_session()`**: Internal helper or main execution logic.
-  - **Function `api_system_stats()`**: Internal helper or main execution logic.
-  - **Function `api_weather()`**: Internal helper or main execution logic.
-  - **Function `api_features()`**: Internal helper or main execution logic.
-  - **Function `api_create_context()`**: Internal helper or main execution logic.
-  - **Function `api_get_suggestions()`**: Internal helper or main execution logic.
-  - **Function `api_multimodal_analyze()`**: Internal helper or main execution logic.
-  - **Function `api_analyze_screen()`**: Internal helper or main execution logic.
-  - **Function `api_get_workflows()`**: Internal helper or main execution logic.
-  - **Function `api_execute_workflow()`**: Internal helper or main execution logic.
-  - **Function `api_save_memory()`**: Internal helper or main execution logic.
-  - **Function `api_search_memory()`**: Internal helper or main execution logic.
-  - **Function `api_detect_language()`**: Internal helper or main execution logic.
-  - **Function `api_translate_text()`**: Internal helper or main execution logic.
-  - **Function `api_apps()`**: Internal helper or main execution logic.
-  - **Function `api_refresh_apps()`**: Internal helper or main execution logic.
-  - **Function `api_launch_app()`**: Internal helper or main execution logic.
-  - **Function `api_spotify_status()`**: Internal helper or main execution logic.
-  - **Function `api_spotify_control()`**: Internal helper or main execution logic.
-  - **Function `api_visual_question()`**: Internal helper or main execution logic.
-  - **Function `api_activity()`**: Internal helper or main execution logic.
-  - **Function `api_voice_history()`**: Internal helper or main execution logic.
-  - **Function `api_voice_status()`**: Internal helper or main execution logic.
-  - **Function `api_start_voice()`**: Internal helper or main execution logic.
-  - **Function `api_stop_voice()`**: Internal helper or main execution logic.
-  - **Function `api_speak()`**: Internal helper or main execution logic.
-  - **Function `api_list_voices()`**: Internal helper or main execution logic.
-  - **Function `api_preview_voice()`**: Internal helper or main execution logic.
-  - **Function `api_process_voice()`**: Internal helper or main execution logic.
-  - **Function `handle_enhanced_chat()`**: Internal helper or main execution logic.
-  - **Function `handle_chat_stream()`**: Internal helper or main execution logic.
-  - **Function `handle_analyze_image()`**: Internal helper or main execution logic.
-  - **Function `handle_analyze_screen()`**: Internal helper or main execution logic.
-  - **Function `handle_get_suggestions()`**: Internal helper or main execution logic.
-  - **Function `handle_execute_workflow()`**: Internal helper or main execution logic.
-  - **Function `handle_mood_detection()`**: Internal helper or main execution logic.
-  - **Function `handle_system_stats_request()`**: Internal helper or main execution logic.
-  - **Function `handle_start_voice()`**: Internal helper or main execution logic.
-  - **Function `handle_stop_voice()`**: Internal helper or main execution logic.
-  - **Function `handle_voice_audio()`**: Internal helper or main execution logic.
-  - **Function `handle_voice_command()`**: Internal helper or main execution logic.
-  - **Function `handle_tts_request()`**: Internal helper or main execution logic.
-  - **Function `process_hinglish()`**: Internal helper or main execution logic.
-  - **Function `set_language_preference()`**: Internal helper or main execution logic.
-  - **Function `get_language_preference()`**: Internal helper or main execution logic.
-  - **Function `handle_multilingual_command()`**: Internal helper or main execution logic.
-  - **Function `api_log_error()`**: Internal helper or main execution logic.
-  - **Function `api_save_settings()`**: Internal helper or main execution logic.
-  - **Function `api_load_settings()`**: Internal helper or main execution logic.
-  - **Function `api_get_all_settings()`**: Internal helper or main execution logic.
-  - **Function `api_update_settings()`**: Internal helper or main execution logic.
-  - **Function `api_reset_settings()`**: Internal helper or main execution logic.
-  - **Function `api_export_settings()`**: Internal helper or main execution logic.
-  - **Function `api_import_settings()`**: Internal helper or main execution logic.
-  - **Function `api_get_available_models()`**: Internal helper or main execution logic.
-  - **Function `api_get_model_preference()`**: Internal helper or main execution logic.
-  - **Function `api_set_model_preference()`**: Internal helper or main execution logic.
-  - **Function `api_get_model_stats()`**: Internal helper or main execution logic.
-  - **Function `api_compare_models()`**: Internal helper or main execution logic.
-  - **Function `api_get_providers()`**: Internal helper or main execution logic.
-  - **Function `local_ai_status()`**: Internal helper or main execution logic.
-  - **Function `local_ai_chat()`**: Internal helper or main execution logic.
-  - **Function `local_ai_reset()`**: Internal helper or main execution logic.
-  - **Function `local_ai_stats()`**: Internal helper or main execution logic.
-  - **Function `local_ai_load_model()`**: Internal helper or main execution logic.
-  - **Function `local_ai_unload()`**: Internal helper or main execution logic.
-  - **Function `api_organize_files()`**: Internal helper or main execution logic.
-  - **Function `api_find_duplicates()`**: Internal helper or main execution logic.
-  - **Function `api_search_files()`**: Internal helper or main execution logic.
-  - **Function `api_batch_rename()`**: Internal helper or main execution logic.
-  - **Function `api_analyze_directory()`**: Internal helper or main execution logic.
-  - **Function `api_ocr_check_dependencies()`**: Internal helper or main execution logic.
-  - **Function `api_extract_text_image()`**: Internal helper or main execution logic.
-  - **Function `api_extract_text_pdf()`**: Internal helper or main execution logic.
-  - **Function `api_analyze_document()`**: Internal helper or main execution logic.
-  - **Function `api_extract_key_information()`**: Internal helper or main execution logic.
-  - **Function `api_get_weather()`**: Internal helper or main execution logic.
-  - **Function `api_get_news()`**: Internal helper or main execution logic.
-  - **Function `api_get_stock()`**: Internal helper or main execution logic.
-  - **Function `api_get_crypto()`**: Internal helper or main execution logic.
-  - **Function `api_scrape_website()`**: Internal helper or main execution logic.
-  - **Function `api_get_trending()`**: Internal helper or main execution logic.
-  - **Function `api_detect_taskbar()`**: Internal helper or main execution logic.
-  - **Function `api_taskbar_capabilities()`**: Internal helper or main execution logic.
-  - **Function `api_find_app_in_taskbar()`**: Internal helper or main execution logic.
-  - **Function `api_get_running_apps()`**: Internal helper or main execution logic.
-  - **Function `not_found_error()`**: Internal helper or main execution logic.
-  - **Function `internal_error()`**: Internal helper or main execution logic.
-  - **Function `bad_request_error()`**: Internal helper or main execution logic.
-  - **Function `service_unavailable_error()`**: Internal helper or main execution logic.
-  - **Function `create_chain()`**: Internal helper or main execution logic.
-  - **Function `resume_chain()`**: Internal helper or main execution logic.
-  - **Function `get_chain_status()`**: Internal helper or main execution logic.
-  - **Function `get_chain_history()`**: Internal helper or main execution logic.
-  - **Function `_broadcast_chain_progress()`**: Internal helper or main execution logic.
-  - **Function `handle_chain_subscribe()`**: Internal helper or main execution logic.
-  - **Function `serve_unified_dashboard()`**: Internal helper or main execution logic.
-  - **Function `write_a_note()`**: Internal helper or main execution logic.
-  - **Function `open_application()`**: Internal helper or main execution logic.
-  - **Function `search_google()`**: Internal helper or main execution logic.
-  - **Function `search_youtube()`**: Internal helper or main execution logic.
-  - **Function `close_application()`**: Internal helper or main execution logic.
-  - **Function `speak()`**: Internal helper or main execution logic.
-  - **Function `set_system_volume()`**: Internal helper or main execution logic.
-  - **Function `get_app_path_from_name()`**: Internal helper or main execution logic.
-  - **Function `setup_memory()`**: Internal helper or main execution logic.
-  - **Function `save_to_memory()`**: Internal helper or main execution logic.
-  - **Function `get_memory()`**: Internal helper or main execution logic.
-  - **Function `search_memory()`**: Internal helper or main execution logic.
-  - **Function `get_conversation_summary()`**: Internal helper or main execution logic.
-  - **Function `save_knowledge()`**: Internal helper or main execution logic.
-  - **Function `get_knowledge()`**: Internal helper or main execution logic.
-  - **Function `discover_applications()`**: Internal helper or main execution logic.
-  - **Function `smart_open_application()`**: Internal helper or main execution logic.
-  - **Function `list_installed_apps()`**: Internal helper or main execution logic.
-  - **Function `get_apps_for_web()`**: Internal helper or main execution logic.
-  - **Function `get_system_status()`**: Internal helper or main execution logic.
-  - **Function `get_running_processes()`**: Internal helper or main execution logic.
-  - **Function `cleanup_temp_files()`**: Internal helper or main execution logic.
-  - **Function `get_network_info()`**: Internal helper or main execution logic.
-  - **Function `get_upcoming_events()`**: Internal helper or main execution logic.
-  - **Function `get_inbox_summary()`**: Internal helper or main execution logic.
-  - **Function `get_spotify_status()`**: Internal helper or main execution logic.
-  - **Function `spotify_play_pause()`**: Internal helper or main execution logic.
-  - **Function `spotify_next_track()`**: Internal helper or main execution logic.
-  - **Function `spotify_previous_track()`**: Internal helper or main execution logic.
-  - **Function `search_and_play_spotify()`**: Internal helper or main execution logic.
-  - **Function `get_weather_info()`**: Internal helper or main execution logic.
-  - **Function `get_latest_news()`**: Internal helper or main execution logic.
-  - **Function `get_stock_price()`**: Internal helper or main execution logic.
-  - **Function `detect_taskbar_apps()`**: Internal helper or main execution logic.
-  - **Function `can_see_taskbar()`**: Internal helper or main execution logic.
-  - **Function `get_cached_stats()`**: Internal helper or main execution logic.
-  - **Function `broadcast_system_stats()`**: Internal helper or main execution logic.
-- **Class `MinimalAssistant`**: Orchestrates logic for this module.
-  - **Function `generate_stream()`**: Internal helper or main execution logic.
-  - **Function `run_chain_background()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `process_command()`**: Internal helper or main execution logic.
-  - **Function `get_real_time_system_stats()`**: Internal helper or main execution logic.
-  - **Function `get_init_status()`**: Internal helper or main execution logic.
-  - **Function `analyze_screen()`**: Internal helper or main execution logic.
-  - **Function `answer_visual_question()`**: Internal helper or main execution logic.
-  - **Function `start_voice_listening()`**: Internal helper or main execution logic.
-  - **Function `stop_voice_listening()`**: Internal helper or main execution logic.
-  - **Function `speak_text()`**: Internal helper or main execution logic.
-  - **Function `process_voice_audio()`**: Internal helper or main execution logic.
+  - **Function `_get_learning_router_lazy()`**: Signature: ()
+  - **Function `_get_memory_retriever_lazy()`**: Signature: ()
+  - **Function `_get_enhanced_ai_lazy()`**: Lazy load enhanced AI on first use
+  - **Function `_get_usage_analyzer_lazy()`**: Lazy load usage analyzer on first use
+  - **Function `_load_voice_modules()`**: Signature: ()
+  - **Function `initialize_heavy_ai_models()`**: Run in a background thread to pre-warm the AI models without blocking the UI
+  - **Function `start_ai_background_thread()`**: Starts the AI loading thread. Called by desktop app or main.
+  - **Function `get_or_create_env_secret()`**: Signature: (name)
+  - **Function `exempt_localhost()`**: Exempt the local desktop app from all rate limits so health checks don't ban it.
+  - **Function `initialize_local_ai()`**: Initialize local AI model in background
+  - **Function `get_current_context()`**: Signature: ()
+  - **Function `get_user_preferences()`**: Signature: ()
+  - **Function `get_user_profile_status()`**: Signature: ()
+  - **Function `setup_user_profile()`**: Signature: ()
+  - **Function `save_user_preferences()`**: Signature: ()
+  - **Function `get_initialization_status()`**: Signature: ()
+  - **Function `validate_input()`**: Validate input data against pattern
+  - **Function `sanitize_command()`**: Sanitize command input to prevent injection
+  - **Function `index()`**: Signature: ()
+  - **Function `serve_static_or_react()`**: Signature: ()
+  - **Function `enhanced_chat()`**: Signature: ()
+  - **Function `download_page()`**: Signature: ()
+  - **Function `download_windows_app()`**: Signature: ()
+  - **Function `test_page()`**: Signature: ()
+  - **Function `api_register()`**: Signature: ()
+  - **Function `api_login()`**: Signature: ()
+  - **Function `api_verify_token()`**: Signature: ()
+  - **Function `api_status()`**: Signature: ()
+  - **Function `api_learning_stats()`**: Signature: ()
+  - **Function `learning_dashboard()`**: Signature: ()
+  - **Function `api_learning_dashboard()`**: Signature: ()
+  - **Function `api_learning_databases()`**: Signature: ()
+  - **Function `api_database_content()`**: Signature: ()
+  - **Function `api_memory_search()`**: Signature: ()
+  - **Function `api_learning_documentation()`**: Signature: ()
+  - **Function `api_logs_recent()`**: Signature: ()
+  - **Function `api_all_learning_stats()`**: Signature: ()
+  - **Function `api_smart_command_predict()`**: Signature: ()
+  - **Function `api_context_generate()`**: Signature: ()
+  - **Function `api_workflow_recommend()`**: Signature: ()
+  - **Function `api_anomaly_detect()`**: Signature: ()
+  - **Function `api_causal_query()`**: Signature: ()
+  - **Function `api_knowledge_graph_query()`**: Signature: ()
+  - **Function `api_adaptive_voice_log()`**: Signature: ()
+  - **Function `api_rl_select_action()`**: Signature: ()
+  - **Function `api_single_system_stats()`**: Signature: ()
+  - **Function `api_local_ai_status()`**: Signature: ()
+  - **Function `api_chat()`**: Signature: ()
+  - **Function `api_command()`**: Signature: ()
+  - **Function `api_startup_sequence()`**: Signature: ()
+  - **Function `api_startup_diagnostics()`**: Signature: ()
+  - **Function `api_startup_briefing()`**: Signature: ()
+  - **Function `api_enhanced_stats()`**: Signature: ()
+  - **Function `api_clear_cache()`**: Signature: ()
+  - **Function `api_usage_analysis()`**: Signature: ()
+  - **Function `api_export_training_data()`**: Signature: ()
+  - **Function `api_chat_stream()`**: Signature: ()
+  - **Function `api_get_session()`**: Signature: ()
+  - **Function `api_delete_session()`**: Signature: ()
+  - **Function `api_system_stats()`**: Signature: ()
+  - **Function `api_weather()`**: Signature: ()
+  - **Function `api_features()`**: Signature: ()
+  - **Function `api_create_context()`**: Signature: ()
+  - **Function `api_get_suggestions()`**: Signature: ()
+  - **Function `api_multimodal_analyze()`**: Signature: ()
+  - **Function `api_analyze_screen()`**: Signature: ()
+  - **Function `api_get_workflows()`**: Signature: ()
+  - **Function `api_execute_workflow()`**: Signature: ()
+  - **Function `api_save_memory()`**: Signature: ()
+  - **Function `api_search_memory()`**: Signature: ()
+  - **Function `api_detect_language()`**: Signature: ()
+  - **Function `api_translate_text()`**: Signature: ()
+  - **Function `api_apps()`**: Signature: ()
+  - **Function `api_refresh_apps()`**: Signature: ()
+  - **Function `api_launch_app()`**: Signature: ()
+  - **Function `api_spotify_status()`**: Signature: ()
+  - **Function `api_spotify_control()`**: Signature: ()
+  - **Function `api_visual_question()`**: Signature: ()
+  - **Function `api_activity()`**: Signature: ()
+  - **Function `api_voice_history()`**: Signature: ()
+  - **Function `api_voice_status()`**: Signature: ()
+  - **Function `api_start_voice()`**: Signature: ()
+  - **Function `api_stop_voice()`**: Signature: ()
+  - **Function `api_speak()`**: Signature: ()
+  - **Function `api_list_voices()`**: Signature: ()
+  - **Function `api_preview_voice()`**: Signature: ()
+  - **Function `api_process_voice()`**: Signature: ()
+  - **Function `handle_enhanced_chat()`**: Signature: ()
+  - **Function `handle_chat_stream()`**: Signature: ()
+  - **Function `handle_analyze_image()`**: Signature: ()
+  - **Function `handle_analyze_screen()`**: Signature: ()
+  - **Function `handle_get_suggestions()`**: Signature: ()
+  - **Function `handle_execute_workflow()`**: Signature: ()
+  - **Function `handle_mood_detection()`**: Signature: ()
+  - **Function `handle_system_stats_request()`**: Signature: ()
+  - **Function `handle_start_voice()`**: Signature: ()
+  - **Function `handle_stop_voice()`**: Signature: ()
+  - **Function `handle_voice_audio()`**: Signature: ()
+  - **Function `handle_voice_command()`**: Signature: ()
+  - **Function `handle_tts_request()`**: Signature: ()
+  - **Function `process_hinglish()`**: Signature: ()
+  - **Function `set_language_preference()`**: Signature: ()
+  - **Function `get_language_preference()`**: Signature: ()
+  - **Function `handle_multilingual_command()`**: Signature: ()
+  - **Function `api_log_error()`**: Signature: ()
+  - **Function `api_save_settings()`**: Signature: ()
+  - **Function `api_load_settings()`**: Signature: ()
+  - **Function `api_get_all_settings()`**: Signature: ()
+  - **Function `api_update_settings()`**: Signature: ()
+  - **Function `api_reset_settings()`**: Signature: ()
+  - **Function `api_export_settings()`**: Signature: ()
+  - **Function `api_import_settings()`**: Signature: ()
+  - **Function `api_get_available_models()`**: Signature: ()
+  - **Function `api_get_model_preference()`**: Signature: ()
+  - **Function `api_set_model_preference()`**: Signature: ()
+  - **Function `api_get_model_stats()`**: Signature: ()
+  - **Function `api_compare_models()`**: Signature: ()
+  - **Function `api_get_providers()`**: Signature: ()
+  - **Function `local_ai_status()`**: Signature: ()
+  - **Function `local_ai_chat()`**: Signature: ()
+  - **Function `local_ai_reset()`**: Signature: ()
+  - **Function `local_ai_stats()`**: Signature: ()
+  - **Function `local_ai_load_model()`**: Signature: ()
+  - **Function `local_ai_unload()`**: Signature: ()
+  - **Function `api_organize_files()`**: Signature: ()
+  - **Function `api_find_duplicates()`**: Signature: ()
+  - **Function `api_search_files()`**: Signature: ()
+  - **Function `api_batch_rename()`**: Signature: ()
+  - **Function `api_analyze_directory()`**: Signature: ()
+  - **Function `api_ocr_check_dependencies()`**: Signature: ()
+  - **Function `api_extract_text_image()`**: Signature: ()
+  - **Function `api_extract_text_pdf()`**: Signature: ()
+  - **Function `api_analyze_document()`**: Signature: ()
+  - **Function `api_extract_key_information()`**: Signature: ()
+  - **Function `api_get_weather()`**: Signature: ()
+  - **Function `api_get_news()`**: Signature: ()
+  - **Function `api_get_stock()`**: Signature: ()
+  - **Function `api_get_crypto()`**: Signature: ()
+  - **Function `api_scrape_website()`**: Signature: ()
+  - **Function `api_get_trending()`**: Signature: ()
+  - **Function `api_detect_taskbar()`**: Signature: ()
+  - **Function `api_taskbar_capabilities()`**: Signature: ()
+  - **Function `api_find_app_in_taskbar()`**: Signature: ()
+  - **Function `api_get_running_apps()`**: Signature: ()
+  - **Function `not_found_error()`**: Signature: (error)
+  - **Function `internal_error()`**: Signature: (error)
+  - **Function `bad_request_error()`**: Signature: (error)
+  - **Function `service_unavailable_error()`**: Signature: (error)
+  - **Function `create_chain()`**: Signature: ()
+  - **Function `resume_chain()`**: Signature: ()
+  - **Function `get_chain_status()`**: Signature: ()
+  - **Function `get_chain_history()`**: Signature: ()
+  - **Function `_broadcast_chain_progress()`**: Broadcast chain progress via WebSocket
+  - **Function `handle_chain_subscribe()`**: Signature: ()
+  - **Function `serve_unified_dashboard()`**: Signature: ()
+  - **Function `write_a_note()`**: Signature: ()
+  - **Function `open_application()`**: Signature: ()
+  - **Function `search_google()`**: Signature: ()
+  - **Function `search_youtube()`**: Signature: ()
+  - **Function `close_application()`**: Signature: ()
+  - **Function `speak()`**: Signature: ()
+  - **Function `set_system_volume()`**: Signature: ()
+  - **Function `get_app_path_from_name()`**: Signature: ()
+  - **Function `setup_memory()`**: Signature: ()
+  - **Function `save_to_memory()`**: Signature: ()
+  - **Function `get_memory()`**: Signature: ()
+  - **Function `search_memory()`**: Signature: ()
+  - **Function `get_conversation_summary()`**: Signature: ()
+  - **Function `save_knowledge()`**: Signature: ()
+  - **Function `get_knowledge()`**: Signature: ()
+  - **Function `discover_applications()`**: Signature: ()
+  - **Function `smart_open_application()`**: Signature: ()
+  - **Function `list_installed_apps()`**: Signature: ()
+  - **Function `get_apps_for_web()`**: Signature: ()
+  - **Function `get_system_status()`**: Signature: ()
+  - **Function `get_running_processes()`**: Signature: ()
+  - **Function `cleanup_temp_files()`**: Signature: ()
+  - **Function `get_network_info()`**: Signature: ()
+  - **Function `get_upcoming_events()`**: Signature: ()
+  - **Function `get_inbox_summary()`**: Signature: ()
+  - **Function `get_spotify_status()`**: Signature: ()
+  - **Function `spotify_play_pause()`**: Signature: ()
+  - **Function `spotify_next_track()`**: Signature: ()
+  - **Function `spotify_previous_track()`**: Signature: ()
+  - **Function `search_and_play_spotify()`**: Signature: ()
+  - **Function `get_weather_info()`**: Signature: ()
+  - **Function `get_latest_news()`**: Signature: ()
+  - **Function `get_stock_price()`**: Signature: ()
+  - **Function `detect_taskbar_apps()`**: Signature: ()
+  - **Function `can_see_taskbar()`**: Signature: ()
+  - **Function `get_cached_stats()`**: Signature: ()
+  - **Function `broadcast_system_stats()`**: Signature: ()
+- **Class `MinimalAssistant`**: Core component.
+  - **Function `generate_stream()`**: Signature: ()
+  - **Function `run_chain_background()`**: Signature: ()
+  - **Function `__init__()`**: Signature: ()
+  - **Function `process_command()`**: Signature: ()
+  - **Function `get_real_time_system_stats()`**: Signature: ()
+  - **Function `get_init_status()`**: Signature: ()
+  - **Function `analyze_screen()`**: Signature: ()
+  - **Function `answer_visual_question()`**: Signature: ()
+  - **Function `start_voice_listening()`**: Signature: ()
+  - **Function `stop_voice_listening()`**: Signature: ()
+  - **Function `speak_text()`**: Signature: ()
+  - **Function `process_voice_audio()`**: Signature: ()
 
 ### File: `backend\startup_sequence.py`
   - *(Documentation parsing failed for this file)*
 
 ### File: `backend\user_preferences.py`
-- **Class `UserPreferencesManager`**: Orchestrates logic for this module.
-  - **Function `get_preferences_manager()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `_get_user_file()`**: Internal helper or main execution logic.
-  - **Function `get_preferences()`**: Internal helper or main execution logic.
-  - **Function `save_preferences()`**: Internal helper or main execution logic.
-  - **Function `_merge_with_defaults()`**: Internal helper or main execution logic.
-  - **Function `_deep_merge()`**: Internal helper or main execution logic.
-  - **Function `reset_preferences()`**: Internal helper or main execution logic.
+- **Class `UserPreferencesManager`**: Manages user preferences with file-based storage
+  - **Function `get_preferences_manager()`**: Get or create preferences manager instance
+  - **Function `__init__()`**: Signature: (self, storage_dir)
+  - **Function `_get_user_file()`**: Get the preferences file path for a user
+  - **Function `get_preferences()`**: Get user preferences, returns defaults if not found
+  - **Function `save_preferences()`**: Save user preferences to file
+  - **Function `_merge_with_defaults()`**: Merge user preferences with defaults to ensure all keys exist
+  - **Function `_deep_merge()`**: Deep merge two dictionaries
+  - **Function `reset_preferences()`**: Reset user preferences to defaults
 
 ### File: `backend\voice_service.py`
   - *(Documentation parsing failed for this file)*
 
 ### File: `backend\backend\app.py`
-  - **Function `create_app()`**: Internal helper or main execution logic.
-  - **Function `initialize_components()`**: Internal helper or main execution logic.
+  - **Function `create_app()`**: Create and configure the Flask application
+  - **Function `initialize_components()`**: Initialize AI components and automation tools
 
 ### File: `backend\backend\error_handler.py`
-- **Class `AIAssistantError`**: Orchestrates logic for this module.
-- **Class `VoiceError`**: Orchestrates logic for this module.
-- **Class `AutomationError`**: Orchestrates logic for this module.
-- **Class `ValidationError`**: Orchestrates logic for this module.
-  - **Function `handle_error()`**: Internal helper or main execution logic.
-  - **Function `error_handler()`**: Internal helper or main execution logic.
-  - **Function `log_request()`**: Internal helper or main execution logic.
-  - **Function `decorator()`**: Internal helper or main execution logic.
-  - **Function `wrapper()`**: Internal helper or main execution logic.
+- **Class `AIAssistantError`**: Base exception for AI Assistant
+- **Class `VoiceError`**: Voice-related errors
+- **Class `AutomationError`**: Automation-related errors
+- **Class `ValidationError`**: Input validation errors
+  - **Function `handle_error()`**: Centralized error handling with logging
+  - **Function `error_handler()`**: Decorator for consistent error handling in routes
+  - **Function `log_request()`**: Log incoming request details
+  - **Function `decorator()`**: Signature: ()
+  - **Function `wrapper()`**: Signature: ()
 
 ### File: `backend\backend\main.py`
   - *(Documentation parsing failed for this file)*
 
 ### File: `backend\backend\middleware.py`
-  - **Function `request_logger()`**: Internal helper or main execution logic.
-  - **Function `add_security_headers()`**: Internal helper or main execution logic.
-  - **Function `validate_json()`**: Internal helper or main execution logic.
-  - **Function `sanitize_input()`**: Internal helper or main execution logic.
-  - **Function `wrapper()`**: Internal helper or main execution logic.
-  - **Function `wrapper()`**: Internal helper or main execution logic.
+  - **Function `request_logger()`**: Log all incoming requests
+  - **Function `add_security_headers()`**: Add security headers to all responses
+  - **Function `validate_json()`**: Ensure request contains valid JSON
+  - **Function `sanitize_input()`**: Basic input sanitization
+  - **Function `wrapper()`**: Signature: ()
+  - **Function `wrapper()`**: Signature: ()
 
 ### File: `backend\backend\routes.py`
   - *(Documentation parsing failed for this file)*
 
 ### File: `backend\backend\system_monitor.py`
-  - **Function `get_network_speed()`**: Internal helper or main execution logic.
-  - **Function `start_system_monitor()`**: Internal helper or main execution logic.
-  - **Function `monitor_loop()`**: Internal helper or main execution logic.
+  - **Function `get_network_speed()`**: Signature: ()
+  - **Function `start_system_monitor()`**: Starts a background task that emits system stats via SocketIO.
+  - **Function `monitor_loop()`**: Signature: ()
 
 ### File: `backend\backend\update_routes.py`
-  - **Function `init_update_routes()`**: Internal helper or main execution logic.
-  - **Function `check_for_updates()`**: Internal helper or main execution logic.
-  - **Function `get_update_info()`**: Internal helper or main execution logic.
-  - **Function `download_update()`**: Internal helper or main execution logic.
-  - **Function `install_update()`**: Internal helper or main execution logic.
-  - **Function `update_config()`**: Internal helper or main execution logic.
-  - **Function `ignore_version()`**: Internal helper or main execution logic.
+  - **Function `init_update_routes()`**: Initialize update routes with updater instance
+  - **Function `check_for_updates()`**: Check if updates are available
+  - **Function `get_update_info()`**: Get current update status and configuration
+  - **Function `download_update()`**: Download available update
+  - **Function `install_update()`**: Install downloaded update
+  - **Function `update_config()`**: Get or update configuration
+  - **Function `ignore_version()`**: Ignore a specific version
 
 ### File: `backend\backend\utils.py`
-  - **Function `generate_session_id()`**: Internal helper or main execution logic.
-  - **Function `generate_api_token()`**: Internal helper or main execution logic.
-  - **Function `hash_string()`**: Internal helper or main execution logic.
-  - **Function `format_timestamp()`**: Internal helper or main execution logic.
-  - **Function `safe_dict_get()`**: Internal helper or main execution logic.
-  - **Function `truncate_string()`**: Internal helper or main execution logic.
-  - **Function `validate_required_fields()`**: Internal helper or main execution logic.
+  - **Function `generate_session_id()`**: Generate secure session ID
+  - **Function `generate_api_token()`**: Generate API token
+  - **Function `hash_string()`**: Hash a string with salt
+  - **Function `format_timestamp()`**: Format timestamp for API responses
+  - **Function `safe_dict_get()`**: Safely get value from dict
+  - **Function `truncate_string()`**: Truncate string to max length
+  - **Function `validate_required_fields()`**: Validate that required fields are present
 
 ### File: `backend\backend\websocket.py`
-  - **Function `register_handlers()`**: Internal helper or main execution logic.
-  - **Function `handle_connect()`**: Internal helper or main execution logic.
-  - **Function `handle_disconnect()`**: Internal helper or main execution logic.
-  - **Function `handle_ping()`**: Internal helper or main execution logic.
-  - **Function `handle_chat_message()`**: Internal helper or main execution logic.
-  - **Function `handle_voice_start()`**: Internal helper or main execution logic.
-  - **Function `handle_voice_audio()`**: Internal helper or main execution logic.
-  - **Function `handle_voice_stop()`**: Internal helper or main execution logic.
-  - **Function `handle_system_command()`**: Internal helper or main execution logic.
-  - **Function `handle_get_status()`**: Internal helper or main execution logic.
+  - **Function `register_handlers()`**: Register all WebSocket event handlers
+  - **Function `handle_connect()`**: Signature: ()
+  - **Function `handle_disconnect()`**: Signature: ()
+  - **Function `handle_ping()`**: Signature: ()
+  - **Function `handle_chat_message()`**: Signature: ()
+  - **Function `handle_voice_start()`**: Signature: ()
+  - **Function `handle_voice_audio()`**: Signature: ()
+  - **Function `handle_voice_stop()`**: Signature: ()
+  - **Function `handle_system_command()`**: Signature: ()
+  - **Function `handle_get_status()`**: Signature: ()
 
 ### File: `backend\backend\blueprints\apps.py`
   - *(Documentation parsing failed for this file)*
 
 ### File: `backend\backend\blueprints\auth.py`
-  - **Function `create_blueprint()`**: Internal helper or main execution logic.
-  - **Function `register()`**: Internal helper or main execution logic.
-  - **Function `login()`**: Internal helper or main execution logic.
-  - **Function `verify_token()`**: Internal helper or main execution logic.
+  - **Function `create_blueprint()`**: Create and configure the auth blueprint
+  - **Function `register()`**: Signature: ()
+  - **Function `login()`**: Signature: ()
+  - **Function `verify_token()`**: Signature: ()
 
 ### File: `backend\backend\blueprints\chat.py`
-  - **Function `create_blueprint()`**: Internal helper or main execution logic.
-  - **Function `chat()`**: Internal helper or main execution logic.
-  - **Function `command()`**: Internal helper or main execution logic.
-  - **Function `chat_stream()`**: Internal helper or main execution logic.
-  - **Function `get_session()`**: Internal helper or main execution logic.
-  - **Function `delete_session()`**: Internal helper or main execution logic.
-  - **Function `set_context()`**: Internal helper or main execution logic.
-  - **Function `get_suggestions()`**: Internal helper or main execution logic.
-  - **Function `generate()`**: Internal helper or main execution logic.
+  - **Function `create_blueprint()`**: Create and configure the chat blueprint
+  - **Function `chat()`**: Signature: ()
+  - **Function `command()`**: Signature: ()
+  - **Function `chat_stream()`**: Signature: ()
+  - **Function `get_session()`**: Signature: ()
+  - **Function `delete_session()`**: Signature: ()
+  - **Function `set_context()`**: Signature: ()
+  - **Function `get_suggestions()`**: Signature: ()
+  - **Function `generate()`**: Signature: ()
 
 ### File: `backend\backend\blueprints\learning.py`
   - *(Documentation parsing failed for this file)*
 
 ### File: `backend\backend\blueprints\memory.py`
-  - **Function `create_blueprint()`**: Internal helper or main execution logic.
-  - **Function `save_memory()`**: Internal helper or main execution logic.
-  - **Function `search_memory()`**: Internal helper or main execution logic.
-  - **Function `recall_memory()`**: Internal helper or main execution logic.
-  - **Function `detect_language()`**: Internal helper or main execution logic.
-  - **Function `translate_text()`**: Internal helper or main execution logic.
+  - **Function `create_blueprint()`**: Create and configure the memory & language blueprint
+  - **Function `save_memory()`**: Signature: ()
+  - **Function `search_memory()`**: Signature: ()
+  - **Function `recall_memory()`**: Signature: ()
+  - **Function `detect_language()`**: Signature: ()
+  - **Function `translate_text()`**: Signature: ()
 
 ### File: `backend\backend\blueprints\multimodal.py`
-  - **Function `create_blueprint()`**: Internal helper or main execution logic.
-  - **Function `analyze_multimodal()`**: Internal helper or main execution logic.
-  - **Function `analyze_screen()`**: Internal helper or main execution logic.
-  - **Function `visual_question()`**: Internal helper or main execution logic.
-  - **Function `extract_text_ocr()`**: Internal helper or main execution logic.
-  - **Function `analyze_document()`**: Internal helper or main execution logic.
-  - **Function `generate_image()`**: Internal helper or main execution logic.
+  - **Function `create_blueprint()`**: Create and configure the multimodal blueprint
+  - **Function `analyze_multimodal()`**: Signature: ()
+  - **Function `analyze_screen()`**: Signature: ()
+  - **Function `visual_question()`**: Signature: ()
+  - **Function `extract_text_ocr()`**: Signature: ()
+  - **Function `analyze_document()`**: Signature: ()
+  - **Function `generate_image()`**: Signature: ()
 
 ### File: `backend\backend\blueprints\preferences.py`
-  - **Function `get_settings_path()`**: Internal helper or main execution logic.
-  - **Function `load_settings()`**: Internal helper or main execution logic.
-  - **Function `save_settings_to_file()`**: Internal helper or main execution logic.
-  - **Function `create_blueprint()`**: Internal helper or main execution logic.
-  - **Function `get_all_settings()`**: Internal helper or main execution logic.
-  - **Function `complete_onboarding()`**: Internal helper or main execution logic.
-  - **Function `update_settings()`**: Internal helper or main execution logic.
-  - **Function `reset_settings()`**: Internal helper or main execution logic.
-  - **Function `export_settings()`**: Internal helper or main execution logic.
-  - **Function `import_settings()`**: Internal helper or main execution logic.
+  - **Function `get_settings_path()`**: Get absolute path to app_settings.json
+  - **Function `load_settings()`**: Load settings from file
+  - **Function `save_settings_to_file()`**: Save settings to file
+  - **Function `create_blueprint()`**: Create and configure the settings blueprint
+  - **Function `get_all_settings()`**: Signature: ()
+  - **Function `complete_onboarding()`**: Signature: ()
+  - **Function `update_settings()`**: Signature: ()
+  - **Function `reset_settings()`**: Signature: ()
+  - **Function `export_settings()`**: Signature: ()
+  - **Function `import_settings()`**: Signature: ()
 
 ### File: `backend\backend\blueprints\system.py`
   - *(Documentation parsing failed for this file)*
 
 ### File: `backend\backend\blueprints\utilities.py`
-  - **Function `create_blueprint()`**: Internal helper or main execution logic.
-  - **Function `get_weather()`**: Internal helper or main execution logic.
-  - **Function `get_features()`**: Internal helper or main execution logic.
-  - **Function `get_activity()`**: Internal helper or main execution logic.
-  - **Function `get_workflows()`**: Internal helper or main execution logic.
-  - **Function `execute_automation()`**: Internal helper or main execution logic.
-  - **Function `spotify_status()`**: Internal helper or main execution logic.
-  - **Function `spotify_control()`**: Internal helper or main execution logic.
+  - **Function `create_blueprint()`**: Create and configure the utilities blueprint
+  - **Function `get_weather()`**: Signature: ()
+  - **Function `get_features()`**: Signature: ()
+  - **Function `get_activity()`**: Signature: ()
+  - **Function `get_workflows()`**: Signature: ()
+  - **Function `execute_automation()`**: Signature: ()
+  - **Function `spotify_status()`**: Signature: ()
+  - **Function `spotify_control()`**: Signature: ()
 
 ### File: `backend\backend\blueprints\voice.py`
-  - **Function `create_blueprint()`**: Internal helper or main execution logic.
-  - **Function `voice_status()`**: Internal helper or main execution logic.
-  - **Function `voice_history()`**: Internal helper or main execution logic.
-  - **Function `start_voice()`**: Internal helper or main execution logic.
-  - **Function `stop_voice()`**: Internal helper or main execution logic.
-  - **Function `get_voice_settings()`**: Internal helper or main execution logic.
-  - **Function `update_voice_settings()`**: Internal helper or main execution logic.
-  - **Function `speak_text()`**: Internal helper or main execution logic.
-  - **Function `recognize_audio()`**: Internal helper or main execution logic.
+  - **Function `create_blueprint()`**: Create and configure the voice blueprint
+  - **Function `voice_status()`**: Signature: ()
+  - **Function `voice_history()`**: Signature: ()
+  - **Function `start_voice()`**: Signature: ()
+  - **Function `stop_voice()`**: Signature: ()
+  - **Function `get_voice_settings()`**: Signature: ()
+  - **Function `update_voice_settings()`**: Signature: ()
+  - **Function `speak_text()`**: Signature: ()
+  - **Function `recognize_audio()`**: Signature: ()
 
 ### File: `backend\backend\blueprints\web.py`
-  - **Function `create_blueprint()`**: Internal helper or main execution logic.
-  - **Function `status()`**: Internal helper or main execution logic.
+  - **Function `create_blueprint()`**: Signature: (assistant)
+  - **Function `status()`**: Signature: ()
 
 ### File: `backend\utils\advanced_logging.py`
-  - **Function `log_performance()`**: Internal helper or main execution logic.
-- **Class `ContextualErrorLogger`**: Orchestrates logic for this module.
-- **Class `APIRequestLogger`**: Orchestrates logic for this module.
-- **Class `SecurityLogger`**: Orchestrates logic for this module.
-- **Class `UserActivityLogger`**: Orchestrates logic for this module.
-- **Class `LogAggregator`**: Orchestrates logic for this module.
-  - **Function `log_error_with_context()`**: Internal helper or main execution logic.
-  - **Function `log_api_call()`**: Internal helper or main execution logic.
-  - **Function `log_user_action()`**: Internal helper or main execution logic.
-  - **Function `decorator()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `log_exception()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `log_request()`**: Internal helper or main execution logic.
-  - **Function `log_response()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `log_auth_attempt()`**: Internal helper or main execution logic.
-  - **Function `log_suspicious_activity()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `log_user_action()`**: Internal helper or main execution logic.
-  - **Function `log_voice_command()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `generate_daily_summary()`**: Internal helper or main execution logic.
-  - **Function `slow_function()`**: Internal helper or main execution logic.
-  - **Function `wrapper()`**: Internal helper or main execution logic.
+  - **Function `log_performance()`**: Decorator to log function performance
+- **Class `ContextualErrorLogger`**: Enhanced error logger with context information
+- **Class `APIRequestLogger`**: Logger for API requests and responses
+- **Class `SecurityLogger`**: Logger for security-related events
+- **Class `UserActivityLogger`**: Logger for user activity and interactions
+- **Class `LogAggregator`**: Aggregates and analyzes log data
+  - **Function `log_error_with_context()`**: Convenience function for logging errors with context
+  - **Function `log_api_call()`**: Convenience function for logging API calls
+  - **Function `log_user_action()`**: Convenience function for logging user actions
+  - **Function `decorator()`**: Signature: ()
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `log_exception()`**: Log exception with full context
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `log_request()`**: Log incoming API request
+  - **Function `log_response()`**: Log API response
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `log_auth_attempt()`**: Log authentication attempt
+  - **Function `log_suspicious_activity()`**: Log suspicious activity
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `log_user_action()`**: Convenience function for logging user actions
+  - **Function `log_voice_command()`**: Log voice command interaction
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `generate_daily_summary()`**: Generate daily log summary
+  - **Function `slow_function()`**: Signature: ()
+  - **Function `wrapper()`**: Signature: ()
 
 ### File: `backend\utils\convert_prints.py`
-- **Class `PrintToLoggerConverter`**: Orchestrates logic for this module.
-  - **Function `main()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `convert_project()`**: Internal helper or main execution logic.
-  - **Function `_should_skip_file()`**: Internal helper or main execution logic.
-  - **Function `_convert_file()`**: Internal helper or main execution logic.
+- **Class `PrintToLoggerConverter`**: Converts print statements to logger calls throughout the project
+  - **Function `main()`**: Run the conversion
+  - **Function `__init__()`**: Signature: (self, project_root)
+  - **Function `convert_project()`**: Convert all Python files in the project
+  - **Function `_should_skip_file()`**: Check if file should be skipped
+  - **Function `_convert_file()`**: Convert a single file
 
 ### File: `backend\utils\embeddings.py`
-- **Class `EmbeddingStore`**: Orchestrates logic for this module.
-  - **Function `get_openai_embedding()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `add()`**: Internal helper or main execution logic.
-  - **Function `search()`**: Internal helper or main execution logic.
+- **Class `EmbeddingStore`**: Core component.
+  - **Function `get_openai_embedding()`**: Get OpenAI embedding for text.
+  - **Function `__init__()`**: Signature: (self, dim)
+  - **Function `add()`**: Signature: (self, text, embedding)
+  - **Function `search()`**: Signature: (self, query_embedding, top_k)
 
 ### File: `backend\utils\logging_analyzer.py`
-- **Class `LoggingAnalyzer`**: Orchestrates logic for this module.
-  - **Function `main()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `analyze_project()`**: Internal helper or main execution logic.
-  - **Function `_analyze_python_files()`**: Internal helper or main execution logic.
-  - **Function `_analyze_python_file()`**: Internal helper or main execution logic.
-  - **Function `_analyze_frontend_files()`**: Internal helper or main execution logic.
-  - **Function `_analyze_js_file()`**: Internal helper or main execution logic.
-  - **Function `_analyze_config_files()`**: Internal helper or main execution logic.
-  - **Function `_should_skip_file()`**: Internal helper or main execution logic.
-  - **Function `_generate_recommendations()`**: Internal helper or main execution logic.
+- **Class `LoggingAnalyzer`**: Analyzes the entire project for logging issues and improvements.
+  - **Function `main()`**: Run comprehensive logging analysis.
+  - **Function `__init__()`**: Signature: (self, project_root)
+  - **Function `analyze_project()`**: Perform comprehensive logging analysis.
+  - **Function `_analyze_python_files()`**: Analyze all Python files for logging issues.
+  - **Function `_analyze_python_file()`**: Analyze a single Python file.
+  - **Function `_analyze_frontend_files()`**: Analyze frontend files for console.log statements.
+  - **Function `_analyze_js_file()`**: Analyze a JavaScript/TypeScript file.
+  - **Function `_analyze_config_files()`**: Analyze configuration files.
+  - **Function `_should_skip_file()`**: Check if file should be skipped.
+  - **Function `_generate_recommendations()`**: Generate recommendations for logging improvements.
 
 ### File: `backend\utils\logging_completion.py`
-- **Class `LoggingSystemValidator`**: Orchestrates logic for this module.
-  - **Function `create_logging_utilities()`**: Internal helper or main execution logic.
-  - **Function `main()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `validate_all()`**: Internal helper or main execution logic.
-  - **Function `_validate_directories()`**: Internal helper or main execution logic.
-  - **Function `_validate_configuration()`**: Internal helper or main execution logic.
-  - **Function `_test_loggers()`**: Internal helper or main execution logic.
-  - **Function `_validate_rotation()`**: Internal helper or main execution logic.
-  - **Function `_test_performance_logging()`**: Internal helper or main execution logic.
-  - **Function `_test_error_handling()`**: Internal helper or main execution logic.
-  - **Function `_test_api_logging()`**: Internal helper or main execution logic.
-  - **Function `_validate_frontend_logging()`**: Internal helper or main execution logic.
-  - **Function `_validate_documentation()`**: Internal helper or main execution logic.
-  - **Function `generate_report()`**: Internal helper or main execution logic.
-  - **Function `test_performance_function()`**: Internal helper or main execution logic.
+- **Class `LoggingSystemValidator`**: Validates the complete logging system
+  - **Function `create_logging_utilities()`**: Create helpful logging utilities
+  - **Function `main()`**: Main function to complete logging system
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `validate_all()`**: Run comprehensive validation
+  - **Function `_validate_directories()`**: Validate log directory structure
+  - **Function `_validate_configuration()`**: Validate logging configuration
+  - **Function `_test_loggers()`**: Test all logger types
+  - **Function `_validate_rotation()`**: Validate log rotation settings
+  - **Function `_test_performance_logging()`**: Test performance logging decorator
+  - **Function `_test_error_handling()`**: Test error logging
+  - **Function `_test_api_logging()`**: Test API logging
+  - **Function `_validate_frontend_logging()`**: Validate frontend logging integration
+  - **Function `_validate_documentation()`**: Validate logging documentation
+  - **Function `generate_report()`**: Generate comprehensive validation report
+  - **Function `test_performance_function()`**: Signature: ()
 
 ### File: `backend\utils\logging_config.py`
-- **Class `SessionManager`**: Orchestrates logic for this module.
-- **Class `LoggingConfig`**: Orchestrates logic for this module.
-  - **Function `get_logger()`**: Internal helper or main execution logic.
-  - **Function `get_api_logger()`**: Internal helper or main execution logic.
-  - **Function `get_performance_logger()`**: Internal helper or main execution logic.
-  - **Function `log_api_request()`**: Internal helper or main execution logic.
-  - **Function `get_current_date()`**: Internal helper or main execution logic.
-  - **Function `start_new_session()`**: Internal helper or main execution logic.
-  - **Function `get_current_session()`**: Internal helper or main execution logic.
-  - **Function `get_session_start_time()`**: Internal helper or main execution logic.
-  - **Function `get_dated_log_dirs()`**: Internal helper or main execution logic.
-  - **Function `LOG_DIRS()`**: Internal helper or main execution logic.
-  - **Function `initialize()`**: Internal helper or main execution logic.
-  - **Function `_generate_readme()`**: Internal helper or main execution logic.
-  - **Function `get_session_file_handler()`**: Internal helper or main execution logic.
-  - **Function `get_session_error_handler()`**: Internal helper or main execution logic.
-  - **Function `get_console_handler()`**: Internal helper or main execution logic.
-  - **Function `get_formatter()`**: Internal helper or main execution logic.
+- **Class `SessionManager`**: Manages logging sessions with unique identifiers
+- **Class `LoggingConfig`**: Centralized logging configuration manager
+  - **Function `get_logger()`**: Get or create a configured logger with session support
+  - **Function `get_api_logger()`**: Get a logger configured specifically for API logging
+  - **Function `get_performance_logger()`**: Get a logger configured for performance metrics
+  - **Function `log_api_request()`**: Helper function to log API requests with consistent formatting
+  - **Function `get_current_date()`**: Get current date in YYYY-MM-DD format for folder organization
+  - **Function `start_new_session()`**: Start a new logging session with timestamp
+  - **Function `get_current_session()`**: Get current session ID (returns None if no session started)
+  - **Function `get_session_start_time()`**: Get session start time
+  - **Function `get_dated_log_dirs()`**: Get log directories organized by current date
+  - **Function `LOG_DIRS()`**: Signature: (cls)
+  - **Function `initialize()`**: Initialize logging directory structure
+  - **Function `_generate_readme()`**: Generate README for logs directory
+  - **Function `get_session_file_handler()`**: Create a session-specific file handler
+  - **Function `get_session_error_handler()`**: Create session-specific error-only file handler
+  - **Function `get_console_handler()`**: Create console handler
+  - **Function `get_formatter()`**: Get a log formatter
 
 ### File: `backend\utils\session_activity_logger.py`
-- **Class `SessionActivityLogger`**: Orchestrates logic for this module.
-  - **Function `get_session_activity_logger()`**: Internal helper or main execution logic.
-- **Class `_LazyLogger`**: Orchestrates logic for this module.
-  - **Function `log_voice_command()`**: Internal helper or main execution logic.
-  - **Function `log_file_operation()`**: Internal helper or main execution logic.
-  - **Function `log_system_command()`**: Internal helper or main execution logic.
-  - **Function `log_api_request()`**: Internal helper or main execution logic.
-  - **Function `log_user_interaction()`**: Internal helper or main execution logic.
-  - **Function `log_music_control()`**: Internal helper or main execution logic.
-  - **Function `log_email_operation()`**: Internal helper or main execution logic.
-  - **Function `log_calendar_operation()`**: Internal helper or main execution logic.
-  - **Function `log_web_scraping()`**: Internal helper or main execution logic.
-  - **Function `log_multimodal_ai()`**: Internal helper or main execution logic.
-  - **Function `log_automation()`**: Internal helper or main execution logic.
-  - **Function `end_current_session()`**: Internal helper or main execution logic.
-  - **Function `__init__()`**: Internal helper or main execution logic.
-  - **Function `__getattr__()`**: Internal helper or main execution logic.
-  - **Function `_initialize_logger()`**: Internal helper or main execution logic.
-  - **Function `_save_session_start()`**: Internal helper or main execution logic.
-  - **Function `log_voice_command()`**: Internal helper or main execution logic.
-  - **Function `log_file_operation()`**: Internal helper or main execution logic.
-  - **Function `log_system_command()`**: Internal helper or main execution logic.
-  - **Function `log_api_request()`**: Internal helper or main execution logic.
-  - **Function `log_user_interaction()`**: Internal helper or main execution logic.
-  - **Function `log_music_control()`**: Internal helper or main execution logic.
-  - **Function `log_email_operation()`**: Internal helper or main execution logic.
-  - **Function `log_calendar_operation()`**: Internal helper or main execution logic.
-  - **Function `log_web_scraping()`**: Internal helper or main execution logic.
-  - **Function `log_multimodal_ai()`**: Internal helper or main execution logic.
-  - **Function `log_automation()`**: Internal helper or main execution logic.
-  - **Function `_update_session_summary()`**: Internal helper or main execution logic.
-  - **Function `end_session()`**: Internal helper or main execution logic.
-  - **Function `__getattr__()`**: Internal helper or main execution logic.
+- **Class `SessionActivityLogger`**: Logs all user activities in session-specific files
+  - **Function `get_session_activity_logger()`**: Get or create singleton session activity logger
+- **Class `_LazyLogger`**: Core component.
+  - **Function `log_voice_command()`**: Log a voice command activity
+  - **Function `log_file_operation()`**: Log a file operation activity
+  - **Function `log_system_command()`**: Log a system command activity
+  - **Function `log_api_request()`**: Log an API request activity
+  - **Function `log_user_interaction()`**: Log a user interaction activity
+  - **Function `log_music_control()`**: Log a music control activity
+  - **Function `log_email_operation()`**: Log an email operation activity
+  - **Function `log_calendar_operation()`**: Log a calendar operation activity
+  - **Function `log_web_scraping()`**: Log a web scraping activity
+  - **Function `log_multimodal_ai()`**: Log a multimodal AI activity
+  - **Function `log_automation()`**: Log an automation activity
+  - **Function `end_current_session()`**: End the current logging session
+  - **Function `__init__()`**: Signature: (self)
+  - **Function `__getattr__()`**: Signature: (self, name)
+  - **Function `_initialize_logger()`**: Initialize logger components (called after session is ready)
+  - **Function `_save_session_start()`**: Save session start information
+  - **Function `log_voice_command()`**: Log a voice command activity
+  - **Function `log_file_operation()`**: Log a file operation activity
+  - **Function `log_system_command()`**: Log a system command activity
+  - **Function `log_api_request()`**: Log an API request activity
+  - **Function `log_user_interaction()`**: Log a user interaction activity
+  - **Function `log_music_control()`**: Log a music control activity
+  - **Function `log_email_operation()`**: Log an email operation activity
+  - **Function `log_calendar_operation()`**: Log a calendar operation activity
+  - **Function `log_web_scraping()`**: Log a web scraping activity
+  - **Function `log_multimodal_ai()`**: Log a multimodal AI activity
+  - **Function `log_automation()`**: Log an automation activity
+  - **Function `_update_session_summary()`**: Update session summary with new activity
+  - **Function `end_session()`**: Mark session as ended
+  - **Function `__getattr__()`**: Signature: (self, name)
 
 ### File: `backend\utils\session_init.py`
-  - **Function `_initialize_session()`**: Internal helper or main execution logic.
-  - **Function `get_session_info()`**: Internal helper or main execution logic.
-  - **Function `log_module_initialization()`**: Internal helper or main execution logic.
+  - **Function `_initialize_session()`**: Initialize session only once
+  - **Function `get_session_info()`**: Get current session information
+  - **Function `log_module_initialization()`**: Log when a module is initialized
 
 ### File: `backend\utils\tool_schemas.py`
 
 ### File: `backend\utils\update_logging.py`
-  - **Function `update_logging_calls()`**: Internal helper or main execution logic.
-  - **Function `main()`**: Internal helper or main execution logic.
+  - **Function `update_logging_calls()`**: Update logging calls in a file
+  - **Function `main()`**: Update all module files
 
 ### File: `backend\utils\user_data_logger.py`
-  - **Function `get_timestamp()`**: Internal helper or main execution logic.
-  - **Function `save_data()`**: Internal helper or main execution logic.
-  - **Function `log_action()`**: Internal helper or main execution logic.
-  - **Function `log_query()`**: Internal helper or main execution logic.
-  - **Function `log_reply()`**: Internal helper or main execution logic.
-  - **Function `log_module_usage()`**: Internal helper or main execution logic.
+  - **Function `get_timestamp()`**: Signature: ()
+  - **Function `save_data()`**: Saves data to the appropriate folder with a timestamp.
+  - **Function `log_action()`**: Logs a user action.
+  - **Function `log_query()`**: Logs a user query.
+  - **Function `log_reply()`**: Logs an assistant reply.
+  - **Function `log_module_usage()`**: Logs the usage of a module and function.
 
 ---
 
