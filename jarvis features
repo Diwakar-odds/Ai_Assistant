@@ -1,0 +1,480 @@
+# 🧠 JARVIS-Level Personalization — Gap Analysis & Implementation Plan
+
+> **Project**: YourDaddy AI Assistant v4.0.0
+> **Goal**: Transform the assistant from a "helpful chatbot" into a truly personalized, proactive, self-healing companion — like JARVIS is to Tony Stark.
+> **Analysis Date**: 22 August 2026
+
+---
+
+## 📊 Current State: What You Already Have vs. JARVIS
+
+### The JARVIS Benchmark (Excluding Home Automation)
+
+| JARVIS Trait | Description | Your Current State | Gap |
+|---|---|---|:---:|
+| **Knows Tony deeply** | Remembers everything about Tony — habits, preferences, health, mood, schedule | Basic onboarding (3 questions), user profile from knowledge DB, user_preferences.json | 🟡 Medium |
+| **Anticipates needs without asking** | "Shall I put the coffee on, sir?" before Tony asks | `ProactiveAnticipator` exists but is hardcoded to 3 time-slots (8AM/6PM/11PM) | 🔴 Large |
+| **Self-healing & diagnostics** | Detects suit malfunctions, reroutes power, fixes problems autonomously | Planned in roadmap (`SelfHealingEngine`) but **not implemented** | 🔴 Critical |
+| **Emotional intelligence** | Detects stress, adjusts tone, provides comfort | Mood detection enum exists in `conversational_ai.py` but **not wired** | 🔴 Large |
+| **Evolving personality** | Gets wittier, adapts humor, builds rapport over time | Static system prompt — same JARVIS persona every session | 🟡 Medium |
+| **Contextual awareness** | Knows what Tony is doing RIGHT NOW (working, fighting, resting) | `ContextOptimizer` has time-based context only, no real activity awareness | 🔴 Large |
+| **Memory that matters** | "Sir, last time you tried this approach, it failed spectacularly" | `memory.py` + `smart_memory_retrieval.py` exist but retrieval is keyword-based, not semantic | 🟡 Medium |
+| **Autonomous problem-solving** | Doesn't just report problems — presents solutions | Command prediction exists, but no autonomous fix-and-report loop | 🔴 Large |
+| **Multi-modal awareness** | Sees, hears, and processes environment simultaneously | Vision module exists, voice exists, but they don't feed into a unified awareness model | 🟡 Medium |
+| **Learning acceleration** | Gets dramatically better with each interaction | 50 AI files with learning code, but most are disconnected/experimental | 🟡 Medium |
+
+### Summary Score
+
+```
+Your Assistant Today:  ████░░░░░░  35% JARVIS-like
+Target:                ██████████  85%+ JARVIS-like
+```
+
+---
+
+## 🔍 Deep Dive: What's Built vs. What's Actually Working
+
+### ✅ Working & Connected
+
+| Feature | File(s) | Status |
+|---|---|---|
+| System prompt with user name/role/interests | [conversational_ai.py](file:///c:/Users/Raghav%20Bajpai/OneDrive/Desktop/Ai_Assistant/core_ai/src/ai_assistant/ai/conversational_ai.py#L265-L346) | ✅ Live |
+| Onboarding interview (3 questions) | [onboarding.py](file:///c:/Users/Raghav%20Bajpai/OneDrive/Desktop/Ai_Assistant/core_ai/src/ai_assistant/core/onboarding.py) | ✅ Live |
+| User preferences (theme, voice, language) | [user_preferences.py](file:///c:/Users/Raghav%20Bajpai/OneDrive/Desktop/Ai_Assistant/backend/user_preferences.py) | ✅ Live |
+| Conversation memory with encryption | [memory.py](file:///c:/Users/Raghav%20Bajpai/OneDrive/Desktop/Ai_Assistant/core_ai/src/ai_assistant/ai/memory.py) | ✅ Live |
+| Voice fingerprinting (user recognition) | [voice_fingerprinting.py](file:///c:/Users/Raghav%20Bajpai/OneDrive/Desktop/Ai_Assistant/core_ai/src/ai_assistant/voice/voice_fingerprinting.py) | ✅ Live |
+| Insights dashboard (mock data) | [insights_engine.py](file:///c:/Users/Raghav%20Bajpai/OneDrive/Desktop/Ai_Assistant/backend/insights_engine.py) | ⚠️ Mock |
+| Adaptive voice recognition | [adaptive_voice.py](file:///c:/Users/Raghav%20Bajpai/OneDrive/Desktop/Ai_Assistant/core_ai/src/ai_assistant/ai/adaptive_voice.py) | ⚠️ Exists, unclear integration |
+
+### 🟡 Built But Disconnected (Not Wired Into Main Flow)
+
+| Feature | File(s) | Problem |
+|---|---|---|
+| Proactive Anticipator | [proactive_anticipator.py](file:///c:/Users/Raghav%20Bajpai/OneDrive/Desktop/Ai_Assistant/core_ai/src/ai_assistant/core/proactive_anticipator.py) | Only 3 hardcoded messages, not data-driven |
+| Usage Pattern Analyzer | [usage_pattern_analyzer.py](file:///c:/Users/Raghav%20Bajpai/OneDrive/Desktop/Ai_Assistant/core_ai/src/ai_assistant/ai/usage_pattern_analyzer.py) | Analyzes patterns but results aren't fed back into behavior |
+| Behavior Clustering | [behavior_clustering.py](file:///c:/Users/Raghav%20Bajpai/OneDrive/Desktop/Ai_Assistant/core_ai/src/ai_assistant/ai/behavior_clustering.py) | K-Means clustering exists but not connected to personalization |
+| Smart Command Prediction | [smart_command_prediction.py](file:///c:/Users/Raghav%20Bajpai/OneDrive/Desktop/Ai_Assistant/core_ai/src/ai_assistant/ai/smart_command_prediction.py) | Predicts commands but not surfaced to user |
+| Workflow Recommender | [workflow_recommender.py](file:///c:/Users/Raghav%20Bajpai/OneDrive/Desktop/Ai_Assistant/core_ai/src/ai_assistant/ai/workflow_recommender.py) | Recommends workflows but not connected |
+| Adaptive Prompts (A/B testing) | [adaptive_prompts.py](file:///c:/Users/Raghav%20Bajpai/OneDrive/Desktop/Ai_Assistant/core_ai/src/ai_assistant/ai/adaptive_prompts.py) | Prompt optimization exists but not used |
+| Context-Aware Responses | [context_aware_response.py](file:///c:/Users/Raghav%20Bajpai/OneDrive/Desktop/Ai_Assistant/core_ai/src/ai_assistant/ai/context_aware_response.py) | Template-based responses, not integrated |
+| Smart Memory Retrieval | [smart_memory_retrieval.py](file:///c:/Users/Raghav%20Bajpai/OneDrive/Desktop/Ai_Assistant/core_ai/src/ai_assistant/ai/smart_memory_retrieval.py) | Keyword-based search, no semantic retrieval |
+| Anomaly Detection | [anomaly_detection.py](file:///c:/Users/Raghav%20Bajpai/OneDrive/Desktop/Ai_Assistant/core_ai/src/ai_assistant/ai/anomaly_detection.py) | Isolation Forest exists but not connected to alerting |
+| Advanced Feedback Learning (RLHF) | [advanced_feedback_learning.py](file:///c:/Users/Raghav%20Bajpai/OneDrive/Desktop/Ai_Assistant/core_ai/src/ai_assistant/ai/advanced_feedback_learning.py) | DPO + reward model exist but experimental |
+| Command Success Predictor | [command_predictor.py](file:///c:/Users/Raghav%20Bajpai/OneDrive/Desktop/Ai_Assistant/core_ai/src/ai_assistant/ai/command_predictor.py) | Predicts success probability but not used for decisions |
+
+### 🔴 Not Built Yet (Planned or Missing)
+
+| Feature | Notes |
+|---|---|
+| **Self-Healing Engine** | Mentioned in [CHAIN_OF_ACTIONS_ROADMAP.md](file:///c:/Users/Raghav%20Bajpai/OneDrive/Desktop/Ai_Assistant/docs/CHAIN_OF_ACTIONS_ROADMAP.md#L146) but never implemented |
+| **Emotional State Tracking** | Mood enum exists but no persistent tracking across sessions |
+| **Deep User Profile** (evolving) | Current profile is static after onboarding — doesn't evolve |
+| **Activity-Aware Context** | No detection of what user is currently doing on their PC |
+| **Proactive Problem Detection** | No background monitoring for system issues |
+| **Personality Evolution** | Same tone and wit level from day 1 to day 1000 |
+| **Relationship Progression** | No concept of "trust level" or relationship depth |
+| **Autonomous Task Initiation** | Cannot start tasks without being asked |
+
+---
+
+## 🎯 Proposed Implementation: 7 Pillars of JARVIS-Level Personalization
+
+### Pillar 1: 🧬 Deep Evolving User Profile
+
+**What JARVIS does**: Knows Tony's coffee preference, stress triggers, work habits, sleep schedule, favorite music, and thousands of micro-preferences — all learned organically.
+
+**What to build**:
+
+#### [NEW] `core_ai/src/ai_assistant/core/user_dna.py` — "User DNA" Profile Engine
+
+A continuously evolving user profile that learns passively from every interaction:
+
+```python
+class UserDNA:
+    """
+    Evolving user identity model — the assistant's understanding of WHO the user is.
+    Learns from every interaction without explicit asking.
+    """
+    # Explicit (from onboarding + settings)
+    name, role, location, language_preference
+    
+    # Inferred (learned over time)
+    work_hours: TimeRange          # detected from usage patterns
+    energy_curve: Dict[int, float] # productivity by hour
+    communication_style: StyleProfile  # verbose vs terse, formal vs casual
+    expertise_map: Dict[str, float]    # topic -> competence level
+    emotional_baseline: EmotionProfile # typical emotional state
+    decision_patterns: DecisionProfile # impulsive vs deliberate
+    recurring_frustrations: List[str]  # things that consistently annoy them
+    favorite_workflows: List[str]      # most-used command sequences
+    learning_velocity: float           # how fast they adopt new features
+    
+    # Relationship state
+    trust_level: float  # 0-1, increases with positive interactions
+    rapport_score: float  # how familiar the tone should be
+    interaction_count: int
+    days_known: int
+```
+
+**Key difference from current `user_preferences.py`**: Current preferences are toggles (dark mode on/off). UserDNA is a continuously-learning model of the person's behavior, personality, and needs.
+
+---
+
+### Pillar 2: 🔮 Proactive Intelligence (Acting Without Being Asked)
+
+**What JARVIS does**: "Sir, you have a meeting in 20 minutes. Shall I prepare the briefing notes?" — Tony never asked for this.
+
+**What to build**:
+
+#### [MODIFY] `core_ai/src/ai_assistant/core/proactive_anticipator.py` — Complete Rewrite
+
+Current implementation is 76 lines with 3 hardcoded messages. Replace with:
+
+```python
+class ProactiveAnticipator:
+    """
+    Learns WHEN and WHAT to proactively suggest based on user patterns.
+    """
+    triggers:
+    - Time-based: "You usually open VS Code at 9 AM, want me to set up your workspace?"
+    - Sequence-based: "After you open Chrome, you usually go to Gmail. Opening it now."
+    - Calendar-based: "Meeting in 15 min with design team. Here's the Figma link from last session."
+    - Anomaly-based: "You haven't taken a break in 4 hours. Shall I remind you in 30 min?"
+    - Weather-based: "It's raining outside, you might want to skip the outdoor plan."
+    - Failure-based: "That deployment failed 3 times this week — I've identified a pattern."
+    - Emotional-based: "You seem stressed today. Want me to keep responses brief?"
+```
+
+#### [NEW] `core_ai/src/ai_assistant/core/situation_awareness.py` — Real-Time Context
+
+```python
+class SituationAwareness:
+    """
+    Knows what the user is doing RIGHT NOW on their system.
+    Like JARVIS seeing Tony working in the workshop vs relaxing.
+    """
+    - active_window: str          # What app is in focus
+    - active_document: str        # What file/URL they're working on
+    - activity_state: ActivityEnum  # coding, browsing, gaming, idle
+    - focus_duration: timedelta    # How long in current activity
+    - system_load: SystemMetrics   # CPU, RAM, disk
+    - time_context: TimeContext    # morning, work_hours, evening, late_night
+```
+
+**Wire these into the chat flow**: Before generating any response, the system prompt gets enriched with current context — the LLM then naturally gives contextually relevant answers.
+
+---
+
+### Pillar 3: 🩺 Self-Healing & Autonomous Problem Solving
+
+**What JARVIS does**: Detects suit power failure → reroutes power → patches armor → reports to Tony. He doesn't just say "there's a problem" — he FIXES it.
+
+**What to build**:
+
+#### [NEW] `core_ai/src/ai_assistant/core/self_healing_engine.py`
+
+```python
+class SelfHealingEngine:
+    """
+    Monitors, diagnoses, and fixes problems autonomously.
+    Reports actions taken, not just problems found.
+    """
+    
+    class HealingCapability:
+        # System-level
+        - detect_high_memory_usage() → kill_zombie_processes()
+        - detect_disk_space_low() → clean_temp_files() + suggest_cleanup()
+        - detect_network_issues() → switch_to_offline_mode() + retry_when_back()
+        
+        # Application-level  
+        - detect_crash_loop() → restart_with_safe_config()
+        - detect_slow_response() → clear_cache() + optimize_queries()
+        - detect_stale_data() → refresh_data_sources()
+        - detect_api_key_expired() → notify_user_with_renewal_link()
+        
+        # AI-level
+        - detect_degraded_responses() → switch_llm_provider()
+        - detect_context_overflow() → compress_history()
+        - detect_repeated_failures() → adjust_strategy()
+        
+    class DiagnosticReport:
+        problem_detected: str
+        severity: Severity  # info, warning, critical
+        action_taken: str
+        result: str  # "Fixed" / "Partially fixed" / "Needs your input"
+        user_action_needed: bool
+```
+
+#### [NEW] `core_ai/src/ai_assistant/core/health_monitor.py`
+
+Background daemon that continuously monitors:
+- System health (CPU, RAM, disk, network)
+- Application health (backend up? frontend connected? APIs responding?)
+- AI health (LLM response latency, quality scores, error rates)
+- Data health (databases accessible? data fresh?)
+
+Reports anomalies to `SelfHealingEngine` which decides whether to fix autonomously or report to user.
+
+---
+
+### Pillar 4: 💭 Emotional Intelligence & Adaptive Personality
+
+**What JARVIS does**: When Tony is stressed, JARVIS is calming. When Tony is joking, JARVIS plays along. When Tony is in danger, JARVIS is laser-focused. The PERSONALITY adapts.
+
+**What to build**:
+
+#### [NEW] `core_ai/src/ai_assistant/ai/emotional_intelligence.py`
+
+```python
+class EmotionalIntelligence:
+    """
+    Detects user's emotional state and adapts assistant behavior.
+    """
+    
+    def detect_emotion_from_text(text: str) -> EmotionState:
+        """Uses LLM to detect frustration, excitement, confusion, urgency, etc."""
+        
+    def detect_emotion_from_voice(audio_features: dict) -> EmotionState:
+        """Voice pitch, speed, volume → emotional state"""
+        
+    def get_adaptive_system_prompt_modifier(emotion: EmotionState) -> str:
+        """
+        Returns prompt modifier based on emotion:
+        - Frustrated: "Be extra patient. Simplify. Acknowledge the frustration."
+        - Excited: "Match their energy. Be enthusiastic."  
+        - Confused: "Break things down step by step. Use analogies."
+        - Stressed: "Be brief and efficient. Don't add unnecessary info."
+        - Casual: "Be witty, use humor, be relaxed."
+        """
+```
+
+#### [MODIFY] System Prompt — Make It Dynamic
+
+Current system prompt in [conversational_ai.py:265](file:///c:/Users/Raghav%20Bajpai/OneDrive/Desktop/Ai_Assistant/core_ai/src/ai_assistant/ai/conversational_ai.py#L265) is static. It should be rebuilt on EVERY interaction with:
+
+```
+Base Personality + User DNA Profile + Current Situation Context + Emotional State + Relationship Stage + Recent Memory Highlights
+```
+
+#### [NEW] Relationship Progression System
+
+```python
+class RelationshipManager:
+    """
+    Models the assistant-user relationship evolution.
+    Day 1: Formal, helpful
+    Week 1: Starting to learn preferences  
+    Month 1: Inside jokes, shorthand, anticipation
+    Month 6: Deep understanding, minimal instructions needed
+    """
+    stages = [
+        "formal_introduction",   # "How may I assist you, sir?"
+        "learning_phase",        # "Based on our conversations, I think you'd prefer..."
+        "familiar_partner",      # "Hey, the usual morning setup? Also, your exam is tomorrow."
+        "trusted_confidant",     # "Look, I know you're going to try the brute force approach again, but last time..."
+    ]
+```
+
+---
+
+### Pillar 5: 🧠 Memory That Matters (Not Just Storage)
+
+**What JARVIS does**: "Sir, the last time you used Mark 42 in humid conditions, the repulsors misfired. I'd recommend Mark 45 for this mission."
+
+**What to build**:
+
+#### [MODIFY] `smart_memory_retrieval.py` — Upgrade to Semantic RAG
+
+Replace keyword search with embedding-based retrieval:
+
+```python
+class JARVISMemory:
+    """
+    Episodic + Semantic + Procedural memory — not just chat logs.
+    """
+    
+    episodic_memory:     # "What happened" — conversation events, outcomes
+    semantic_memory:     # "What I know" — facts, preferences, knowledge
+    procedural_memory:   # "How to do things" — successful workflows, recipes
+    emotional_memory:    # "How they felt" — emotional context of past events
+    
+    def recall_relevant(context: str, top_k=5) -> List[MemoryFragment]:
+        """Embedding-based semantic search over all memory types"""
+        
+    def remember_automatically(interaction: Interaction):
+        """
+        After every interaction, automatically extract and store:
+        - Facts mentioned (dates, names, preferences)
+        - Decisions made
+        - Emotional context
+        - Outcome (successful/failed)
+        """
+```
+
+**Key insight**: Your current `memory.py` stores conversations. JARVIS-level memory extracts *meaning* from conversations and stores that separately.
+
+---
+
+### Pillar 6: ⚡ Autonomous Action Initiation
+
+**What JARVIS does**: Doesn't wait for commands. "Sir, I've taken the liberty of compiling the data you'll need for tomorrow's meeting."
+
+**What to build**:
+
+#### [NEW] `core_ai/src/ai_assistant/core/autonomous_actions.py`
+
+```python
+class AutonomousActionEngine:
+    """
+    Takes actions WITHOUT being asked, based on learned patterns.
+    Always reports what it did (transparency).
+    """
+    
+    confidence_threshold = 0.85  # Only auto-act when very confident
+    
+    auto_actions = [
+        # Data preparation
+        "Pre-fetch weather before morning briefing",
+        "Pre-load calendar events before work hours",
+        "Pre-search for news in user's interest areas",
+        
+        # Maintenance  
+        "Clean temp files when disk > 90%",
+        "Optimize database when queries slow down",
+        "Update cached data when stale",
+        
+        # Productivity
+        "Prepare project summary when user opens IDE",
+        "Draft email reply suggestions when new email arrives",
+        "Create todo list from yesterday's unfinished items",
+        
+        # Wellness
+        "Suggest breaks after long focus sessions",
+        "Dim screen at night (eye care)",
+        "Track productivity trends and share weekly report",
+    ]
+    
+    def should_act(action: AutoAction, confidence: float) -> bool:
+        """Only act autonomously if confidence > threshold AND user hasn't disabled this action"""
+        
+    def report_action(action: str, result: str):
+        """Always tell the user what was done: 'I've prepared your morning briefing, sir.'"""
+```
+
+---
+
+### Pillar 7: 🔄 Connected Learning Loop
+
+**What JARVIS does**: Every interaction makes JARVIS better at serving Tony. Not through explicit training — through observation.
+
+**What to build**:
+
+#### [NEW] `core_ai/src/ai_assistant/core/learning_loop.py` — Unified Learning Orchestrator
+
+Your project has 50 AI files with learning capabilities that are mostly disconnected. Build one orchestrator:
+
+```python
+class LearningLoop:
+    """
+    Connects all the disconnected learning modules into a single feedback loop.
+    """
+    
+    def after_every_interaction(interaction: Interaction):
+        """Called after EVERY user interaction"""
+        
+        # 1. Update User DNA
+        user_dna.update_from_interaction(interaction)
+        
+        # 2. Update Memory
+        jarvis_memory.remember_automatically(interaction)
+        
+        # 3. Update Usage Patterns
+        usage_pattern_analyzer.record(interaction)
+        
+        # 4. Update Command Predictions
+        smart_command_predictor.learn(interaction)
+        
+        # 5. Update Emotional Baseline
+        emotional_intelligence.update_baseline(interaction)
+        
+        # 6. Update Proactive Triggers
+        proactive_anticipator.learn_trigger(interaction)
+        
+        # 7. Track success/failure for self-healing
+        if interaction.had_error:
+            self_healing_engine.learn_failure(interaction)
+```
+
+---
+
+## 📋 Implementation Priority & Phasing
+
+### Phase 1: Foundation (Wire Existing Code) — 1-2 weeks
+> Highest ROI — connects what you've already built
+
+- [ ] **Wire `ProactiveAnticipator`** into the main loop (currently disconnected)
+- [ ] **Wire `UsagePatternAnalyzer`** results into system prompt enrichment
+- [ ] **Wire `SmartCommandPredictor`** to suggest next-likely commands in the UI
+- [ ] **Upgrade onboarding** to collect deeper preferences (work schedule, interests, goals)
+- [ ] **Make system prompt dynamic** — rebuild it per-interaction with user context + time + mood
+
+### Phase 2: Intelligence Layer — 2-3 weeks
+> The core JARVIS-like features
+
+- [ ] **Build `UserDNA`** — evolving user profile from interaction data
+- [ ] **Build `SituationAwareness`** — real-time detection of what user is doing
+- [ ] **Build `EmotionalIntelligence`** — detect frustration/excitement/stress from text+voice
+- [ ] **Upgrade memory** to semantic RAG with auto-extraction of facts/decisions/outcomes
+- [ ] **Build `RelationshipManager`** — personality evolves with relationship depth
+
+### Phase 3: Autonomy & Self-Healing — 2-3 weeks
+> What makes it truly JARVIS-like
+
+- [ ] **Build `SelfHealingEngine`** — detect + fix problems autonomously
+- [ ] **Build `HealthMonitor`** — background system/app/AI health tracking
+- [ ] **Build `AutonomousActionEngine`** — take actions without being asked
+- [ ] **Build `LearningLoop`** — unified orchestrator connecting all learning modules
+- [ ] **Build proactive notifications** — push insights/actions via WebSocket to frontend
+
+### Phase 4: Polish & Delight — 1-2 weeks
+> The magic touches
+
+- [ ] **Personality quirks** — wit level, catchphrases, inside jokes that evolve
+- [ ] **Morning briefing** — personalized daily summary with real data (not mock)
+- [ ] **Weekly report** — "Here's how I helped you this week" productivity summary
+- [ ] **Proactive warnings** — "You haven't backed up in 7 days" / "Your API key expires in 3 days"
+- [ ] **Context-switching detection** — "I see you switched from coding to browsing — want me to save your workspace?"
+
+---
+
+## ⚠️ User Review Required
+
+> [!IMPORTANT]
+> **Scope Decision**: This plan covers 4 phases across ~6-8 weeks of development. I recommend starting with **Phase 1** (wiring existing code) since it's the highest ROI — you already have the building blocks, they just need to be connected.
+
+> [!IMPORTANT]
+> **Privacy Consideration**: Features like `SituationAwareness` (tracking active windows) and `EmotionalIntelligence` (tracking mood) are powerful but privacy-sensitive. These should be opt-in with clear consent, leveraging your existing `privacy_consent.py` system.
+
+## Open Questions
+
+1. **Which phases do you want to tackle first?** All 4, or start with Phase 1 and iterate?
+2. **Real integrations priority**: Should the Insights Engine switch from mock data to real calendar/weather/news APIs now, or later?
+3. **Activity tracking comfort level**: Are you comfortable with the assistant detecting active windows/apps for context, or should it rely only on explicit user input?
+4. **Tone preference**: Should the personality be strictly JARVIS-like (formal, "Sir"), or evolve toward something more casual over time?
+5. **Self-healing aggressiveness**: Should the assistant auto-fix issues silently, or always ask before acting?
+
+---
+
+## Verification Plan
+
+### Automated Tests
+- Unit tests for `UserDNA` profile evolution
+- Integration tests for the `LearningLoop` ensuring all modules receive data
+- Tests for `SelfHealingEngine` with simulated failures
+- Tests for `EmotionalIntelligence` with sample text inputs
+
+### Manual Verification
+- Run the assistant for a day and verify proactive suggestions are relevant
+- Test self-healing by intentionally causing errors (high CPU, API timeout)
+- Verify personality adaptation by comparing responses at interaction 1 vs interaction 100
+- Test emotional intelligence by typing frustrated vs excited messages
