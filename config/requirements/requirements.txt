@@ -74,7 +74,7 @@ indic-transliteration==2.3.37
 kittentts
 pygame-ce>=2.4.0
 pydub==0.25.1
-soundfile==0.12.1
+soundfile==0.14.0
 librosa==0.10.2
 
 noisereduce>=3.0.0
