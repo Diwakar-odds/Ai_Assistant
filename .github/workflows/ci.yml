@@ -11,16 +11,12 @@ jobs:
   test:
     name: Test on ${{ matrix.os }} - Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
-    
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        python-version: ['3.9', '3.10', '3.11']
-        exclude:
-          # Exclude some combinations to save CI time
-          - os: windows-latest
-            python-version: '3.9'
+        python-version: ['3.11', '3.12']
     
     steps:
     - name: Checkout code
@@ -52,8 +48,8 @@ jobs:
         TESTING: true
         ENVIRONMENT: development
         PYTHONPATH: core_ai/src:backend
-        ADMIN_PIN: "123456"
-        ADMIN_PASSWORD: changeme123
+        ADMIN_PIN: ${{ secrets.ADMIN_PIN || '123456' }}
+        ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD || 'changeme123' }}
 
     - name: Run tests (Windows)
       if: runner.os == 'Windows'
@@ -63,8 +59,8 @@ jobs:
         TESTING: true
         ENVIRONMENT: development
         PYTHONPATH: core_ai/src;backend
-        ADMIN_PIN: "123456"
-        ADMIN_PASSWORD: changeme123
+        ADMIN_PIN: ${{ secrets.ADMIN_PIN || '123456' }}
+        ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD || 'changeme123' }}
 
     - name: Run tests with coverage (Ubuntu + Python 3.11 only)
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
@@ -74,10 +70,10 @@ jobs:
         TESTING: true
         ENVIRONMENT: development
         PYTHONPATH: core_ai/src:backend
-        ADMIN_PIN: "123456"
-        ADMIN_PASSWORD: changeme123
-        JWT_SECRET_KEY: test-secret-key-for-ci
-        SECRET_KEY: test-secret-key-for-ci
+        ADMIN_PIN: ${{ secrets.ADMIN_PIN || '123456' }}
+        ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD || 'changeme123' }}
+        JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY || 'test-secret-key-for-ci' }}
+        SECRET_KEY: ${{ secrets.SECRET_KEY || 'test-secret-key-for-ci' }}
     
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
@@ -91,6 +87,7 @@ jobs:
   lint:
     name: Lint and Format Check
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     
     steps:
     - name: Checkout code
@@ -110,7 +107,6 @@ jobs:
     - name: Run flake8 (errors only)
       run: |
         flake8 core_ai/src/ai_assistant/ backend/ --count --select=E9,F63,F7,F82 --show-source --statistics
-      continue-on-error: true
 
     - name: Run flake8 (warnings)
       run: |
@@ -135,6 +131,7 @@ jobs:
   security:
     name: Security Scan
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     
     steps:
     - name: Checkout code
@@ -154,12 +151,10 @@ jobs:
       run: |
         pip install -r config/requirements/requirements-ci.txt
         safety check --json || true
-      continue-on-error: true
 
     - name: Run bandit security scan
       run: |
         bandit -r core_ai/src/ai_assistant/ backend/ -f json -o bandit-report.json || true
-      continue-on-error: true
     
     - name: Upload bandit report
       if: always()
@@ -172,7 +167,8 @@ jobs:
   build-check:
     name: Build Verification
     runs-on: ubuntu-latest
-    needs: [test, lint]
+    needs: [test, lint, security]
+    timeout-minutes: 15
     
     steps:
     - name: Checkout code
