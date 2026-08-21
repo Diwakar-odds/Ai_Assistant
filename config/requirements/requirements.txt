@@ -13,7 +13,7 @@ static-ffmpeg>=2.5
 # WEB FRAMEWORK & API
 # =========================================
 Flask==3.1.0
-Flask-SocketIO==5.3.6
+Flask-SocketIO==5.6.1
 flask-cors==5.0.0
 flask-restful==0.3.10
 Flask-JWT-Extended==4.6.0
