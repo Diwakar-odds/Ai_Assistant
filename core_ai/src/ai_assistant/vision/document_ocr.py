@@ -25,12 +25,20 @@ try:
     from PIL import Image, ImageEnhance, ImageFilter
     PIL_AVAILABLE = True
 except ImportError:
+    cv2 = None
+    fitz = None
+    pytesseract = None
+    np = None
     PIL_AVAILABLE = False
 
 try:
     import pytesseract
     TESSERACT_AVAILABLE = True
 except ImportError:
+    cv2 = None
+    fitz = None
+    pytesseract = None
+    np = None
     TESSERACT_AVAILABLE = False
 
 try:
@@ -38,6 +46,10 @@ try:
     import numpy as np
     CV2_AVAILABLE = True
 except ImportError:
+    cv2 = None
+    fitz = None
+    pytesseract = None
+    np = None
     CV2_AVAILABLE = False
 
 try:
@@ -45,6 +57,10 @@ try:
     import pdfplumber
     PDF_AVAILABLE = True
 except ImportError:
+    cv2 = None
+    fitz = None
+    pytesseract = None
+    np = None
     PDF_AVAILABLE = False
 
 class DocumentAnalyzer:

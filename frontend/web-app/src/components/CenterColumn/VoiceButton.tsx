@@ -97,10 +97,10 @@ const VoiceButton = () => {
     setVoiceLanguage,
     alwaysActive,
     toggleAlwaysActive,
-    aiMode,
+    __aiMode,
     aiProvider,
     setAIProvider,
-    toggleAIMode
+    __toggleAIMode
   } = useDashboard();
 
   const [showLangSelector, setShowLangSelector] = useState(false);

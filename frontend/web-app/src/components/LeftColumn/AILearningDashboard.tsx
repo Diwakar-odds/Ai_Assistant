@@ -3,7 +3,8 @@ import { Database, Activity, MessageSquare, Brain } from 'lucide-react';
 import { useEffect } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
 
-const StatCard = ({ icon: Icon, label, value, targetValue, delay, onClick }: { icon: any; label: string; value: string; targetValue: number; delay: number; onClick?: () => void }) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const StatCard = ({ icon: Icon, label, _value, targetValue, delay, onClick }: { icon: any; label: string; _value: string; targetValue: number; delay: number; onClick?: () => void }) => {
   const count = useMotionValue(0);
   const rounded = useTransform(count, (latest) => {
     if (label === 'Database Stats') return `${latest.toFixed(1)}TB`;
@@ -48,17 +49,17 @@ const StatCard = ({ icon: Icon, label, value, targetValue, delay, onClick }: { i
 const AILearningDashboard = () => {
   const { learningStats, setSelectedView } = useDashboard();
 
-  // Parse values to get numeric targets
+  // Parse _values to get numeric targets
   const dbValue = parseFloat(learningStats.database.replace('TB', '')) || 1.2;
   const systemsValue = parseInt(learningStats.systems.split('/')[0]) || 27;
   const convsValue = parseFloat(learningStats.conversations.replace('K', '')) * 1000 || 54300;
   const accuracyValue = 96.8;
 
   const stats = [
-    { icon: Database, label: 'Database Stats', value: learningStats.database, targetValue: dbValue, onClick: () => setSelectedView('database') },
-    { icon: Activity, label: 'Active Systems', value: learningStats.systems, targetValue: systemsValue, onClick: () => setSelectedView('systems') },
-    { icon: MessageSquare, label: 'Conversations', value: learningStats.conversations, targetValue: convsValue, onClick: () => setSelectedView('conversations') },
-    { icon: Brain, label: 'Model Accuracy', value: '96.8%', targetValue: accuracyValue, onClick: () => setSelectedView('ai-learning') },
+    { icon: Database, label: 'Database Stats', _value: learningStats.database, targetValue: dbValue, onClick: () => setSelectedView('database') },
+    { icon: Activity, label: 'Active Systems', _value: learningStats.systems, targetValue: systemsValue, onClick: () => setSelectedView('systems') },
+    { icon: MessageSquare, label: 'Conversations', _value: learningStats.conversations, targetValue: convsValue, onClick: () => setSelectedView('conversations') },
+    { icon: Brain, label: 'Model Accuracy', _value: '96.8%', targetValue: accuracyValue, onClick: () => setSelectedView('ai-learning') },
   ];
 
   return (

@@ -22,6 +22,7 @@ const StatusBar = () => {
     const getBatteryStatus = async () => {
       if ('getBattery' in navigator) {
         try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const battery: any = await (navigator as any).getBattery();
 
           const updateBattery = () => {

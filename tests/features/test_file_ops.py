@@ -22,7 +22,7 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from modules.file_ops import (
+from ai_assistant.utils.file_ops import (
     organize_files_by_type,
     find_duplicate_files,
     remove_duplicate_files,

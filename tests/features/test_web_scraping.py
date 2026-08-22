@@ -22,7 +22,7 @@ import json
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from modules.web_scraping import (
+from ai_assistant.integrations.web_scraping import (
     get_weather_info,
     get_weather_forecast,
     get_latest_news,
@@ -39,7 +39,7 @@ from modules.web_scraping import (
 class TestWeatherFunctions(unittest.TestCase):
     """Test suite for weather-related functions"""
     
-    @patch('modules.web_scraping.requests.get')
+    @patch('ai_assistant.integrations.web_scraping.requests.get')
     def test_get_weather_info_with_api_key(self, mock_get):
         """Test weather info retrieval with API key"""
         # Mock successful API response
@@ -62,7 +62,7 @@ class TestWeatherFunctions(unittest.TestCase):
         self.assertIn("London", result)
         self.assertIn("20", result)
     
-    @patch('modules.web_scraping.requests.get')
+    @patch('ai_assistant.integrations.web_scraping.requests.get')
     def test_get_weather_info_without_api_key(self, mock_get):
         """Test weather info retrieval without API key (free service)"""
         # Mock successful response from wttr.in
@@ -85,7 +85,7 @@ class TestWeatherFunctions(unittest.TestCase):
         self.assertIn("Paris", result)
         self.assertIn("22", result)
     
-    @patch('modules.web_scraping.requests.get')
+    @patch('ai_assistant.integrations.web_scraping.requests.get')
     def test_get_weather_info_error(self, mock_get):
         """Test weather info with API error"""
         mock_response = Mock()
@@ -96,7 +96,7 @@ class TestWeatherFunctions(unittest.TestCase):
         
         self.assertIn("Could not get weather", result)
     
-    @patch('modules.web_scraping.requests.get')
+    @patch('ai_assistant.integrations.web_scraping.requests.get')
     def test_get_weather_forecast(self, mock_get):
         """Test weather forecast retrieval"""
         # Mock forecast response
@@ -130,7 +130,7 @@ class TestWeatherFunctions(unittest.TestCase):
 class TestNewsFunctions(unittest.TestCase):
     """Test suite for news-related functions"""
     
-    @patch('modules.web_scraping.feedparser.parse')
+    @patch('ai_assistant.integrations.web_scraping.feedparser.parse')
     def test_get_latest_news_basic(self, mock_parse):
         """Test news retrieval"""
         # Mock RSS feed response
@@ -157,7 +157,7 @@ class TestNewsFunctions(unittest.TestCase):
         self.assertIn("Latest", result)
         self.assertIn("News", result)
     
-    @patch('modules.web_scraping.feedparser.parse')
+    @patch('ai_assistant.integrations.web_scraping.feedparser.parse')
     def test_get_latest_news_technology(self, mock_parse):
         """Test technology news retrieval"""
         mock_feed = MagicMock()
@@ -176,7 +176,7 @@ class TestNewsFunctions(unittest.TestCase):
         
         self.assertIn("News", result)
     
-    @patch('modules.web_scraping.feedparser.parse')
+    @patch('ai_assistant.integrations.web_scraping.feedparser.parse')
     def test_get_latest_news_no_results(self, mock_parse):
         """Test news retrieval with no results"""
         mock_feed = MagicMock()
@@ -191,7 +191,7 @@ class TestNewsFunctions(unittest.TestCase):
 class TestWebSearchFunctions(unittest.TestCase):
     """Test suite for web search functions"""
     
-    @patch('modules.web_scraping.requests.get')
+    @patch('ai_assistant.integrations.web_scraping.requests.get')
     def test_search_web_basic(self, mock_get):
         """Test basic web search"""
         # Mock search results page
@@ -210,7 +210,7 @@ class TestWebSearchFunctions(unittest.TestCase):
         self.assertIn("Search Results", result)
         self.assertIn("test query", result)
     
-    @patch('modules.web_scraping.requests.get')
+    @patch('ai_assistant.integrations.web_scraping.requests.get')
     def test_search_web_error(self, mock_get):
         """Test web search with error"""
         mock_response = Mock()
@@ -221,7 +221,7 @@ class TestWebSearchFunctions(unittest.TestCase):
         
         self.assertIn("unavailable", result)
     
-    @patch('modules.web_scraping.requests.get')
+    @patch('ai_assistant.integrations.web_scraping.requests.get')
     def test_search_web_no_results(self, mock_get):
         """Test web search with no results"""
         mock_response = Mock()
@@ -237,7 +237,7 @@ class TestWebSearchFunctions(unittest.TestCase):
 class TestFinancialFunctions(unittest.TestCase):
     """Test suite for financial data functions"""
     
-    @patch('modules.web_scraping.requests.get')
+    @patch('ai_assistant.integrations.web_scraping.requests.get')
     def test_get_stock_price_success(self, mock_get):
         """Test stock price retrieval"""
         # Mock Yahoo Finance API response
@@ -262,7 +262,7 @@ class TestFinancialFunctions(unittest.TestCase):
         self.assertIn("AAPL", result)
         self.assertIn("150.50", result)
     
-    @patch('modules.web_scraping.requests.get')
+    @patch('ai_assistant.integrations.web_scraping.requests.get')
     def test_get_stock_price_invalid_symbol(self, mock_get):
         """Test stock price with invalid symbol"""
         mock_response = Mock()
@@ -274,7 +274,7 @@ class TestFinancialFunctions(unittest.TestCase):
         
         self.assertIn("No data found", result)
     
-    @patch('modules.web_scraping.requests.get')
+    @patch('ai_assistant.integrations.web_scraping.requests.get')
     def test_get_crypto_price_success(self, mock_get):
         """Test cryptocurrency price retrieval"""
         # Mock CoinGecko API response
@@ -294,7 +294,7 @@ class TestFinancialFunctions(unittest.TestCase):
         self.assertIn("45,000", result)
         self.assertIn("2.5", result)
     
-    @patch('modules.web_scraping.requests.get')
+    @patch('ai_assistant.integrations.web_scraping.requests.get')
     def test_get_crypto_price_invalid(self, mock_get):
         """Test crypto price with invalid symbol"""
         mock_response = Mock()
@@ -310,7 +310,7 @@ class TestFinancialFunctions(unittest.TestCase):
 class TestWebScrapingFunctions(unittest.TestCase):
     """Test suite for web scraping functions"""
     
-    @patch('modules.web_scraping.requests.get')
+    @patch('ai_assistant.integrations.web_scraping.requests.get')
     def test_scrape_website_content_success(self, mock_get):
         """Test website content scraping"""
         mock_response = Mock()
@@ -331,7 +331,7 @@ class TestWebScrapingFunctions(unittest.TestCase):
         self.assertIn("Website Content", result)
         self.assertIn("Test Page", result)
     
-    @patch('modules.web_scraping.requests.get')
+    @patch('ai_assistant.integrations.web_scraping.requests.get')
     def test_scrape_website_content_error(self, mock_get):
         """Test website scraping with error"""
         mock_response = Mock()
@@ -342,7 +342,7 @@ class TestWebScrapingFunctions(unittest.TestCase):
         
         self.assertIn("Could not access", result)
     
-    @patch('modules.web_scraping.requests.get')
+    @patch('ai_assistant.integrations.web_scraping.requests.get')
     def test_scrape_website_metadata_only(self, mock_get):
         """Test scraping metadata without full text"""
         mock_response = Mock()
@@ -370,7 +370,7 @@ class TestWebScrapingFunctions(unittest.TestCase):
 class TestTrendingFunctions(unittest.TestCase):
     """Test suite for trending topics functions"""
     
-    @patch('modules.web_scraping.requests.get')
+    @patch('ai_assistant.integrations.web_scraping.requests.get')
     def test_get_trending_reddit(self, mock_get):
         """Test getting trending topics from Reddit"""
         mock_response = Mock()
@@ -404,7 +404,7 @@ class TestTrendingFunctions(unittest.TestCase):
         self.assertIn("Trending on Reddit", result)
         self.assertIn("Trending Post", result)
     
-    @patch('modules.web_scraping.requests.get')
+    @patch('ai_assistant.integrations.web_scraping.requests.get')
     def test_get_trending_github(self, mock_get):
         """Test getting trending topics from GitHub"""
         mock_response = Mock()
@@ -443,7 +443,7 @@ class TestTrendingFunctions(unittest.TestCase):
 class TestRSSFunctions(unittest.TestCase):
     """Test suite for RSS monitoring functions"""
     
-    @patch('modules.web_scraping.feedparser.parse')
+    @patch('ai_assistant.integrations.web_scraping.feedparser.parse')
     def test_monitor_rss_feeds_success(self, mock_parse):
         """Test monitoring RSS feeds"""
         mock_feed = MagicMock()
@@ -468,7 +468,7 @@ class TestRSSFunctions(unittest.TestCase):
         self.assertIn("RSS Feed Monitor", result)
         self.assertIn("Article", result)
     
-    @patch('modules.web_scraping.feedparser.parse')
+    @patch('ai_assistant.integrations.web_scraping.feedparser.parse')
     def test_monitor_rss_feeds_no_items(self, mock_parse):
         """Test RSS monitoring with no items"""
         mock_feed = MagicMock()
@@ -496,7 +496,7 @@ class TestProductPriceFunctions(unittest.TestCase):
 class TestWebScrapingEdgeCases(unittest.TestCase):
     """Test suite for edge cases and error handling"""
     
-    @patch('modules.web_scraping.requests.get')
+    @patch('ai_assistant.integrations.web_scraping.requests.get')
     def test_network_timeout(self, mock_get):
         """Test handling of network timeout"""
         mock_get.side_effect = Exception("Connection timeout")
@@ -505,7 +505,7 @@ class TestWebScrapingEdgeCases(unittest.TestCase):
         
         self.assertIn("error", result.lower())
     
-    @patch('modules.web_scraping.requests.get')
+    @patch('ai_assistant.integrations.web_scraping.requests.get')
     def test_invalid_json_response(self, mock_get):
         """Test handling of invalid JSON response"""
         mock_response = Mock()
@@ -517,7 +517,7 @@ class TestWebScrapingEdgeCases(unittest.TestCase):
         
         self.assertIn("error", result.lower())
     
-    @patch('modules.web_scraping.requests.get')
+    @patch('ai_assistant.integrations.web_scraping.requests.get')
     def test_html_parsing_error(self, mock_get):
         """Test handling of HTML parsing errors"""
         mock_response = Mock()

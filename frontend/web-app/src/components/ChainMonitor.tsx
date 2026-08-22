@@ -42,7 +42,7 @@ const ChainMonitor: React.FC<ChainMonitorProps> = ({ chainId }) => {
       .catch(err => console.error("Failed to fetch chain", err));
 
     // 2. Setup WebSocket (Mock implementation of how it would look)
-    const setupWebSocket = () => {
+    const __setupWebSocket = () => {
       // socket.emit('subscribe_chain', { chain_id: chainId });
       
       // socket.on('chain.started', (data) => setChain(prev => prev ? {...prev, status: 'EXECUTING'} : null));
@@ -56,7 +56,7 @@ const ChainMonitor: React.FC<ChainMonitorProps> = ({ chainId }) => {
       // }
     };
     
-    // setupWebSocket();
+    // __setupWebSocket();
   }, [chainId]);
 
   if (!chain) return <div className="p-4 border rounded shadow-sm">Loading Chain {chainId}...</div>;

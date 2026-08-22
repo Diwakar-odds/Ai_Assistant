@@ -20,17 +20,13 @@ import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import OnboardingModal from './components/OnboardingModal';
 import { useState, useEffect } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 
 function AppContent() {
   const { selectedView, closeDetailView } = useDashboard();
   const [activeTab, setActiveTab] = useState<'main' | 'options' | 'stats'>('main');
-  const [showOptions, setShowOptions] = useState(false);
-  const [showStats, setShowStats] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [hasCheckedOnboarding, setHasCheckedOnboarding] = useState(false);
 
   useEffect(() => {
     fetch('/api/settings/all')
@@ -39,9 +35,8 @@ function AppContent() {
         if (data.success && data.settings && data.settings.onboarded === false) {
           setShowOnboarding(true);
         }
-        setHasCheckedOnboarding(true);
       })
-      .catch(() => setHasCheckedOnboarding(true));
+      .catch(() => {});
   }, []);
 
   const handleOnboardingComplete = () => {
@@ -82,7 +77,7 @@ function AppContent() {
   };
 
   const detailContent = getDetailContent();
-  const containerVariants = {
+  const containerVariants: import('framer-motion').Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -92,7 +87,7 @@ function AppContent() {
     }
   };
 
-  const columnVariants = {
+  const columnVariants: import('framer-motion').Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,

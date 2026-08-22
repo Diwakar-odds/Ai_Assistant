@@ -4,7 +4,7 @@ import sys
 import importlib.util
 
 # Load app_discovery module directly
-spec = importlib.util.spec_from_file_location('app_discovery', 'ai_assistant/modules/app_discovery.py')
+spec = importlib.util.spec_from_file_location('app_discovery', 'core_ai/src/ai_assistant/automation/app_discovery.py')
 app_disc = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(app_disc)
 

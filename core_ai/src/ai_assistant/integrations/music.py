@@ -358,6 +358,18 @@ def get_ytmusic_playlists() -> str:
     except Exception as e:
         return f"❌ Error getting Spotify status: {str(e)}"
 
+def _get_current_spotify_track() -> str:
+    controller = SpotifyController()
+    if not controller._ensure_authenticated() or not hasattr(controller, 'sp'):
+        return 'Spotify is not authenticated'
+    try:
+        current = controller.sp.current_playback()
+        if current is not None and current.get('is_playing'):
+            return f"{current['item']['name']} by {current['item']['artists'][0]['name']} (Playing)"
+        return 'No track currently playing'
+    except Exception as e:
+        return f'Error: {e}'
+
 def get_spotify_status() -> str:
     """
     Get current Spotify playback status

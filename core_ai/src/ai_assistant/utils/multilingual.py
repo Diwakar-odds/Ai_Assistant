@@ -69,6 +69,9 @@ try:
 except ImportError:
     VOSK_AVAILABLE = False
     print("WARNING: Vosk not available. Install with: pip install vosk pyaudio")
+    Model = None
+    KaldiRecognizer = None
+    pyaudio = None
 
 class Language(Enum):
     """Supported languages."""
