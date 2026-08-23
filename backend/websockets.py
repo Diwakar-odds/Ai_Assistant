@@ -60,7 +60,7 @@ def handle_chat_stream(data):
             emit('chat_stream_error', {'error': 'No message provided'})
             return
         
-        logger.info(f"ÃƒÂ°Ã…Â¸"Ã‚Â¡ WebSocket chat stream started: {session_id}")
+        logger.info(f"ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ WebSocket chat stream started: {session_id}")
         
         # Get or create chat session
         with chat_session_lock:
@@ -275,7 +275,7 @@ def handle_voice_command(data):
             emit('voice_response', {'response': 'No command received', 'error': True})
             return
         
-        print(f"🎙️ Processing voice command: {text}")
+        print(f"Ã°Å¸Å½Â¤ Processing voice command: {text}")
         print(f"   Language: {language}")
         
         # Log the voice interaction
@@ -359,10 +359,29 @@ def handle_multilingual_command(data):
             'timestamp': datetime.now().isoformat()
         })
 
+from flask_socketio import join_room, leave_room
+
 @socketio.on('subscribe_chain')
 def handle_chain_subscribe(data):
     """Subscribe to chain updates"""
     chain_id = data.get('chain_id')
-    # In a full implementation, we would join a room specific to this chain
-    # For now, progress is broadcast globally or we could filter
-    emit('subscribed', {'chain_id': chain_id})
+    if chain_id:
+        join_room(f"chain_{chain_id}")
+        emit('chain.subscribed', {'chain_id': chain_id})
+        logger.info(f"Client subscribed to progress for chain {chain_id}")
+
+@socketio.on('unsubscribe_chain')
+def handle_chain_unsubscribe(data):
+    """Unsubscribe from chain updates"""
+    chain_id = data.get('chain_id')
+    if chain_id:
+        leave_room(f"chain_{chain_id}")
+        emit('chain.unsubscribed', {'chain_id': chain_id})
+        logger.info(f"Client unsubscribed from progress for chain {chain_id}")
+
+def broadcast_chain_progress(chain_id: str, event_type: str, data: dict):
+    """
+    Broadcasts chain progress to clients subscribed to the chain.
+    event_type can be: chain.started, chain.step_completed, chain.step_failed, chain.verification_completed, chain.completed
+    """
+    socketio.emit(event_type, data, room=f"chain_{chain_id}")

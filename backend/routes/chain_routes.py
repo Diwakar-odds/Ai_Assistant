@@ -13,6 +13,14 @@ except ImportError as e:
     MULTI_AGENT_AVAILABLE = False
     logger.warning(f"Multi-Agent System not available in chain_routes: {e}")
 
+try:
+    from backend.modern_web_backend import *
+except ImportError:
+    from modern_web_backend import *
+
+from ai_assistant.core.chain_optimizer import ChainOptimizer
+chain_optimizer = ChainOptimizer()
+
 def _broadcast_chain_progress(progress):
     """Broadcast chain progress via WebSocket"""
     try:
@@ -25,7 +33,6 @@ def _broadcast_chain_progress(progress):
             )
     except Exception as e:
         logger.error(f"WebSocket broadcast error: {e}")
-
 @chain_bp.route('/api/chains/create', methods=['POST'])
 @jwt_required()
 def create_chain():
@@ -70,7 +77,72 @@ def create_chain():
         })
         
     except Exception as e:
-        logger.error(f"Chain creation error: {e}")
+        logger.error(f"Error getting chain status: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@chain_bp.route('/api/chains/<chain_id>/execute', methods=['POST'])
+@jwt_required()
+def execute_chain(chain_id):
+    """Execute a created chain"""
+    if not MULTI_AGENT_AVAILABLE:
+        return jsonify({"error": "Multi-Agent System not available"}), 503
+        
+    try:
+        import asyncio
+        manager = get_chain_manager()
+        
+        # This is typically an async background task in actual production
+        def run_execute():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(manager.execute_chain(chain_id))
+            loop.close()
+            
+        thread = threading.Thread(target=run_execute)
+        thread.start()
+        
+        return jsonify({"status": "executing", "chain_id": chain_id, "message": "Chain execution started"})
+    except Exception as e:
+        logger.error(f"Error executing chain: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@chain_bp.route('/api/chains/<chain_id>/cancel', methods=['POST'])
+@jwt_required()
+def cancel_chain(chain_id):
+    """Cancel a running chain"""
+    if not MULTI_AGENT_AVAILABLE:
+        return jsonify({"error": "Multi-Agent System not available"}), 503
+        
+    try:
+        manager = get_chain_manager()
+        if chain_id in manager.active_chains:
+            manager.active_chains[chain_id].status = "CANCELLED"
+            # Move to completed if needed
+            manager.completed_chains[chain_id] = manager.active_chains.pop(chain_id)
+            return jsonify({"status": "cancelled", "chain_id": chain_id})
+        return jsonify({"error": "Chain not found or already completed"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@chain_bp.route('/api/chains/optimize', methods=['POST'])
+@jwt_required()
+def optimize_chain():
+    """Optimize a chain plan based on historical execution"""
+    data = request.get_json()
+    plan = data.get("plan", [])
+    
+    try:
+        optimized_plan = chain_optimizer.optimize_plan(plan)
+        success_rate = chain_optimizer.predict_success_rate(optimized_plan)
+        
+        return jsonify({
+            "status": "success",
+            "optimized_plan": optimized_plan,
+            "predicted_success_rate": success_rate
+        })
+    except Exception as e:
+        logger.error(f"Error optimizing chain: {e}")
         return jsonify({"error": str(e)}), 500
 
 @chain_bp.route('/api/chains/<chain_id>/resume', methods=['POST'])

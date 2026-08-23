@@ -206,3 +206,45 @@ def api_process_voice():
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": f"Failed to process voice: {e}"}), 500
+
+@voice_bp.route('/api/voice/chain', methods=['POST'])
+@jwt_required()
+def api_voice_to_chain():
+    """Convert voice transcript directly to a Chain of Actions"""
+    try:
+        data = request.get_json()
+        command = data.get('command')
+        if not command:
+            return jsonify({"error": "No command provided"}), 400
+            
+        if not MULTI_AGENT_AVAILABLE:
+            return jsonify({"error": "Multi-Agent System not available"}), 503
+            
+        manager = get_chain_manager()
+        import asyncio
+        import threading
+        
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        chain = loop.run_until_complete(manager.create_chain(command))
+        
+        def run_chain_background(chain_obj):
+            async def _run():
+                await manager.decompose_command(chain_obj)
+                await manager.identify_executors(chain_obj)
+                await manager.execute_chain(chain_obj.id)
+            new_loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(new_loop)
+            new_loop.run_until_complete(_run())
+            new_loop.close()
+            
+        thread = threading.Thread(target=run_chain_background, args=(chain,))
+        thread.start()
+        
+        return jsonify({
+            "success": True,
+            "chain_id": chain.id,
+            "message": f"Started chain execution for voice command: {command}"
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
