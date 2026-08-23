@@ -141,6 +141,7 @@ const AILearningDetail = () => {
         <div className="bg-[#1F2228] border border-[#2A2D35] rounded-lg p-6">
           <h4 className="text-lg font-semibold text-white mb-4">Recent Training Sessions</h4>
           <div className="space-y-3">
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             {recentSessions.map((session: any, idx: number) => (
               <div
                 key={idx}
@@ -166,20 +167,21 @@ const AILearningDetail = () => {
             <p className="text-sm text-[#9CA3AF]">Active autonomous agents running in the system</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             {details.agents.map((agent: any) => (
               <div key={agent.id} className="bg-[#1F2228] border border-[#2A2D35] rounded-lg p-4 hover:border-[#8B5CF6]/50 transition-all">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className={`p-2 rounded-lg ${agent.status === 'active' ? 'bg-[#10B981]/10 text-[#10B981]' : 'bg-[#8B5CF6]/10 text-[#8B5CF6]'
+                  <div className={`p-2 rounded-lg ${(agent as any).status === 'active' ? 'bg-[#10B981]/10 text-[#10B981]' : 'bg-[#8B5CF6]/10 text-[#8B5CF6]'
                     }`}>
                     <Brain className="w-5 h-5" />
                   </div>
                   <div>
-                    <h5 className="font-semibold text-white text-sm">{agent.name}</h5>
+                    <h5 className="font-semibold text-white text-sm">{(agent as any).name}</h5>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-[#9CA3AF] bg-[#2A2D35] px-1.5 py-0.5 rounded uppercase tracking-wider">
                         {agent.id.split('_')[0]}
                       </span>
-                      {agent.status === 'active' ? (
+                      {(agent as any).status === 'active' ? (
                         <span className="text-[10px] text-[#10B981] flex items-center gap-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse"></span>
                           ACTIVE

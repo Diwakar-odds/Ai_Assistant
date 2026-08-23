@@ -13,7 +13,12 @@ except ImportError:
 
 import time
 import os
-import pygame
+try:
+    import pygame
+    PYGAME_AVAILABLE = True
+except ImportError:
+    PYGAME_AVAILABLE = False
+    print("WARNING: pygame not found. Audio features will be disabled.")
 
 import json 
 import re

@@ -26,7 +26,7 @@ import sqlite3
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
-from ai_assistant.web_scraping import (
+from ai_assistant.integrations.web_scraping import (
     WebScrapingManager,
     get_weather_info,
     get_latest_news
@@ -38,7 +38,7 @@ try:
     from ai_assistant.ai.conversation_clustering import ConversationClusterer
     from ai_assistant.ai.intent_classification import IntentClassifier
     from ai_assistant.ai.enhanced_learning import PersonalKnowledgeGraph
-    from ai_assistant.modules.memory import save_to_memory, search_memory
+    from ai_assistant.ai.memory import save_to_memory, search_memory
     from ai_assistant.ai.advanced_feedback_learning import AdaptiveLearningEngine
 except ImportError as e:
     print(f"Warning: Could not import some learning systems: {e}")

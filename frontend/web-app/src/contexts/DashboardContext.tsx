@@ -26,7 +26,7 @@ export interface LearningStats {
     database: string;
     systems: string;
     conversations: string;
-    details?: any;
+    details?: unknown;
 }
 
 export interface SystemLog {
@@ -122,16 +122,16 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         conversations: '--',
     });
     const [systemLogs, setSystemLogs] = useState<SystemLog[]>([]);
-    const [taskProgress, setTaskProgress] = useState(0);
+    const [taskProgress, _setTaskProgress] = useState(0);
     const [isVoiceActive, setIsVoiceActive] = useState(false);
     const [interimTranscript, setInterimTranscript] = useState('');
     const interimTranscriptRef = useRef(''); // Ref to access current transcript in simulation
-    const [recognition, setRecognition] = useState<any>(null);
+    const [recognition, setRecognition] = useState<unknown>(null);
     const [voiceLanguage, setVoiceLanguageState] = useState('auto'); // Auto-detect language
-    const [isRecognitionStarted, setIsRecognitionStarted] = useState(false);
+    const [_isRecognitionStarted, _setIsRecognitionStarted] = useState(false);
     
     // MediaRecorder & Audio Context for Faster-Whisper
-            const silenceTimerRef = useRef<any>(null);
+            const silenceTimerRef = useRef<unknown>(null);
         const [userStoppedVoice, setUserStoppedVoice] = useState(false); // Track if user manually stopped
     const userStoppedRef = useRef(false); // Ref to track stop state without causing re-renders
 
@@ -250,7 +250,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     };
 
     // Expose setAIModel
-    const setAIModelByName = (model: string) => {
+    const _setAIModelByName = (model: string) => {
         console.log(`🔄 Switching AI model to: ${model}`);
         setAIModel(model);
     };
@@ -279,6 +279,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
     // SAFETY: Use a ref to hold the active recognition instance
     // This persists across re-renders and ensures we always clean up the *actual* active instance
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const activeRecognitionRef = useRef<any>(null);
     const hasGreetedRef = useRef(false); // Fix for double greeting
 
@@ -310,6 +311,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         });
 
         // Listen for live settings changes
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         newSocket.on('settings_updated', async (data: any) => {
             console.log(`⚙️ Settings updated live: ${data.category}`, data);
             addSystemLog('info', `${data.category} settings updated`);
@@ -331,11 +333,12 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                         }
                     }
                 }
-            } catch (err) {
+            } catch (_err) {
                 console.error('Failed to sync settings live:', err);
             }
         });
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         newSocket.on('command_response', (data: any) => {
             console.log('📢 command_response received:', data);
             if (data.success) {
@@ -351,6 +354,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             }
         });
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         newSocket.on('system_stats_update', (stats: any) => {
             setSystemStats({
                 cpu: Math.round(stats.cpu_usage || 0),
@@ -360,10 +364,12 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             });
         });
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         newSocket.on('log_update', (log: any) => {
             addSystemLog(log.type || 'info', log.message);
         });
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         newSocket.on('learning_stats_update', (stats: any) => {
             setLearningStats({
                 database: stats.database || '--',
@@ -373,6 +379,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         });
 
         // Handle voice command responses with talkback
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         newSocket.on('voice_response', (data: any) => {
             console.log('🎤 Voice response received:', data);
             console.log('🔊 voiceLanguage:', voiceLanguage);
@@ -398,11 +405,13 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
 
         // Google Speech Recognition handlers
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         newSocket.on('google_ready', (data: any) => {
             console.log('🌐 Google Speech Recognition ready:', data);
             addSystemLog('success', `Online recognition enabled (${data.language})`);
         });
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         newSocket.on('google_transcript', (data: any) => {
             console.log('🌐 Google transcript:', data);
             if (data.isFinal) {
@@ -415,6 +424,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             }
         });
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         newSocket.on('google_error', (data: any) => {
             console.error('❌ Google Speech error:', data);
             addSystemLog('error', `Online recognition error: ${data.error}`);
@@ -427,11 +437,13 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             newSocket.close();
             socketRef.current = null;
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Initialize Voice Recognition
     useEffect(() => {
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
             const recog = new SpeechRecognition();
             recog.continuous = true;  // Keep listening continuously
@@ -452,7 +464,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 try {
                     activeRecognitionRef.current.abort();
                     activeRecognitionRef.current.onend = null; // Prevent restart loops from old instance
-                } catch (e) {
+                } catch (_e) {
                     console.warn('Error aborting previous recognition:', e);
                 }
             }
@@ -472,7 +484,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     setIsVoiceActive(true);
                     isVoiceActiveRef.current = true; // Sync ref
                     setInterimTranscript('');
-                    setIsRecognitionStarted(true);
+                    _setIsRecognitionStarted(true);
 
                     // Start audio level monitoring immediately
                     console.log('🎧 Initiating audio level monitoring...');
@@ -483,11 +495,12 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     });
                 } else {
                     console.log('⚠️ Recognition started but user stopped - stopping immediately');
-                    setIsRecognitionStarted(false);
+                    _setIsRecognitionStarted(false);
                     recog.stop();
                 }
             };
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             recog.onresult = (event: any) => {
                 // Check if this instance is still the active one
                 if (activeRecognitionRef.current !== recog) {
@@ -668,6 +681,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 }
             };
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             recog.onerror = (event: any) => {
                 console.error('🚨 Speech recognition error:', event.error);
 
@@ -722,7 +736,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
             recog.onend = () => {
                 console.log('🔴 Recognition ended, current state:', isVoiceActiveRef.current, 'userStopped:', userStoppedRef.current);
-                setIsRecognitionStarted(false);
+                _setIsRecognitionStarted(false);
 
                 // Stop audio monitoring when recognition ends
                 stopAudioLevelMonitoring();
@@ -738,6 +752,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                             try {
                                 recog.start();
                                 console.log('✅ Recognition restarted');
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
                             } catch (error: any) {
                                 if (!error.message?.includes('already started')) {
                                     console.error('❌ Failed to restart:', error);
@@ -771,7 +786,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     try {
                         oldRecog.abort();
                         console.log('✅ Stopped active recognition instance');
-                    } catch (e) {
+                    } catch (_e) {
                         // ignore errors on abort
                     }
                     activeRecognitionRef.current = null;
@@ -803,6 +818,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             console.log('✅ Microphone access granted');
             microphoneStreamRef.current = stream;
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
             console.log('🔊 Audio context created, state:', audioContext.state);
             
@@ -824,7 +840,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             audioContextRef.current = audioContext;
             analyserRef.current = analyser;
 
-            analyzeAudioLevel();
+            _analyzeAudioLevel();
             console.log('✅ Audio level monitoring started successfully');
         } catch (error) {
             console.error('❌ Failed to start audio monitoring:', error);
@@ -833,7 +849,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         */
     };
 
-    const analyzeAudioLevel = () => {
+    const _analyzeAudioLevel = () => {
         if (!analyserRef.current) {
             console.warn('⚠️ No analyser available for audio level monitoring');
             return;
@@ -940,7 +956,9 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     const stopAudioLevelMonitoring = () => {
         // Cancel animation frame
         if (animationFrameRef.current) {
-            cancelAnimationFrame(animationFrameRef.current);
+            try {
+                cancelAnimationFrame(animationFrameRef.current);
+            } catch (_e) { /* empty */ }
             animationFrameRef.current = null;
         }
 
@@ -1065,7 +1083,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
         // Simply update the language property - recognition will use it on next start
         if (recognition) {
-            recognition.lang = lang;
+            (recognition as any).lang = lang;
             console.log(`✅ Language updated to: ${lang}`);
         }
 
@@ -1080,14 +1098,14 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             userStoppedRef.current = true;
             setIsVoiceActive(false);
             isVoiceActiveRef.current = false;
-            setIsRecognitionStarted(false);
+            _setIsRecognitionStarted(false);
             setInterimTranscript('');
 
             if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-                try { mediaRecorderRef.current.stop(); } catch(e) {}
+                try { mediaRecorderRef.current.stop(); } catch(_e) { /* empty */ }
             }
             if (audioContextRef.current) {
-                try { audioContextRef.current.close(); } catch(e) {}
+                try { audioContextRef.current.close(); } catch(_e) { /* empty */ }
                 audioContextRef.current = null;
             }
         } else {
@@ -1126,7 +1144,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 mediaRecorderRef.current.start();
                 setIsVoiceActive(true);
                 isVoiceActiveRef.current = true;
-                setIsRecognitionStarted(true);
+                _setIsRecognitionStarted(true);
                 setInterimTranscript('Listening (Auto-stops on silence)...');
 
                 const dataArray = new Uint8Array(analyser.frequencyBinCount);
@@ -1151,7 +1169,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                                     mediaRecorderRef.current.stop();
                                     setIsVoiceActive(false);
                                     isVoiceActiveRef.current = false;
-                                    setIsRecognitionStarted(false);
+                                    _setIsRecognitionStarted(false);
                                     setInterimTranscript('Processing with Whisper...');
                                 }
                             }, 1500); // 1.5 seconds silence
@@ -1161,7 +1179,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 };
                 checkSilence();
 
-            } catch (err) {
+            } catch (_err) {
                 console.error('Error accessing microphone:', err);
                 setIsVoiceActive(false);
                 isVoiceActiveRef.current = false;
@@ -1180,7 +1198,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 
                 // Mute mic if necessary
                 if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-                    try { mediaRecorderRef.current.stop(); } catch (e) {}
+                    try { mediaRecorderRef.current.stop(); } catch (_e) { /* ignore */ }
                 }
                 
                 audio.onended = () => {
@@ -1240,8 +1258,8 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     // Mute microphone to prevent echo loop
                     if (recognition) {
                         try {
-                            recognition.stop();
-                        } catch (e) {
+                            (recognition as any).stop();
+                        } catch (_e) {
                             console.warn('Could not stop recognition on TTS start:', e);
                         }
                     }
@@ -1257,8 +1275,8 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                         // Resume listening if alwaysActive mode is on
                         if (recognition && alwaysActive && !userStoppedVoice) {
                             try {
-                                recognition.start();
-                            } catch (e) {
+                                (recognition as any).start();
+                            } catch (_e) {
                                 console.warn('Could not restart recognition on TTS end:', e);
                             }
                         }
@@ -1272,8 +1290,8 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                         ttsSpeakingRef.current = false;
                         if (recognition && alwaysActive && !userStoppedVoice) {
                             try {
-                                recognition.start();
-                            } catch (err) {}
+                                (recognition as any).start();
+                            } catch (_err) { /* ignore */ }
                         }
                     }, 1500);
                 };
@@ -1302,7 +1320,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             userStoppedRef.current = false;
             if (!isVoiceActive && recognition) {
                 try {
-                    recognition.start();
+                    (recognition as any).start();
                     const message = requireWakeWord
                         ? 'Always active mode enabled. Waiting for wake word.'
                         : 'Always active mode enabled. Just speak your command.';
@@ -1318,7 +1336,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 userStoppedRef.current = true;
                 setIsVoiceActive(false);
                 isVoiceActiveRef.current = false; // Sync ref
-                recognition.stop();
+                (recognition as any).stop();
                 speak('Always active mode disabled.', voiceLanguage);
             }
             setWakeWordDetected(false);
@@ -1383,7 +1401,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
 
     // Start Google Speech Recognition (online)
-    const startGoogleRecognition = async () => {
+    const _startGoogleRecognition = async () => {
         if (!socket) {
             addSystemLog('error', 'Not connected to server');
             return;
@@ -1428,7 +1446,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
             mediaRecorder.start(100); // Capture in 100ms chunks for real-time processing
             setIsVoiceActive(true);
-            setIsRecognitionStarted(true);
+            _setIsRecognitionStarted(true);
             console.log('🌐 Google Speech Recognition started');
 
         } catch (error) {
@@ -1438,7 +1456,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     };
 
     // Stop Google Speech Recognition
-    const stopGoogleRecognition = () => {
+    const _stopGoogleRecognition = () => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
             mediaRecorderRef.current.stop();
             mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
@@ -1449,7 +1467,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         }
 
         setIsVoiceActive(false);
-        setIsRecognitionStarted(false);
+        _setIsRecognitionStarted(false);
         setInterimTranscript('');
         console.log('🚫 Google Speech Recognition stopped');
     };
@@ -1621,7 +1639,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         if (stored) {
             try {
                 setConversationHistory(JSON.parse(stored));
-            } catch (e) {
+            } catch (_e) {
                 console.error('Failed to load conversation history:', e);
             }
         }

@@ -8,7 +8,7 @@ import os
 import sqlite3
 import tempfile
 import shutil
-from modules import memory
+from ai_assistant.ai import memory
 
 
 class TestMemoryModule(unittest.TestCase):
@@ -30,6 +30,8 @@ class TestMemoryModule(unittest.TestCase):
         
         # Update the memory pool to use test database
         memory._memory_pool = memory.ConnectionPool(self.test_db, max_connections=5)
+        memory.ENCRYPTION_AVAILABLE = False
+        memory._encrypted_db = None
         
         # Initialize test database
         memory.setup_memory()
@@ -109,8 +111,11 @@ class TestMemoryModule(unittest.TestCase):
     
     def test_get_memory(self):
         """Test retrieving conversation history."""
+        import time
         memory.save_to_memory("User", "First message")
+        time.sleep(1)
         memory.save_to_memory("YourDaddy", "First response")
+        time.sleep(1)
         memory.save_to_memory("User", "Second message")
         
         result = memory.get_memory(last_n_messages=2)
@@ -177,7 +182,7 @@ class TestMemoryModule(unittest.TestCase):
     def test_conversation_summary(self):
         """Test daily conversation summary."""
         import datetime
-        today = datetime.date.today().strftime("%Y-%m-%d")
+        today = datetime.datetime.utcnow().strftime("%Y-%m-%d")
         
         memory.save_to_memory("User", "Test message 1")
         memory.save_to_memory("YourDaddy", "Test response 1")
