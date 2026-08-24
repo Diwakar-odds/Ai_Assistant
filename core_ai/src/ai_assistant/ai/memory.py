@@ -1,7 +1,11 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 # Memory Management Module
 """
 Enhanced memory system with semantic search, conversation summaries,
-and knowledge management for the YourDaddy AI Assistant.
+and knowledge management for the Pulsar AI Assistant.
 
 Now includes encryption for sensitive conversation data.
 """
@@ -10,10 +14,26 @@ import sqlite3
 import hashlib
 import datetime
 import json
+import numpy as np
 from typing import List, Dict, Optional, Tuple
 from contextlib import contextmanager
 import threading
 from pathlib import Path
+
+_embedding_model = None
+
+def get_embedding_model():
+    """Lazily load the SentenceTransformer model to avoid blocking startup."""
+    global _embedding_model
+    if _embedding_model is None:
+        try:
+            from sentence_transformers import SentenceTransformer
+            print("Loading Semantic Memory Embeddings Model...")
+            _embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+        except ImportError:
+            logger.warning("WARNING: sentence-transformers not found. Semantic memory degraded.")
+            _embedding_model = None
+    return _embedding_model
 
 # Import encryption support
 try:
@@ -21,7 +41,7 @@ try:
     ENCRYPTION_AVAILABLE = True
 except ImportError:
     ENCRYPTION_AVAILABLE = False
-    # print("WARNING: Encryption not available - sensitive data will not be encrypted")
+    # logger.warning("WARNING: Encryption not available - sensitive data will not be encrypted")
     pass
 
 # Import database configuration
@@ -109,7 +129,7 @@ def setup_memory() -> str:
                  content TEXT)
             ''')
             
-            # Enhanced memory with categorization
+            # Enhanced memory with categorization and embeddings
             c.execute('''
                 CREATE TABLE IF NOT EXISTS enhanced_memory
                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -120,8 +140,15 @@ def setup_memory() -> str:
                  importance_level INTEGER DEFAULT 3,
                  category TEXT DEFAULT 'general',
                  tags TEXT,
-                 summary TEXT)
+                 summary TEXT,
+                 embedding BLOB)
             ''')
+            
+            # Attempt to add embedding column if table existed before RAG upgrade
+            try:
+                c.execute("ALTER TABLE enhanced_memory ADD COLUMN embedding BLOB")
+            except sqlite3.OperationalError:
+                pass # Column already exists
             
             # Create indexes for better query performance
             c.execute('''
@@ -173,6 +200,13 @@ def setup_memory() -> str:
 def save_to_memory(speaker: str, content: str):
     """Saves a line of dialogue to both memory tables with transaction safety and encryption."""
     try:
+        # Compute semantic embedding if available
+        embedding_bytes = None
+        model = get_embedding_model()
+        if model:
+            emb = model.encode(content)
+            embedding_bytes = emb.astype(np.float32).tobytes()
+
         # Use encrypted database if available
         encrypted_db = get_encrypted_db()
         
@@ -199,7 +233,8 @@ def save_to_memory(speaker: str, content: str):
                     "content_hash": content_hash,
                     "importance_level": importance,
                     "category": category,
-                    "summary": summary
+                    "summary": summary,
+                    "embedding": embedding_bytes
                 }
                 encrypted_db.insert("enhanced_memory", data)
                 
@@ -222,9 +257,9 @@ def save_to_memory(speaker: str, content: str):
                 try:
                     c.execute("""
                         INSERT INTO enhanced_memory 
-                        (speaker, content, content_hash, importance_level, category, summary)
-                        VALUES (?,?,?,?,?,?)
-                    """, (speaker, content, content_hash, importance, category, summary))
+                        (speaker, content, content_hash, importance_level, category, summary, embedding)
+                        VALUES (?,?,?,?,?,?,?)
+                    """, (speaker, content, content_hash, importance, category, summary, embedding_bytes))
                 except sqlite3.IntegrityError:
                     # Content already exists (duplicate), update timestamp instead
                     c.execute("""
@@ -233,7 +268,7 @@ def save_to_memory(speaker: str, content: str):
                         WHERE content_hash = ?
                     """, (content_hash,))
     except Exception as e:
-        print(f"Error saving to memory: {e}")
+        logger.error(f"Error saving to memory: {e}")
 
 def get_memory(last_n_messages: int = 10) -> str:
     """
@@ -350,7 +385,7 @@ def get_conversation_summary(date: str = "") -> str:
         # Generate summary (simplified version)
         total_messages = len(conversations)
         user_messages = len([c for c in conversations if c[0] == "User"])
-        assistant_messages = len([c for c in conversations if c[0] == "YourDaddy"])
+        assistant_messages = len([c for c in conversations if c[0] == "Pulsar"])
         
         summary = f"Total messages: {total_messages} (User: {user_messages}, Assistant: {assistant_messages})"
         topics = "General conversation, assistance requests"
@@ -484,78 +519,86 @@ def generate_summary(content: str) -> str:
         # Simple truncation for now (could be enhanced with NLP)
         return content[:47] + "..."
 
-def semantic_search_memory(query: str, limit: int = 5) -> str:
+def semantic_search_memory(query: str, limit: int = 5, threshold: float = 0.3) -> str:
     """
-    Perform semantic search on conversation history.
-    Uses simple keyword matching and TF-IDF style scoring.
+    Perform semantic search on conversation history using SentenceTransformers.
     :param query: Search query
     :param limit: Maximum number of results
+    :param threshold: Minimum cosine similarity threshold (0-1)
     """
     print(f"--- 'Hands' (semantic_search_memory) activated. Query: {query} ---")
+    model = get_embedding_model()
+    
+    if not model:
+        # Fallback to simple keyword search if model failed to load
+        return search_memory(query, limit)
+        
     try:
-        with get_db_connection() as conn:
-            c = conn.cursor()
-            
-            # Get all conversations for semantic analysis
-            c.execute("""
-                SELECT id, speaker, content, timestamp, importance_level, category, summary
-                FROM enhanced_memory
-                ORDER BY timestamp DESC
-                LIMIT 500
-            """)
-            
-            all_convs = c.fetchall()
+        from sklearn.metrics.pairwise import cosine_similarity
         
+        # 1. Compute embedding for the user's query
+        query_embedding = model.encode([query]).astype(np.float32)
+        
+        encrypted_db = get_encrypted_db()
+        all_convs = []
+        
+        if encrypted_db:
+            rows = encrypted_db.select("enhanced_memory", "embedding IS NOT NULL", limit=1000)
+            for row in rows:
+                all_convs.append((
+                    row.get("id"),
+                    row.get("speaker"),
+                    row.get("content"),
+                    row.get("timestamp"),
+                    row.get("importance_level", 3),
+                    row.get("category", "general"),
+                    row.get("embedding")
+                ))
+        else:
+            with get_db_connection() as conn:
+                c = conn.cursor()
+                c.execute("""
+                    SELECT id, speaker, content, timestamp, importance_level, category, embedding
+                    FROM enhanced_memory
+                    WHERE embedding IS NOT NULL
+                    ORDER BY timestamp DESC
+                    LIMIT 1000
+                """)
+                all_convs = c.fetchall()
+            
         if not all_convs:
-            return "No conversations found in memory."
-        
-        # Simple semantic scoring based on query terms
-        query_terms = set(query.lower().split())
+            return "No semantic memories found (database might be initializing or empty)."
+            
         scored_results = []
-        
-        for conv_id, speaker, content, timestamp, importance, category, summary in all_convs:
-            content_lower = content.lower()
-            summary_lower = (summary or "").lower()
+        for conv_id, speaker, content, timestamp, importance, category, embedding_bytes in all_convs:
+            # Reconstruct numpy array from BLOB
+            emb_array = np.frombuffer(embedding_bytes, dtype=np.float32).reshape(1, -1)
+            # Calculate Cosine Similarity
+            score = cosine_similarity(query_embedding, emb_array)[0][0]
             
-            # Calculate relevance score
-            score = 0
+            # Bonus factor for highly important memories
+            adjusted_score = score + (importance * 0.02)
             
-            # Exact phrase match (highest score)
-            if query.lower() in content_lower:
-                score += 10
-            
-            # Term frequency scoring
-            for term in query_terms:
-                if term in content_lower:
-                    score += content_lower.count(term) * 2
-                if term in summary_lower:
-                    score += 1
-                if term in category.lower():
-                    score += 3
-            
-            # Boost by importance
-            score += importance
-            
-            if score > 0:
-                scored_results.append((score, speaker, content, timestamp, importance, category))
-        
-        # Sort by score and take top results
+            if adjusted_score >= threshold:
+                scored_results.append((adjusted_score, speaker, content, timestamp, importance, category))
+                
+        # Sort by best score descending
         scored_results.sort(reverse=True, key=lambda x: x[0])
         top_results = scored_results[:limit]
         
         if not top_results:
             return f"No semantically relevant conversations found for: '{query}'"
-        
-        search_report = f"🔍 SEMANTIC SEARCH RESULTS for '{query}'\\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n"
-        
+            
+        search_report = f"🔍 SEMANTIC RAG RESULTS for '{query}'\\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n"
         for score, speaker, content, timestamp, importance, category in top_results:
             dt = datetime.datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
             formatted_time = dt.strftime("%m/%d %I:%M %p")
             importance_icon = "🔴" if importance >= 4 else "🟡" if importance >= 3 else "🟢"
             
-            search_report += f"{importance_icon} [{formatted_time}] {speaker} (Score: {score}, {category}): {content[:100]}{'...' if len(content) > 100 else ''}\\n\\n"
-        
+            search_report += f"{importance_icon} [{formatted_time}] {speaker} (Sim: {score:.2f}, {category}): {content}\\n\\n"
+            
         return search_report
         
     except Exception as e:
+        print(f"Semantic search error: {e}")
         return f"Error in semantic search: {e}"

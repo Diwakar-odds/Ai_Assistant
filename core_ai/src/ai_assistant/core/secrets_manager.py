@@ -1,5 +1,5 @@
 """
-Secure Secrets Manager for YourDaddy AI Assistant
+Secure Secrets Manager for Pulsar AI Assistant
 
 Centralized management for all sensitive credentials and secrets.
 Features:

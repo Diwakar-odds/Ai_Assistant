@@ -4,7 +4,7 @@ Centralized Permission and Authorization System
 This module provides a comprehensive permission system for all system-level operations,
 including file operations, application execution, system commands, and API calls.
 
-Author: YourDaddy AI Assistant Team
+Author: Pulsar AI Assistant Team
 Date: January 9, 2026
 """
 

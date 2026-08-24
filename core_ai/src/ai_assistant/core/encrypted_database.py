@@ -374,7 +374,7 @@ def create_encrypted_credentials_db(db_path: str) -> EncryptedDatabase:
 
 if __name__ == "__main__":
     # Test encrypted database
-    print("Testing encrypted database...")
+    logger.debug("Testing encrypted database...")
     
     # Create test database
     test_db_path = "test_encrypted.db"
@@ -407,4 +407,4 @@ if __name__ == "__main__":
     
     # Cleanup
     os.remove(test_db_path)
-    print("✅ Encrypted database test passed!")
+    logger.info("✅ Encrypted database test passed!")

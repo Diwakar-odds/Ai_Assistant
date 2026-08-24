@@ -613,7 +613,7 @@ def validate_file_upload(filename: str, content_type: str) -> Dict[str, str]:
 
 if __name__ == "__main__":
     # Test input validation system
-    print("Testing input validation system...")
+    logger.debug("Testing input validation system...")
     
     validator = InputValidator()
     
@@ -651,5 +651,5 @@ if __name__ == "__main__":
     except ValidationError as e:
         print(f"File validation error: {e}")
     
-    print("✅ Input validation test completed!")
+    logger.info("✅ Input validation test completed!")
     

@@ -1,5 +1,9 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
-Performance Optimization Module for YourDaddy Assistant
+Performance Optimization Module for Pulsar Assistant
 
 This module provides comprehensive performance monitoring, optimization,
 and resource management capabilities including:
@@ -855,7 +859,7 @@ class ResourceMonitor:
                 time.sleep(self.check_interval)
             
             except Exception as e:
-                print(f"❌ Resource monitoring error: {e}")
+                logger.error(f"❌ Resource monitoring error: {e}")
                 time.sleep(self.check_interval)
     
     def get_current_status(self) -> Dict[str, Any]:
@@ -1002,7 +1006,7 @@ class PerformanceOptimizer:
         if needs_optimization:
             print("🔧 Auto-optimization triggered")
             results = self.optimize_all_systems()
-            print(f"✅ Auto-optimization completed in {results.get('duration_seconds', 0):.2f}s")
+            logger.info(f"✅ Auto-optimization completed in {results.get('duration_seconds', 0):.2f}s")
         
         self.last_auto_optimization = current_time
     
@@ -1098,7 +1102,7 @@ def main():
     # Run optimization
     print("🔧 Running system optimization...")
     results = optimizer.optimize_all_systems()
-    print(f"✅ Optimization completed: {results['duration_seconds']:.2f}s")
+    logger.info(f"✅ Optimization completed: {results['duration_seconds']:.2f}s")
     
     # Get performance summary
     summary = optimizer.get_performance_summary()

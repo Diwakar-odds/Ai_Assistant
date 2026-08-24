@@ -1,5 +1,9 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
-Configuration Loader for YourDaddy AI Assistant
+Configuration Loader for Pulsar AI Assistant
 
 Centralized configuration management using environment variables.
 Replaces api_keys.json with secure .env file.
@@ -199,7 +203,7 @@ def load_config(env_file: Optional[Path] = None) -> Config:
 
 if __name__ == "__main__":
     # Test configuration loading
-    print("Testing Configuration Loader")
+    logger.debug("Testing Configuration Loader")
     print("=" * 80)
     
     config = get_config()

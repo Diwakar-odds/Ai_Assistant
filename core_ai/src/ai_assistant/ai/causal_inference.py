@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Causal Inference System
 Understands cause-effect relationships for better decision making
@@ -22,7 +26,7 @@ try:
     SCIPY_AVAILABLE = True
 except ImportError:
     SCIPY_AVAILABLE = False
-    print("⚠️ scipy not available")
+    logger.warning("⚠️ scipy not available")
 
 
 class CausalInference:

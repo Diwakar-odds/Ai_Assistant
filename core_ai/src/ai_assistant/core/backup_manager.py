@@ -17,7 +17,7 @@ class BackupManager:
         
         try:
             if not self.config_dir.exists():
-                print("❌ Config directory not found.")
+                logger.error("❌ Config directory not found.")
                 return False
                 
             shutil.make_archive(
@@ -25,10 +25,10 @@ class BackupManager:
                 'zip',
                 self.config_dir
             )
-            print(f"✅ Settings successfully backed up to backups/{backup_name}.zip")
+            logger.info(f"✅ Settings successfully backed up to backups/{backup_name}.zip")
             return True
         except Exception as e:
-            print(f"❌ Failed to backup settings: {e}")
+            logger.error(f"❌ Failed to backup settings: {e}")
             return False
             
     def list_backups(self):

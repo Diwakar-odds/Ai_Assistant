@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Local AI Manager - Ollama Integration
 Uses Ollama HTTP API for local AI inference
@@ -76,12 +80,12 @@ class LocalAIManager:
         3. Any other available model
         """
         if not self.is_ollama_running():
-            print("ERROR: Ollama service is not running")
+            logger.error("ERROR: Ollama service is not running")
             return None
             
         available_models = self.list_ollama_models()
         if not available_models:
-            print("ERROR: No models found in Ollama. Run 'ollama pull llama3.2' to download a model.")
+            logger.error("ERROR: No models found in Ollama. Run 'ollama pull llama3.2' to download a model.")
             return None
         
         # Priority models
@@ -97,12 +101,12 @@ class LocalAIManager:
         # Check for priority models
         for model in priority_models:
             if model in available_models:
-                print(f"SUCCESS: Found priority model: {model}")
+                logger.info(f"SUCCESS: Found priority model: {model}")
                 return model
         
         # Return first available model
         first_model = available_models[0]
-        print(f"SUCCESS: Using available model: {first_model}")
+        logger.info(f"SUCCESS: Using available model: {first_model}")
         return first_model
     
     def load_model(self, model_name: str) -> bool:
@@ -113,12 +117,12 @@ class LocalAIManager:
             model_name: Name of Ollama model (e.g., "llama3.2", "qwen2.5")
         """
         if not self.is_ollama_running():
-            print("ERROR: Ollama service is not running. Start it with: ollama serve")
+            logger.error("ERROR: Ollama service is not running. Start it with: ollama serve")
             return False
         
         available_models = self.list_ollama_models()
         if model_name not in available_models:
-            print(f"ERROR: Model '{model_name}' not found in Ollama")
+            logger.error(f"ERROR: Model '{model_name}' not found in Ollama")
             print(f"Download it with: ollama pull {model_name}")
             return False
         
@@ -127,7 +131,7 @@ class LocalAIManager:
         self.current_model = model_name
         self.model_config = LocalModelConfig(name=model_name)
         
-        print(f"SUCCESS: Model ready: {model_name}")
+        logger.info(f"SUCCESS: Model ready: {model_name}")
         return True
     
     def generate(
@@ -270,7 +274,7 @@ class LocalAIManager:
     def clear_history(self):
         """Clear conversation history"""
         self.conversation_history = []
-        print("✅ Conversation history cleared")
+        logger.info("✅ Conversation history cleared")
     
     def get_stats(self) -> Dict:
         """Get performance statistics"""
@@ -284,24 +288,24 @@ class LocalAIManager:
 # Quick test function
 def quick_test():
     """Quick test of LocalAIManager with Ollama"""
-    print("Testing LocalAIManager with Ollama...")
+    logger.debug("Testing LocalAIManager with Ollama...")
     print("=" * 60)
     
     manager = LocalAIManager()
     
     # Check Ollama
     if not manager.is_ollama_running():
-        print("ERROR: Ollama is not running. Please start Ollama first.")
+        logger.error("ERROR: Ollama is not running. Please start Ollama first.")
         return
     
-    print("SUCCESS: Ollama is running")
+    logger.info("SUCCESS: Ollama is running")
     
     # List models
     models = manager.list_ollama_models()
     print(f"Available models: {models}")
     
     if not models:
-        print("ERROR: No models available. Run 'ollama pull llama3.2' first.")
+        logger.error("ERROR: No models available. Run 'ollama pull llama3.2' first.")
         return
     
     # Find best model

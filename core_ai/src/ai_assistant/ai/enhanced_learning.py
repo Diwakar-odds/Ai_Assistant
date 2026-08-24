@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Redirect to ai_assistant.ai.enhanced_learning for backward compatibility.
 
@@ -26,14 +30,14 @@ try:
     from sklearn.metrics.pairwise import cosine_similarity
     SKLEARN_AVAILABLE = True
 except ImportError:
-    print("⚠️ Scikit-learn not available - ML features limited")
+    logger.warning("⚠️ Scikit-learn not available - ML features limited")
     SKLEARN_AVAILABLE = False
 
 try:
     import matplotlib.pyplot as plt
     MATPLOTLIB_AVAILABLE = True
 except ImportError:
-    print("⚠️ Matplotlib not available - Visualization features limited")
+    logger.warning("⚠️ Matplotlib not available - Visualization features limited")
     MATPLOTLIB_AVAILABLE = False
 
 ADVANCED_FEATURES_AVAILABLE = MATPLOTLIB_AVAILABLE and SKLEARN_AVAILABLE
@@ -512,7 +516,7 @@ class PersonalKnowledgeGraph:
                     
         except sqlite3.OperationalError as e:
             # Handle case where tables don't exist yet
-            print(f"⚠️ Knowledge graph tables not found: {e}")
+            logger.warning(f"⚠️ Knowledge graph tables not found: {e}")
         finally:
             conn.close()
     
@@ -648,7 +652,7 @@ class PersonalKnowledgeGraph:
     def visualize_graph(self, output_path: str = "knowledge_graph.png"):
         """Create a visualization of the knowledge graph"""
         if not MATPLOTLIB_AVAILABLE:
-            print("⚠️ Graph visualization not available - matplotlib required")
+            logger.warning("⚠️ Graph visualization not available - matplotlib required")
             return False
             
         if self.graph.number_of_nodes() == 0:

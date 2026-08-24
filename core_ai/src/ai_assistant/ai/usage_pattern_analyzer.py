@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Usage Pattern Analyzer for Fine-Tuning
 Analyzes command history to create personalized training datasets
@@ -450,6 +454,23 @@ class UsagePatternAnalyzer:
             logger.info(f"✅ Report saved to {output_path}")
         
         return report_text
+        
+    def get_pattern_summary(self) -> Dict[str, Any]:
+        """Get a concise summary of current patterns for dynamic context injection"""
+        # If empty, try to load
+        if not self.patterns.get('time_patterns'):
+            try:
+                self.analyze_all(days_back=7)
+            except Exception as e:
+                logger.error(f"Failed to auto-analyze patterns: {e}")
+                
+        summary = {
+            'peak_activity': self.patterns.get('time_patterns', {}).get('most_active_time', 'unknown'),
+            'top_apps': list(self.patterns.get('app_usage', {}).get('top_apps', {}).keys())[:3],
+            'frequent_topics': [t['topic'] for t in self.patterns.get('frequent_topics', [])[:3]],
+            'common_commands': [c['command_type'] for c in self.patterns.get('common_commands', [])[:3]]
+        }
+        return summary
 
 
 if __name__ == "__main__":

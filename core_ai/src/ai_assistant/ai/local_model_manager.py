@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Local AI Model Manager - Optimized for 8GB RAM, CPU-only
 Supports ultra-lightweight models with QLoRA fine-tuning
@@ -21,14 +25,14 @@ try:
     TRANSFORMERS_AVAILABLE = True
 except ImportError:
     TRANSFORMERS_AVAILABLE = False
-    print("⚠️  transformers not installed. Run: pip install transformers torch")
+    logger.warning("⚠️  transformers not installed. Run: pip install transformers torch")
 
 try:
     from peft import LoraConfig, get_peft_model, PeftModel
     PEFT_AVAILABLE = True
 except ImportError:
     PEFT_AVAILABLE = False
-    print("⚠️  peft not installed. Run: pip install peft")
+    logger.warning("⚠️  peft not installed. Run: pip install peft")
 
 
 class LocalModelManager:
@@ -129,11 +133,11 @@ class LocalModelManager:
                     low_cpu_mem_usage=True
                 )
             
-            print(f"✅ Model downloaded successfully")
+            logger.info(f"✅ Model downloaded successfully")
             return True
             
         except Exception as e:
-            print(f"❌ Failed to download model: {e}")
+            logger.error(f"❌ Failed to download model: {e}")
             return False
     
     def load_model(self, fine_tuned_path: Optional[str] = None) -> bool:
@@ -190,13 +194,13 @@ class LocalModelManager:
                 self.model = PeftModel.from_pretrained(self.model, fine_tuned_path)
             
             self.is_loaded = True
-            print(f"✅ Model loaded successfully")
+            logger.info(f"✅ Model loaded successfully")
             print(f"   Memory usage: ~{self.model_config['ram_needed']}")
             
             return True
             
         except Exception as e:
-            print(f"❌ Failed to load model: {e}")
+            logger.error(f"❌ Failed to load model: {e}")
             return False
     
     def unload_model(self):
@@ -215,7 +219,7 @@ class LocalModelManager:
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
             
-            print("✅ Model unloaded, memory freed")
+            logger.info("✅ Model unloaded, memory freed")
     
     def generate(self, prompt: str, max_tokens: int = 512, temperature: float = 0.7) -> str:
         """
@@ -230,7 +234,7 @@ class LocalModelManager:
             Generated text
         """
         if not self.is_loaded:
-            print("⚠️  Model not loaded. Loading now...")
+            logger.warning("⚠️  Model not loaded. Loading now...")
             self.load_model()
         
         try:
@@ -276,7 +280,7 @@ class LocalModelManager:
             return response
             
         except Exception as e:
-            print(f"❌ Generation failed: {e}")
+            logger.error(f"❌ Generation failed: {e}")
             return f"Error: {str(e)}"
     
     def get_system_info(self) -> Dict:
@@ -379,7 +383,7 @@ def demo_local_model():
     success = manager.load_model()
     
     if not success:
-        print("❌ Failed to load model")
+        logger.error("❌ Failed to load model")
         return
     
     # Test generation
@@ -410,7 +414,7 @@ def demo_local_model():
     # Cleanup
     print("\n6️⃣  Cleaning up...")
     manager.unload_model()
-    print("✅ Demo complete!")
+    logger.info("✅ Demo complete!")
 
 
 if __name__ == "__main__":

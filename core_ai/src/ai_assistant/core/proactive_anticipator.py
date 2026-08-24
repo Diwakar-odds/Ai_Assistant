@@ -44,24 +44,27 @@ class ProactiveAnticipator:
             time.sleep(300)
             
     def _check_for_proactive_actions(self, now: datetime):
-        # Fetch time patterns
-        patterns = self.analyzer._analyze_time_patterns(days_back=7)
-        if not patterns:
-            return
-            
-        current_hour = now.hour
-        # simplified check: if we have significant usage at this hour, maybe generate a greeting/summary
-        # Since actual pattern structure is nested, let's just do a basic contextual proactive push
+        # Fetch usage pattern summary
+        summary = self.analyzer.get_pattern_summary()
+        peak_activity = summary.get('peak_activity', 'unknown')
+        top_apps = summary.get('top_apps', [])
+        frequent_topics = summary.get('frequent_topics', [])
         
+        current_hour = now.hour
         context = self.context_opt.get_time_context()
         proactive_msg = None
         
-        if current_hour == 8 and context == "work":
-            proactive_msg = "Good morning! It's 8 AM. Would you like your morning briefing and schedule summary?"
+        # Pattern-driven proactive logic
+        if peak_activity != 'unknown' and str(current_hour) in peak_activity:
+            proactive_msg = f"Sir, we are entering your peak activity period. Should I prepare your usual workflow? {', '.join(top_apps[:2])} perhaps?"
+        elif current_hour == 8 and context == "work":
+            proactive_msg = "Good morning! I've pre-fetched your daily briefing. Would you like a summary of today's schedule?"
         elif current_hour == 18 and context == "home":
-            proactive_msg = "Good evening! You've transitioned to home context. Should I play some relaxing music?"
-        elif current_hour == 23 and context == "night":
-            proactive_msg = "It's getting late. Don't forget to wind down and rest soon."
+            proactive_msg = "Good evening! It appears you've transitioned to your home context. Shall I prepare some relaxing music or focus on winding down?"
+        elif current_hour >= 23 and context == "night":
+            proactive_msg = "It's getting quite late. Based on your energy curve, I recommend wrapping up your current task soon."
+        elif len(frequent_topics) > 0 and current_hour == 13: # Lunch break suggestion
+            proactive_msg = f"Taking a break? You frequently ask about {frequent_topics[0]}. Would you like me to fetch the latest updates on that?"
             
         if proactive_msg and self.chat_interface:
             # We inject the proactive message into the chat as an assistant message

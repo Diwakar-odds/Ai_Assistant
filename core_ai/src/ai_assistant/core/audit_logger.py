@@ -729,7 +729,7 @@ def audit_security_event(message: str, severity: SeverityLevel = SeverityLevel.H
 
 if __name__ == "__main__":
     # Test audit logging
-    print("Testing audit logging system...")
+    logger.debug("Testing audit logging system...")
     
     audit_logger = AuditLogger()
     
@@ -755,4 +755,4 @@ if __name__ == "__main__":
     print(f"Compliance report: {report}")
     
     audit_logger.stop()
-    print("✅ Audit logging test completed!")
+    logger.info("✅ Audit logging test completed!")

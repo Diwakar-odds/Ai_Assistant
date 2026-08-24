@@ -547,7 +547,7 @@ def require_data_access(func: Callable) -> Callable:
 
 if __name__ == "__main__":
     # Test access control system
-    print("Testing access control system...")
+    logger.debug("Testing access control system...")
     
     import datetime
     
@@ -585,4 +585,4 @@ if __name__ == "__main__":
     except PermissionError as e:
         print(f"Guest command failed: {e}")
     
-    print("✅ Access control test completed!")
+    logger.info("✅ Access control test completed!")

@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Anomaly Detection for Security & Performance
 Detects unusual command patterns and system behavior
@@ -24,7 +28,7 @@ try:
     SKLEARN_AVAILABLE = True
 except ImportError:
     SKLEARN_AVAILABLE = False
-    print("⚠️ scikit-learn not available - using statistical detection")
+    logger.warning("⚠️ scikit-learn not available - using statistical detection")
 
 
 class AnomalyDetector:
@@ -506,7 +510,7 @@ def example_usage():
     """Demonstrate anomaly detection"""
     detector = AnomalyDetector()
     
-    print("Testing anomaly detection...\n")
+    logger.debug("Testing anomaly detection...\n")
     
     # Normal command
     result = detector.detect_anomaly(

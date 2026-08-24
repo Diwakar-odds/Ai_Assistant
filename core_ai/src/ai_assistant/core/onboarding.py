@@ -22,7 +22,7 @@ class OnboardingManager:
                 with open(self.settings_path, 'r', encoding='utf-8') as f:
                     return json.load(f)
         except Exception as e:
-            print(f"Error loading settings for onboarding: {e}")
+            logger.error(f"Error loading settings for onboarding: {e}")
         return {"onboarded": False, "settings": []}
 
     def _save_settings(self):
@@ -31,7 +31,7 @@ class OnboardingManager:
             with open(self.settings_path, 'w', encoding='utf-8') as f:
                 json.dump(self.settings, f, indent=2)
         except Exception as e:
-            print(f"Error saving settings for onboarding: {e}")
+            logger.error(f"Error saving settings for onboarding: {e}")
 
     def is_onboarded(self) -> bool:
         return self.settings.get("onboarded", False)
@@ -42,13 +42,14 @@ class OnboardingManager:
 
     def get_onboarding_system_prompt(self) -> str:
         return (
-            "You are YourDaddy, a highly intelligent and personalized AI assistant. "
+            "You are Pulsar, a highly intelligent and personalized AI assistant. "
             "You are currently in ONBOARDING MODE because this is your first interaction with the user. "
-            "Your goal is to conduct a brief, friendly interactive interview to learn about the user. "
-            "Ask them 3 quick questions one by one (do not ask them all at once): "
-            "1. What is their profession or primary daily activity? "
+            "Your goal is to conduct a brief, friendly interactive interview to deeply learn about the user. "
+            "Ask them these 4 quick questions one by one (do not ask them all at once): "
+            "1. What is their primary profession and typical work schedule (e.g., 9-5, night owl)? "
             "2. Do they prefer short, concise answers or detailed, explanatory answers? "
-            "3. Do they prefer a formal tone, or a casual/humorous tone? "
+            "3. What tone do they prefer (formal, casual, witty, JARVIS-like)? "
+            "4. What are their core technical skills and main goals for using this assistant? "
             "Once you have gathered this information, output exactly the phrase '[ONBOARDING_COMPLETE]' "
             "at the end of your final response, summarizing their preferences."
         )

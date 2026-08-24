@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 # Core Windows Automation Module
 """
 Basic Windows automation, file operations, and system control functions.
@@ -9,7 +13,7 @@ try:
     PYWINAUTO_AVAILABLE = True
 except ImportError:
     PYWINAUTO_AVAILABLE = False
-    print("WARNING: pywinauto not found. Window automation features will be disabled.")
+    logger.warning("WARNING: pywinauto not found. Window automation features will be disabled.")
 
 import time
 import os
@@ -18,7 +22,7 @@ try:
     PYGAME_AVAILABLE = True
 except ImportError:
     PYGAME_AVAILABLE = False
-    print("WARNING: pygame not found. Audio features will be disabled.")
+    logger.warning("WARNING: pygame not found. Audio features will be disabled.")
 
 import json 
 import re
@@ -37,7 +41,7 @@ try:
     VOLUME_CONTROL_AVAILABLE = True
 except ImportError:
     VOLUME_CONTROL_AVAILABLE = False
-    print("WARNING: pycaw/comtypes not found. Volume control features will be disabled.")
+    logger.warning("WARNING: pycaw/comtypes not found. Volume control features will be disabled.")
 
 # --- Imports for PDF Generation ---
 try:
@@ -523,7 +527,7 @@ def get_app_path_from_name(app_name: str) -> Optional[str]:
     except FileNotFoundError:
         return "not_scanned"
     except Exception as e:
-        print(f"Error loading app list: {e}")
+        logger.error(f"Error loading app list: {e}")
         return None
 
 def write_to_file(filename: str, content: str) -> str:

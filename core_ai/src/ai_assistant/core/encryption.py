@@ -1,5 +1,5 @@
 """
-Encryption Utilities for YourDaddy AI Assistant
+Encryption Utilities for Pulsar AI Assistant
 
 Provides comprehensive encryption/decryption for sensitive data including:
 - API credentials and tokens
@@ -368,7 +368,7 @@ def decrypt_sensitive_data(encrypted_data: str, context: str = "default") -> Uni
 
 if __name__ == "__main__":
     # Test the encryption system
-    print("Testing encryption system...")
+    logger.debug("Testing encryption system...")
     
     # Test basic encryption
     encryption = SecureEncryption()
@@ -394,4 +394,4 @@ if __name__ == "__main__":
     
     print(f"Original message: {message}")
     print(f"Decrypted message: {decrypted_msg}")
-    print("✅ Encryption test passed!")
+    logger.info("✅ Encryption test passed!")

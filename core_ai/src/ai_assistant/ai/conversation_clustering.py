@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Conversation Topic Clustering
 Clusters conversations by topics to improve retrieval and context
@@ -26,7 +30,7 @@ try:
     SKLEARN_AVAILABLE = True
 except ImportError:
     SKLEARN_AVAILABLE = False
-    print("⚠️ scikit-learn not available")
+    logger.warning("⚠️ scikit-learn not available")
 
 
 class ConversationClusterer:
@@ -482,7 +486,7 @@ def example_usage():
     print("2. Clustering conversations...")
     if SKLEARN_AVAILABLE:
         clusterer.cluster_conversations()
-        print("✅ Clustering complete")
+        logger.info("✅ Clustering complete")
     
     # Find similar
     print("\n3. Finding similar conversations to 'python coding'...")

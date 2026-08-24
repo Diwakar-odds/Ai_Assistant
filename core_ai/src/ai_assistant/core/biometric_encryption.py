@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Biometric Data Encryption Manager
 ==================================
@@ -459,13 +463,13 @@ if __name__ == "__main__":
     
     # Verify
     assert test_model == decrypted, "Encryption/decryption failed!"
-    print("✅ Encryption test passed!")
+    logger.info("✅ Encryption test passed!")
     
     # Save/load test
     filepath = encryptor.save_encrypted_model(encrypted, "test_speaker.enc")
     loaded = encryptor.load_encrypted_model("test_speaker.enc")
     assert test_model == loaded, "Save/load failed!"
-    print(f"✅ Save/load test passed! File: {filepath}")
+    logger.info(f"✅ Save/load test passed! File: {filepath}")
     
     # Show encryption info
     info = encryptor.get_encryption_info()

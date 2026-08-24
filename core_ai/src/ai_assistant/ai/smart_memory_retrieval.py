@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Smart Memory Retrieval
 Searches memory to answer user questions from past conversations
@@ -89,7 +93,7 @@ class SmartMemoryRetrieval:
             
             conn.close()
         except Exception as e:
-            print(f"Error searching for dates: {e}")
+            logger.error(f"Error searching for dates: {e}")
         
         return None
     
@@ -157,7 +161,7 @@ class SmartMemoryRetrieval:
                     app_list = ", ".join([f"{app} ({count} times)" for app, count in most_used[:3]])
                     return f"Based on your history, you commonly use: {app_list}"
         except Exception as e:
-            print(f"Error searching app usage: {e}")
+            logger.error(f"Error searching app usage: {e}")
         
         return None
     
@@ -202,46 +206,27 @@ class SmartMemoryRetrieval:
                 if events:
                     return f"Upcoming events from your history:\\n" + "\\n".join(f"- {e}" for e in events[:3])
         except Exception as e:
-            print(f"Error searching events: {e}")
+            logger.error(f"Error searching events: {e}")
         
         return None
     
     def _search_general_memory(self, question: str) -> Optional[str]:
-        """General memory search based on keywords"""
+        """General memory search based on semantic vector embeddings (RAG)"""
         try:
-            # Extract important words from question
-            stop_words = {'is', 'are', 'was', 'were', 'what', 'when', 'where', 'who', 'how', 'my', 'the', 'a', 'an'}
-            words = question.split()
-            keywords = [w for w in words if len(w) > 3 and w not in stop_words]
+            from ai_assistant.ai.memory import semantic_search_memory
             
-            if not keywords:
+            # Use the new vector-based search
+            result = semantic_search_memory(question, limit=2, threshold=0.25)
+            
+            # If the result is one of the fallback "Not found" messages, return None
+            if result.startswith("No "):
                 return None
+                
+            return result
             
-            conn = sqlite3.connect(str(self.db_path))
-            cursor = conn.cursor()
-            
-            # Search for any keyword
-            search_conditions = " OR ".join([f"LOWER(content) LIKE '%{kw}%'" for kw in keywords[:3]])
-            
-            cursor.execute(f"""
-                SELECT content, importance_level, timestamp 
-                FROM enhanced_memory 
-                WHERE {search_conditions}
-                ORDER BY importance_level DESC, timestamp DESC
-                LIMIT 3
-            """)
-            
-            results = cursor.fetchall()
-            conn.close()
-            
-            if results:
-                # Return most relevant result
-                content, importance, timestamp = results[0]
-                return f"From our previous conversation: {content[:200]}"
         except Exception as e:
-            print(f"Error in general search: {e}")
-        
-        return None
+            logger.error(f"Error in general semantic search: {e}")
+            return None
 
 
 # Integration function
@@ -281,7 +266,7 @@ if __name__ == "__main__":
         "when is my test?",
     ]
     
-    print("Testing Smart Memory Retrieval:")
+    logger.debug("Testing Smart Memory Retrieval:")
     print("="*60)
     
     for question in test_questions:

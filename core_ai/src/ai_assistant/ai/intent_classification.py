@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Advanced Intent Classification and Named Entity Recognition
 Uses transformer-based models with transfer learning for personalized understanding
@@ -26,7 +30,7 @@ try:
     SENTENCE_TRANSFORMERS_AVAILABLE = True
 except ImportError:
     SENTENCE_TRANSFORMERS_AVAILABLE = False
-    print("⚠️ sentence-transformers not available. Using fallback intent matching.")
+    logger.warning("⚠️ sentence-transformers not available. Using fallback intent matching.")
 
 try:
     from sklearn.ensemble import RandomForestClassifier

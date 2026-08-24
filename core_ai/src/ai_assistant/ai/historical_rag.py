@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Historical Retrieval-Augmented Generation (RAG)
 Uses past successful interactions to improve responses
@@ -22,14 +26,14 @@ try:
     FAISS_AVAILABLE = True
 except ImportError:
     FAISS_AVAILABLE = False
-    print("⚠️ FAISS not available - using fallback search")
+    logger.warning("⚠️ FAISS not available - using fallback search")
 
 try:
     from sentence_transformers import SentenceTransformer
     SBERT_AVAILABLE = True
 except ImportError:
     SBERT_AVAILABLE = False
-    print("⚠️ sentence-transformers not available")
+    logger.warning("⚠️ sentence-transformers not available")
 
 
 class HistoricalRAG:

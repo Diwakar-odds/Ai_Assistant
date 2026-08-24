@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Multi-Armed Bandit for LLM Selection
 Automatically selects best LLM for each task type
@@ -23,7 +27,7 @@ try:
     NUMPY_AVAILABLE = True
 except ImportError:
     NUMPY_AVAILABLE = False
-    print("⚠️ numpy not available")
+    logger.warning("⚠️ numpy not available")
 
 
 class LLMBandit:

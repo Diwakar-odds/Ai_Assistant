@@ -1,4 +1,4 @@
-"""Configuration Validator for YourDaddy AI Assistant."""
+"""Configuration Validator for Pulsar AI Assistant."""
 
 import os
 import sys
@@ -183,7 +183,7 @@ class ConfigValidator:
             True if all required configuration is valid
         """
         logger.info("=" * 70)
-        logger.info("🔍 YourDaddy AI Assistant - Configuration Validation")
+        logger.info("🔍 Pulsar AI Assistant - Configuration Validation")
         logger.info("=" * 70)
         
         # Load environment file

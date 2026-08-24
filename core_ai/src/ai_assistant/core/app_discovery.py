@@ -1,4 +1,4 @@
-﻿"""
+"""
 App Discovery Module - Re-export
 Re-export from canonical location to avoid code duplication.
 The comprehensive implementation is in ai_assistant.modules.app_discovery

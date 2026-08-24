@@ -125,6 +125,17 @@ class SmartCommandPredictor:
         self.command_history.append(command)
         if len(self.command_history) > 100:
             self.command_history.pop(0)
+            
+        # Emit predictions to UI
+        try:
+            from ai_assistant.services.modern_web_backend import socketio
+            if socketio:
+                predictions = self.predict_next_commands(context, top_k=3)
+                if predictions:
+                    cmds = [cmd for cmd, score in predictions]
+                    socketio.emit('command_suggestions', {'suggestions': cmds})
+        except ImportError:
+            pass
     
     def predict_next_commands(self, 
                              context: Optional[Dict] = None,

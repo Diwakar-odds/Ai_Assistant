@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Automatic Learning Data Router
 Routes conversation data to appropriate learning systems automatically
@@ -22,7 +26,7 @@ try:
     from ai_assistant.ai.query_cache import QuerySimilarityCache
     IMPORTS_SUCCESS = True
 except ImportError as e:
-    print(f"Warning: Some learning systems unavailable: {e}")
+    logger.warning(f"Warning: Some learning systems unavailable: {e}")
     IMPORTS_SUCCESS = False
 
 class LearningDataRouter:
@@ -52,7 +56,7 @@ class LearningDataRouter:
     def _initialize_systems(self):
         """Initialize all learning systems"""
         if not IMPORTS_SUCCESS:
-            print("⚠️ Learning systems not available")
+            logger.warning("⚠️ Learning systems not available")
             return
         
         try:
@@ -64,9 +68,9 @@ class LearningDataRouter:
             self.smart_commands = SmartCommandPredictor()
             self.knowledge_graph = PersonalKnowledgeGraph(db_path="data/core/personal_knowledge.db")
             self.query_cache = QuerySimilarityCache()
-            print("✅ Learning systems initialized")
+            logger.info("✅ Learning systems initialized")
         except Exception as e:
-            print(f"⚠️ Error initializing systems: {e}")
+            logger.warning(f"⚠️ Error initializing systems: {e}")
     
     def route_conversation(self, speaker: str, content: str, category: str = "general", 
                           importance: int = 3, success: bool = True, input_mode: str = "chat"):
@@ -346,8 +350,8 @@ def integrate_with_chat_system():
         print(f"   {key}: {value}")
     
     print("\n✅ Both chat and voice use the SAME learning systems!")
-    print("✅ Knowledge learned from chat is available in voice!")
-    print("✅ Commands from voice are remembered in chat!")
+    logger.info("✅ Knowledge learned from chat is available in voice!")
+    logger.info("✅ Commands from voice are remembered in chat!")
 
 
 if __name__ == "__main__":

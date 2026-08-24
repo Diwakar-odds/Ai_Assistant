@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Advanced Feedback Learning System with RLHF-Inspired Techniques
 Implements Direct Preference Optimization (DPO), RLAIF, and continuous learning

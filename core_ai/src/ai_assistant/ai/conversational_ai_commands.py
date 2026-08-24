@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 # Command execution methods for Conversational AI
 """
 This module contains all command execution methods that will be merged

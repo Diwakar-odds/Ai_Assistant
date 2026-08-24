@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Explainable AI (XAI) System
 Provides interpretable explanations for model predictions
@@ -23,7 +27,7 @@ try:
     SKLEARN_AVAILABLE = True
 except ImportError:
     SKLEARN_AVAILABLE = False
-    print("⚠️ scikit-learn not available")
+    logger.warning("⚠️ scikit-learn not available")
 
 
 class ExplainabilityEngine:

@@ -1,7 +1,11 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Database Configuration Module
 
-Centralized database path management for YourDaddy AI Assistant.
+Centralized database path management for Pulsar AI Assistant.
 All database files are stored in the data/ directory.
 """
 

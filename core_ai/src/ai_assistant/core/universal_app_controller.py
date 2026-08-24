@@ -1,4 +1,4 @@
-﻿"""
+"""
 Universal App Controller
 Controls ANY Windows application without app-specific code.
 Uses generic automation, computer vision, and AI understanding.

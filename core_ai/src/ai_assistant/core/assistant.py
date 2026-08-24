@@ -1,5 +1,9 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
-YourDaddy AI Assistant - ModernAssistant Class
+Pulsar AI Assistant - ModernAssistant Class
 
 Core assistant class with AI initialization, command processing, and system monitoring.
 Extracted from modern_web_backend.py for better modularity and reusability.
@@ -126,6 +130,8 @@ class ModernAssistant:
         self.system_stats_cache = {}
         self.cache_timestamp = 0
         self.current_language = "hinglish"
+        import threading
+        self._process_lock = threading.RLock()
         
         # Network speed tracking
         self.last_network_stats = None
@@ -209,8 +215,19 @@ class ModernAssistant:
                     if not self._onboarding_mgr.is_onboarded():
                         self._llm_chat.add_system_message(self._onboarding_mgr.get_onboarding_system_prompt())
                     else:
-                        base_prompt = "You are 'YourDaddy', a smart and helpful AI assistant."
+                        base_prompt = "You are 'Pulsar', a smart and helpful AI assistant."
                         self._llm_chat.add_system_message(self._context_opt.inject_context_into_prompt(base_prompt))
+                
+                # --- JARVIS HOOK: Inject emotional context before sending to LLM ---
+                emotion_context = {}
+                self._current_turn_mood = "neutral"
+                if hasattr(self, '_learning_loop') and self._learning_loop:
+                    emotion_context = self._learning_loop.get_emotion_context(query)
+                    self._current_turn_mood = emotion_context.get("mood", "neutral")
+                    modifier = emotion_context.get("prompt_modifier", "")
+                    if modifier:
+                        # Temporarily inject the emotion-aware system instruction
+                        self._llm_chat.add_system_message(modifier)
                 
                 # Fetch response
                 response = self._llm_chat.chat(query)
@@ -222,8 +239,16 @@ class ModernAssistant:
                         # Reset system message once onboarding completes
                         if not hasattr(self, '_context_opt'):
                             self._context_opt = ContextOptimizer()
-                        base_prompt = "You are 'YourDaddy', a smart and helpful AI assistant."
+                        base_prompt = "You are 'Pulsar', a smart and helpful AI assistant."
                         self._llm_chat.add_system_message(self._context_opt.inject_context_into_prompt(base_prompt))
+                
+                # --- JARVIS HOOK: Fire async learning loop after every interaction ---
+                if hasattr(self, '_learning_loop') and self._learning_loop:
+                    self._learning_loop.process_interaction(
+                        prompt=query,
+                        response=response,
+                        context=emotion_context
+                    )
                         
                 return response
             except ImportError:
@@ -231,7 +256,7 @@ class ModernAssistant:
                 return f"I received: {query} (AI engine unavailable)"
                 
         except Exception as e:
-            print(f"Error processing query: {e}")
+            logger.error(f"Error processing query: {e}")
             return f"I encountered an error replying to that: {str(e)}"
     
     def _background_init(self):
@@ -261,9 +286,26 @@ class ModernAssistant:
             self._proactive_anticipator = ProactiveAnticipator(chat_interface=self._llm_chat if hasattr(self, '_llm_chat') else None)
             self._proactive_anticipator.start()
         except Exception as e:
-            print(f"âš ï¸ Proactive Anticipator could not start: {e}")
+            logger.warning(f"⚠️ Proactive Anticipator could not start: {e}")
+            
+        try:
+            from ai_assistant.core.self_healing_engine import SelfHealingEngine
+            self._self_healing_engine = SelfHealingEngine()
+            self._self_healing_engine.start()
+            logger.info("✅ Self-Healing Engine started")
+        except Exception as e:
+            logger.warning(f"⚠️ Self-Healing Engine could not start: {e}")
         
-        print("âœ… Background initialization complete")
+        # Initialize the Learning Loop (connects DNA, EI, Relationship, Memory)
+        try:
+            from ai_assistant.core.learning_loop import LearningLoop
+            self._learning_loop = LearningLoop()
+            logger.info("✅ Learning Loop initialized (EI + DNA + Relationship + Memory)")
+        except Exception as e:
+            logger.warning(f"⚠️ Learning Loop could not initialize: {e}")
+            self._learning_loop = None
+        
+        logger.info("✅ Background initialization complete")
     
     def _eager_init(self):
         """Eager initialization (respects feature flags)"""
@@ -502,11 +544,11 @@ class ModernAssistant:
         if AUTOMATION_AVAILABLE:
             try:
                 setup_memory()
-                print("✅ Memory system initialized")
+                logger.info("✅ Memory system initialized")
             except Exception as e:
-                print(f"❌ Memory initialization failed: {e}")
+                logger.error(f"❌ Memory initialization failed: {e}")
         else:
-            print("⚠️ Memory system not available")
+            logger.warning("⚠️ Memory system not available")
     
     def _init_voice_system_internal(self):
         """Initialize voice recognition and TTS systems (internal)"""
@@ -641,6 +683,13 @@ class ModernAssistant:
                 print(f"PSUtil error: {e}")
                 print(traceback.format_exc())
         
+        # Append AI Intelligence Metrics
+        if getattr(self, '_self_healing_engine', None):
+            stats["self_healing"] = self._self_healing_engine.get_status()
+            
+        if getattr(self, '_learning_loop', None) and self._learning_loop and self._learning_loop.dna:
+            stats["user_dna"] = self._learning_loop.dna.get_all_traits()
+
         self.system_stats_cache = stats
         self.cache_timestamp = current_time
         return stats
@@ -712,43 +761,44 @@ class ModernAssistant:
     def process_command(self, command_text, model_preference=None):
         """Process user command with multilingual support"""
         log_query(command_text)
-        try:
-            # Process with multilingual support first
-            if self.multilingual:
-                response = self.process_multilingual_command(command_text, model_preference)
-                log_reply(response)
-                return response
-            
-            # Save command to memory (with error handling)
+        with self._process_lock:
             try:
-                if AUTOMATION_AVAILABLE:
-                    save_to_memory("user", f"Command: {command_text}")
-                    
-                # Route to learning systems
-                if LEARNING_ROUTER_AVAILABLE and learning_router:
-                    learning_router.route_conversation(
-                        speaker="user",
-                        content=command_text,
-                        category="command",
-                        importance=3,
-                        success=True
-                    )
-            except Exception as mem_err:
-                print(f"Memory save error (non-fatal): {mem_err}")
-            
-            # Use conversational AI if available
-            if self.conversational_ai:
-                response = self.conversational_ai.process_message(command_text)
-                return response
-            
-            # Fallback to automation tools processing
-            return self.process_automation_command(command_text)
-            
-        except Exception as e:
-            import traceback
-            error_details = traceback.format_exc()
-            print(f"Command processing error details:\n{error_details}")
-            return f"Error processing command: {str(e)}"
+                # Process with multilingual support first
+                if self.multilingual:
+                    response = self.process_multilingual_command(command_text, model_preference)
+                    log_reply(response)
+                    return response
+                
+                # Save command to memory (with error handling)
+                try:
+                    if AUTOMATION_AVAILABLE:
+                        save_to_memory("user", f"Command: {command_text}")
+                        
+                    # Route to learning systems
+                    if LEARNING_ROUTER_AVAILABLE and learning_router:
+                        learning_router.route_conversation(
+                            speaker="user",
+                            content=command_text,
+                            category="command",
+                            importance=3,
+                            success=True
+                        )
+                except Exception as mem_err:
+                    print(f"Memory save error (non-fatal): {mem_err}")
+                
+                # Use conversational AI if available
+                if self.conversational_ai:
+                    response = self.conversational_ai.process_message(command_text)
+                    return response
+                
+                # Fallback to automation tools processing
+                return self.process_automation_command(command_text)
+                
+            except Exception as e:
+                import traceback
+                error_details = traceback.format_exc()
+                print(f"Command processing error details:\n{error_details}")
+                return f"Error processing command: {str(e)}"
     
     def process_multilingual_command(self, command_text, model_preference=None):
         """Process command with full multilingual support"""
@@ -953,7 +1003,7 @@ class ModernAssistant:
             
             # Help
             elif any(word in text_lower for word in ['help', 'commands', 'what can you do']):
-                return """Ã°Å¸Â¤â€“ YourDaddy Assistant Commands:
+                return """Ã°Å¸Â¤â€“ Pulsar Assistant Commands:
 
 Ã°Å¸Å’Â¤Ã¯Â¸Â **Weather**: "What's the weather like?"
 Ã°Å¸â€™Â» **System**: "Show system status" 
@@ -985,13 +1035,15 @@ Just speak naturally - I understand context! Ã°Å¸Å½â€°"""
         except Exception as e:
             return f"Screen analysis error: {str(e)}"
     
-    def process_enhanced_chat(self, message, context=None, image_data=None, model_preference=None):
+    def process_enhanced_chat(self, message, context=None, image_data=None, model_preference=None, provider_preference=None):
         """Enhanced chat processing with full AI integration and all features"""
         features_used = []
         suggestions = []
         response_text = ""
         mood = "neutral"
         context_id = None
+        actual_provider = None
+        actual_model = None
         
         try:
             # Initialize context if not provided
@@ -1054,18 +1106,40 @@ Just speak naturally - I understand context! Ã°Å¸Å½â€°"""
             # 4. SMART LLM PROCESSING (Network-Aware)
             if processed_message:
                 try:
+                    # --- Inject Learning Loop Context ---
+                    if hasattr(self, '_learning_loop') and self._learning_loop:
+                        context_dict = self._learning_loop.get_emotion_context(processed_message)
+                        if context_dict and context_dict.get("prompt_modifier"):
+                            processed_message = f"{context_dict['prompt_modifier']}\n\nUser: {processed_message}"
+                    
                     # Use smart LLM system that auto-selects best provider
                     if hasattr(self, 'llm_chat') and self.llm_chat:
+                        chat_interface = self.llm_chat
+                        
+                        if provider_preference or model_preference:
+                            try:
+                                from ai_assistant.ai.llm_provider import UnifiedChatInterface
+                                chat_interface = UnifiedChatInterface(
+                                    provider=provider_preference,
+                                    model=model_preference,
+                                    use_fallback=True
+                                )
+                            except Exception as e:
+                                logger.warning(f"Warning: Failed to use preferred provider {provider_preference}: {e}")
+                        
                         # Get current provider info
                         provider_info = ""
-                        if hasattr(self, 'current_llm_config') and self.current_llm_config:
-                            provider = self.current_llm_config.get('provider', 'unknown')
-                            model = self.current_llm_config.get('model', 'unknown')
-                            network_status = "Ã°Å¸Å’Â Online" if self.current_llm_config.get('network_status') else "Ã°Å¸ÂÂ  Offline"
-                            provider_info = f" ({network_status} - {provider}:{model})"
+                        actual_provider = getattr(chat_interface, 'provider_name', 'unknown')
+                        actual_model = getattr(chat_interface, 'model', 'unknown')
+                        
+                        if hasattr(self, 'current_llm_config') and self.current_llm_config and chat_interface == self.llm_chat:
+                            network_status = "Online" if self.current_llm_config.get('network_status') else "Offline"
+                            provider_info = f" ({network_status} - {actual_provider}:{actual_model})"
+                        else:
+                            provider_info = f" (Custom - {actual_provider}:{actual_model})"
                         
                         # Generate response using smart LLM
-                        ai_response = self.llm_chat.chat(processed_message, stream=False)
+                        ai_response = chat_interface.chat(processed_message, stream=False)
                         response_text += ai_response
                         features_used.append(f"smart_llm{provider_info}")
                         
@@ -1088,10 +1162,10 @@ Just speak naturally - I understand context! Ã°Å¸Å½â€°"""
                         if suggestions:
                             features_used.append("ai_suggestions")
                     else:
-                        response_text += "Ã¢ÂÅ’ No AI system available for processing"
+                        response_text += "Ã¢Â Å’ No AI system available for processing"
                         
                 except Exception as e:
-                    response_text += f"Ã¢ÂÅ’ AI processing failed: {str(e)}\n\n"
+                    response_text += f"Ã¢Â Å’ AI processing failed: {str(e)}\n\n"
             
             # 5. SMART AUTOMATION DETECTION
             if AUTOMATION_AVAILABLE and processed_message:
@@ -1137,7 +1211,7 @@ Just speak naturally - I understand context! Ã°Å¸Å½â€°"""
                 # Check for integration opportunities
                 integration_result = advanced_integration.process_command(processed_message)
                 if integration_result and integration_result != processed_message:
-                    response_text += f"\n\nÃ°Å¸â€â€” **Advanced Integration**: {integration_result}"
+                    response_text += f"\n\nÃ°Å¸â€ â€” **Advanced Integration**: {integration_result}"
                     features_used.append("advanced_integration")
             except Exception as e:
                 print(f"Advanced integration error: {e}")
@@ -1207,7 +1281,9 @@ Just speak naturally - I understand context! Ã°Å¸Å½â€°"""
                 "mood": mood,
                 "context_id": context_id,
                 "detected_language": detected_language,
-                "message_type": self._classify_message_type(processed_message)
+                "message_type": self._classify_message_type(processed_message),
+                "provider": actual_provider,
+                "model": actual_model
             }
             
         except Exception as e:
@@ -1358,14 +1434,39 @@ Just speak naturally - I understand context! Ã°Å¸Å½â€°"""
         socketio.emit('voice_status', {'listening': False})
         return {"success": True, "message": "Voice listening stopped"}
     
-    def speak_text(self, text):
+    def speak_text(self, text, mood=None):
         """Convert text to speech and return base64 audio data"""
         if not self.tts_engine:
             return None
+            
+        # Dynamically retrieve mood if not provided
+        if mood is None:
+            # Prefer the mood from the current interaction turn
+            mood = getattr(self, '_current_turn_mood', None)
+            # Fallback to learning loop history if unavailable
+            if mood is None and getattr(self, '_learning_loop', None) and self._learning_loop.dna:
+                mood = self._learning_loop.dna.get_trait("recent_mood")
+        
+        # Default voice params
+        voice = 'expr-voice-2-m'
+        speed = 1.0
+        
+        # Adjust based on mood
+        if mood:
+            mood_lower = mood.lower()
+            if mood_lower in ['happy', 'excited']:
+                speed = 1.15
+            elif mood_lower in ['sad']:
+                speed = 0.85
+            elif mood_lower in ['frustrated', 'angry']:
+                speed = 1.1
+                # Could change voice here if more voices are added
+            elif mood_lower in ['neutral']:
+                speed = 1.0
         
         try:
-            # Generate audio using KittenTTS
-            audio_array = self.tts_engine.generate(text, voice='expr-voice-2-m', speed=1.0)
+            # Generate audio using KittenTTS with mood-aware parameters
+            audio_array = self.tts_engine.generate(text, voice=voice, speed=speed)
             
             import io
             import soundfile as sf
@@ -1380,7 +1481,7 @@ Just speak naturally - I understand context! Ã°Å¸Å½â€°"""
             print(f"KittenTTS error: {e}")
             return None
     
-    def process_voice_audio(self, audio_data):
+    def process_voice_audio(self, audio_data, on_transcription_complete=None):
         """Process raw audio data for speech recognition using Faster-Whisper"""
         if not VOICE_AVAILABLE or not self.voice_recognizer:
             return {"error": "Voice recognition not available"}
@@ -1390,25 +1491,49 @@ Just speak naturally - I understand context! Ã°Å¸Å½â€°"""
             import tempfile
             import os
             
+            logger.debug(f"DEBUG: Received audio_data length: {len(audio_data)}")
+            
             # Decode base64 audio data
             # Audio data from MediaRecorder is usually webm
             audio_bytes = base64.b64decode(audio_data.split(',')[-1] if ',' in audio_data else audio_data)
+            logger.debug(f"DEBUG: Decoded audio_bytes length: {len(audio_bytes)}")
             
             # Write to a temporary file
             with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as temp_audio:
                 temp_audio.write(audio_bytes)
                 temp_path = temp_audio.name
                 
+            logger.debug(f"DEBUG: Audio written to {temp_path}. Starting Whisper transcribe...")
+                
             try:
                 # Transcribe using Faster-Whisper
                 segments, info = self.voice_recognizer.transcribe(temp_path, beam_size=5)
+                logger.debug("DEBUG: Generator returned. Evaluating segments...")
                 text = " ".join([segment.text for segment in segments]).strip()
+                logger.debug(f"DEBUG: Segments evaluated. Text: {text}")
             finally:
                 if os.path.exists(temp_path):
                     os.unlink(temp_path)
             
             if text:
                 print(f"Whisper transcribed: {text}")
+                if on_transcription_complete:
+                    try:
+                        on_transcription_complete(text)
+                    except Exception as cb_err:
+                        print(f"Transcription callback error: {cb_err}")
+                
+                # Voice Emotion Detection
+                try:
+                    from ai_assistant.ai.emotional_intelligence import EmotionalIntelligence
+                    ei = EmotionalIntelligence()
+                    voice_emotion = ei.detect_emotion_from_voice(audio_data)
+                    print(f"Detected voice emotion: {voice_emotion}")
+                    if voice_emotion and voice_emotion.get("emotion") != "neutral":
+                        self._current_turn_mood = voice_emotion.get("emotion")
+                except Exception as e:
+                    print(f"Voice emotion detection error: {e}")
+                    
                 response = self.process_command(text)
                 return {
                     "success": True,

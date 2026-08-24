@@ -8,7 +8,7 @@ This module provides comprehensive input sanitization to prevent:
 - Path traversal
 - AI prompt injection
 
-Author: YourDaddy AI Assistant Team
+Author: Pulsar AI Assistant Team
 Date: January 9, 2026
 """
 

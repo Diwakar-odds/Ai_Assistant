@@ -9,7 +9,7 @@ This module protects against:
 - Personal information leakage
 - Sensitive data exposure
 
-Author: YourDaddy AI Assistant Team
+Author: Pulsar AI Assistant Team
 Date: January 14, 2026
 """
 
@@ -475,7 +475,7 @@ def sanitize_ai_response(response: str) -> str:
 
 if __name__ == "__main__":
     # Test privacy protection
-    print("Testing Privacy Protection System...\n")
+    logger.debug("Testing Privacy Protection System...\n")
     
     privacy = PrivacyProtectionSystem()
     

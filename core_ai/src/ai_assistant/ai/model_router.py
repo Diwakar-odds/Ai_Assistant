@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Intelligent Model Router
 Routes queries to appropriate LLM based on complexity, cost, and context
@@ -379,7 +383,7 @@ def get_model_router() -> IntelligentModelRouter:
 
 if __name__ == "__main__":
     # Test the router
-    print("Testing Intelligent Model Router...\n")
+    logger.debug("Testing Intelligent Model Router...\n")
     
     router = IntelligentModelRouter()
     

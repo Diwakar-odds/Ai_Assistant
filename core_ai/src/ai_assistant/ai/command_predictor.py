@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Command Success Predictor
 Predicts if a command will succeed before execution
@@ -23,7 +27,7 @@ try:
     SKLEARN_AVAILABLE = True
 except ImportError:
     SKLEARN_AVAILABLE = False
-    print("⚠️ scikit-learn not available - using rule-based prediction")
+    logger.warning("⚠️ scikit-learn not available - using rule-based prediction")
 
 
 class CommandSuccessPredictor:
@@ -394,16 +398,16 @@ def example_usage():
     
     # Test prediction
     print("\n" + "="*50)
-    print("Testing prediction for new command...")
+    logger.debug("Testing prediction for new command...")
     test_context = {'system_load': 0.5, 'memory_available_gb': 6.0, 'network_available': True}
     prediction = predictor.predict_success("open_chrome", test_context)
     
     print(f"Command: open_chrome")
-    print(f"Success probability: {prediction['success_probability']:.1%}")
+    logger.info(f"Success probability: {prediction['success_probability']:.1%}")
     print(f"Confidence: {prediction['confidence']:.1%}")
     print(f"Method: {prediction['method']}")
     if prediction['warnings']:
-        print("Warnings:")
+        logger.warning("Warnings:")
         for warning in prediction['warnings']:
             print(f"  {warning}")
     

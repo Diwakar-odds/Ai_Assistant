@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Contrastive Learning System
 Learns better embeddings through contrastive objectives
@@ -28,7 +32,7 @@ try:
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
-    print("⚠️ torch not available")
+    logger.warning("⚠️ torch not available")
 
 
 class ContrastiveLearner:
@@ -362,7 +366,7 @@ def example_usage():
     print("Contrastive Learning Demo\n" + "="*50)
     
     if not TORCH_AVAILABLE:
-        print("⚠️ PyTorch not available - showing conceptual demo only")
+        logger.warning("⚠️ PyTorch not available - showing conceptual demo only")
         return
     
     # Generate sample data

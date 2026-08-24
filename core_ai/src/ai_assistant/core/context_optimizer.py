@@ -1,4 +1,8 @@
-﻿#!/usr/bin/env python3
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
+#!/usr/bin/env python3
 """
 Context Window Optimization Module
 Handles intelligent history compression and semantic retrieval

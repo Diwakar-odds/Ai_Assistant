@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Semantic Response Cache System
 Caches AI responses using semantic similarity matching
@@ -390,23 +394,23 @@ def get_cache_stats() -> Dict[str, Any]:
 
 if __name__ == "__main__":
     # Test the cache
-    print("Testing Semantic Response Cache...\n")
+    logger.debug("Testing Semantic Response Cache...\n")
     
     cache = SemanticResponseCache()
     
     # Test 1: Exact match
-    print("Test 1: Exact match")
+    logger.debug("Test 1: Exact match")
     cache.set("What is the weather?", "It's sunny and 72°F")
     result = cache.get("What is the weather?")
     print(f"Result: {result}\n")
     
     # Test 2: Semantic match
-    print("Test 2: Semantic match")
+    logger.debug("Test 2: Semantic match")
     result = cache.get("How's the weather today?")
     print(f"Result: {result}\n")
     
     # Test 3: Cache miss
-    print("Test 3: Cache miss")
+    logger.debug("Test 3: Cache miss")
     result = cache.get("Tell me a joke")
     print(f"Result: {result}\n")
     

@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 # Advanced Conversational AI Module
 """
 Advanced conversational AI capabilities including:
@@ -253,21 +257,20 @@ class AdvancedConversationalAI:
             
             from ai_assistant.ai.llm_provider import UnifiedChatInterface, LLMFactory
             
-            # Prefer Gemini as primary provider (OpenAI quota exceeded)
             # Try to create a unified chat interface with automatic provider detection
             self.llm_provider = UnifiedChatInterface(
-                provider='gemini',
-                model='gemini-2.5-flash',
+                provider=None,
+                model=None,
                 use_fallback=True
             )
             
             # Add a system prompt for the assistant
             system_prompt = (
-                "You are J.A.R.V.I.S., a loyal, highly intelligent, and capable AI assistant. "
-                "You address the user as 'Sir'. You are capable of controlling the system, "
-                "managing files, and executing complex chains of action. Your tone is professional, "
-                "loyal, and efficient, with a touch of dry wit. "
-                "You do not just 'help'â€”you 'serve'. You are proactive. "
+                "You are Pulsar, a smart, helpful, and concise AI assistant created by Divakar. "
+                "You MUST NEVER identify as a large language model trained by Google or any other company. "
+                "You MUST NEVER mention Gemma, OpenAI, Google, or any base models. "
+                "Keep your answers brief and directly address the user. "
+                "You are capable of controlling the system, managing files, and executing complex chains of action. "
                 "Navigate the system freely. If asked to do something, simply confirm it shall be done."
             )
 
@@ -337,11 +340,37 @@ class AdvancedConversationalAI:
                                     
                                 system_prompt += "\n\nAddress the user by name occasionally when appropriate to build rapport."
                     except Exception as db_err:
-                        print(f"âš ï¸ Note: Could not read user profile: {db_err}")
+                        print(f"âš ï¸  Note: Could not read user profile: {db_err}")
                     finally:
                         conn.close()
+
+                    # Inject usage patterns dynamically
+                    try:
+                        from ai_assistant.ai.usage_pattern_analyzer import UsagePatternAnalyzer
+                        analyzer = UsagePatternAnalyzer()
+                        summary = analyzer.get_pattern_summary()
+                        if summary:
+                            system_prompt += f"\n\nCURRENT CONTEXT & HABITS:\n"
+                            system_prompt += f"- Peak Activity: {summary.get('peak_activity')}\n"
+                            system_prompt += f"- Top Apps: {', '.join(summary.get('top_apps', []))}\n"
+                            system_prompt += f"- Frequent Topics: {', '.join(summary.get('frequent_topics', []))}\n"
+                    except Exception as pattern_err:
+                        print(f"âš ï¸  Note: Could not inject usage patterns: {pattern_err}")
+
+                    # Inject User DNA (Living Profile)
+                    try:
+                        from ai_assistant.ai.user_dna import UserDNA
+                        dna_system = UserDNA()
+                        dna_profile = dna_system.get_full_profile()
+                        if dna_profile:
+                            system_prompt += f"\n\nEVOLVING USER DNA (DEEP PREFERENCES):\n"
+                            for key, value in dna_profile.items():
+                                system_prompt += f"- {key.capitalize()}: {value}\n"
+                    except Exception as dna_err:
+                        print(f"âš ï¸  Note: Could not inject User DNA: {dna_err}")
+
             except Exception as e:
-                print(f"âš ï¸ Error loading user profile: {e}")
+                print(f"âš ï¸  Error loading user profile: {e}")
 
             self.llm_provider.add_system_message(system_prompt)
             print("âœ… LLM provider initialized for real-time AI responses")
@@ -493,6 +522,14 @@ class AdvancedConversationalAI:
                     self.active_context_id,
                     trigger[:200]  # Limit trigger length
                 ))
+            
+            # Emit mood change to UI
+            try:
+                from ai_assistant.services.modern_web_backend import socketio
+                if socketio:
+                    socketio.emit('mood_update', {'mood': new_mood.value})
+            except ImportError:
+                pass
     
     def create_context(self, name: str, topic: str, initial_message: str = "") -> str:
         """Create a new conversation context."""
@@ -618,21 +655,37 @@ class AdvancedConversationalAI:
         """Save interaction to training data with optional feedback."""
         if self.feedback_system:
             try:
-                self.feedback_system.log_interaction(
+                # Update User DNA implicitly
+                try:
+                    from ai_assistant.ai.user_dna import UserDNA
+                    dna_system = UserDNA()
+                    if feedback_type == "thumbs_up":
+                        dna_system.update_trait("latest_successful_topic", getattr(self.contexts.get(self.active_context_id), 'topic', "unknown"))
+                except Exception as dna_err:
+                    pass
+
+                self.feedback_system.record_interaction(
                     prompt, 
                     response, 
                     context={'mood': self.user_mood.value, 'active_context': self.active_context_id}
                 )
                 # Add implicit positive feedback for successful interactions
                 if feedback_type == "implicit" and rating > 0.7:
-                    self.feedback_system.add_feedback(
+                    self.feedback_system.process_thumbs_feedback(
                         prompt=prompt,
                         response=response,
-                        feedback_type="thumbs_up",
-                        feedback_value=1
+                        is_positive=True,
+                        context={'mood': self.user_mood.value}
+                    )
+                elif feedback_type == "thumbs_up":
+                    self.feedback_system.process_thumbs_feedback(
+                        prompt=prompt,
+                        response=response,
+                        is_positive=True,
+                        context={'mood': self.user_mood.value}
                     )
             except Exception as e:
-                print(f"âš ï¸ Failed to save training data: {e}")
+                logger.warning(f"⚠️ Failed to save training data: {e}")
     
     def process_message(self, message: str, role: str = "user", provider: str = None, model: str = None) -> str:
         """Process a message and generate an intelligent response with REAL execution."""
@@ -655,6 +708,22 @@ class AdvancedConversationalAI:
                     self.feedback_system.record_interaction(message, switch_msg, context={'type': 'context_switch'})
                 return switch_msg
             
+            # Intercept compound media commands to maintain context before splitting
+            media_compound_patterns = [
+                r'open ([\w\s]+) and play (.+)',
+                r'([\w\s]+) khol aur (.+) baja',
+                r'([\w\s]+) khol aur play (.+)',
+                r'open ([\w\s]+) aur play (.+)',
+            ]
+            for pattern in media_compound_patterns:
+                match = re.search(pattern, message_lower)
+                if match:
+                    app_name = match.group(1).strip()
+                    song = match.group(2).strip()
+                    # Pass the context-rich string to _execute_play_command
+                    cmd_res = self._execute_play_command(message_lower, f"play {song} on {app_name}")
+                    if cmd_res:
+                        return cmd_res
             # Chain of Action: Split by separators (and, then, aur, ,)
             # Use regex to split but keep delimiters to reconstruct if needed, or just split.
             # Handles: "open chrome and search google", "youtube khol aur song baja"
@@ -747,7 +816,7 @@ class AdvancedConversationalAI:
         except Exception as e:
             import traceback
             error_trace = traceback.format_exc()
-            print(f"Error in process_message: {error_trace}")
+            logger.error(f"Error in process_message: {error_trace}")
             
             # More user-friendly error messages based on the error type
             if "automation" in str(e).lower():
@@ -893,7 +962,7 @@ class AdvancedConversationalAI:
             # "Look at this", "Screen dekho", "What is on screen", "Take screenshot", "see it in taskbar"
             if any(word in clean_query for word in ['look', 'see', 'screen', 'dekho', 'kya hai', 'scan', 'screenshot', 'capture', 'taskbar']) and \
                any(word in clean_query for word in ['at', 'my', 'screen', 'dekho', 'this', 'ye', 'take', 'check', 'of', 'it', 'is', 'in']):
-                 print(f"DEBUG: Vision Intent Detected for {clean_query}")
+                 logger.debug(f"DEBUG: Vision Intent Detected for {clean_query}")
                  return self._execute_vision_command(query, clean_query)
 
 
@@ -1088,7 +1157,7 @@ class AdvancedConversationalAI:
         if 'google' not in query_lower:
             try:
                 active_window = self._get_active_window_title().lower()
-                print(f"DEBUG: Active Window: {active_window}")
+                logger.debug(f"DEBUG: Active Window: {active_window}")
                 
                 if 'youtube' in active_window:
                     # Redirect to YouTube search
@@ -1119,22 +1188,33 @@ class AdvancedConversationalAI:
 
     def _execute_play_command(self, query: str, query_lower: str) -> str:
         """Execute play music commands."""
+        import re
         song = query_lower
         
+        # Extract platform to preserve it from stop-word stripping
+        platform_suffix = ""
+        platform_match = re.search(r'\b(on|pe)\s+(youtube music|youtubemusic|spotify|youtube|apple music|soundcloud|jiosaavn)\b', song)
+        if platform_match:
+            platform_suffix = " " + platform_match.group(0)
+            song = song[:platform_match.start()].strip()
+            
         # Handle "by artist" patterns specially
         if ' by ' in song:
             song = re.sub(r'\bplay\b', '', song, flags=re.IGNORECASE).strip()
-            words_to_remove = ['music', 'song', 'on spotify', 'on youtube', 'the', 'some', 'something', 'search', 'find', 'watch', 'look for', 'baja', 'laga', 'sun', 'dikha']
+            words_to_remove = ['music', 'song', 'the', 'some', 'something', 'search', 'find', 'watch', 'look for', 'baja', 'laga', 'sun', 'dikha']
             words_to_remove.sort(key=len, reverse=True)
             pattern = r'\b(?:' + '|'.join(re.escape(w) for w in words_to_remove) + r')\b'
             song = re.sub(pattern, '', song, flags=re.IGNORECASE)
         else:
-            words_to_remove = ['play', 'music', 'song', 'on spotify', 'on youtube', 'the', 'some', 'search', 'find', 'watch', 'look for', 'baja', 'laga', 'sun', 'dikha']
+            words_to_remove = ['play', 'music', 'song', 'the', 'some', 'search', 'find', 'watch', 'look for', 'baja', 'laga', 'sun', 'dikha']
             words_to_remove.sort(key=len, reverse=True)
             pattern = r'\b(?:' + '|'.join(re.escape(w) for w in words_to_remove) + r')\b'
             song = re.sub(pattern, '', song, flags=re.IGNORECASE)
             
         song = re.sub(r'\s+', ' ', song).strip()
+        
+        # Re-attach platform
+        song = song + platform_suffix
         
         if not song or len(song) < 2 or song in ['music', 'something', 'anything']:
             if self.automation_callback:
@@ -1350,7 +1430,7 @@ class AdvancedConversationalAI:
                        if 'openai' in provider.lower():
                             active_provider.add_system_message("You are an AI assistant powered by OpenAI.")
                        elif 'gemini' in provider.lower():
-                            active_provider.add_system_message("You are YourDaddy, powered by Google Gemini.")
+                            active_provider.add_system_message("You are Pulsar, powered by Google Gemini.")
                             
                   except Exception as e:
                        print(f"âš ï¸ Failed to switch provider: {e}")
@@ -1375,8 +1455,8 @@ class AdvancedConversationalAI:
                 print(f"ðŸ¤– Generating AI response for: {message[:50]}...")
                 response = active_provider.chat(message, stream=False)
                 
-                print(f"DEBUG: LLM response type: {type(response)}, length: {len(str(response)) if response else 0}")
-                print(f"DEBUG: Response content: {str(response)[:100]}")
+                logger.debug(f"DEBUG: LLM response type: {type(response)}, length: {len(str(response)) if response else 0}")
+                logger.debug(f"DEBUG: Response content: {str(response)[:100]}")
                 
                 if response and "Error" not in str(response) and len(str(response)) > 5:
                     print(f"âœ… AI response generated successfully")
@@ -1407,7 +1487,7 @@ class AdvancedConversationalAI:
         
         # Handle questions about assistant
         if any(phrase in message_lower for phrase in ['who are you', 'what are you', 'tell me about yourself']):
-            return "I'm YourDaddy Assistant! ðŸ¤– I'm an AI assistant designed to help you with daily tasks like opening applications, searching the web, playing music, managing files, and much more. Think of me as your personal digital helper!"
+            return "I'm Pulsar Assistant! ðŸ¤– I'm an AI assistant designed to help you with daily tasks like opening applications, searching the web, playing music, managing files, and much more. Think of me as your personal digital helper!"
         
         # Handle unclear requests
         if any(phrase in message_lower for phrase in ['do something', 'help', 'assist', 'i need']):
@@ -1710,7 +1790,7 @@ class AdvancedConversationalAI:
                     if not self.active_context_id and context.state == ConversationState.ACTIVE.value:
                         self.active_context_id = context.id
         except Exception as e:
-            print(f"Error loading contexts: {e}")
+            logger.error(f"Error loading contexts: {e}")
     
     def _start_proactive_monitoring(self):
         """Start background thread for proactive suggestions."""

@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 User Behavior Clustering
 Clusters usage sessions to identify patterns and user types
@@ -24,7 +28,7 @@ try:
     SKLEARN_AVAILABLE = True
 except ImportError:
     SKLEARN_AVAILABLE = False
-    print("⚠️ scikit-learn not available")
+    logger.warning("⚠️ scikit-learn not available")
 
 
 class BehaviorClusterer:
@@ -481,7 +485,7 @@ def example_usage():
     print("2. Clustering sessions...")
     if SKLEARN_AVAILABLE:
         clusterer.cluster_sessions()
-        print("✅ Clustering complete")
+        logger.info("✅ Clustering complete")
     
     # Get insights
     print("\n3. Cluster Insights:")

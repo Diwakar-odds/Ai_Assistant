@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Model Compression System
 Reduces model size and latency through quantization, pruning, and distillation
@@ -27,7 +31,7 @@ try:
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
-    print("⚠️ torch not available")
+    logger.warning("⚠️ torch not available")
 
 try:
     import numpy as np
@@ -393,7 +397,7 @@ def example_usage():
     print("Model Compression Demo\n" + "="*50)
     
     if not TORCH_AVAILABLE:
-        print("⚠️ PyTorch not available - showing conceptual demo only")
+        logger.warning("⚠️ PyTorch not available - showing conceptual demo only")
         return
     
     # Create a simple model

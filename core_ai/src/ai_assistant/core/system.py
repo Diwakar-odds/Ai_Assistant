@@ -1,7 +1,11 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 # System Monitoring and Management Module
 """
 System monitoring, process management, and PC maintenance functions
-for the YourDaddy AI Assistant.
+for the Pulsar AI Assistant.
 """
 
 try:
@@ -10,7 +14,7 @@ try:
 except ImportError:
     psutil = None
     PSUTIL_AVAILABLE = False
-    print("WARNING: psutil not found. System monitoring features will be disabled.")
+    logger.warning("WARNING: psutil not found. System monitoring features will be disabled.")
 
 import platform
 import tempfile

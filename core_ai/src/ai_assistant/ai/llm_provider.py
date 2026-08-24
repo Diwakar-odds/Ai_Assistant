@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 #!/usr/bin/env python3
 """
 LLM Provider Abstraction Layer
@@ -361,10 +365,82 @@ class OfflineProvider(LLMProvider):
         return formatted
 
 
+class GGUFProvider(LLMProvider):
+    """Local GGUF model provider using llama_cpp via singleton manager."""
+    
+    def __init__(self, **kwargs):
+        """Initialize GGUF provider."""
+        try:
+            from src.ai_assistant.ai.gguf_model_manager import gguf_manager
+        except ImportError:
+            from ai_assistant.ai.gguf_model_manager import gguf_manager
+            
+        self.llm = gguf_manager.get_model()
+        
+    def _format_messages(self, messages: List[Dict[str, str]]) -> str:
+        """Format messages for Llama 3 Instruct."""
+        # Llama 3 prompt format
+        formatted = ""
+        for msg in messages:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            formatted += f"<|start_header_id|>{role}<|end_header_id|>\n\n{content}<|eot_id|>"
+        formatted += "<|start_header_id|>assistant<|end_header_id|>\n\n"
+        return formatted
+
+    def generate_response(self, messages: List[Dict[str, str]], **kwargs) -> str:
+        """Generate full response using local GGUF model."""
+        try:
+            print("🧠 [GGUF] Generating response using local model...")
+            prompt = self._format_messages(messages)
+            
+            response = self.llm.create_completion(
+                prompt=prompt,
+                max_tokens=kwargs.get("max_tokens", 1024),
+                temperature=kwargs.get("temperature", 0.7),
+                top_p=kwargs.get("top_p", 0.95),
+                stop=["<|eot_id|>", "<|end_of_text|>"]
+            )
+            return response['choices'][0]['text'].strip()
+        except Exception as e:
+            logger.error(f"GGUF generation failed: {e}")
+            return f"Error: {str(e)}"
+            
+    def stream_response(self, messages: List[Dict[str, str]], **kwargs) -> Generator[str, None, None]:
+        """Stream response using local GGUF model."""
+        try:
+            print("🧠 [GGUF] Streaming response using local model...")
+            prompt = self._format_messages(messages)
+            
+            stream = self.llm.create_completion(
+                prompt=prompt,
+                max_tokens=kwargs.get("max_tokens", 1024),
+                temperature=kwargs.get("temperature", 0.7),
+                top_p=kwargs.get("top_p", 0.95),
+                stop=["<|eot_id|>", "<|end_of_text|>"],
+                stream=True
+            )
+            for chunk in stream:
+                text = chunk['choices'][0]['text']
+                if text:
+                    yield text
+        except Exception as e:
+            logger.error(f"GGUF streaming failed: {e}")
+            yield f"Error: {str(e)}"
+            
+    def count_tokens(self, text: str) -> int:
+        """Count tokens using llama_cpp tokenizer."""
+        try:
+            return len(self.llm.tokenize(text.encode('utf-8')))
+        except:
+            return len(text) // 4
+
+
 class LLMFactory:
     """Factory for creating LLM providers."""
     
     PROVIDERS = {
+        "gguf": GGUFProvider,
         "openai": OpenAIProvider,
         "gemini": GeminiProvider,
         "local": LocalLLMProvider,
@@ -388,14 +464,28 @@ class LLMFactory:
     def detect_provider(cls) -> tuple[str, str]:
         """Detect available provider using smart network-aware configuration."""
         try:
-            from ai_assistant.ai.network_aware_llm import get_optimal_llm_config
+            # 1. First priority: The 4.6GB Local GGUF Model (100% Offline & Private)
+            try:
+                try:
+                    from src.ai_assistant.ai.gguf_model_manager import gguf_manager
+                except ImportError:
+                    from ai_assistant.ai.gguf_model_manager import gguf_manager
+                # Just importing it ensures we prefer it if it's available in the system
+                return ("gguf", "pulsar-final-q4_k_m")
+            except ImportError:
+                pass
+                
+            # 2. Fallback to Cloud models via network config
+            try:
+                from ai_assistant.ai.network_aware_llm import get_optimal_llm_config
+            except ImportError:
+                from src.ai_assistant.ai.network_aware_llm import get_optimal_llm_config
+                
             config = get_optimal_llm_config()
             provider = config["provider"]
             model = config["model"]
             
-            logger.info(f"Smart provider selection: {provider} ({model})")
-            logger.info(f"Network status: {'Online' if config['network_status'] else 'Offline'}")
-            
+            logger.info(f"Smart provider fallback selection: {provider} ({model})")
             return (provider, model)
         except Exception as e:
             logger.error(f"Smart provider detection failed: {e}")
@@ -405,7 +495,7 @@ class LLMFactory:
             elif os.getenv("GEMINI_API_KEY"):
                 return ("gemini", "gemini-pro")
             else:
-                raise RuntimeError("No API keys configured. Please set OPENAI_API_KEY or GEMINI_API_KEY")
+                raise ValueError("No LLM providers available (OpenAI, Gemini, or GGUF).")
     
     @classmethod
     def create_with_fallback(cls, preferred_provider: Optional[str] = None, **kwargs) -> LLMProvider:
@@ -430,16 +520,9 @@ class LLMFactory:
             return cls.create(provider, **kwargs)
         except Exception as e:
             logger.warning(f"Failed to create {provider} provider: {e}")
-            raise
             
-            # Fallback to offline
-            # if provider != "offline":
-            #     logger.info("Falling back to offline provider")
-            #     try:
-            #         return cls.create("offline", **kwargs)
-            #     except Exception as e2:
-            #         logger.error(f"Offline provider also failed: {e2}")
-            #         raise
+            # We could ping a global self healing engine instance here if we had a singleton
+            raise e
 
 
 class UnifiedChatInterface:
@@ -460,6 +543,7 @@ class UnifiedChatInterface:
             model = model or detected_model
         
         logger.info(f"Initializing {provider} with model {model}")
+        print(f"\n🚀 [UnifiedChat] Initializing Session (Provider: {provider}, Model: {model})")
         
         # Try to create provider with fallback support
         if use_fallback:
@@ -469,7 +553,18 @@ class UnifiedChatInterface:
         
         self.provider_name = provider
         self.model = model
+        self.use_fallback = use_fallback
         self.conversation_history: List[Dict[str, str]] = []
+        
+        # Enforce strong assistant persona for all models (especially local GGUF which defaults to Google/Gemma identity)
+        default_system_prompt = (
+            "You are Pulsar, a smart, helpful, and concise AI assistant created by Divakar. "
+            "You MUST NEVER identify as a large language model trained by Google or any other company. "
+            "You MUST NEVER mention Gemma, OpenAI, Google, or any base models. "
+            "Keep your answers brief and directly address the user."
+        )
+        self.conversation_history.append({"role": "system", "content": default_system_prompt})
+        
         self.offline_mode = isinstance(self.provider, OfflineProvider)
         
         if self.offline_mode:
@@ -492,15 +587,31 @@ class UnifiedChatInterface:
         self.conversation_history.append({"role": "assistant", "content": content})
     
     def chat(self, user_message: str, stream: bool = False, **kwargs) -> Union[str, Generator[str, None, None]]:
-        """Send a chat message and get response."""
+        """Send a chat message and get response, with dynamic fallback."""
         self.add_user_message(user_message)
         
-        if stream:
-            return self.provider.stream_response(self.conversation_history, **kwargs)
-        else:
-            response = self.provider.generate_response(self.conversation_history, **kwargs)
-            self.add_assistant_message(response)
-            return response
+        try:
+            if stream:
+                return self.provider.stream_response(self.conversation_history, **kwargs)
+            else:
+                response = self.provider.generate_response(self.conversation_history, **kwargs)
+                if response.startswith("Error:"):
+                    raise Exception(response)
+                self.add_assistant_message(response)
+                return response
+        except Exception as e:
+            logger.error(f"Chat generation failed: {e}")
+            if stream:
+                def _error_stream():
+                    yield f"Error: Generation failed: {e}"
+                return _error_stream()
+            return f"Error: I encountered an error during generation: {e}"
+            
+            if stream:
+                def _error_stream():
+                    yield "Error: Generation failed."
+                return _error_stream()
+            return f"Error: I encountered an error during generation."
     
     def reset(self):
         """Reset conversation history."""
@@ -521,17 +632,17 @@ if __name__ == "__main__":
         chat.add_system_message("You are a helpful AI assistant.")
         
         # Test non-streaming
-        print("Testing non-streaming response:")
+        logger.debug("Testing non-streaming response:")
         response = chat.chat("What is Python?", stream=False)
         print(f"Response: {response}\n")
         
         # Test streaming
-        print("Testing streaming response:")
+        logger.debug("Testing streaming response:")
         for chunk in chat.chat("Tell me a joke", stream=True):
             print(chunk, end="", flush=True)
         print()
         
     except Exception as e:
-        print(f"Error: {e}")
+        logger.error(f"Error: {e}")
         print("Make sure you have OPENAI_API_KEY or GEMINI_API_KEY set")
 

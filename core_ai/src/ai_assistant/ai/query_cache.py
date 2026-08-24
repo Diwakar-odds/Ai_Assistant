@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 TF-IDF Query Similarity Cache
 Smart response caching using semantic similarity
@@ -26,7 +30,7 @@ try:
     SKLEARN_AVAILABLE = True
 except ImportError:
     SKLEARN_AVAILABLE = False
-    print("⚠️ scikit-learn not available - using fallback similarity")
+    logger.warning("⚠️ scikit-learn not available - using fallback similarity")
 
 
 class QuerySimilarityCache:

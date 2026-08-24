@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 QLoRA Trainer - Ultra-efficient fine-tuning for 8GB RAM systems
 Uses 4-bit quantization + LoRA adapters to train on CPU with minimal memory
@@ -244,7 +248,7 @@ class QLoRATrainer:
         total_params = sum(p.numel() for p in model.parameters())
         trainable_percent = 100 * trainable_params / total_params
         
-        print(f"✅ Model prepared for training")
+        logger.info(f"✅ Model prepared for training")
         print(f"   Trainable params: {trainable_params:,} ({trainable_percent:.2f}%)")
         print(f"   Total params: {total_params:,}")
         
@@ -411,7 +415,7 @@ def demo_training():
     
     # Train
     print("\n3️⃣  Starting training...")
-    print("⚠️  WARNING: This will take several minutes on CPU!")
+    logger.warning("⚠️  WARNING: This will take several minutes on CPU!")
     print("   Press Ctrl+C to cancel if needed\n")
     
     try:

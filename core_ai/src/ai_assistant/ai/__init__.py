@@ -1,5 +1,8 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
-AI and machine learning modules for the assistant.
 
 This package contains conversational AI, LLM providers, memory systems,
 and other AI-related functionality including advanced learning systems.
@@ -25,7 +28,7 @@ def get_feedback_engine():
             from .advanced_feedback_learning import AdaptiveLearningEngine
             _feedback_engine = AdaptiveLearningEngine()
         except ImportError as e:
-            print(f"Warning: Could not load feedback engine: {e}")
+            logger.warning(f"Warning: Could not load feedback engine: {e}")
             return None
     return _feedback_engine
 
@@ -37,7 +40,7 @@ def get_intent_classifier():
             from .intent_classification import IntentClassifier
             _intent_classifier = IntentClassifier()
         except ImportError as e:
-            print(f"Warning: Could not load intent classifier: {e}")
+            logger.warning(f"Warning: Could not load intent classifier: {e}")
             return None
     return _intent_classifier
 
@@ -49,7 +52,7 @@ def get_prompt_optimizer():
             from .adaptive_prompts import PromptOptimizer
             _prompt_optimizer = PromptOptimizer()
         except ImportError as e:
-            print(f"Warning: Could not load prompt optimizer: {e}")
+            logger.warning(f"Warning: Could not load prompt optimizer: {e}")
             return None
     return _prompt_optimizer
 
@@ -61,7 +64,7 @@ def get_multimodal_engine():
             from .multimodal_learning import MultiModalLearningEngine
             _multimodal_engine = MultiModalLearningEngine()
         except ImportError as e:
-            print(f"Warning: Could not load multimodal engine: {e}")
+            logger.warning(f"Warning: Could not load multimodal engine: {e}")
             return None
     return _multimodal_engine
 

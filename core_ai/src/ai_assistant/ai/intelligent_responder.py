@@ -1,5 +1,5 @@
 """
-Intelligent Response Generator for YourDaddy Assistant
+Intelligent Response Generator for Pulsar Assistant
 
 Analyzes user input for intent, mood, context and generates appropriate responses.
 Provides personality-driven, context-aware conversation handling.
