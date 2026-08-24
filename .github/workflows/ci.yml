@@ -8,8 +8,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
-    name: Test on ${{ matrix.os }} - Python ${{ matrix.python-version }}
+  test-backend:
+    name: Backend Test (${{ matrix.os }} - Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     strategy:
@@ -74,15 +74,37 @@ jobs:
         ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD || 'changeme123' }}
         JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY || 'test-secret-key-for-ci' }}
         SECRET_KEY: ${{ secrets.SECRET_KEY || 'test-secret-key-for-ci' }}
+
+  test-frontend:
+    name: Frontend Typecheck & Test
+    runs-on: ubuntu-latest
     
-    - name: Upload coverage to Codecov
-      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
-      uses: codecov/codecov-action@v4
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
       with:
-        files: ./coverage.xml
-        token: ${{ secrets.CODECOV_TOKEN }}
-        fail_ci_if_error: false
-        verbose: true
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: 'frontend/web-app/package.json'
+
+    - name: Install dependencies
+      working-directory: frontend/web-app
+      run: npm ci || npm install
+
+    - name: Typecheck TypeScript
+      working-directory: frontend/web-app
+      run: npm run typecheck
+
+    - name: Run Vitest Unit Tests
+      working-directory: frontend/web-app
+      run: npm test
+
+    - name: Build Web Application
+      working-directory: frontend/web-app
+      run: npm run build
 
   lint:
     name: Lint and Format Check
@@ -108,24 +130,9 @@ jobs:
       run: |
         flake8 core_ai/src/ai_assistant/ backend/ --count --select=E9,F63,F7,F82 --show-source --statistics
 
-    - name: Run flake8 (warnings)
-      run: |
-        flake8 core_ai/src/ai_assistant/ backend/ --count --exit-zero --max-complexity=15 --max-line-length=127 --statistics
-      continue-on-error: true
-
     - name: Check code formatting with black
       run: |
         black --check --diff core_ai/src/ai_assistant/ backend/
-      continue-on-error: true
-
-    - name: Check import sorting with isort
-      run: |
-        isort --check-only --diff core_ai/src/ai_assistant/ backend/
-      continue-on-error: true
-
-    - name: Run pylint
-      run: |
-        pylint core_ai/src/ai_assistant/ backend/ --exit-zero --max-line-length=127
       continue-on-error: true
 
   security:
@@ -155,6 +162,7 @@ jobs:
     - name: Run bandit security scan
       run: |
         bandit -r core_ai/src/ai_assistant/ backend/ -f json -o bandit-report.json || true
+      continue-on-error: true
     
     - name: Upload bandit report
       if: always()
@@ -167,7 +175,7 @@ jobs:
   build-check:
     name: Build Verification
     runs-on: ubuntu-latest
-    needs: [test, lint, security]
+    needs: [test-backend, test-frontend, lint, security]
     timeout-minutes: 15
     
     steps:

@@ -1,14 +1,17 @@
-from flask import Blueprint, jsonify, request, send_from_directory, render_template, Response, stream_with_context
-from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity, verify_jwt_in_request
-import os, json, sys, time, datetime
-try:
-    from backend.modern_web_backend import logger, api_logger, get_current_context
-except ImportError:
-    pass
-    
+import threading
+import asyncio
+from flask import Blueprint, jsonify, request
+from .common import logger, get_socketio, jwt_required
 
 chain_bp = Blueprint('chain', __name__)
 
+try:
+    from ai_assistant.core.chain_of_actions_manager import get_chain_manager, ChainOfActionsManager
+    from ai_assistant.core.progress_tracker import get_progress_tracker
+    MULTI_AGENT_AVAILABLE = True
+except ImportError as e:
+    MULTI_AGENT_AVAILABLE = False
+    logger.warning(f"Multi-Agent System not available in chain_routes: {e}")
 
 try:
     from backend.modern_web_backend import *
@@ -17,6 +20,19 @@ except ImportError:
 
 from ai_assistant.core.chain_optimizer import ChainOptimizer
 chain_optimizer = ChainOptimizer()
+
+def _broadcast_chain_progress(progress):
+    """Broadcast chain progress via WebSocket"""
+    try:
+        sio = get_socketio()
+        if sio:
+            sio.emit(
+                'chain_progress',
+                progress.to_dict() if hasattr(progress, 'to_dict') else progress,
+                namespace='/'
+            )
+    except Exception as e:
+        logger.error(f"WebSocket broadcast error: {e}")
 @chain_bp.route('/api/chains/create', methods=['POST'])
 @jwt_required()
 def create_chain():
@@ -31,32 +47,18 @@ def create_chain():
         return jsonify({"error": "Command is required"}), 400
         
     try:
-        import asyncio
         manager = get_chain_manager()
         
-        # 1. Create Chain Synchronously (well, effectively) to get ID
-        # We need to run the async create_chain method
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         chain = loop.run_until_complete(manager.create_chain(command))
         
-        # 2. Run execution in background
         def run_chain_background(chain_obj):
             async def _run():
-                # Continue with Steps 2-7
-                # Subscribe to progress
                 manager.subscribe_progress(chain_obj.id, _broadcast_chain_progress)
-                
-                # Step 2: Process & Breakdown
                 await manager.decompose_command(chain_obj)
-                
-                # Step 3: Identify
                 await manager.identify_executors(chain_obj)
-                
-                # Step 4: Assign & Execute + Step 5: Track Progress
                 report = await manager.execute_chain(chain_obj.id)
-                
-                # Step 7: Notify
                 await manager.notify_completion(report)
                 
             new_loop = asyncio.new_event_loop()
@@ -152,10 +154,8 @@ def resume_chain(chain_id):
         
     data = request.get_json()
     user_input = data.get("input")
-    action = data.get("action", "proceed") # proceed, cancel, retry
+    action = data.get("action", "proceed")
     
-    # Placeholder for resume logic
-    # In future: manager.resume_chain(chain_id, action, user_input)
     return jsonify({"status": "resumed", "message": "Resume signal sent (Not fully implemented)"})
 
 @chain_bp.route('/api/chains/<chain_id>', methods=['GET'])

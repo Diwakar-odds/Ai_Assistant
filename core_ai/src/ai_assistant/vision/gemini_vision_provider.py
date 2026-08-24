@@ -7,8 +7,19 @@ Implements the VLMProvider interface using Google's Gemini Vision API.
 import os
 import io
 from typing import Union, Optional, List, Dict, Any
-from PIL import Image
-import google.generativeai as genai
+try:
+    from PIL import Image
+    PIL_AVAILABLE = True
+except ImportError:
+    Image = None
+    PIL_AVAILABLE = False
+
+try:
+    import google.generativeai as genai
+    GENAI_AVAILABLE = True
+except ImportError:
+    genai = None
+    GENAI_AVAILABLE = False
 
 from .vlm_provider import VLMProvider, VLMResponse
 

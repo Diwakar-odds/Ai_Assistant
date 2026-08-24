@@ -1,19 +1,12 @@
 from flask import Blueprint, jsonify, request, send_from_directory, render_template, Response, stream_with_context
-from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity, verify_jwt_in_request
 import os, json, sys, time, datetime
-try:
-    from backend.modern_web_backend import logger, api_logger, get_current_context
-except ImportError:
-    pass
-    
+from .common import (
+    logger, api_logger, limiter, assistant, validate_input, sanitize_command,
+    get_current_context, jwt_required, create_access_token, get_jwt_identity, verify_jwt_in_request,
+    ENABLE_VOICE, ENABLE_MULTIMODAL, ENABLE_CONVERSATIONAL_AI
+)
 
 settings_bp = Blueprint('settings', __name__)
-
-
-try:
-    from backend.modern_web_backend import *
-except ImportError:
-    from modern_web_backend import *
 @settings_bp.route('/api/language/detect', methods=['POST'])
 @jwt_required(optional=True)
 @limiter.limit("30 per minute")

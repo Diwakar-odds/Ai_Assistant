@@ -1,29 +1,45 @@
 """
-Logging Configuration - Import Redirect
-=======================================
-
-This module redirects to the main logging_config in utils/
-to prevent duplicate instances and session conflicts.
-
-DO NOT MODIFY - import from utils.logging_config directly instead.
+Logging Configuration for AI Assistant Modules
+Centralized logger access point for core_ai package.
 """
 
 import sys
-import importlib.util
+import logging
 from pathlib import Path
+from typing import Optional
 
-# Dynamically load the main utils.logging_config bypassing sys.path collisions
-main_logging_config = Path(__file__).resolve().parent.parent.parent / "utils" / "logging_config.py"
-spec = importlib.util.spec_from_file_location("main_utils_logging_config", str(main_logging_config))
-main_utils = importlib.util.module_from_spec(spec)
-sys.modules["main_utils_logging_config"] = main_utils
-spec.loader.exec_module(main_utils)
+try:
+    from utils.logging_config import SessionManager, LoggingConfig, get_logger, get_api_logger
+except ImportError:
+    # Fallback to standard logging if backend utils not in sys.path
+    class SessionManager:
+        @classmethod
+        def get_current_date(cls):
+            from datetime import datetime
+            return datetime.now().strftime('%Y-%m-%d')
+            
+        @classmethod
+        def get_session_id(cls):
+            return "default"
 
-from main_utils_logging_config import *
+    class LoggingConfig:
+        pass
+
+    def get_logger(name: str, log_category: str = 'modules', **kwargs) -> logging.Logger:
+        logger = logging.getLogger(name)
+        if not logger.handlers:
+            handler = logging.StreamHandler(sys.stdout)
+            handler.setFormatter(logging.Formatter('%(asctime)s | %(name)s | %(levelname)s | %(message)s'))
+            logger.addHandler(handler)
+            logger.setLevel(logging.INFO)
+        return logger
+
+    def get_api_logger(name: str = 'api_requests', **kwargs) -> logging.Logger:
+        return get_logger(name, log_category='api')
 
 __all__ = [
     'SessionManager',
-    'LoggingConfig', 
+    'LoggingConfig',
     'get_logger',
     'get_api_logger'
 ]

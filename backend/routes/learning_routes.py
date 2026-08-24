@@ -1,24 +1,17 @@
 from flask import Blueprint, jsonify, request, send_from_directory, render_template, Response, stream_with_context
-from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity, verify_jwt_in_request
 import os, json, sys, time, datetime
+from pathlib import Path
+from .common import logger, api_logger, jwt_required, get_jwt_identity, limiter
+
 try:
-    from backend.modern_web_backend import logger, api_logger, get_current_context
+    from learning_dashboard_api import LearningDashboardAPI
+    dashboard_api = LearningDashboardAPI()
+    DASHBOARD_API_AVAILABLE = True
 except ImportError:
-    try:
-        from modern_web_backend import logger, api_logger, get_current_context
-    except ImportError:
-        pass
+    dashboard_api = None
+    DASHBOARD_API_AVAILABLE = False
 
 learning_bp = Blueprint('learning', __name__)
-
-# In case of missing globals, you may need to import them locally or add them here.
-try:
-    from backend.modern_web_backend import *
-except ImportError:
-    try:
-        from modern_web_backend import *
-    except ImportError:
-        pass 
 @learning_bp.route('/api/learning/stats')
 @jwt_required(optional=True)
 def api_learning_stats():

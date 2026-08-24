@@ -74,7 +74,7 @@ def main():
     parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
     parser.add_argument("--port", type=int, default=8000, help="Port for web interface (default: 8000)")
     parser.add_argument("--setup-pin", action="store_true", help="Setup or change PIN")
-    parser.add_argument("--skip-auth", action="store_true", default=True, help="Skip PIN authentication (development only)")
+    parser.add_argument("--skip-auth", action="store_true", default=False, help="Skip PIN authentication (development only)")
     
     args = parser.parse_args()
     

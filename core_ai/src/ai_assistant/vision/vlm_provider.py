@@ -13,7 +13,12 @@ from abc import ABC, abstractmethod
 from typing import Optional, Dict, List, Any, Union
 from dataclasses import dataclass, field
 from datetime import datetime
-from PIL import Image
+try:
+    from PIL import Image
+    PIL_AVAILABLE = True
+except ImportError:
+    Image = None
+    PIL_AVAILABLE = False
 import json
 
 

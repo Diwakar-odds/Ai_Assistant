@@ -2,6 +2,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { ReactNode } from 'react';
 
+import ErrorBoundary from './ErrorBoundary';
+
 interface DetailViewProps {
   isOpen: boolean;
   onClose: () => void;
@@ -53,7 +55,9 @@ const DetailView = ({ isOpen, onClose, title, children }: DetailViewProps) => {
               
               {/* Content */}
               <div className="overflow-y-auto max-h-[calc(90vh-80px)] p-6">
-                {children}
+                <ErrorBoundary fallbackTitle={`Error displaying ${title}`}>
+                  {children}
+                </ErrorBoundary>
               </div>
             </motion.div>
           </motion.div>
