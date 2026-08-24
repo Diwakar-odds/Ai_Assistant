@@ -230,3 +230,4 @@ tests/output/
 # Cache files
 **/discovered_apps.json
 core_ai/src/ai_assistant/nlp/offline_command_model/
+models/
