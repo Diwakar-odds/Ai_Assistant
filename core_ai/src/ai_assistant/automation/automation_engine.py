@@ -1,6 +1,10 @@
-﻿# Smart Automation & Workflows Module
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
+# Smart Automation & Workflows Module
 """
-Advanced automation and workflow management system for YourDaddy Assistant.
+Advanced automation and workflow management system for Pulsar Assistant.
 
 Features:
 - Workflow creation and execution
@@ -21,7 +25,7 @@ try:
     SCHEDULE_AVAILABLE = True
 except ImportError:
     SCHEDULE_AVAILABLE = False
-    print("Warning: schedule library not available. Scheduled automation disabled.")
+    logger.warning("Warning: schedule library not available. Scheduled automation disabled.")
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Callable, Tuple
 from dataclasses import dataclass, asdict, field
@@ -704,7 +708,7 @@ class SmartAutomationEngine:
                 try:
                     self._add_scheduled_workflow(workflow.id, trigger.schedule)
                 except Exception as e:
-                    print(f"Error scheduling workflow {workflow.name}: {e}")
+                    logger.error(f"Error scheduling workflow {workflow.name}: {e}")
     
     def _add_scheduled_workflow(self, workflow_id: str, schedule_pattern: str):
         """Add scheduled workflow to scheduler."""
@@ -784,7 +788,7 @@ class SmartAutomationEngine:
                     self.workflows[workflow.id] = workflow
                     self._schedule_workflow_triggers(workflow)
         except Exception as e:
-            print(f"Error loading workflows: {e}")
+            logger.error(f"Error loading workflows: {e}")
     
     def cleanup(self):
         """Cleanup resources."""
@@ -955,7 +959,7 @@ __all__ = [
 # Section 2: Advanced Integration (from advanced_integration.py)
 # =============================================================================
 """
-Advanced System Integration for YourDaddy Assistant
+Advanced System Integration for Pulsar Assistant
 
 This module provides deep system integration capabilities including:
 - System-wide hooks and event monitoring
@@ -1290,7 +1294,7 @@ class SystemHookManager:
                 try:
                     handler(event)
                 except Exception as e:
-                    print(f"Error in event handler: {e}")
+                    logger.error(f"Error in event handler: {e}")
     
     def _store_event(self, event: SystemEvent):
         """Store event in database"""
@@ -1811,7 +1815,7 @@ class AdvancedIntegrationManager:
             try:
                 self.hook_manager.start_hook(hook_name)
             except Exception as e:
-                print(f"Failed to start hook {hook_name}: {e}")
+                logger.error(f"Failed to start hook {hook_name}: {e}")
     
     def stop_monitoring(self):
         """Stop system monitoring"""

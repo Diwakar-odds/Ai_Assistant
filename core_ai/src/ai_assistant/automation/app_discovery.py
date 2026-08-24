@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 # Dynamic Application Discovery Module
 """
 This module scans the system to discover all installed applications
@@ -80,7 +84,7 @@ class AppDiscovery:
         self.apps_database = apps
         self.save_cache()
         
-        print(f"✅ Discovery complete! Found {len(apps)} apps (same as Settings).")
+        logger.info(f"✅ Discovery complete! Found {len(apps)} apps (same as Settings).")
         return apps
     
     # REMOVED: PowerShell Get-StartApps - not needed, using Windows Settings > Apps & Features sources
@@ -236,7 +240,7 @@ class AppDiscovery:
             with open(self.apps_cache_file, 'w') as f:
                 json.dump(self.apps_database, f, indent=2)
         except Exception as e:
-            print(f"Error saving cache: {e}")
+            logger.error(f"Error saving cache: {e}")
     
     def load_cache(self):
         """Load discovered apps from cache file"""
@@ -259,7 +263,7 @@ class AppDiscovery:
                 else:
                     self.apps_database = {}
         except Exception as e:
-            print(f"Error loading cache: {e}")
+            logger.error(f"Error loading cache: {e}")
             self.apps_database = {}
     
     def _start_background_refresh(self):
@@ -286,7 +290,7 @@ class AppDiscovery:
         
         thread = threading.Thread(target=delayed_refresh, daemon=True)
         thread.start()
-        print(f"✅ Delayed app refresh scheduled ({delay_seconds}s after startup)")
+        logger.info(f"✅ Delayed app refresh scheduled ({delay_seconds}s after startup)")
     
     def _background_refresh(self):
         """Background refresh of app database"""
@@ -301,7 +305,7 @@ class AppDiscovery:
             from datetime import datetime
             self._last_refresh_time = datetime.now()
             
-            print(f"✅ Background refresh complete! Found {len(new_apps)} apps")
+            logger.info(f"✅ Background refresh complete! Found {len(new_apps)} apps")
             
             # Notify frontend via WebSocket if available
             try:
@@ -370,7 +374,7 @@ class AppDiscovery:
                 
                 conn.commit()
         except Exception as e:
-            print(f"Error initializing usage database: {e}")
+            logger.error(f"Error initializing usage database: {e}")
     
     def track_app_launch(self, app_name: str, app_path: str = "", success: bool = True):
         """Track an application launch for usage statistics."""
@@ -393,7 +397,7 @@ class AppDiscovery:
                 
                 conn.commit()
         except Exception as e:
-            print(f"Error tracking app launch: {e}")
+            logger.error(f"Error tracking app launch: {e}")
     
     def get_most_used_apps(self, limit: int = 10) -> List[Tuple[str, int]]:
         """Get most frequently used applications."""
@@ -407,7 +411,7 @@ class AppDiscovery:
                 """, (limit,))
                 return cursor.fetchall()
         except Exception as e:
-            print(f"Error getting most used apps: {e}")
+            logger.error(f"Error getting most used apps: {e}")
             return []
     
     def get_recent_apps(self, limit: int = 10) -> List[Tuple[str, str]]:
@@ -424,7 +428,7 @@ class AppDiscovery:
                 """, (limit,))
                 return cursor.fetchall()
         except Exception as e:
-            print(f"Error getting recent apps: {e}")
+            logger.error(f"Error getting recent apps: {e}")
             return []
     
     def get_preferred_app_for_action(self, action_type: str) -> Optional[Tuple[str, str]]:
@@ -443,7 +447,7 @@ class AppDiscovery:
                     return (row[0], row[1])
                 return None
         except Exception as e:
-            print(f"Error getting preference: {e}")
+            logger.error(f"Error getting preference: {e}")
             return None
 
     def record_action_preference(self, action_type: str, chosen_app: str, method: str):
@@ -460,7 +464,7 @@ class AppDiscovery:
                 """, (action_type, chosen_app, method))
                 conn.commit()
         except Exception as e:
-            print(f"Error recording preference: {e}")
+            logger.error(f"Error recording preference: {e}")
 
     def try_windows_search(self, app_name: str) -> bool:
         """Use Windows search bar (Win+S) as last resort."""
@@ -475,7 +479,7 @@ class AppDiscovery:
             pyautogui.press('enter')
             return True
         except Exception as e:
-            print(f"Error with Windows Search: {e}")
+            logger.error(f"Error with Windows Search: {e}")
             return False
     
     def _split_camel_case(self, text: str) -> str:
@@ -939,7 +943,7 @@ def start_periodic_refresh(interval_hours: int = 168):  # 168 hours = 1 week
     
     thread = threading.Thread(target=periodic_refresh_loop, daemon=True)
     thread.start()
-    print(f"✅ Periodic app refresh enabled (every {interval_hours} hours)")
+    logger.info(f"✅ Periodic app refresh enabled (every {interval_hours} hours)")
 
 def start_auto_refresh_after_startup(delay_seconds: int = 30):
     """Convenience function to start delayed refresh after server startup"""
@@ -979,7 +983,7 @@ try:
     PIL_AVAILABLE = True
 except ImportError:
     PIL_AVAILABLE = False
-    print("Warning: PIL not available. Visual taskbar detection disabled.")
+    logger.warning("Warning: PIL not available. Visual taskbar detection disabled.")
 import json
 from datetime import datetime
 
@@ -991,7 +995,7 @@ try:
     WIN32_AVAILABLE = True
 except ImportError:
     WIN32_AVAILABLE = False
-    print("Warning: win32gui not available. Some taskbar detection features will be limited.")
+    logger.warning("Warning: win32gui not available. Some taskbar detection features will be limited.")
 
 # Import multimodal capabilities for visual analysis
 try:
@@ -999,7 +1003,7 @@ try:
     MULTIMODAL_AVAILABLE = True
 except ImportError:
     MULTIMODAL_AVAILABLE = False
-    print("Warning: Multimodal AI not available for visual taskbar analysis.")
+    logger.warning("Warning: Multimodal AI not available for visual taskbar analysis.")
 
 class TaskbarDetector:
     """Detects and analyzes Windows taskbar and running applications."""
@@ -1010,7 +1014,7 @@ class TaskbarDetector:
             try:
                 self.multimodal = MultiModalAI()
             except Exception as e:
-                print(f"Warning: Could not initialize MultiModalAI: {e}")
+                logger.warning(f"Warning: Could not initialize MultiModalAI: {e}")
     
     def get_running_applications(self) -> Dict[str, List[Dict[str, Any]]]:
         """
@@ -1102,7 +1106,7 @@ class TaskbarDetector:
         try:
             win32gui.EnumWindows(enum_window_callback, None)
         except Exception as e:
-            print(f"Error enumerating windows: {e}")
+            logger.error(f"Error enumerating windows: {e}")
         
         return windows
     

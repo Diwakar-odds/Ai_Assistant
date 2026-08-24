@@ -15,7 +15,7 @@ class IntentRouter:
         self.routes = self._define_routes()
         self.layer = RouteLayer(encoder=self.encoder, routes=self.routes)
         self.threshold = threshold
-        print("✅ Semantic Router initialized with local encoder")
+        logger.info("✅ Semantic Router initialized with local encoder")
 
     def _define_routes(self) -> List[Route]:
         """Define the semantic routes for the system."""

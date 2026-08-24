@@ -1,5 +1,9 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
-Live Taskbar Analysis for YourDaddy Assistant
+Live Taskbar Analysis for Pulsar Assistant
 Real-time detection and analysis of taskbar applications and system state
 """
 
@@ -15,7 +19,7 @@ def analyze_current_taskbar():
         import win32process
         from datetime import datetime
         
-        print(f"🔍 LIVE TASKBAR ANALYSIS - {datetime.now().strftime('%I:%M:%S %p')}")
+        logger.info(f"🔍 LIVE TASKBAR ANALYSIS - {datetime.now().strftime('%I:%M:%S %p')}")
         print("=" * 60)
         
         # Get visible windows (taskbar applications)
@@ -91,7 +95,7 @@ def analyze_current_taskbar():
         }
         
     except Exception as e:
-        print(f"Error analyzing taskbar: {e}")
+        logger.error(f"Error analyzing taskbar: {e}")
         return None
 
 def check_specific_app(app_name):
@@ -116,16 +120,16 @@ def check_specific_app(app_name):
                 continue
         
         if found_apps:
-            print(f"✅ Found '{app_name}' running:")
+            logger.info(f"✅ Found '{app_name}' running:")
             for app in found_apps:
                 print(f"   - {app['name']} (PID: {app['pid']})")
             return True
         else:
-            print(f"❌ '{app_name}' is not currently running")
+            logger.error(f"❌ '{app_name}' is not currently running")
             return False
             
     except Exception as e:
-        print(f"Error checking for app '{app_name}': {e}")
+        logger.error(f"Error checking for app '{app_name}': {e}")
         return False
 
 if __name__ == "__main__":
@@ -134,7 +138,7 @@ if __name__ == "__main__":
     
     # Test specific app detection
     print("\n" + "="*60)
-    print("🔍 TESTING SPECIFIC APP DETECTION:")
+    logger.info("🔍 TESTING SPECIFIC APP DETECTION:")
     print("-" * 30)
     
     test_apps = ['chrome', 'firefox', 'notepad', 'code', 'brave']

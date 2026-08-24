@@ -1,4 +1,4 @@
-﻿"""
+"""
 System Automation Module
 
 Handles system-level controls:

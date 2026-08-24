@@ -1,11 +1,15 @@
-﻿import os
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
+import os
 import logging
 try:
     import PyPDF2
     PYPDF2_AVAILABLE = True
 except ImportError:
     PYPDF2_AVAILABLE = False
-    print("WARNING: PyPDF2 not found. PDF features in workflows will be disabled.")
+    logger.warning("WARNING: PyPDF2 not found. PDF features in workflows will be disabled.")
 
 from typing import Optional
 from ai_assistant.utils.file_ops import smart_file_search

@@ -66,5 +66,5 @@ class WorkflowOrchestrator:
             res_image = await creative_agent.execute(image_task)
             pipeline_results["image"] = res_image.data if res_image.success else "Failed"
             
-        print("✅ [Orchestrator] Pipeline Completed!")
+        logger.info("✅ [Orchestrator] Pipeline Completed!")
         return pipeline_results

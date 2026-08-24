@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Intent Registry for mapping natural language intents to workflow templates.
 Scans workflow templates directory and builds intent mappings.
@@ -41,7 +45,7 @@ class IntentRegistry:
     def _load_templates(self):
         """Load all workflow templates from the templates directory."""
         if not os.path.exists(self.templates_dir):
-            print(f"Warning: Templates directory not found: {self.templates_dir}")
+            logger.warning(f"Warning: Templates directory not found: {self.templates_dir}")
             return
         
         # Find all YAML files in templates directory
@@ -52,7 +56,7 @@ class IntentRegistry:
             try:
                 self._load_template_file(yaml_file)
             except Exception as e:
-                print(f"Warning: Failed to load template {yaml_file}: {e}")
+                logger.warning(f"Warning: Failed to load template {yaml_file}: {e}")
     
     def _load_template_file(self, filepath: str):
         """Load a single workflow template file and extract intent information."""

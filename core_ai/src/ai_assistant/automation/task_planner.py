@@ -1,4 +1,8 @@
-﻿"""
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
+"""
 AI-Powered Task Planner Module
 
 Decomposes natural language commands into executable action sequences.

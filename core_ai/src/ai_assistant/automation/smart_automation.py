@@ -1,6 +1,10 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 # Smart Automation & Workflows Module
 """
-Advanced automation and workflow management system for YourDaddy Assistant.
+Advanced automation and workflow management system for Pulsar Assistant.
 
 Features:
 - Workflow creation and execution
@@ -699,7 +703,7 @@ class SmartAutomationEngine:
                 try:
                     self._add_scheduled_workflow(workflow.id, trigger.schedule)
                 except Exception as e:
-                    print(f"Error scheduling workflow {workflow.name}: {e}")
+                    logger.error(f"Error scheduling workflow {workflow.name}: {e}")
     
     def _add_scheduled_workflow(self, workflow_id: str, schedule_pattern: str):
         """Add scheduled workflow to scheduler."""
@@ -779,7 +783,7 @@ class SmartAutomationEngine:
                     self.workflows[workflow.id] = workflow
                     self._schedule_workflow_triggers(workflow)
         except Exception as e:
-            print(f"Error loading workflows: {e}")
+            logger.error(f"Error loading workflows: {e}")
     
     def cleanup(self):
         """Cleanup resources."""

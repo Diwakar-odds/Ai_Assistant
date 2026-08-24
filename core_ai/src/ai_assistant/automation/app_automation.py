@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Application Automation Module
 
@@ -146,22 +150,94 @@ class AppAutomation:
             logger.error(f"❌ Failed to search web: {e}")
             return False
 
-    def play_media(self, query: str) -> bool:
-        """Play media (music/video) by delegating to smart launcher."""
-        logger.info(f"🎵 Playing media: {query}")
+    def play_media_ui(self, query: str, platform: str) -> bool:
+        """Play media visually on a specific web platform."""
+        import webbrowser
+        import time
+        import urllib.parse
+        
+        if not _ensure_pyautogui():
+            return False
+            
         try:
-            from ai_assistant.automation.app_discovery import smart_open_application
+            logger.info(f"▶️ Initiating visual media automation on {platform}...")
             
-            # Delegate to smart app launcher with action_type='play_music'
-            # This allows it to check the user's preferred music player
-            result_msg = smart_open_application(query, action_type='play_music')
+            encoded_query = urllib.parse.quote_plus(query)
             
-            if "✅" in result_msg:
-                logger.info(result_msg)
-                return True
+            if platform == "youtube music":
+                url = f"https://music.youtube.com/search?q={encoded_query}"
+            elif platform == "spotify":
+                url = f"https://open.spotify.com/search/{encoded_query}"
             else:
-                logger.error(result_msg)
-                return False
+                # Default to regular YouTube
+                url = f"https://www.youtube.com/results?search_query={encoded_query}"
+                
+            # 1. Open the search URL directly for maximum robustness
+            # Use os.startfile for Windows as it's more robust than webbrowser.open
+            try:
+                import os
+                os.startfile(url)
+            except AttributeError:
+                webbrowser.open(url)
+                
+            time.sleep(5)  # Wait for page to fully load
+            
+            # 2. Play the first video by tabbing or pressing enter
+            # YouTube and YT Music usually allow tabbing into the first result.
+            if platform == "youtube music":
+                for _ in range(4):
+                    pyautogui.press('tab')
+                    time.sleep(0.1)
+                pyautogui.press('enter')
+            elif platform == "spotify":
+                # Spotify web UI usually selects the top result automatically or we can hit Tab.
+                for _ in range(3):
+                    pyautogui.press('tab')
+                    time.sleep(0.1)
+                pyautogui.press('enter')
+            else:
+                for _ in range(5):
+                    pyautogui.press('tab')
+                    time.sleep(0.1)
+                pyautogui.press('enter')
+            
+            return True
+        except Exception as e:
+            logger.error(f"❌ Media UI automation failed: {e}")
+            return False
+
+    def play_media(self, query: str) -> bool:
+        """Play media (music/video) by delegating to smart launcher or web automation."""
+        logger.info(f"🎵 Playing media: {query}")
+        import re
+        try:
+            query_lower = query.lower()
+            
+            # If the user just asked for an app name
+            if query_lower in ["spotify", "youtube music", "music", "youtube"]:
+                from ai_assistant.automation.app_discovery import smart_open_application
+                result_msg = smart_open_application(query, action_type='play_music')
+                if "✅" in result_msg:
+                    logger.info(result_msg)
+                    return True
+                else:
+                    logger.error(result_msg)
+                    return False
+            
+            # Extract platform if specified (e.g., 'dagabaaz re on youtube music')
+            platform = "youtube" # Default fallback
+            platform_match = re.search(r'\b(on|pe)\s+(youtube music|youtubemusic|spotify|youtube|apple music|soundcloud|jiosaavn)\b', query_lower)
+            
+            if platform_match:
+                platform = platform_match.group(2)
+                if platform == "youtubemusic":
+                    platform = "youtube music"
+                # Remove the platform phrase from the query so we just have the song
+                query = query[:platform_match.start()].strip()
+            
+            # Fallback to visual web UI automation for the song on the requested platform
+            return self.play_media_ui(query, platform)
+            
         except Exception as e:
             logger.error(f"❌ Failed to play media: {e}")
             return False

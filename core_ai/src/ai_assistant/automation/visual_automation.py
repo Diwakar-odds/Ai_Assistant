@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Visual Automation Engine
 
@@ -57,7 +61,7 @@ class VisualAutomationEngine:
         pyautogui.FAILSAFE = True  # Move mouse to corner to abort
         pyautogui.PAUSE = 0.5  # Pause between actions
         
-        print("✅ Visual Automation Engine initialized")
+        logger.info("✅ Visual Automation Engine initialized")
         if safety_mode:
             print("🛡️ Safety mode enabled - actions require confirmation")
     
@@ -78,7 +82,7 @@ class VisualAutomationEngine:
         Returns:
             Dict with success status and details
         """
-        print(f"🔍 Looking for: {element_description}")
+        logger.info(f"🔍 Looking for: {element_description}")
         
         # Find element coordinates using VLM
         coords_result = self.vlm.extract_coordinates(element_description)
@@ -105,7 +109,7 @@ class VisualAutomationEngine:
         
         # Safety check
         if self.safety_mode:
-            print(f"⚠️ Will click {element_description} at ({x}, {y})")
+            logger.warning(f"⚠️ Will click {element_description} at ({x}, {y})")
             confirm = input("Proceed? (y/n): ")
             if confirm.lower() != 'y':
                 return {"success": False, "error": "User cancelled"}
@@ -125,7 +129,7 @@ class VisualAutomationEngine:
             else:
                 pyautogui.click()
             
-            print(f"✅ Clicked {element_description}")
+            logger.info(f"✅ Clicked {element_description}")
             
             # Record action
             action_record = {
@@ -195,7 +199,7 @@ class VisualAutomationEngine:
         # Type text
         try:
             pyautogui.write(text, interval=0.05)
-            print(f"✅ Typed: {text}")
+            logger.info(f"✅ Typed: {text}")
             
             return {
                 "success": True,
@@ -262,7 +266,7 @@ class VisualAutomationEngine:
             })
             
             if not result.get("success") and stop_on_error:
-                print(f"❌ Workflow stopped at step {i+1}: {result.get('error')}")
+                logger.error(f"❌ Workflow stopped at step {i+1}: {result.get('error')}")
                 break
             
             # Small delay between steps

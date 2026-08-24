@@ -1,4 +1,8 @@
-# YourDaddy Assistant - Modular Automation Tools
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
+# Pulsar Assistant - Modular Automation Tools
 """
 Main automation tools module that imports functionality from specialized modules.
 This provides a clean interface while maintaining modular architecture.
@@ -210,7 +214,7 @@ def __getattr__(name: str) -> Any:
             globals()[name] = attr
             return attr
         except ImportError as e:
-            print(f"⚠️ Lazy import failed for '{name}' from '{module_path}': {e}")
+            logger.warning(f"⚠️ Lazy import failed for '{name}' from '{module_path}': {e}")
             # Return dummy callable to prevent crashes
             if name[0].isupper(): # Likely a class
                  return type(name, (), {}) 
@@ -226,8 +230,8 @@ __all__ = list(_LAZY_IMPORTS.keys())
 
 # Module version and information
 __version__ = "4.2.0"
-__author__ = "YourDaddy AI Assistant"
+__author__ = "Pulsar AI Assistant"
 
 if __name__ != '__main__':
-    print("✅ YourDaddy Automation Tools v4.2.0 - Lazy Loading Enabled")
+    logger.info("✅ Pulsar Automation Tools v4.2.0 - Lazy Loading Enabled")
     print(f"🔧 Registered Functions: {len(__all__)}")

@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 # Taskbar and Running Applications Detection Module
 """
 This module provides capabilities to detect and analyze the Windows taskbar,
@@ -20,7 +24,7 @@ try:
     WIN32_AVAILABLE = True
 except ImportError:
     WIN32_AVAILABLE = False
-    print("Warning: win32gui not available. Some taskbar detection features will be limited.")
+    logger.warning("Warning: win32gui not available. Some taskbar detection features will be limited.")
 
 # Import multimodal capabilities for visual analysis
 try:
@@ -28,7 +32,7 @@ try:
     MULTIMODAL_AVAILABLE = True
 except ImportError:
     MULTIMODAL_AVAILABLE = False
-    print("Warning: Multimodal AI not available for visual taskbar analysis.")
+    logger.warning("Warning: Multimodal AI not available for visual taskbar analysis.")
 
 class TaskbarDetector:
     """Detects and analyzes Windows taskbar and running applications."""
@@ -39,7 +43,7 @@ class TaskbarDetector:
             try:
                 self.multimodal = MultiModalAI()
             except Exception as e:
-                print(f"Warning: Could not initialize MultiModalAI: {e}")
+                logger.warning(f"Warning: Could not initialize MultiModalAI: {e}")
     
     def get_running_applications(self) -> Dict[str, List[Dict[str, Any]]]:
         """
@@ -48,7 +52,7 @@ class TaskbarDetector:
         Returns:
             Dictionary with application information including PIDs, names, and window titles
         """
-        print("🔍 Detecting running applications...")
+        logger.info("🔍 Detecting running applications...")
         
         applications = {
             "processes": [],
@@ -131,7 +135,7 @@ class TaskbarDetector:
         try:
             win32gui.EnumWindows(enum_window_callback, None)
         except Exception as e:
-            print(f"Error enumerating windows: {e}")
+            logger.error(f"Error enumerating windows: {e}")
         
         return windows
     
@@ -198,7 +202,7 @@ class TaskbarDetector:
         if not self.multimodal:
             return {"error": "Visual analysis not available"}
         
-        print("🔍 Analyzing taskbar region specifically...")
+        logger.info("🔍 Analyzing taskbar region specifically...")
         
         try:
             # Get screen dimensions
@@ -303,7 +307,7 @@ class TaskbarDetector:
         Returns:
             Information about whether the app is found and its status
         """
-        print(f"🔍 Looking for '{app_name}' in taskbar...")
+        logger.info(f"🔍 Looking for '{app_name}' in taskbar...")
         
         # Check running processes first
         app_found_in_processes = False
