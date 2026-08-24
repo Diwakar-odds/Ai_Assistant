@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 App Integration CLI for AI Assistant
 
@@ -27,7 +31,7 @@ def register_app_interactive():
     # Basic information
     name = input("App name (lowercase, alphanumeric): ").strip().lower()
     if not name.replace('_', '').replace('-', '').isalnum():
-        print("❌ Error: App name must contain only letters, numbers, hyphens, and underscores")
+        logger.error("❌ Error: App name must contain only letters, numbers, hyphens, and underscores")
         return False
     
     display_name = input("Display name: ").strip()
@@ -38,7 +42,7 @@ def register_app_interactive():
     print(f"\nAvailable categories: {', '.join(categories)}")
     category = input("Category: ").strip().lower()
     if category not in categories:
-        print(f"❌ Error: Invalid category. Choose from: {', '.join(categories)}")
+        logger.error(f"❌ Error: Invalid category. Choose from: {', '.join(categories)}")
         return False
     
     # Integration type
@@ -50,7 +54,7 @@ def register_app_interactive():
     print("- webhook: Webhook-based integration")
     integration_type = input("Integration type: ").strip().lower()
     if integration_type not in integration_types:
-        print(f"❌ Error: Invalid integration type. Choose from: {', '.join(integration_types)}")
+        logger.error(f"❌ Error: Invalid integration type. Choose from: {', '.join(integration_types)}")
         return False
     
     # Build app config
@@ -70,7 +74,7 @@ def register_app_interactive():
         if executable_path and Path(executable_path).exists():
             app_config['executable_path'] = executable_path
         else:
-            print("⚠️  Warning: Executable path not found or empty")
+            logger.warning("⚠️  Warning: Executable path not found or empty")
     
     # API configuration
     if integration_type in ['api', 'oauth']:
@@ -130,20 +134,20 @@ def register_app_interactive():
     
     confirm = input("\nRegister this app? (y/n): ").strip().lower() == 'y'
     if not confirm:
-        print("❌ Registration cancelled.")
+        logger.error("❌ Registration cancelled.")
         return False
     
     # Register the app
     success, message = secure_app_integrator.register_app(app_config)
     if success:
-        print(f"✅ {message}")
+        logger.info(f"✅ {message}")
         print("\n🔒 Security Notes:")
         print("- API keys and secrets have been encrypted")
         print("- Credentials are stored in config/secure/ (excluded from git)")
         print("- Only you can decrypt these credentials on this machine")
         return True
     else:
-        print(f"❌ Registration failed: {message}")
+        logger.error(f"❌ Registration failed: {message}")
         return False
 
 def list_apps():
@@ -171,46 +175,46 @@ def launch_app(app_name: str):
     """Launch an app."""
     success, message = secure_app_integrator.launch_app(app_name)
     if success:
-        print(f"✅ {message}")
+        logger.info(f"✅ {message}")
     else:
-        print(f"❌ {message}")
+        logger.error(f"❌ {message}")
 
 def stop_app(app_name: str):
     """Stop an app."""
     success, message = secure_app_integrator.stop_app(app_name)
     if success:
-        print(f"✅ {message}")
+        logger.info(f"✅ {message}")
     else:
-        print(f"❌ {message}")
+        logger.error(f"❌ {message}")
 
 def remove_app(app_name: str):
     """Remove an app."""
     apps = secure_app_manager.list_registered_apps()
     if app_name.lower() not in apps:
-        print(f"❌ App '{app_name}' is not registered.")
+        logger.error(f"❌ App '{app_name}' is not registered.")
         return
     
     app_config = apps[app_name.lower()]
     print(f"\nRemoving app: {app_config['display_name']}")
-    print("⚠️  This will delete all stored credentials and configuration.")
+    logger.warning("⚠️  This will delete all stored credentials and configuration.")
     
     confirm = input("Are you sure? (y/n): ").strip().lower() == 'y'
     if not confirm:
-        print("❌ Removal cancelled.")
+        logger.error("❌ Removal cancelled.")
         return
     
     success = secure_app_manager.remove_app(app_name)
     if success:
-        print(f"✅ App '{app_config['display_name']}' removed successfully.")
+        logger.info(f"✅ App '{app_config['display_name']}' removed successfully.")
     else:
-        print(f"❌ Failed to remove app '{app_name}'.")
+        logger.error(f"❌ Failed to remove app '{app_name}'.")
 
 def app_status(app_name: str):
     """Show detailed app status."""
     status_info = secure_app_integrator.get_app_status(app_name)
     
     if status_info['status'] == 'not_registered':
-        print(f"❌ App '{app_name}' is not registered.")
+        logger.error(f"❌ App '{app_name}' is not registered.")
         return
     
     print(f"\n=== {status_info['display_name']} Status ===")
@@ -273,7 +277,7 @@ def main():
         remove_app(args.app_name)
     elif args.command == 'autostart':
         secure_app_integrator.auto_start_apps()
-        print("✅ Auto-start process initiated.")
+        logger.info("✅ Auto-start process initiated.")
     else:
         parser.print_help()
 

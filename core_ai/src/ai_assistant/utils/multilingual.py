@@ -1,4 +1,4 @@
-# Language Support Module for YourDaddy Assistant
+# Language Support Module for Pulsar Assistant
 """
 Advanced multilingual support for Hindi, English, and Hinglish:
 - Language detection and automatic switching
@@ -34,7 +34,7 @@ try:
     GOOGLE_TRANSLATE_AVAILABLE = True
 except ImportError:
     GOOGLE_TRANSLATE_AVAILABLE = False
-    print("WARNING: deep-translator not available. Install with: pip install deep-translator")
+    logger.warning("WARNING: deep-translator not available. Install with: pip install deep-translator")
 
 try:
     import speech_recognition as sr
@@ -54,7 +54,7 @@ try:
     EDGE_TTS_AVAILABLE = True
 except ImportError:
     EDGE_TTS_AVAILABLE = False
-    print("WARNING: Edge-TTS not available. Install with: pip install edge-tts")
+    logger.warning("WARNING: Edge-TTS not available. Install with: pip install edge-tts")
 
 try:
     from gtts import gTTS
@@ -68,7 +68,7 @@ try:
     VOSK_AVAILABLE = True
 except ImportError:
     VOSK_AVAILABLE = False
-    print("WARNING: Vosk not available. Install with: pip install vosk pyaudio")
+    logger.warning("WARNING: Vosk not available. Install with: pip install vosk pyaudio")
     Model = None
     KaldiRecognizer = None
     pyaudio = None
@@ -1012,14 +1012,14 @@ def _voice_listen_loop_vosk(ml_support, callback, wake_words, language, stop_eve
                             for wake_word in wake_words:
                                 if wake_word.lower() in text.lower():
                                     wake_word_detected = True
-                                    print(f"✅ Wake word detected: {wake_word}")
+                                    logger.info(f"✅ Wake word detected: {wake_word}")
                                     logging.info(f"Wake word detected: {wake_word}")
                                     if callback:
                                         callback(f"[WAKE_WORD_DETECTED: {wake_word}]")
                                     break
                         else:
                             # Process command
-                            print(f"🎯 Command: {text}")
+                            logger.info(f"🎯 Command: {text}")
                             
                             # Detect language
                             context = ml_support.detect_language(text)
@@ -1102,14 +1102,14 @@ def _voice_listen_loop_google(ml_support, callback, wake_words, language, stop_e
                         for wake_word in wake_words:
                             if wake_word.lower() in text.lower():
                                 wake_word_detected = True
-                                print(f"✅ Wake word detected: {wake_word}")
+                                logger.info(f"✅ Wake word detected: {wake_word}")
                                 logging.info(f"Wake word detected: {wake_word}")
                                 if callback:
                                     callback(f"[WAKE_WORD_DETECTED: {wake_word}]")
                                 break
                     else:
                         # Process command
-                        print(f"🎯 Command: {text}")
+                        logger.info(f"🎯 Command: {text}")
                         
                         # Call callback with recognized text
                         if callback:
@@ -1154,7 +1154,7 @@ def test_voice_recognition(duration=10, language='auto'):
     
     def callback(text):
         results.append(text)
-        print(f"✅ Recognized: {text}")
+        logger.info(f"✅ Recognized: {text}")
     
     # Create a stop event
     stop_event = threading.Event()

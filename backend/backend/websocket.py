@@ -1,5 +1,5 @@
 """
-YourDaddy AI Assistant - WebSocket Handlers
+Pulsar AI Assistant - WebSocket Handlers
 
 Real-time communication handlers for voice, chat, and system events.
 """
@@ -36,7 +36,7 @@ def register_handlers(socketio, components):
         emit('connected', {
             'status': 'ok',
             'client_id': client_id,
-            'message': 'Connected to YourDaddy Assistant'
+            'message': 'Connected to Pulsar Assistant'
         })
     
     @socketio.on('disconnect')

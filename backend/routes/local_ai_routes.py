@@ -258,4 +258,3 @@ def local_ai_unload():
     
     except Exception as e:
         logger.error(f"Local AI unload error: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500

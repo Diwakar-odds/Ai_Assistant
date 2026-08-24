@@ -1,4 +1,4 @@
-﻿"""
+"""
 Voice Settings Manager
 
 Handles persistence and validation of voice settings (TTS/STT).

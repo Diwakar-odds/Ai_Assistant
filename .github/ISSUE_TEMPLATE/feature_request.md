@@ -1,6 +1,6 @@
 ---
 name: Feature Request
-about: Suggest an idea for YourDaddy Assistant
+about: Suggest an idea for Pulsar Assistant
 title: '[FEATURE] '
 labels: ['enhancement', 'feature-request']
 assignees: ''

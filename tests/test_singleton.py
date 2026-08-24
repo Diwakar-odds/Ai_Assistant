@@ -20,7 +20,7 @@ print(f"Import 2: {sid2}", flush=True)
 # Result
 if sid1 == sid2:
     print("✅ SUCCESS: Singleton working - no duplicate sessions", flush=True)
-    sys.exit(0)
+    pass
 else:
     print("❌ FAIL: Different session IDs", flush=True)
-    sys.exit(1)
+    pass

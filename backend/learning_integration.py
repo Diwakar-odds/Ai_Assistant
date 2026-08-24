@@ -1,4 +1,8 @@
-﻿"""
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
+"""
 Learning Systems Integration for Flask Backend
 Provides helper functions to integrate learning_api with modern_web_backend.py
 """

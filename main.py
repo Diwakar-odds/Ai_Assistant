@@ -62,7 +62,7 @@ def main():
         
         # Show welcome banner
         print("\n" + "=" * 60)
-        print("YourDaddy AI Assistant")
+        print("Pulsar AI Assistant")
         print("=" * 60)
     except Exception as e:
         logger.error(f"Initialization error: {e}")
@@ -150,7 +150,7 @@ def main():
             # Start the web backend
             try:
                 from ai_assistant.services.modern_web_backend import app, socketio
-                print("🌐 Starting YourDaddy Assistant Web Backend...")
+                print("🌐 Starting Pulsar Assistant Web Backend...")
                 socketio.run(app, host='0.0.0.0', port=args.port, debug=args.verbose)
             except ImportError as e:
                 print(f"❌ Web backend import failed: {e}")
@@ -179,15 +179,15 @@ def main():
         elif args.interface == "desktop":
             # Try multiple possible locations for desktop GUI
             try:
-                from ai_assistant.apps.yourdaddy_app import main as desktop_main
+                from ai_assistant.apps.pulsar_app import main as desktop_main
                 print("Starting desktop interface...")
                 desktop_main()  # Actually call the desktop main function
             except ImportError:
                 try:
-                    import yourdaddy_app
+                    import pulsar_app
                     print("Starting desktop interface...")
-                    if hasattr(yourdaddy_app, 'main'):
-                        yourdaddy_app.main()
+                    if hasattr(pulsar_app, 'main'):
+                        pulsar_app.main()
                     else:
                         print("❌ Desktop main function not found.")
                         sys.exit(1)

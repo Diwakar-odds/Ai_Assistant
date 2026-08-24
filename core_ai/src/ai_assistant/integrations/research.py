@@ -1,4 +1,8 @@
-﻿import logging
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
+import logging
 import requests
 from bs4 import BeautifulSoup
 from typing import List, Optional

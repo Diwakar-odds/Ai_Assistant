@@ -1,48 +1,61 @@
 import os
 import json
-import torch
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from pathlib import Path
+
+# We will lazily load llama_cpp to avoid errors if it's not installed yet
+try:
+    from llama_cpp import Llama
+    LLAMA_AVAILABLE = True
+except ImportError:
+    LLAMA_AVAILABLE = False
+
 
 class OfflineCommandPredictor:
     def __init__(self):
-        self.model_dir = os.path.join(os.path.dirname(__file__), "offline_command_model")
-        self.mapping_file = os.path.join(self.model_dir, "label_mapping.json")
+        try:
+            from src.ai_assistant.ai.gguf_model_manager import gguf_manager
+        except ImportError:
+            from ai_assistant.ai.gguf_model_manager import gguf_manager
         
-        if not os.path.exists(self.model_dir) or not os.path.exists(self.mapping_file):
-            raise FileNotFoundError(f"Offline model not found at {self.model_dir}. Please run train_model.py first.")
+        if not LLAMA_AVAILABLE:
+            raise ImportError("llama-cpp-python is not installed. Please run: pip install llama-cpp-python")
             
-        print("Loading offline command model into memory...")
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_dir)
-        self.model = AutoModelForSequenceClassification.from_pretrained(self.model_dir)
-        self.model.eval() # Set to evaluation mode
-        
-        with open(self.mapping_file, "r") as f:
-            # json saves keys as strings, we need to map string indices to intent names
-            self.labels_mapping = json.load(f)
+        # Use the singleton manager to ensure the 4.6GB model is loaded exactly once
+        self.llm = gguf_manager.get_model()
             
     def predict(self, text: str) -> str:
         """
         Takes a natural language command (English, Hindi, or Bhojpuri) 
         and returns the corresponding INTENT tag.
         """
-        # Tokenize the input text
-        inputs = self.tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=64)
+        messages = [
+            {"role": "system", "content": "You are an AI assistant intent classifier. Reply with exactly one of the known INTENT tags (e.g. SYSTEM_SHUTDOWN, OPEN_BROWSER, PLAY_MUSIC) and nothing else."},
+            {"role": "user", "content": text}
+        ]
         
-        # Predict
-        with torch.no_grad():
-            outputs = self.model(**inputs)
-            
-        logits = outputs.logits
-        predicted_class_id = logits.argmax().item()
+        # We can use the chat_completion API
+        response = self.llm.create_chat_completion(
+            messages=messages,
+            max_tokens=15,      # We only need a short intent string
+            temperature=0.1     # Low temperature for deterministic classification
+        )
         
-        # Look up the intent string
-        intent = self.labels_mapping[str(predicted_class_id)]
+        # Extract the text
+        intent = response['choices'][0]['message']['content'].strip()
+        
+        # Clean up any markdown or quotes just in case
+        intent = intent.replace('`', '').replace('"', '').replace("'", "").strip()
+        
         return intent
 
 if __name__ == "__main__":
     try:
         predictor = OfflineCommandPredictor()
-        print("\n--- Offline Tri-Lingual Assistant ---")
+        print("\n\n# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
+--- Offline Tri-Lingual Assistant (Llama 3.1 8B GGUF) ---")
         print("Type a command in English, Hindi, or Bhojpuri (or 'exit' to quit).")
         
         while True:
@@ -52,12 +65,6 @@ if __name__ == "__main__":
                 
             predicted_intent = predictor.predict(user_input)
             print(f"-> Predicted Intent: {predicted_intent}")
-            
-            # Here you would route to your actual assistant logic, for example:
-            if predicted_intent == "SYSTEM_SHUTDOWN":
-                print("   [Action] Triggering system shutdown logic...")
-            elif predicted_intent == "OPEN_BROWSER":
-                print("   [Action] Launching Chrome...")
                 
-    except FileNotFoundError as e:
-        print(e)
+    except Exception as e:
+        logger.error(f"Error: {e}")

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Dependency Checker for YourDaddy Assistant
+Dependency Checker for Pulsar Assistant
 Checks for required and optional dependencies and provides installation guidance.
 """
 
@@ -36,7 +36,7 @@ def check_dependency(module_name, package_name=None, optional=False):
 
 def main():
     print(f"\n{Colors.BOLD}{'='*70}{Colors.END}")
-    print(f"{Colors.BOLD}YourDaddy Assistant - Dependency Check{Colors.END}")
+    print(f"{Colors.BOLD}Pulsar Assistant - Dependency Check{Colors.END}")
     print(f"{Colors.BOLD}{'='*70}{Colors.END}\n")
     
     # Core dependencies

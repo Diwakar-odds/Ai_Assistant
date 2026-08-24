@@ -1,10 +1,10 @@
-[![CI/CD Pipeline](https://github.com/yourusername/yourdaddy-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/yourdaddy-assistant/actions/workflows/ci.yml)
+[![CI/CD Pipeline](https://github.com/yourusername/pulsar-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/pulsar-assistant/actions/workflows/ci.yml)
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)](https://www.microsoft.com/windows)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-# 🤖 YourDaddy AI Assistant
+# 🤖 Pulsar AI Assistant
 
 <div align="center">
 
@@ -76,8 +76,8 @@
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/yourdaddy-assistant.git
-   cd yourdaddy-assistant
+   git clone https://github.com/yourusername/pulsar-assistant.git
+   cd pulsar-assistant
    ```
 
 2. **Create virtual environment**
@@ -100,7 +100,7 @@
 
 5. **Launch the assistant**
    ```bash
-   python yourdaddy_app.py
+   python pulsar_app.py
    ```
 
 ### 🎯 First Steps
@@ -242,16 +242,16 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
 <div align="center">
 
-[![Discord](https://img.shields.io/badge/Discord-Join%20Community-7289da?style=for-the-badge&logo=discord)](https://discord.gg/yourdaddy-ai)
-[![GitHub Discussions](https://img.shields.io/badge/GitHub-Discussions-181717?style=for-the-badge&logo=github)](https://github.com/yourusername/yourdaddy-assistant/discussions)
-[![Twitter](https://img.shields.io/badge/Twitter-Follow%20Us-1da1f2?style=for-the-badge&logo=twitter)](https://twitter.com/yourdaddy_ai)
+[![Discord](https://img.shields.io/badge/Discord-Join%20Community-7289da?style=for-the-badge&logo=discord)](https://discord.gg/pulsar-ai)
+[![GitHub Discussions](https://img.shields.io/badge/GitHub-Discussions-181717?style=for-the-badge&logo=github)](https://github.com/yourusername/pulsar-assistant/discussions)
+[![Twitter](https://img.shields.io/badge/Twitter-Follow%20Us-1da1f2?style=for-the-badge&logo=twitter)](https://twitter.com/pulsar_ai)
 
 </div>
 
 - **💬 Discord**: Real-time chat and support
 - **🗣️ Discussions**: Feature requests and Q&A
 - **🐦 Twitter**: Updates and announcements
-- **📧 Email**: contact@yourdaddy.ai
+- **📧 Email**: contact@pulsar.ai
 
 ## 📊 Project Status
 
@@ -289,7 +289,7 @@ We take security seriously:
 - **📊 Audit Logging**: Comprehensive activity logs
 - **🚫 Rate Limiting**: Protection against abuse
 
-Report security vulnerabilities to: security@yourdaddy.ai
+Report security vulnerabilities to: security@pulsar.ai
 
 ## 📄 License
 
@@ -315,6 +315,6 @@ This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE.t
 
 **⭐ Star this repository if you find it helpful!**
 
-*Made with ❤️ by the YourDaddy AI Team*
+*Made with ❤️ by the Pulsar AI Team*
 
 </div>

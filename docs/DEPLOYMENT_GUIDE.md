@@ -81,7 +81,7 @@ railway up
 heroku login
 
 # 3. Create app
-heroku create yourdaddy-ai
+heroku create pulsar-ai
 
 # 4. Add buildpack
 heroku buildpacks:set heroku/python
@@ -145,7 +145,7 @@ gcloud auth login
 gcloud config set project YOUR_PROJECT_ID
 
 # 4. Build and deploy
-gcloud run deploy yourdaddy-ai \
+gcloud run deploy pulsar-ai \
   --source . \
   --region us-central1 \
   --allow-unauthenticated

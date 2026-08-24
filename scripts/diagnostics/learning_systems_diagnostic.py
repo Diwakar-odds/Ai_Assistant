@@ -434,7 +434,7 @@ class LearningSystemsDiagnostic:
         print(f"\n{Colors.BOLD}{Colors.BLUE}")
         print("╔═══════════════════════════════════════════════════════════════════════════════╗")
         print("║                   LEARNING SYSTEMS DIAGNOSTIC TOOL                            ║")
-        print("║                        YourDaddy AI Assistant                                 ║")
+        print("║                        Pulsar AI Assistant                                 ║")
         print("╚═══════════════════════════════════════════════════════════════════════════════╝")
         print(f"{Colors.RESET}")
         

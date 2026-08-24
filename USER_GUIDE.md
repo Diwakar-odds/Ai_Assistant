@@ -1,8 +1,8 @@
-# YourDaddy AI Assistant - Windows Desktop Application User Guide
+# Pulsar AI Assistant - Windows Desktop Application User Guide
 
 ## Introduction
 
-Welcome to the YourDaddy AI Assistant Windows Desktop Application! This guide will help you download, install, and use the AI Assistant on your Windows PC. The application provides a native Windows experience for interacting with your AI assistant, featuring voice capabilities, chat interface, and access to various AI-powered tools.
+Welcome to the Pulsar AI Assistant Windows Desktop Application! This guide will help you download, install, and use the AI Assistant on your Windows PC. The application provides a native Windows experience for interacting with your AI assistant, featuring voice capabilities, chat interface, and access to various AI-powered tools.
 
 ## System Requirements
 
@@ -18,13 +18,13 @@ Welcome to the YourDaddy AI Assistant Windows Desktop Application! This guide wi
 1. **Download the Application**
    - Visit the official website: [https://yourwebsite.com/ai-assistant](https://yourwebsite.com/ai-assistant)
    - Click the "Download for Windows" button
-   - Save the `YourDaddy_Assistant_Setup.exe` file to your computer
+   - Save the `Pulsar_Assistant_Setup.exe` file to your computer
 
 2. **Install the Application**
    - Double-click the downloaded setup file
    - If prompted by Windows SmartScreen, click "More info" then "Run anyway"
    - Follow the installation wizard prompts
-   - Choose installation location (default: `C:\Program Files\YourDaddy AI Assistant`)
+   - Choose installation location (default: `C:\Program Files\Pulsar AI Assistant`)
    - Wait for installation to complete
    - Optionally, check "Create desktop shortcut" during installation
 
@@ -40,9 +40,9 @@ Welcome to the YourDaddy AI Assistant Windows Desktop Application! This guide wi
 
 ### Starting the Application
 
-1. Double-click the YourDaddy AI Assistant desktop shortcut
+1. Double-click the Pulsar AI Assistant desktop shortcut
    OR
-   - Click Start → All Programs → YourDaddy AI Assistant → YourDaddy AI Assistant
+   - Click Start → All Programs → Pulsar AI Assistant → Pulsar AI Assistant
 
 2. The application will launch and display a loading screen while initializing
 3. Once loaded, the main interface will appear in a window
@@ -108,7 +108,7 @@ Some features require API keys for external services:
 1. Ensure you have Windows 10 or later
 2. Check that your antivirus isn't blocking the application
 3. Try running as administrator (right-click → "Run as administrator")
-4. Check the logs in `%USERPROFILE%\YourDaddy AI Assistant\logs\`
+4. Check the logs in `%USERPROFILE%\Pulsar AI Assistant\logs\`
 
 ### Voice Features Not Working
 1. Ensure your microphone is connected and not muted
@@ -154,11 +154,11 @@ If you encounter issues not covered in this guide:
 1. Check the troubleshooting section above
 2. Visit the support page: [https://yourwebsite.com/support](https://yourwebsite.com/support)
 3. Email support: support@yourwebsite.com
-4. Check the logs in `%USERPROFILE%\YourDaddy AI Assistant\logs\` for error details
+4. Check the logs in `%USERPROFILE%\Pulsar AI Assistant\logs\` for error details
 
 ## Privacy Policy
 
-YourDaddy AI Assistant respects your privacy:
+Pulsar AI Assistant respects your privacy:
 - Voice recordings are processed locally and not stored unless you enable the option
 - Chat history is stored locally on your device
 - No personal data is collected without your explicit consent
@@ -166,10 +166,10 @@ YourDaddy AI Assistant respects your privacy:
 
 ## License
 
-This software is provided under the [YourDaddy License]. See the LICENSE file in the installation directory for details.
+This software is provided under the [Pulsar License]. See the LICENSE file in the installation directory for details.
 
 ---
 
-© 2026 YourDaddy AI Assistant. All rights reserved.
+© 2026 Pulsar AI Assistant. All rights reserved.
 Version: 1.0.0
 Last Updated: July 2026

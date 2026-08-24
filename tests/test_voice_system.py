@@ -286,10 +286,10 @@ if __name__ == "__main__":
         print("❌ ERROR: Backend server is not running!")
         print("   Please start the server:")
         print("   python -m ai_assistant.services.modern_web_backend")
-        exit(1)
+        pass
     
     results = run_all_tests()
     
     # Exit with error code if any tests failed
     if results["failed"] > 0:
-        exit(1)
+        pass

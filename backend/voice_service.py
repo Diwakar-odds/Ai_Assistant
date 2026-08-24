@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 # =============================================================================
 # Unified Voice Service
 # Consolidated from: voice_service_manager.py, voice_api.py, chat_voice_handlers_new.py
@@ -959,6 +963,7 @@ def set_socketio(sio):
     sio.on_event('disconnect', handle_disconnect)
     sio.on_event('command', handle_command)
     sio.on_event('voice_command', handle_voice_command)
+    sio.on_event('voice_audio_data', handle_voice_audio)
     
     print("âœ… Command handlers registered with socketio")
 
@@ -1035,13 +1040,17 @@ def handle_command(data):
                             if b64:
                                 payload['audio_base64'] = b64
                     except Exception as e:
-                        print(f"Failed to generate TTS: {e}")
-                emit(event, payload)
+                        logger.error(f"Failed to generate TTS: {e}")
+                
+                if _socketio:
+                    _socketio.emit(event, payload)
+                else:
+                    emit(event, payload)
             except OSError as e:
                 # Errno 22 often happens with socketio emit on windows if payload is too large or socket closed
-                print(f"⚠️ Socket emit error (ignored): {e}")
+                logger.warning(f"⚠️ Socket emit error (ignored): {e}")
             except Exception as e:
-                print(f"⚠️ General emit error: {e}")
+                logger.warning(f"⚠️ General emit error: {e}")
         
         # NOTE: ai_models_ready check removed - models load in ~3 seconds
         # and the cross-module check was broken. Commands proceed directly.
@@ -1170,14 +1179,14 @@ def handle_command(data):
                     )
                 elif 'gemini' in provider_name or 'gemini' in model_name:
                     system_msg = (
-                        "You are YourDaddy Assistant, powered by Google Gemini. "
+                        "You are Pulsar Assistant, powered by Google Gemini. "
                         f"You are using the {model_name} model. "
                         "You can answer general knowledge questions, help with information, "
                         "and provide assistance."
                     )
                 else:
                     system_msg = (
-                        "You are YourDaddy, a helpful AI assistant. "
+                        "You are Pulsar, a helpful AI assistant. "
                         "You can answer general knowledge questions, help with information, "
                         "and provide assistance."
                     )
@@ -1277,11 +1286,79 @@ def handle_voice_command(data):
         })
         
     except Exception as e:
-        print(f'âŒ Voice command error: {e}')
+        print(f'â Œ Voice command error: {e}')
         emit('voice_response', {
             'success': False,
             'error': str(e)
         })
+
+def handle_voice_audio(data):
+    """Handle raw audio data from Faster-Whisper frontend (Note: now generates KittenTTS audio_base64)"""
+    audio_data = data.get('audio_data', '')
+    if not audio_data:
+        return
+        
+    logger.info(f"[VOICE] Received voice_audio_data! Length: {len(audio_data)}")
+    
+    def process_and_emit():
+        try:
+            import sys
+            assistant = None
+            if hasattr(sys.modules.get('__main__'), 'assistant'):
+                assistant = sys.modules['__main__'].assistant
+                
+            if not assistant:
+                logger.debug("DEBUG: No assistant found!")
+                return
+                
+            # Emit transcript as soon as Whisper finishes (before LLM processing)
+            def on_transcript(text):
+                logger.info(f"[VOICE] Whisper finished transcribing: {text}")
+                if _socketio:
+                    _socketio.emit('voice_transcript', {
+                        'text': text,
+                        'confidence': 0.9
+                    })
+
+            # Run in a thread to prevent blocking the socketio loop
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(assistant.process_voice_audio, audio_data, on_transcript)
+                result = future.result()
+            
+            if result.get('success') and result.get('transcript'):
+                logger.info(f"[VOICE] Processed audio. Transcript: {result.get('transcript')}")
+                logger.info(f"[VOICE] AI Response: {result.get('response', '<no response>')}")
+                
+                # Generate TTS for offline mode
+                audio_base64 = None
+                if result.get('response') and assistant:
+                    audio_base64 = assistant.speak_text(result['response'])
+                
+                # Emit the response directly since process_voice_audio already generated it
+                if result.get('response') and _socketio:
+                    payload = {
+                        'success': True,
+                        'response': result['response'],
+                        'provider': 'gguf',  # Fallback provider name if needed
+                        'timestamp': __import__('datetime').datetime.now().isoformat()
+                    }
+                    if audio_base64:
+                        payload['audio_base64'] = audio_base64
+                        
+                    _socketio.emit('voice_response', payload)
+            else:
+                if _socketio:
+                    _socketio.emit('voice_audio_response', result)
+        except Exception as e:
+            import traceback
+            logger.error(f"Error in background voice processing: {e}")
+            traceback.print_exc()
+            if _socketio:
+                _socketio.emit('voice_audio_response', {'success': False, 'error': str(e)})
+
+    if _socketio:
+        _socketio.start_background_task(process_and_emit)
 
 
 # System stats broadcaster

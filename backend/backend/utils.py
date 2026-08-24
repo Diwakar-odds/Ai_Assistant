@@ -1,5 +1,5 @@
 """
-YourDaddy AI Assistant - Utility Functions
+Pulsar AI Assistant - Utility Functions
 
 Common utility functions for the backend.
 """

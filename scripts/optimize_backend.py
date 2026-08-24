@@ -129,7 +129,7 @@ def main():
     """Main entry point"""
     print()
     print("=" * 60)
-    print("🚀 YourDaddy Assistant - Backend Startup Optimizer")
+    print("🚀 Pulsar Assistant - Backend Startup Optimizer")
     print("=" * 60)
     
     if len(sys.argv) > 1:

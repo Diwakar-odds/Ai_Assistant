@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 #!/usr/bin/env python3
 """
 MCP CLI Utility - Command Line Interface for MCP Server Management
@@ -32,7 +36,7 @@ try:
     MCP_AVAILABLE = True
 except ImportError:
     MCP_AVAILABLE = False
-    print("❌ MCP not available. Install with: pip install mcp")
+    logger.error("❌ MCP not available. Install with: pip install mcp")
     sys.exit(1)
 
 
@@ -48,7 +52,7 @@ class MCPCli:
         self.manager = MCPManager(str(self.config_path))
         success = await self.manager.initialize()
         if not success:
-            print("❌ Failed to initialize MCP manager")
+            logger.error("❌ Failed to initialize MCP manager")
             return False
         return True
     
@@ -91,7 +95,7 @@ class MCPCli:
         print(f"Available: {'✅' if status['available'] else '❌'}")
         print(f"Total Servers: {status['total_servers']}")
         print(f"Connected: {len(status['enabled_servers'])}")
-        print(f"Failed: {len(status['failed_servers'])}")
+        logger.error(f"Failed: {len(status['failed_servers'])}")
         print(f"Cache Size: {status['cache_size']}")
         
         if status['enabled_servers']:
@@ -111,7 +115,7 @@ class MCPCli:
         if server_name:
             # List tools from specific server
             if server_name not in self.manager.get_enabled_servers():
-                print(f"❌ Server '{server_name}' is not connected")
+                logger.error(f"❌ Server '{server_name}' is not connected")
                 return
             
             tools = await self.manager.get_server_tools(server_name, use_cache=False)
@@ -148,7 +152,7 @@ class MCPCli:
         try:
             args = json.loads(args_json)
         except json.JSONDecodeError:
-            print(f"❌ Invalid JSON arguments: {args_json}")
+            logger.error(f"❌ Invalid JSON arguments: {args_json}")
             return
         
         # Call tool
@@ -191,7 +195,7 @@ class MCPCli:
             config = json.load(f)
         
         if server_name not in config.get('servers', {}):
-            print(f"❌ Server '{server_name}' not found in configuration")
+            logger.error(f"❌ Server '{server_name}' not found in configuration")
             return
         
         # Enable server
@@ -201,7 +205,7 @@ class MCPCli:
         with open(self.config_path, 'w', encoding='utf-8') as f:
             json.dump(config, f, indent=2)
         
-        print(f"✅ Server '{server_name}' enabled")
+        logger.info(f"✅ Server '{server_name}' enabled")
         print("   Restart or reload manager to connect")
     
     async def disable_server(self, server_name: str):
@@ -213,7 +217,7 @@ class MCPCli:
             config = json.load(f)
         
         if server_name not in config.get('servers', {}):
-            print(f"❌ Server '{server_name}' not found in configuration")
+            logger.error(f"❌ Server '{server_name}' not found in configuration")
             return
         
         # Disable server
@@ -223,7 +227,7 @@ class MCPCli:
         with open(self.config_path, 'w', encoding='utf-8') as f:
             json.dump(config, f, indent=2)
         
-        print(f"✅ Server '{server_name}' disabled")
+        logger.info(f"✅ Server '{server_name}' disabled")
 
 
 async def main():

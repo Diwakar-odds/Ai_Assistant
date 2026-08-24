@@ -20,7 +20,7 @@ It combines intents (`open_app`, `change_wallpaper`), targets (`chrome`, `nature
 ```json
 {
   "messages": [
-    {"role": "system", "content": "You are YourDaddy, an OS automation assistant."},
+    {"role": "system", "content": "You are Pulsar, an OS automation assistant."},
     {"role": "user", "content": "bhai jaldi chrome khol de"},
     {"role": "assistant", "tool_calls": [{"name": "system_automation", "arguments": {"action": "open_app", "target": "chrome"}}]}
   ]

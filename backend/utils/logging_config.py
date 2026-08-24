@@ -1,5 +1,5 @@
 """
-Centralized Logging Configuration for YourDaddy Assistant
+Centralized Logging Configuration for Pulsar Assistant
 Provides organized, module-specific logging with proper rotation and formatting.
 
 Usage:
@@ -169,16 +169,16 @@ class LoggingConfig(metaclass=LoggingConfigMeta):
     @classmethod
     def _generate_readme(cls) -> str:
         """Generate README for logs directory"""
-        return f"""# YourDaddy Assistant - Logs Directory
+        return f"""# Pulsar Assistant - Logs Directory
 
 ## 📁 Directory Structure
 
-This directory contains organized logs for all components of YourDaddy Assistant.
+This directory contains organized logs for all components of Pulsar Assistant.
 
 ### Log Categories
 
 - **app/** - Main application logs
-  - `yourdaddy_app.log` - GUI application logs
+  - `pulsar_app.log` - GUI application logs
   - `startup.log` - Application startup logs
 
 - **backend/** - Web backend logs
@@ -470,10 +470,10 @@ LoggingConfig.initialize()
 # Example usage and testing
 if __name__ == "__main__":
     # Test the logging system
-    print("Testing YourDaddy Logging System\n")
+    logger.debug("Testing Pulsar Logging System\n")
     
     # Test different module loggers
-    app_logger = get_logger('yourdaddy_app', log_category='app')
+    app_logger = get_logger('pulsar_app', log_category='app')
     app_logger.info("✅ Application started successfully")
     app_logger.warning("⚠️ This is a warning message")
     app_logger.error("❌ This is an error message")
@@ -493,7 +493,7 @@ if __name__ == "__main__":
     log_api_request(api_logger, 'POST', '/api/voice', 500, 123.4, "Voice processing failed")
     
     print("\n✅ Logging test complete!")
-    print(f"📁 Check logs in: {LoggingConfig.BASE_LOG_DIR}")
+    logger.info(f"📁 Check logs in: {LoggingConfig.BASE_LOG_DIR}")
     print("\nLog structure created:")
     for category, path in LoggingConfig.LOG_DIRS.items():
         print(f"  - {category}/: {path}")

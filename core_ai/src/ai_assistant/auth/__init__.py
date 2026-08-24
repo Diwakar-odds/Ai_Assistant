@@ -1,5 +1,5 @@
 """
-Authentication module for YourDaddy AI Assistant
+Authentication module for Pulsar AI Assistant
 
 Provides PIN-based authentication system for secure access.
 """

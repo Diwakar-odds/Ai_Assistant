@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="tests")
+
 #!/usr/bin/env python3
 """
 Quick test script for voice recognition functionality.
@@ -17,7 +21,7 @@ def test_voice_callback(text):
     """Callback function for voice recognition"""
     if text.startswith('[WAKE_WORD_DETECTED'):
         print(f"\n{'='*50}")
-        print(f"✅ {text}")
+        logger.info(f"✅ {text}")
         print(f"{'='*50}")
         print("Now speak your command...")
     else:
@@ -30,10 +34,10 @@ def test_vosk_models():
     ml = MultilingualSupport()
     
     if hasattr(ml, 'vosk_models') and ml.vosk_models:
-        print(f"✅ Vosk models loaded: {list(ml.vosk_models.keys())}")
+        logger.info(f"✅ Vosk models loaded: {list(ml.vosk_models.keys())}")
         return True
     else:
-        print("❌ No Vosk models found")
+        logger.error("❌ No Vosk models found")
         return False
 
 def main():
@@ -86,7 +90,7 @@ def main():
     except KeyboardInterrupt:
         print("\n\n🛑 Stopping voice recognition...")
         stop_event.set()
-        print("✅ Voice recognition stopped")
+        logger.info("✅ Voice recognition stopped")
     except Exception as e:
         print(f"\n❌ Error: {e}")
         import traceback

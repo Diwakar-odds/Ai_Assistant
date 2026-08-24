@@ -1,5 +1,9 @@
-﻿"""
-YourDaddy AI Assistant - JARVIS-Style Startup Sequence
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
+"""
+Pulsar AI Assistant - JARVIS-Style Startup Sequence
 Provides system diagnostics, contextual briefing, and personalized greetings
 """
 
@@ -334,7 +338,7 @@ class StartupSequence:
             briefing["raw_insights"] = insights
             
         except Exception as e:
-            print(f"Error getting insights: {e}")
+            logger.error(f"Error getting insights: {e}")
             # Fallback to simple uptime
             if PSUTIL_AVAILABLE:
                 try:

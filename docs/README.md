@@ -1,4 +1,4 @@
-# 🤖 YourDaddy AI Assistant
+# 🤖 Pulsar AI Assistant
 
 <div align="center">
 
@@ -36,7 +36,7 @@
 
 ## 🌟 Overview
 
-**YourDaddy AI Assistant** is a comprehensive, voice-activated AI assistant that combines the power of Google's Gemini AI, advanced speech recognition, and intelligent automation to create a seamless personal assistant experience. Built with Python, it offers multilingual support, multimodal capabilities (text, voice, vision), and extensive system integration.
+**Pulsar AI Assistant** is a comprehensive, voice-activated AI assistant that combines the power of Google's Gemini AI, advanced speech recognition, and intelligent automation to create a seamless personal assistant experience. Built with Python, it offers multilingual support, multimodal capabilities (text, voice, vision), and extensive system integration.
 
 ### Key Highlights
 
@@ -101,8 +101,8 @@
 ## 🏗️ Architecture
 
 ```
-YourDaddy Assistant
-├── Core Application (yourdaddy_app.py)
+Pulsar Assistant
+├── Core Application (pulsar_app.py)
 │   ├── Voice Recognition Engine
 │   ├── AI Processing (Gemini)
 │   └── Command Router
@@ -292,7 +292,7 @@ start_app.bat
 ./start_app.sh
 
 # Or directly
-python yourdaddy_app.py
+python pulsar_app.py
 ```
 
 ### Running the Web Interface
@@ -559,7 +559,7 @@ python modern_web_backend.py --port 5001
 
 ```bash
 # Run with verbose logging
-python yourdaddy_app.py --debug
+python pulsar_app.py --debug
 
 # Check logs
 cat logs/assistant.log
@@ -691,6 +691,6 @@ For questions, suggestions, or support:
 
 ⭐ Star this repository if you find it helpful!
 
-[Back to Top](#-yourdaddy-ai-assistant)
+[Back to Top](#-pulsar-ai-assistant)
 
 </div>

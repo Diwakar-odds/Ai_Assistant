@@ -1,4 +1,4 @@
-# Advanced File Operations Module for YourDaddy Assistant
+# Advanced File Operations Module for Pulsar Assistant
 """
 Advanced file management and organization functionality:
 - Intelligent file organization and sorting
@@ -31,7 +31,7 @@ class FileOperationsManager:
     
     def __init__(self):
         self.operations_log = []
-        self.backup_dir = os.path.expanduser("~/YourDaddy_Backups")
+        self.backup_dir = os.path.expanduser("~/Pulsar_Backups")
         self.ensure_backup_dir()
     
     def ensure_backup_dir(self):

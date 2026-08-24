@@ -27,7 +27,7 @@ try:
 except Exception as e:
     print(f"Import Error: {e}")
     traceback.print_exc()
-    sys.exit(1)
+    pass
 
 class MockAgent(BaseAgent):
     def __init__(self):

@@ -129,7 +129,11 @@ class DeepResearchAgent(BaseAgent):
             return "ERROR: Could not load local LLM."
             
         # Prepare context
-        context = f"Topic: {original_prompt}\n\nScraped Data:\n"
+        context = f"Topic: {original_prompt}\n\n# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
+\nScraped Data:\n"
         for idx, item in enumerate(raw_data):
             context += f"Source {idx+1} ({item['url']}): {item.get('content', '')}\n\n"
             

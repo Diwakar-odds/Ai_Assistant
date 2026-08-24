@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 # Multi-Modal AI Integration Module
 """
 Advanced multi-modal AI capabilities including computer vision, screen analysis,
@@ -23,7 +27,7 @@ try:
     PIL_AVAILABLE = True
 except ImportError:
     PIL_AVAILABLE = False
-    print("Warning: PIL not available. Multimodal features will be disabled.")
+    logger.warning("Warning: PIL not available. Multimodal features will be disabled.")
     # Create dummy Image class for type hinting
     class Image:
         class Image: pass
@@ -107,7 +111,7 @@ class MultiModalAI:
             return screenshot
             
         except Exception as e:
-            print(f"Error capturing screen: {e}")
+            logger.error(f"Error capturing screen: {e}")
             return None
     
     def image_to_base64(self, image: Image.Image) -> str:
@@ -566,7 +570,7 @@ class MultiModalAI:
             # Analyze each frame
             frame_analyses = []
             for i, (frame, timestamp) in enumerate(zip(frames, frame_timestamps)):
-                print(f"🔍 Analyzing frame {i+1}/{len(frames)} at {timestamp:.1f}s...")
+                logger.info(f"🔍 Analyzing frame {i+1}/{len(frames)} at {timestamp:.1f}s...")
                 
                 result = self.analyze_image(
                     frame,

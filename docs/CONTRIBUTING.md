@@ -1,6 +1,6 @@
-# 🤝 Contributing to YourDaddy AI Assistant
+# 🤝 Contributing to Pulsar AI Assistant
 
-Thank you for your interest in contributing to YourDaddy AI Assistant! This document provides guidelines and instructions for contributing to the project.
+Thank you for your interest in contributing to Pulsar AI Assistant! This document provides guidelines and instructions for contributing to the project.
 
 ## 📋 Table of Contents
 - [Code of Conduct](#-code-of-conduct)
@@ -314,7 +314,7 @@ If you have any questions about contributing, please:
 
 ## 🙏 Thank You
 
-Thank you for contributing to YourDaddy AI Assistant! Your efforts help make this project better for everyone in the community.
+Thank you for contributing to Pulsar AI Assistant! Your efforts help make this project better for everyone in the community.
 
 ---
 

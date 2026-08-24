@@ -1,5 +1,5 @@
 """
-Environment Fix Script for YourDaddy Assistant
+Environment Fix Script for Pulsar Assistant
 This script ensures all modules are installed in the correct virtual environment
 and provides detailed diagnostics.
 """
@@ -178,7 +178,7 @@ def create_activation_scripts():
 def main():
     """Main function to fix environment issues."""
     print("\n" + "="*70)
-    print("  YourDaddy Assistant - Environment Fix Tool")
+    print("  Pulsar Assistant - Environment Fix Tool")
     print("="*70)
     
     # Check if we're using the correct environment

@@ -337,7 +337,7 @@ def get_feedback_stats():
         """Run full activation"""
         print("\\n" + "="*80)
         print("LEARNING SYSTEMS ACTIVATION")
-        print("YourDaddy AI Assistant")
+        print("Pulsar AI Assistant")
         print("="*80)
         
         self.step1_install_dependencies()

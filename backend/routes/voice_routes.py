@@ -234,4 +234,3 @@ def api_voice_to_chain():
             "message": f"Started chain execution for voice command: {command}"
         })
     except Exception as e:
-        return jsonify({"error": str(e)}), 500

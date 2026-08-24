@@ -41,7 +41,7 @@ def run_command(cmd, description):
         return False
 
 def main():
-    print_header("📱 YourDaddy AI - Mobile Setup Wizard")
+    print_header("📱 Pulsar AI - Mobile Setup Wizard")
     
     print("This script will:")
     print("  1. Install mobile dependencies")

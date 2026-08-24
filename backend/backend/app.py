@@ -1,5 +1,5 @@
 """
-YourDaddy AI Assistant - Flask Application Factory
+Pulsar AI Assistant - Flask Application Factory
 
 This is the main Flask application initialization module.
 It sets up the Flask app, SocketIO, CORS, JWT, and rate limiting.
@@ -46,7 +46,7 @@ def create_app():
         tuple: (app, socketio) - Flask app and SocketIO instance
     """
     logger.info("="*80)
-    logger.info("YourDaddy AI Assistant - Backend Starting")
+    logger.info("Pulsar AI Assistant - Backend Starting")
     logger.info("="*80)
     
     # Create Flask app

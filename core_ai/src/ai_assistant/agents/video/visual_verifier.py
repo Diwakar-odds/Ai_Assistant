@@ -45,7 +45,7 @@ class VisualVerifier:
             
         template = cv2.imread(template_path)
         if template is None:
-             print(f"Failed to load template: {template_path}")
+             logger.error(f"Failed to load template: {template_path}")
              return None
              
         # Template Matching

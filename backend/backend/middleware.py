@@ -1,5 +1,5 @@
 """
-YourDaddy AI Assistant - Request/Response Middleware
+Pulsar AI Assistant - Request/Response Middleware
 
 Handles request validation, response formatting, security headers, and logging.
 """

@@ -29,12 +29,21 @@ PULSAR is not just another chatbot. It is a **native Operating System Automation
 
 ### Key Capabilities (Why PULSAR?)
 - **Native Windows Automation:** PULSAR can open apps, click buttons, type text, and manage your files directly.
-- **100% Offline & Private:** Powered by a massive 2.5 million line custom fine-tuning dataset, it runs entirely on local models (like Llama-3 via Ollama/Unsloth) ensuring zero data leakage.
+- **100% Offline & Private:** Powered by a massive 2.5 million line custom fine-tuning dataset, it runs entirely on local models.
+- **GGUF CPU-Inference Architecture:** We utilize a custom fine-tuned, 4-bit quantized Llama 3.1 8B Instruct model (Q4_K_M GGUF format) running natively via `llama-cpp-python` to process and classify user intents seamlessly without a GPU.
 - **Multi-Modal Intelligence:** Features advanced computer vision (to read your screen) and voice integration (Whisper/TTS) so you can speak to it naturally.
 - **Continuous Learning:** Built with 27 distinct machine learning paradigms (including Active Learning and Meta Learning) that adapt to your personal habits and slang (like Hinglish) over time.
 - **Agentic Execution:** It breaks down complex goals into sub-tasks and uses multi-agent negotiation to find the best way to execute them.
 
 PULSAR features over 700 specialized Python modules, 27 distinct machine learning paradigms, and a beautiful React frontend.
+
+### Project JARVIS Upgrades (Phase 1 & 2 Complete)
+Recent integrations have massive upgraded the assistant's autonomy and personality:
+- **Audio-Based Emotion Tracking**: Calculates the intensity of your voice stream to guess if you are frustrated or calm before reading the text transcript.
+- **Context-Switching Watcher**: Actively tracks your OS window states and prepares proactive suggestions if you suddenly switch contexts (e.g. from coding to browsing).
+- **Proactive Diagnostics**: Scans for low disk space, expired backups, and API keys.
+- **Trust-Scaling Personality Engine**: Seamlessly transitions from a formal, robotic AI (Low Trust) to a highly sarcastic companion who drops custom catchphrases (High Trust).
+- **Continuous Dashboard**: Real-time React dashboard visualizing Self-Healing Engine logs and User DNA trust scores.
 
 ---
 
@@ -2128,7 +2137,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
 - **Class `SystemChecker`**: Comprehensive system compatibility checker
   - **Function `install_missing_dependencies()`**: Install missing critical dependencies
   - **Function `download_voice_models()`**: Download required voice models
-  - **Function `start_assistant()`**: Start the YourDaddy Assistant
+  - **Function `start_assistant()`**: Start the Pulsar Assistant
   - **Function `main()`**: Main launcher function
   - **Function `__init__()`**: Signature: (self)
   - **Function `check_python_version()`**: Check Python version compatibility
@@ -4309,7 +4318,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
 To distribute the AI Assistant to non-technical users:
 1. Build React bundle: `cd frontend/web-app && npm run build`
 2. Run PyInstaller: `desktop\build_exe.bat`
-3. Execute `dist_package/YourDaddy_Assistant/YourDaddy_Assistant.exe`
+3. Execute `dist_package/Pulsar_Assistant/Pulsar_Assistant.exe`
 
 ---
 

@@ -1,1 +1,1 @@
-# Utils package for YourDaddy Assistant
+# Utils package for Pulsar Assistant

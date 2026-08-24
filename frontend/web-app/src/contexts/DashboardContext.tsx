@@ -73,8 +73,8 @@ interface DashboardContextType {
     wakeWordDetected: boolean;
 
     aiMode: 'online' | 'offline';
-    aiProvider: 'gemini' | 'openai' | 'ollama';
-    setAIProvider: (provider: 'gemini' | 'openai' | 'ollama') => void;
+    aiProvider: 'gemini' | 'openai' | 'ollama' | 'gguf';
+    setAIProvider: (provider: 'gemini' | 'openai' | 'ollama' | 'gguf') => void;
     toggleAIMode: () => void;
     speak: (text: string, lang?: string) => void;
     selectedView: ViewType;
@@ -129,14 +129,14 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     const [recognition, setRecognition] = useState<unknown>(null);
     const [voiceLanguage, setVoiceLanguageState] = useState('auto'); // Auto-detect language
     const [_isRecognitionStarted, _setIsRecognitionStarted] = useState(false);
-    
+
     // MediaRecorder & Audio Context for Faster-Whisper
-            const silenceTimerRef = useRef<unknown>(null);
-        const [userStoppedVoice, setUserStoppedVoice] = useState(false); // Track if user manually stopped
+    const silenceTimerRef = useRef<unknown>(null);
+    const [userStoppedVoice, setUserStoppedVoice] = useState(false); // Track if user manually stopped
     const userStoppedRef = useRef(false); // Ref to track stop state without causing re-renders
 
     const [aiMode, setAIMode] = useState<'online' | 'offline'>('online'); // 'online' = GPT/Gemini, 'offline' = Ollama
-    const [aiProvider, setAIProviderState] = useState<'gemini' | 'openai' | 'ollama'>('openai'); // Current AI provider
+    const [aiProvider, setAIProviderState] = useState<'gemini' | 'openai' | 'ollama' | 'gguf'>('openai'); // Current AI provider
     const [aiModel, setAIModel] = useState<string>(''); // Current AI model
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
@@ -232,16 +232,17 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
     // ... (keep existing code) ...
 
-    const setAIProvider = (provider: 'gemini' | 'openai' | 'ollama') => {
+    const setAIProvider = (provider: 'gemini' | 'openai' | 'ollama' | 'gguf') => {
         console.log(`🔄 Switching AI provider to: ${provider}`);
         setAIProviderState(provider);
         // Reset model when provider changes (optional, or set to first available)
         // setAIModel(''); 
 
         // Update aiMode based on provider
-        if (provider === 'ollama') {
+        if (provider === 'ollama' || provider === 'gguf') {
             setAIMode('offline');
-            addSystemLog('info', '🤖 Switched to Ollama (Offline)');
+            const providerName = provider === 'gguf' ? 'GGUF' : 'Ollama';
+            addSystemLog('info', `🤖 Switched to ${providerName} (Offline)`);
         } else {
             setAIMode('online');
             const providerName = provider === 'gemini' ? 'Gemini' : 'OpenAI';
@@ -315,7 +316,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         newSocket.on('settings_updated', async (data: any) => {
             console.log(`⚙️ Settings updated live: ${data.category}`, data);
             addSystemLog('info', `${data.category} settings updated`);
-            
+
             // Re-fetch all settings to update local state
             try {
                 const response = await fetch(apiUrl('/api/settings/all'));
@@ -380,6 +381,14 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
         // Handle voice command responses with talkback
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        newSocket.on('voice_transcript', (data: any) => {
+            console.log(' Voice transcript received:', data);
+            if (data.text) {
+                setInterimTranscript(''); // Clear the 'Processing with Whisper...' text
+                addChatMessage(data.text, 'user');
+            }
+        });
+
         newSocket.on('voice_response', (data: any) => {
             console.log('🎤 Voice response received:', data);
             console.log('🔊 voiceLanguage:', voiceLanguage);
@@ -536,13 +545,22 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     }
                 }
 
-                // Update interim transcript in real-time (immediate update)
-                if (interim) {
-                    console.log('💬 Setting interim transcript:', interim);
-                    setInterimTranscript(interim);
-                    interimTranscriptRef.current = interim; // Update ref for simulation
+                // Combine accumulated final with new interim
+                const fullInterim = accumulatedFinalTranscriptRef.current
+                    ? accumulatedFinalTranscriptRef.current + (interim ? ' ' + interim : '')
+                    : interim;
+
+                if (fullInterim) {
+                    console.log('💬 Setting interim transcript:', fullInterim);
+                    setInterimTranscript(fullInterim);
+                    interimTranscriptRef.current = fullInterim; // Update ref for simulation
                 } else {
                     console.log('⚠️ No interim text');
+                }
+
+                // Reset timer whenever there is speech (interim or final)
+                if (transcriptTimeoutRef.current) {
+                    clearTimeout(transcriptTimeoutRef.current);
                 }
 
                 // Process final result
@@ -553,132 +571,151 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                         window.speechSynthesis.cancel();
                         setInterimTranscript('');
                         interimTranscriptRef.current = '';
+                        accumulatedFinalTranscriptRef.current = '';
+                        if (transcriptTimeoutRef.current) clearTimeout(transcriptTimeoutRef.current);
                         return;
                     }
 
-                    console.log('✅ Final transcript:', final);
-                    setInterimTranscript('');
-                    interimTranscriptRef.current = ''; // Clear ref
-
-                    // Deduplication check
-                    const now = Date.now();
-
-                    // Check Global Variable (protects against duplicate listeners/instances)
-                    if (globalLastCommandInfo.text === final && (now - globalLastCommandInfo.time) < 2000) {
-                        console.log('🚫 Global duplicate command ignored:', final);
-                        return;
+                    if (accumulatedFinalTranscriptRef.current) {
+                        accumulatedFinalTranscriptRef.current += ' ' + final;
+                    } else {
+                        accumulatedFinalTranscriptRef.current = final;
                     }
 
-                    // Check Local Ref (standard check)
-                    if (lastProcessedCommandRef.current &&
-                        lastProcessedCommandRef.current.text === final &&
-                        (now - lastProcessedCommandRef.current.time) < 2000) {
-                        console.log('🚫 Local duplicate command ignored:', final);
-                        return;
-                    }
+                    // Update UI to show the accumulated text as interim until it's sent
+                    setInterimTranscript(accumulatedFinalTranscriptRef.current);
+                    interimTranscriptRef.current = accumulatedFinalTranscriptRef.current;
+                }
 
-                    // Update both
-                    lastProcessedCommandRef.current = { text: final, time: now };
-                    globalLastCommandInfo = { text: final, time: now };
+                if (accumulatedFinalTranscriptRef.current) {
+                    transcriptTimeoutRef.current = setTimeout(() => {
+                        const commandToSend = accumulatedFinalTranscriptRef.current.trim();
+                        accumulatedFinalTranscriptRef.current = '';
 
-                    // Always-active mode with wake word requirement
-                    if (alwaysActive && requireWakeWord && !isProcessingCommand) {
-                        const wakeWords = ['hey assistant', 'ok assistant', 'hey daddy', 'ok daddy', 'assistant'];
-                        const detectedWake = wakeWords.find(wake => final.toLowerCase().includes(wake));
+                        console.log('✅ Final transcript (accumulated):', commandToSend);
+                        setInterimTranscript('');
+                        interimTranscriptRef.current = ''; // Clear ref
 
-                        if (detectedWake) {
-                            console.log('🎯 Wake word detected:', detectedWake);
-                            setWakeWordDetected(true);
-                            setIsProcessingCommand(true);
+                        // Deduplication check
+                        const now = Date.now();
 
-                            // Play greeting
-                            const greetings = [
-                                'At your service, sir.',
-                                'systems initialized. Ready for command.',
-                                'For you, sir, always.',
-                                'I am ready. What is your will?',
-                                'Online and ready to serve.'
-                            ];
-                            const greeting = greetings[Math.floor(Math.random() * greetings.length)];
-                            speak(greeting, voiceLanguage);
-
-                            // Reset after 10 seconds if no command given
-                            setTimeout(() => {
-                                if (isProcessingCommand) {
-                                    setIsProcessingCommand(false);
-                                    setWakeWordDetected(false);
-                                }
-                            }, 10000);
-                            return;
-                        } else {
-                            // In wake word mode, ignore commands without wake word
-                            console.log('⏭️ Skipping - waiting for wake word');
+                        // Check Global Variable (protects against duplicate listeners/instances)
+                        if (globalLastCommandInfo.text === commandToSend && (now - globalLastCommandInfo.time) < 2000) {
+                            console.log('🚫 Global duplicate command ignored:', commandToSend);
                             return;
                         }
-                    }
 
-                    // Process command directly (no wake word required or wake word detected)
-                    const shouldProcess = !alwaysActive || !requireWakeWord || isProcessingCommand;
+                        // Check Local Ref (standard check)
+                        if (lastProcessedCommandRef.current &&
+                            lastProcessedCommandRef.current.text === commandToSend &&
+                            (now - lastProcessedCommandRef.current.time) < 2000) {
+                            console.log('🚫 Local duplicate command ignored:', commandToSend);
+                            return;
+                        }
 
-                    if (shouldProcess) {
-                        console.log('🎯 Processing voice command:', final);
-                        addVoiceCommand(final);
+                        // Update both
+                        lastProcessedCommandRef.current = { text: commandToSend, time: now };
+                        globalLastCommandInfo = { text: commandToSend, time: now };
 
-                        // Send via socket for voice command processing, using REFs to avoid stale closures
-                        const currentSocket = socketRef.current;
+                        // Always-active mode with wake word requirement
+                        if (alwaysActive && requireWakeWord && !isProcessingCommand) {
+                            const wakeWords = ['hey assistant', 'ok assistant', 'hey daddy', 'ok daddy', 'assistant'];
+                            const detectedWake = wakeWords.find(wake => commandToSend.toLowerCase().includes(wake));
 
-                        if (currentSocket && currentSocket.connected) {
-                            console.log('📤 Sending voice_command event to backend:', final);
-                            console.log(`🤖 Voice AI Mode: ${aiMode}`);
-                            currentSocket.emit('voice_command', {
-                                text: final,
-                                language: voiceLanguage,
-                                timestamp: new Date().toISOString(),
-                                offline_mode: aiMode === 'offline',
-                                provider: aiProvider
-                            });
-                            console.log('✅ voice_command emitted successfully');
-                        } else {
-                            console.warn('⚠️ Socket not connected, using direct fallback (avoiding duplicate chat entry)');
+                            if (detectedWake) {
+                                console.log('🎯 Wake word detected:', detectedWake);
+                                setWakeWordDetected(true);
+                                setIsProcessingCommand(true);
 
-                            // Log processing
-                            addSystemLog('info', `Processing Voice: ${final}`);
+                                // Play greeting
+                                const greetings = [
+                                    'At your service, sir.',
+                                    'systems initialized. Ready for command.',
+                                    'For you, sir, always.',
+                                    'I am ready. What is your will?',
+                                    'Online and ready to serve.'
+                                ];
+                                const greeting = greetings[Math.floor(Math.random() * greetings.length)];
+                                speak(greeting, voiceLanguage);
 
-                            // DIRECT FETCH FALLBACK (No addChatMessage for user, since addVoiceCommand already added it)
-                            // This prevents double entries (one Voice Icon, one Chat Text)
-                            fetch(apiUrl('/api/command'), {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    command: final,
+                                // Reset after 10 seconds if no command given
+                                setTimeout(() => {
+                                    if (isProcessingCommand) {
+                                        setIsProcessingCommand(false);
+                                        setWakeWordDetected(false);
+                                    }
+                                }, 10000);
+                                return;
+                            } else {
+                                // In wake word mode, ignore commands without wake word
+                                console.log('⏭️ Skipping - waiting for wake word');
+                                return;
+                            }
+                        }
+
+                        // Process command directly (no wake word required or wake word detected)
+                        const shouldProcess = !alwaysActive || !requireWakeWord || isProcessingCommand;
+
+                        if (shouldProcess) {
+                            console.log('🎯 Processing voice command:', final);
+                            addVoiceCommand(final);
+
+                            // Send via socket for voice command processing, using REFs to avoid stale closures
+                            const currentSocket = socketRef.current;
+
+                            if (currentSocket && currentSocket.connected) {
+                                console.log('📤 Sending voice_command event to backend:', final);
+                                console.log(`🤖 Voice AI Mode: ${aiMode}`);
+                                currentSocket.emit('voice_command', {
+                                    text: final,
+                                    language: voiceLanguage,
+                                    timestamp: new Date().toISOString(),
                                     offline_mode: aiMode === 'offline',
                                     provider: aiProvider
-                                }),
-                            })
-                                .then((res) => res.json())
-                                .then((data) => {
-                                    const response = data.response || data.message;
-                                    addChatMessage(response, 'ai');
-                                    // Speak response always for voice interactions
-                                    speak(response, voiceLanguage);
-                                })
-                                .catch((error) => {
-                                    console.error('API call error:', error);
-                                    const errorMsg = 'Error processing command. Please try again.';
-                                    addChatMessage(errorMsg, 'ai');
-                                    speak(errorMsg, voiceLanguage);
                                 });
-                        }
+                                console.log('✅ voice_command emitted successfully');
+                            } else {
+                                console.warn('⚠️ Socket not connected, using direct fallback (avoiding duplicate chat entry)');
 
-                        // Reset processing state after command
-                        if (requireWakeWord) {
-                            setTimeout(() => {
-                                setIsProcessingCommand(false);
-                                setWakeWordDetected(false);
-                            }, 1000);
+                                // Log processing
+                                addSystemLog('info', `Processing Voice: ${final}`);
+
+                                // DIRECT FETCH FALLBACK (No addChatMessage for user, since addVoiceCommand already added it)
+                                // This prevents double entries (one Voice Icon, one Chat Text)
+                                fetch(apiUrl('/api/command'), {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        command: final,
+                                        offline_mode: aiMode === 'offline',
+                                        provider: aiProvider
+                                    }),
+                                })
+                                    .then((res) => res.json())
+                                    .then((data) => {
+                                        const response = data.response || data.message;
+                                        addChatMessage(response, 'ai');
+                                        // Speak response always for voice interactions
+                                        speak(response, voiceLanguage);
+                                    })
+                                    .catch((error) => {
+                                        console.error('API call error:', error);
+                                        const errorMsg = 'Error processing command. Please try again.';
+                                        addChatMessage(errorMsg, 'ai');
+                                        speak(errorMsg, voiceLanguage);
+                                    });
+                            }
+
+                            // Reset processing state after command
+                            if (requireWakeWord) {
+                                setTimeout(() => {
+                                    setIsProcessingCommand(false);
+                                    setWakeWordDetected(false);
+                                }, 1000);
+                            }
                         }
-                    }
-                }
+                    }, 2000); // End of debouncing setTimeout
+                } // End of if (accumulatedFinalTranscriptRef.current)
             };
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -752,7 +789,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                             try {
                                 recog.start();
                                 console.log('✅ Recognition restarted');
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                             } catch (error: any) {
                                 if (!error.message?.includes('already started')) {
                                     console.error('❌ Failed to restart:', error);
@@ -1102,92 +1139,110 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             setInterimTranscript('');
 
             if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-                try { mediaRecorderRef.current.stop(); } catch(_e) { /* empty */ }
+                try { mediaRecorderRef.current.stop(); } catch (_e) { /* empty */ }
             }
             if (audioContextRef.current) {
-                try { audioContextRef.current.close(); } catch(_e) { /* empty */ }
+                try { audioContextRef.current.close(); } catch (_e) { /* empty */ }
                 audioContextRef.current = null;
             }
+            if (activeRecognitionRef.current) {
+                try { activeRecognitionRef.current.stop(); } catch (_e) { /* empty */ }
+            }
         } else {
-            console.log('▶️ Starting voice recording (MediaRecorder)');
             setUserStoppedVoice(false);
             userStoppedRef.current = false;
 
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                audioContextRef.current = new AudioContext();
-                const source = audioContextRef.current.createMediaStreamSource(stream);
-                const analyser = audioContextRef.current.createAnalyser();
-                analyser.fftSize = 512;
-                source.connect(analyser);
+            // ALWAYS use backend Faster-Whisper for voice transcription, regardless of LLM provider
+            if (true) {
+                console.log('▶️ Starting voice recording (MediaRecorder for Faster Whisper)');
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    audioContextRef.current = new AudioContext();
+                    const source = audioContextRef.current.createMediaStreamSource(stream);
+                    const analyser = audioContextRef.current.createAnalyser();
+                    analyser.fftSize = 512;
+                    source.connect(analyser);
 
-                mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-                audioChunksRef.current = [];
+                    mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                    audioChunksRef.current = [];
 
-                mediaRecorderRef.current.ondataavailable = (e) => {
-                    if (e.data.size > 0) audioChunksRef.current.push(e.data);
-                };
-
-                mediaRecorderRef.current.onstop = () => {
-                    const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-                    const reader = new FileReader();
-                    reader.readAsDataURL(audioBlob);
-                    reader.onloadend = () => {
-                        if (socket) {
-                            console.log('📤 Sending audio to Faster-Whisper backend');
-                            socket.emit('voice_audio_data', { audio_data: reader.result });
-                        }
+                    mediaRecorderRef.current.ondataavailable = (e) => {
+                        if (e.data.size > 0) audioChunksRef.current.push(e.data);
                     };
-                    stream.getTracks().forEach(track => track.stop());
-                };
 
-                mediaRecorderRef.current.start();
-                setIsVoiceActive(true);
-                isVoiceActiveRef.current = true;
-                _setIsRecognitionStarted(true);
-                setInterimTranscript('Listening (Auto-stops on silence)...');
+                    mediaRecorderRef.current.onstop = () => {
+                        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                        const reader = new FileReader();
+                        reader.readAsDataURL(audioBlob);
+                        reader.onloadend = () => {
+                            if (socket) {
+                                console.log('📤 Sending audio to Faster-Whisper backend');
+                                socket.emit('voice_audio_data', { audio_data: reader.result });
+                            }
+                        };
+                        stream.getTracks().forEach(track => track.stop());
+                    };
 
-                const dataArray = new Uint8Array(analyser.frequencyBinCount);
-                const checkSilence = () => {
-                    if (!mediaRecorderRef.current || mediaRecorderRef.current.state !== 'recording') return;
-                    
-                    analyser.getByteFrequencyData(dataArray);
-                    const sum = dataArray.reduce((a, b) => a + b, 0);
-                    const average = sum / dataArray.length;
+                    mediaRecorderRef.current.start();
+                    setIsVoiceActive(true);
+                    isVoiceActiveRef.current = true;
+                    _setIsRecognitionStarted(true);
+                    setInterimTranscript('Listening (Auto-stops on silence)...');
 
-                    if (average > 10) { // Voice detected
-                        if (silenceTimerRef.current) {
-                            clearTimeout(silenceTimerRef.current);
-                            silenceTimerRef.current = null;
-                            setInterimTranscript('Hearing you...');
+                    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                    const checkSilence = () => {
+                        if (!mediaRecorderRef.current || mediaRecorderRef.current.state !== 'recording') return;
+
+                        analyser.getByteFrequencyData(dataArray);
+                        const sum = dataArray.reduce((a, b) => a + b, 0);
+                        const average = sum / dataArray.length;
+
+                        if (average > 10) { // Voice detected
+                            if (silenceTimerRef.current) {
+                                clearTimeout(silenceTimerRef.current);
+                                silenceTimerRef.current = null;
+                                setInterimTranscript('Hearing you...');
+                            }
+                        } else { // Silence
+                            if (!silenceTimerRef.current) {
+                                silenceTimerRef.current = setTimeout(() => {
+                                    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+                                        console.log('🔇 Silence detected, processing...');
+                                        mediaRecorderRef.current.stop();
+                                        setIsVoiceActive(false);
+                                        isVoiceActiveRef.current = false;
+                                        _setIsRecognitionStarted(false);
+                                        setInterimTranscript('Processing with Whisper...');
+                                    }
+                                }, 1500); // 1.5 seconds silence
+                            }
                         }
-                    } else { // Silence
-                        if (!silenceTimerRef.current) {
-                            silenceTimerRef.current = setTimeout(() => {
-                                if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-                                    console.log('🔇 Silence detected, processing...');
-                                    mediaRecorderRef.current.stop();
-                                    setIsVoiceActive(false);
-                                    isVoiceActiveRef.current = false;
-                                    _setIsRecognitionStarted(false);
-                                    setInterimTranscript('Processing with Whisper...');
-                                }
-                            }, 1500); // 1.5 seconds silence
-                        }
+                        requestAnimationFrame(checkSilence);
+                    };
+                    checkSilence();
+
+                } catch (err) {
+                    console.error('Error accessing microphone:', err);
+                    setIsVoiceActive(false);
+                    isVoiceActiveRef.current = false;
+                    setInterimTranscript('Microphone access denied');
+                }
+            } else {
+                console.log('▶️ Starting voice recording (SpeechRecognition for real-time text)');
+                if (activeRecognitionRef.current) {
+                    try {
+                        activeRecognitionRef.current.start();
+                    } catch (err) {
+                        console.error('Error starting recognition:', err);
                     }
-                    requestAnimationFrame(checkSilence);
-                };
-                checkSilence();
-
-            } catch (_err) {
-                console.error('Error accessing microphone:', err);
-                setIsVoiceActive(false);
-                isVoiceActiveRef.current = false;
-                setInterimTranscript('Microphone access denied');
+                } else {
+                    console.error('Voice recognition not initialized');
+                    setInterimTranscript('Voice recognition not supported or not initialized.');
+                }
             }
         }
     };
-    
+
     // Text-to-Speech function
     const speak = (text: string, lang: string = 'en-US', audioBase64?: string) => {
         try {
@@ -1195,12 +1250,12 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 console.log('🔊 Playing backend generated audio (KittenTTS)');
                 const audio = new Audio("data:audio/wav;base64," + audioBase64);
                 ttsSpeakingRef.current = true;
-                
+
                 // Mute mic if necessary
                 if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
                     try { mediaRecorderRef.current.stop(); } catch (_e) { /* ignore */ }
                 }
-                
+
                 audio.onended = () => {
                     console.log('🔊 TTS ended, starting cooldown');
                     setTimeout(() => {
@@ -1210,97 +1265,18 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                         }
                     }, 300);
                 };
-                
+
                 audio.onerror = (e) => {
                     console.error('❌ Audio playback error:', e);
                     ttsSpeakingRef.current = false;
                 };
-                
+
                 audio.play();
                 return;
             }
 
-            console.log('🔊 speak() called with:', { textLength: text.length, lang });
-
-            const synth = window.speechSynthesis;
-            console.log('🔊 speechSynthesis available:', !!synth);
-            console.log('🔊 speechSynthesis speaking:', synth.speaking);
-
-            // Cancel any ongoing speech
-            synth.cancel();
-
-            // Wait a bit for cancel to complete
-            setTimeout(() => {
-                const utterance = new SpeechSynthesisUtterance(text);
-                activeUtteranceRef.current = utterance; // Keep a reference so it doesn't get garbage collected!
-
-                // Map language codes - default to en-US for 'auto'
-                if (lang === 'hi-IN' || lang === 'hindi') {
-                    utterance.lang = 'hi-IN';
-                } else if (lang === 'auto') {
-                    utterance.lang = 'en-US'; // Use en-US instead of navigator.language
-                } else {
-                    utterance.lang = lang;
-                }
-
-                utterance.rate = 1.0;
-                utterance.pitch = 1.0;
-                utterance.volume = 1.0; // Increased volume to max
-
-                console.log('🔊 Speaking:', text.substring(0, 50), 'in', utterance.lang);
-                console.log('🔊 Utterance config:', { rate: utterance.rate, pitch: utterance.pitch, volume: utterance.volume });
-                console.log('🔊 Available voices:', synth.getVoices().length);
-
-                utterance.onstart = () => {
-                    console.log('✅ TTS started');
-                    // Set guard flag BEFORE stopping mic
-                    ttsSpeakingRef.current = true;
-                    // Mute microphone to prevent echo loop
-                    if (recognition) {
-                        try {
-                            (recognition as any).stop();
-                        } catch (_e) {
-                            console.warn('Could not stop recognition on TTS start:', e);
-                        }
-                    }
-                };
-                
-                utterance.onend = () => {
-                    console.log('🔊 TTS ended, starting 300ms cooldown before re-enabling mic');
-                    // Keep the guard flag ON for 300ms after TTS ends
-                    // This prevents the mic from picking up residual speaker audio
-                    setTimeout(() => {
-                        ttsSpeakingRef.current = false;
-                        console.log('✅ TTS cooldown complete, mic re-enabled');
-                        // Resume listening if alwaysActive mode is on
-                        if (recognition && alwaysActive && !userStoppedVoice) {
-                            try {
-                                (recognition as any).start();
-                            } catch (_e) {
-                                console.warn('Could not restart recognition on TTS end:', e);
-                            }
-                        }
-                    }, 300); // 300ms delay to let speakers fully quiet down
-                };
-                
-                utterance.onerror = (e) => {
-                    console.error('❌ TTS error:', e);
-                    // Clear guard and ensure microphone resumes even if TTS fails
-                    setTimeout(() => {
-                        ttsSpeakingRef.current = false;
-                        if (recognition && alwaysActive && !userStoppedVoice) {
-                            try {
-                                (recognition as any).start();
-                            } catch (_err) { /* ignore */ }
-                        }
-                    }, 1500);
-                };
-
-                // Prevent race condition: mute mic BEFORE speaking starts (onstart might fire too late)
-                ttsSpeakingRef.current = true;
-                synth.speak(utterance);
-                console.log('🔊 synth.speak() called, pending:', synth.pending, 'speaking:', synth.speaking);
-            }, 100);
+            // Browser TTS fallback permanently disabled per user request
+            console.warn('⚠️ No audioBase64 provided to speak(). Browser TTS fallback disabled.');
         } catch (error) {
             console.error('❌ TTS error:', error);
         }

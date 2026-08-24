@@ -436,4 +436,3 @@ def api_single_system_stats(system_name):
         })
     except Exception as e:
         logger.error(f"Single system stats error: {e}")
-        return jsonify({"error": str(e)}), 500

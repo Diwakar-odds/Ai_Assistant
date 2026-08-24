@@ -1,8 +1,8 @@
 import sys; sys.stdout.reconfigure(encoding='utf-8'); sys.stderr.reconfigure(encoding='utf-8');
-# YourDaddy Assistant - Modern Web Backend
+# Pulsar Assistant - Modern Web Backend
 """
 Modern Flask backend to serve the React frontend and provide real-time APIs
-for YourDaddy Assistant's features.
+for Pulsar Assistant's features.
 """
 # print("Server Started ");
 import warnings
@@ -86,7 +86,7 @@ logger = get_logger('web_backend', log_category='backend')
 api_logger = get_api_logger('api_requests')
 
 logger.info("="*80)
-logger.info("YourDaddy Assistant - Web Backend Starting")
+logger.info("Pulsar Assistant - Web Backend Starting")
 logger.info("="*80)
 
 # Add ai_assistant directory to sys.path to allow importing automation_tools_new and modules
@@ -113,7 +113,7 @@ try:
         start_auto_refresh_after_startup, start_periodic_refresh
     )
     AUTOMATION_AVAILABLE = True
-    print("✅ Automation tools loaded successfully")
+    logger.info("✅ Automation tools loaded successfully")
 except ImportError as e:
     print(f"Ã¢Å¡Â Ã¯Â¸Â Automation tools import failed: {e}")
     # Try fallback import from modules directly
@@ -123,7 +123,7 @@ except ImportError as e:
             start_auto_refresh_after_startup, start_periodic_refresh
         )
         AUTOMATION_AVAILABLE = True
-        print("✅ App discovery loaded from modules")
+        logger.info("✅ App discovery loaded from modules")
     except ImportError as e2:
         print(f"Ã¢ÂÅ’ App discovery also failed: {e2}")
         AUTOMATION_AVAILABLE = False
@@ -631,7 +631,7 @@ set_socketio(socketio)
 
 # Global assistant instance - protected initialization
 try:
-    print("[INFO] Initializing YourDaddy Assistant...")
+    print("[INFO] Initializing Pulsar Assistant...")
     assistant = ModernAssistant()
     print("[OK] Assistant initialized successfully")
 except Exception as e:
@@ -678,7 +678,7 @@ print("📋 Registering blueprints...")
 try:
     from backend.blueprints import register_all_blueprints
     register_all_blueprints(app, assistant)
-    print("✅ All blueprints registered")
+    logger.info("✅ All blueprints registered")
 except Exception as e:
     print(f"Ã¢Å¡Â Ã¯Â¸Â Blueprint registration failed: {e}")
     import traceback
@@ -1199,7 +1199,7 @@ except Exception as e:
 
 if __name__ == '__main__':
     print("=" * 60)
-    print("🚀 YourDaddy Assistant - Modern Web Backend")
+    print("🚀 Pulsar Assistant - Modern Web Backend")
     print("=" * 60)
     print("Ã°Å¸Å’Â Server starting on: http://localhost:5000")
     print("Ã¢Å¡â€ºÃ¯Â¸Â  Bolt.ai React UI (Monochrome Steel Design)")
@@ -1249,7 +1249,7 @@ if __name__ == '__main__':
         try:
             from backend.system_monitor import start_system_monitor
             start_system_monitor(socketio)
-            print("✅ System monitoring started")
+            logger.info("✅ System monitoring started")
         except ImportError as e:
             print(f"Ã¢Å¡Â Ã¯Â¸Â Could not start system monitoring: {e}")
         
@@ -1257,7 +1257,7 @@ if __name__ == '__main__':
         if GOOGLE_SPEECH_WS_AVAILABLE:
             try:
                 register_google_speech_handlers(socketio)
-                print("✅ Google Speech Recognition WebSocket handlers registered")
+                logger.info("✅ Google Speech Recognition WebSocket handlers registered")
             except Exception as e:
                 print(f"Ã¢Å¡Â Ã¯Â¸Â Could not register Google Speech handlers: {e}")
         
@@ -1267,7 +1267,7 @@ if __name__ == '__main__':
             import voice_service as chat_handlers
             chat_handlers.set_socketio(socketio)
             chat_handlers.set_learning_router(learning_router if 'learning_router' in globals() else None)
-            print("✅ Command handlers registered with local-first routing")
+            logger.info("✅ Command handlers registered with local-first routing")
         except Exception as e:
             print(f"Ã¢Å¡Â Ã¯Â¸Â Could not register command handlers: {e}")
             import traceback
@@ -1276,9 +1276,9 @@ if __name__ == '__main__':
         # Start AI models background initialization
         try:
             start_ai_background_thread()
-            print("✅ AI background thread started")
+            logger.info("✅ AI background thread started")
         except Exception as e:
-            print(f"⚠️ Could not start AI background thread: {e}")
+            logger.warning(f"⚠️ Could not start AI background thread: {e}")
 
         socketio.run(app, host=host, port=port, debug=False, allow_unsafe_werkzeug=True)
     except Exception as e:

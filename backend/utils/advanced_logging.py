@@ -1,5 +1,9 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
-Advanced Logging Enhancements for YourDaddy Assistant
+Advanced Logging Enhancements for Pulsar Assistant
 =====================================================
 
 This module provides advanced logging features including:
@@ -276,7 +280,7 @@ def log_user_action(user_id: str, action: str, details: Dict[str, Any] = None):
 
 # Example usage and testing
 if __name__ == "__main__":
-    print("Testing Advanced Logging Features\n")
+    logger.debug("Testing Advanced Logging Features\n")
     
     # Test performance logging
     @log_performance("test_function", threshold_ms=50)
@@ -297,4 +301,4 @@ if __name__ == "__main__":
     # Test user activity
     log_user_action("user123", "login", {"method": "oauth"})
     
-    print("✅ Advanced logging features tested successfully!")
+    logger.info("✅ Advanced logging features tested successfully!")

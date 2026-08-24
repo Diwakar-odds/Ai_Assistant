@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Speech Emotion Detection
 Detects emotions in user's voice to adapt assistant behavior

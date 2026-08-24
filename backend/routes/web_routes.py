@@ -148,4 +148,3 @@ def api_get_trending():
     
     except Exception as e:
         logger.error(f"Trending topics error: {e}")
-        return jsonify({"success": False, "error": str(e)}), 500

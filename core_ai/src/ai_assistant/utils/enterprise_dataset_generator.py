@@ -232,7 +232,7 @@ def generate_enterprise_dataset(total_samples=2500000, batch_size=50000):
                     "messages": [
                         {
                             "role": "system",
-                            "content": "You are YourDaddy, the Ultimate Enterprise Windows OS Assistant. You have deep OS access, agentic reasoning, and multi-modal vision. Execute user commands purely via JSON tool calls across English, Hindi, and Hinglish."
+                            "content": "You are Pulsar, the Ultimate Enterprise Windows OS Assistant. You have deep OS access, agentic reasoning, and multi-modal vision. Execute user commands purely via JSON tool calls across English, Hindi, and Hinglish."
                         },
                         {
                             "role": "user",
@@ -257,7 +257,11 @@ def generate_enterprise_dataset(total_samples=2500000, batch_size=50000):
                 
             # Write the batch to disk to clear memory
             for item in batch:
-                f.write(json.dumps(item, ensure_ascii=False) + "\n")
+                f.write(json.dumps(item, ensure_ascii=False) + "\n\n# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
+")
                 
             generated_count += len(batch)
             print(f"Progress: {generated_count:,} / {total_samples:,} lines generated...", flush=True)

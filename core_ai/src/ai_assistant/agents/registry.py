@@ -71,10 +71,10 @@ class AgentRegistry:
                 if agent_id in self._definitions:
                     self._definitions[agent_id].status = "active"
                 
-                print(f"✅ Agent {agent_id} loaded successfully")
+                logger.info(f"✅ Agent {agent_id} loaded successfully")
                 return agent
             except Exception as e:
-                print(f"❌ Failed to lazy load agent {agent_id}: {e}")
+                logger.error(f"❌ Failed to lazy load agent {agent_id}: {e}")
                 if agent_id in self._definitions:
                     self._definitions[agent_id].status = "error"
                 return None

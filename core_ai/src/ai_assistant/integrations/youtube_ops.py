@@ -7,7 +7,7 @@ try:
     YT_DLP_AVAILABLE = True
 except ImportError:
     YT_DLP_AVAILABLE = False
-    print("Warning: yt_dlp not available. YouTube download features disabled.")
+    logger.warning("Warning: yt_dlp not available. YouTube download features disabled.")
 
 try:
     import static_ffmpeg
@@ -24,7 +24,7 @@ class YouTubeDownloader:
             self.download_path = Path(download_path)
         else:
             # Default to user's Music folder or a 'downloads' folder in the project
-            self.download_path = Path(os.path.expanduser("~/Music/YourDaddy_Downloads"))
+            self.download_path = Path(os.path.expanduser("~/Music/Pulsar_Downloads"))
         
         self.download_path.mkdir(parents=True, exist_ok=True)
 

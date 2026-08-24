@@ -1,5 +1,5 @@
 """
-YourDaddy AI Assistant - Error Handling Utilities
+Pulsar AI Assistant - Error Handling Utilities
 
 Centralized error handling for consistent error responses and logging.
 """

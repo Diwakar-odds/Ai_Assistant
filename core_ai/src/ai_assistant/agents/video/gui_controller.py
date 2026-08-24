@@ -49,7 +49,7 @@ class BaseGUIController(AppControlInterface):
                 return True
             return False
         except Exception as e:
-            print(f"Error focusing window: {e}")
+            logger.error(f"Error focusing window: {e}")
             return False
             
     def send_hotkey(self, keys: List[str]):
@@ -119,7 +119,7 @@ class KnowledgeBaseController(BaseGUIController):
         kb_path = os.path.abspath(os.path.join(current_dir, "..", "..", "knowledge", "video_tools_kb.json"))
         
         if not os.path.exists(kb_path):
-            print(f"Warning: Knowledge Base not found at {kb_path}")
+            logger.warning(f"Warning: Knowledge Base not found at {kb_path}")
             return {}
             
         try:
@@ -127,7 +127,7 @@ class KnowledgeBaseController(BaseGUIController):
                 data = json.load(f)
                 return data.get("tools", {}).get(self.app_key, {})
         except Exception as e:
-            print(f"Error loading KB: {e}")
+            logger.error(f"Error loading KB: {e}")
             return {}
 
     def execute_action(self, action_name: str):

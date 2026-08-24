@@ -349,4 +349,3 @@ def api_verify_token():
             "username": current_user,
             "role": user['role'] if user else "user"
         }
-    }), 200

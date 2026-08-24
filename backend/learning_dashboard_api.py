@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Learning Dashboard API Helper
 Provides comprehensive learning statistics, database info, and history
@@ -31,7 +35,7 @@ class LearningDashboardAPI:
                     'size_mb': round(size / 1024 / 1024, 2)
                 })
             except Exception as e:
-                print(f"Error reading {db_path.name}: {e}")
+                logger.error(f"Error reading {db_path.name}: {e}")
         
         return sorted(databases, key=lambda x: x['size_kb'], reverse=True)
     
@@ -143,7 +147,7 @@ class LearningDashboardAPI:
                 
                 conn.close()
             except Exception as e:
-                print(f"Error getting recent activity: {e}")
+                logger.error(f"Error getting recent activity: {e}")
         
         return activities
     
@@ -176,7 +180,7 @@ class LearningDashboardAPI:
             
             conn.close()
         except Exception as e:
-            print(f"Error getting growth trend: {e}")
+            logger.error(f"Error getting growth trend: {e}")
         
         return {
             'daily': daily_stats[:7],  # Last 7 days
@@ -249,7 +253,7 @@ class LearningDashboardAPI:
             
             conn.close()
         except Exception as e:
-            print(f"Error searching memory: {e}")
+            logger.error(f"Error searching memory: {e}")
         
         return results
     

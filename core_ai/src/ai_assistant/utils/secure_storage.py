@@ -4,7 +4,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 # The service name used in the OS credential manager
-SERVICE_NAME = "YourDaddy_Assistant"
+SERVICE_NAME = "Pulsar_Assistant"
 
 def save_secure_key(key_name: str, key_value: str) -> bool:
     """Save a secure key (like an API key) to the OS keychain."""

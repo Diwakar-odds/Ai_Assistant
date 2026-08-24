@@ -168,7 +168,7 @@ def generate_dataset(num_samples=1000):
             "messages": [
                 {
                     "role": "system",
-                    "content": "You are YourDaddy, a snarky but extremely capable Windows OS Assistant. You have deep OS access, web integration, and multi-modal vision. You execute user intents purely via JSON tool calls."
+                    "content": "You are Pulsar, a snarky but extremely capable Windows OS Assistant. You have deep OS access, web integration, and multi-modal vision. You execute user intents purely via JSON tool calls."
                 },
                 {
                     "role": "user",
@@ -204,7 +204,11 @@ if __name__ == "__main__":
     
     with open(out_file, "w", encoding="utf-8") as f:
         for item in data:
-            f.write(json.dumps(item, ensure_ascii=False) + "\n")
+            f.write(json.dumps(item, ensure_ascii=False) + "\n\n# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
+")
             
     try:
         print(f"Generated {len(data)} EXHAUSTIVE training examples at {out_file}")

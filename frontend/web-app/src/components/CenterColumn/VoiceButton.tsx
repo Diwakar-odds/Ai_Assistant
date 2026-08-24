@@ -118,6 +118,7 @@ const VoiceButton = () => {
     { id: 'gemini' as const, name: 'Gemini', icon: '🔷', color: 'blue' },
     { id: 'openai' as const, name: 'OpenAI', icon: '🟢', color: 'green' },
     { id: 'ollama' as const, name: 'Ollama', icon: '🤖', color: 'purple' },
+    { id: 'gguf' as const, name: 'GGUF', icon: '🧠', color: 'yellow' },
   ];
 
   const currentProvider = aiProviders.find(p => p.id === aiProvider) || aiProviders[0];
@@ -128,7 +129,7 @@ const VoiceButton = () => {
     setShowLangSelector(false);
   };
 
-  const handleProviderChange = (providerId: 'gemini' | 'openai' | 'ollama') => {
+  const handleProviderChange = (providerId: 'gemini' | 'openai' | 'ollama' | 'gguf') => {
     setAIProvider(providerId);
     setShowProviderSelector(false);
   };

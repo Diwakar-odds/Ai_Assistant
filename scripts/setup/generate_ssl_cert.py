@@ -30,7 +30,7 @@ def generate_self_signed_cert(
     cert.get_subject().C = "US"
     cert.get_subject().ST = "State"
     cert.get_subject().L = "City"
-    cert.get_subject().O = "YourDaddy AI Assistant"
+    cert.get_subject().O = "Pulsar AI Assistant"
     cert.get_subject().OU = "Development"
     cert.get_subject().CN = hostname
     

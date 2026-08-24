@@ -1,5 +1,5 @@
 """
-YourDaddy AI Assistant - Backend Package
+Pulsar AI Assistant - Backend Package
 
 Modular backend structure for better maintainability.
 """

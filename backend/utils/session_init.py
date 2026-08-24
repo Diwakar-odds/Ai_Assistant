@@ -1,5 +1,8 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
-Session Initialization Module
 ============================
 
 This module initializes a new logging session ONCE per process.
@@ -52,10 +55,10 @@ if session_id:
 
     # Print session start info to console
     print(f"")
-    print(f"🚀 YourDaddy Assistant - New Session Started")
+    print(f"🚀 Pulsar Assistant - New Session Started")
     print(f"📅 Session ID: {session_id}")
     print(f"🕒 Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"📁 Logs will be saved in: logs/*/[module_name]_{session_id}.log")
+    logger.info(f"📁 Logs will be saved in: logs/*/[module_name]_{session_id}.log")
     print(f"📊 Activity tracking: logs/activities/session_summary_{session_id}.json")
     print(f"")
 

@@ -1,5 +1,5 @@
 """
-Session Activity Logger for YourDaddy Assistant
+Session Activity Logger for Pulsar Assistant
 =============================================
 
 This module handles session-specific activity logging with categorized tracking.
@@ -384,7 +384,7 @@ def end_current_session():
 
 # Example usage
 if __name__ == "__main__":
-    print("Testing Session Activity Logger")
+    logger.debug("Testing Session Activity Logger")
     
     # Test different activity types
     log_voice_command("play some music", language="en", confidence=0.95, 
@@ -397,4 +397,4 @@ if __name__ == "__main__":
     
     log_user_interaction("gui_button_click", details={"button": "send_message"})
     
-    print(f"✅ Session activities logged with ID: {session_activity_logger.session_id}")
+    logger.info(f"✅ Session activities logged with ID: {session_activity_logger.session_id}")

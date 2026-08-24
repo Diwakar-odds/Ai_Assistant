@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Security Setup Script for YourDaddy AI Assistant
+Security Setup Script for Pulsar AI Assistant
 
 This script helps you set up secure credentials for the assistant.
 Run this script to:
@@ -35,7 +35,7 @@ def setup_env_file():
     example_file = config_dir / 'app_integration.env.example'
     
     print("\n" + "=" * 60)
-    print("🔐 YourDaddy AI Assistant - Security Setup")
+    print("🔐 Pulsar AI Assistant - Security Setup")
     print("=" * 60)
     
     # Check if env file already exists

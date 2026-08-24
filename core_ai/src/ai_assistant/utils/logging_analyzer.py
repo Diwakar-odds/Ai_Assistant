@@ -1,5 +1,5 @@
 """
-Comprehensive Logging System Analysis and Improvements for YourDaddy Assistant
+Comprehensive Logging System Analysis and Improvements for Pulsar Assistant
 ================================================================================
 
 This script analyzes the entire project for logging issues and implements
@@ -26,7 +26,7 @@ class LoggingAnalyzer:
         
     def analyze_project(self) -> Dict:
         """Perform comprehensive logging analysis."""
-        print("🔍 Starting comprehensive logging analysis...")
+        logger.info("🔍 Starting comprehensive logging analysis...")
         
         results = {
             'python_files': self._analyze_python_files(),
@@ -73,7 +73,7 @@ class LoggingAnalyzer:
             }
             
             # Find print statements
-            print_matches = re.finditer(r'\\bprint\\(.*?\\)', content, re.MULTILINE | re.DOTALL)
+            print_matches = re.finditer(r'\\blogger.info(\(.*?\\))', content, re.MULTILINE | re.DOTALL)
             for match in print_matches:
                 line_num = content[:match.start()].count('\\n') + 1
                 file_info['has_print_statements'].append({
@@ -105,7 +105,7 @@ class LoggingAnalyzer:
             return file_info
             
         except Exception as e:
-            print(f"Error analyzing {file_path}: {e}")
+            logger.error(f"Error analyzing {file_path}: {e}")
             return None
     
     def _analyze_frontend_files(self) -> List[Dict]:
@@ -160,7 +160,7 @@ class LoggingAnalyzer:
             return file_info
             
         except Exception as e:
-            print(f"Error analyzing {file_path}: {e}")
+            logger.error(f"Error analyzing {file_path}: {e}")
             return None
     
     def _analyze_config_files(self) -> List[Dict]:

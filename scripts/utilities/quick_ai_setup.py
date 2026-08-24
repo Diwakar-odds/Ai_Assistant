@@ -10,7 +10,7 @@ import sys
 
 def main():
     print("=" * 70)
-    print(" YourDaddy Assistant - Quick AI Setup")
+    print(" Pulsar Assistant - Quick AI Setup")
     print("=" * 70)
     print()
     print("🤖 This will enable real-time AI responses instead of hardcoded replies")

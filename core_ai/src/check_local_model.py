@@ -11,7 +11,7 @@ def check_fix():
     print("Checking Local Model Setup...")
     
     # 1. Check for compiler
-    print("\n1. Checking for C++ Compiler...")
+    print("\n\n# Setup centralized logging\nfrom utils.logging_config import get_logger\nlogger = get_logger(__name__, log_category="app")\n\n1. Checking for C++ Compiler...")
     try:
         subprocess.check_call(["cl"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         print("Compiler found!")
@@ -53,7 +53,7 @@ def check_fix():
         from ai_assistant.local_ai_manager import quick_test
         quick_test()
     except Exception as e:
-        print(f"Test failed: {e}")
+        logger.debug(f"Test failed: {e}")
 
 if __name__ == "__main__":
     check_fix()

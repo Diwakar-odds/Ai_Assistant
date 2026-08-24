@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 MCP Manager - Centralized Management for Model Context Protocol Servers
 
@@ -440,7 +444,7 @@ if __name__ == "__main__":
         success = await manager.initialize()
         
         if success:
-            print(f"✅ Manager initialized")
+            logger.info(f"✅ Manager initialized")
             print(f"📊 Status: {manager.get_status()}")
             
             # List all tools
@@ -451,7 +455,7 @@ if __name__ == "__main__":
                 for tool in tools[:3]:  # Show first 3
                     print(f"    - {tool['name']}: {tool['description']}")
         else:
-            print("❌ Failed to initialize manager")
+            logger.error("❌ Failed to initialize manager")
             print("💡 Make sure to configure servers in config/mcp_servers.json")
     
     asyncio.run(test_manager())

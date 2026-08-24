@@ -181,7 +181,7 @@ def show_log_structure():
                 print(f"{sub_indent}... and {len(files) - 5} more files")
 
 if __name__ == "__main__":
-    print("🎯 YourDaddy Assistant - Session Logging Demo")
+    print("🎯 Pulsar Assistant - Session Logging Demo")
     print("=" * 60)
     
     # Run demonstration

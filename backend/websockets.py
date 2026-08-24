@@ -39,6 +39,8 @@ def handle_enhanced_chat(data):
                 'context_id': response.get('context_id'),
                 'detected_language': response.get('detected_language', 'english'),
                 'message_type': response.get('message_type', 'general_chat'),
+                'provider': response.get('provider'),
+                'model': response.get('model'),
                 'timestamp': datetime.now().isoformat()
             })
         else:
@@ -196,7 +198,7 @@ def handle_execute_workflow(data):
 
 @socketio.on('mood_detection')
 def handle_mood_detection(data):
-    """Handle mood detection request"""
+    """Handle mood detection request (Note: duplicate voice listeners were removed from this file)"""
     try:
         text = data.get('text', '')
         
@@ -233,91 +235,6 @@ def handle_stop_voice():
     """Stop voice listening"""
     result = assistant.stop_voice_listening()
     emit('voice_stop_response', result)
-
-@socketio.on('voice_audio_data')
-def handle_voice_audio(data):
-    """Handle voice audio data from client"""
-    audio_data = data.get('audio_data', '')
-    if audio_data:
-        result = assistant.process_voice_audio(audio_data)
-        
-        # Emit transcript if recognized
-        if result.get('success') and result.get('transcript'):
-            emit('voice_transcript', {
-                'text': result['transcript'],
-                'confidence': 0.9
-            })
-            
-            # Also emit the response if available
-            if result.get('response'):
-                response_text = result['response']
-                # Generate audio using KittenTTS
-                audio_b64 = assistant.speak_text(response_text)
-                
-                emit('voice_response', {
-                    'response': response_text,
-                    'audio_base64': audio_b64,
-                    'success': True,
-                    'timestamp': datetime.now().isoformat(),
-                    'command': result['transcript']
-                })
-        else:
-            emit('voice_audio_response', result)
-
-@socketio.on('voice_command')
-def handle_voice_command(data):
-    """Process voice command from transcript text"""
-    try:
-        text = data.get('text', '')
-        language = data.get('language', 'en-US')
-        
-        if not text:
-            emit('voice_response', {'response': 'No command received', 'error': True})
-            return
-        
-        print(f"Ã°Å¸Å½Â¤ Processing voice command: {text}")
-        print(f"   Language: {language}")
-        
-        # Log the voice interaction
-        log_query(text)
-        log_module_usage('voice', 'voice_command')
-        
-        # Process the command with full AI capabilities
-        response = assistant.process_command(text)
-        
-        # Log the response
-        log_reply(response)
-        
-        # Generate audio using KittenTTS
-        audio_b64 = assistant.speak_text(response)
-        
-        # Emit the response for talkback
-        emit('voice_response', {
-            'response': response,
-            'audio_base64': audio_b64,
-            'success': True,
-            'timestamp': datetime.now().isoformat(),
-            'command': text
-        })
-        
-        print(f"✅ Voice command processed successfully")
-        print(f"   Response: {response[:100]}...")
-        print(f"🔊 Emitted voice_response event for talkback")
-        
-    except Exception as e:
-        import traceback
-        error_trace = traceback.format_exc()
-        print(f"♠ Voice command error: {str(e)}")
-        print(f"   Traceback: {error_trace}")
-        
-        error_msg = f'Sorry, I encountered an error: {str(e)}'
-        log_action('voice_command_error', {'error': str(e), 'command': text})
-        
-        emit('voice_response', {
-            'response': error_msg,
-            'error': True,
-            'success': False
-        })
 
 @socketio.on('request_tts')
 def handle_tts_request(data):
@@ -384,4 +301,4 @@ def broadcast_chain_progress(chain_id: str, event_type: str, data: dict):
     Broadcasts chain progress to clients subscribed to the chain.
     event_type can be: chain.started, chain.step_completed, chain.step_failed, chain.verification_completed, chain.completed
     """
-    socketio.emit(event_type, data, room=f"chain_{chain_id}")
+    socketio.emit(event_type, data, room=f"chain_{chain_id}")

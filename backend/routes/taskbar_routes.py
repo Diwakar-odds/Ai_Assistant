@@ -95,4 +95,3 @@ def api_get_running_apps():
     
     except Exception as e:
         logger.error(f"Running apps detection error: {e}")
-        return jsonify({"success": False, "error": str(e)}), 500

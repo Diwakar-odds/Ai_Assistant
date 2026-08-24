@@ -75,4 +75,4 @@ Any additional information that reviewers should know about this PR.
 ---
 
 ### 🎉 Thanks for Contributing!
-Thank you for taking the time to contribute to YourDaddy Assistant! Your efforts help make this project better for everyone.
+Thank you for taking the time to contribute to Pulsar Assistant! Your efforts help make this project better for everyone.

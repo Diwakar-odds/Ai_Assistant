@@ -1,6 +1,6 @@
-// YourDaddy Assistant - Web Interface JavaScript
+// Pulsar Assistant - Web Interface JavaScript
 
-class YourDaddyWebInterface {
+class PulsarWebInterface {
     constructor() {
         this.socket = null;
         this.isListening = false;
@@ -16,7 +16,7 @@ class YourDaddyWebInterface {
         this.loadModelPreference(); // Load model preference
         this.loadRecentApps();
         
-        console.log('YourDaddy Web Interface initialized');
+        console.log('Pulsar Web Interface initialized');
     }
     
     initializeAuth() {
@@ -87,7 +87,7 @@ class YourDaddyWebInterface {
             
             this.socket.on('connect', () => {
                 this.updateStatus('Connected', 'success');
-                this.addMessage('Connected to YourDaddy Assistant', 'system');
+                this.addMessage('Connected to Pulsar Assistant', 'system');
             });
             
             this.socket.on('disconnect', () => {
@@ -547,7 +547,7 @@ class YourDaddyWebInterface {
 // Global functions for footer links
 function showAbout() {
     const content = `
-        <p><strong>YourDaddy Assistant</strong> is an AI-powered personal assistant that helps you:</p>
+        <p><strong>Pulsar Assistant</strong> is an AI-powered personal assistant that helps you:</p>
         <ul>
             <li>🗣️ Control your computer with voice commands</li>
             <li>🚀 Launch applications quickly</li>
@@ -559,7 +559,7 @@ function showAbout() {
         <p><strong>Version:</strong> 3.0.0</p>
         <p><strong>Created by:</strong> Your Development Team</p>
     `;
-    assistant.showModal('About YourDaddy Assistant', content);
+    assistant.showModal('About Pulsar Assistant', content);
 }
 
 async function showSettings() {
@@ -899,7 +899,7 @@ document.head.appendChild(style);
 // Initialize the assistant when DOM is loaded
 let assistant;
 document.addEventListener('DOMContentLoaded', () => {
-    assistant = new YourDaddyWebInterface();
+    assistant = new PulsarWebInterface();
 });
 
 // Export for global access

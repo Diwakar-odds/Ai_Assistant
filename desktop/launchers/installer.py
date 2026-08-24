@@ -11,7 +11,7 @@ import sys
 class SetupWizard(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("YourDaddy Assistant - Setup")
+        self.title("Pulsar Assistant - Setup")
         self.geometry("600x450")
         self.resizable(False, False)
         
@@ -67,7 +67,7 @@ class SetupWizard(tk.Tk):
         self.show_step(0)
 
     def create_welcome_page(self, parent):
-        ttk.Label(parent, text="Welcome to YourDaddy Setup", style='Header.TLabel').pack(pady=10)
+        ttk.Label(parent, text="Welcome to Pulsar Setup", style='Header.TLabel').pack(pady=10)
         ttk.Label(parent, text="Please read the following End User License Agreement:").pack(pady=(0, 5))
         
         # Add scrollable text area for EULA
@@ -83,7 +83,7 @@ class SetupWizard(tk.Tk):
         
         agreement = (
             "END USER LICENSE AGREEMENT (EULA)\n\n"
-            "Please read this agreement carefully before installing YourDaddy AI Assistant.\n\n"
+            "Please read this agreement carefully before installing Pulsar AI Assistant.\n\n"
             "1. PRIVACY & DATA\n"
             "This application processes and stores your data locally. By using the voice assistant, "
             "you agree that voice data is captured by your microphone and processed using local models. "
@@ -114,7 +114,7 @@ class SetupWizard(tk.Tk):
     def create_permissions_page(self, parent):
         ttk.Label(parent, text="System Permissions", style='Header.TLabel').pack(pady=20)
         text = (
-            "YourDaddy Assistant is voice-first. We need permission to use your microphone.\n"
+            "Pulsar Assistant is voice-first. We need permission to use your microphone.\n"
             "We also need permission to send Desktop Notifications."
         )
         ttk.Label(parent, text=text, justify="center", wraplength=500).pack(pady=20)
@@ -135,9 +135,9 @@ class SetupWizard(tk.Tk):
 
     def create_finish_page(self, parent):
         ttk.Label(parent, text="Installation Complete", style='Header.TLabel').pack(pady=20)
-        ttk.Label(parent, text="YourDaddy Assistant has been successfully installed on your computer.").pack(pady=20)
+        ttk.Label(parent, text="Pulsar Assistant has been successfully installed on your computer.").pack(pady=20)
         self.launch_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(parent, text="Launch YourDaddy Assistant", variable=self.launch_var).pack(pady=20)
+        ttk.Checkbutton(parent, text="Launch Pulsar Assistant", variable=self.launch_var).pack(pady=20)
 
     def show_step(self, step):
         for frame in self.frames:
@@ -193,7 +193,7 @@ class SetupWizard(tk.Tk):
         
         # Determine installation directory
         local_app_data = Path(os.environ.get('LOCALAPPDATA', os.path.expanduser('~')))
-        self.install_dir = local_app_data / "YourDaddy_Assistant"
+        self.install_dir = local_app_data / "Pulsar_Assistant"
         
         for i, task in enumerate(tasks):
             self.lbl_progress.config(text=task)
@@ -223,7 +223,7 @@ class SetupWizard(tk.Tk):
             self.install_dir.mkdir(parents=True)
             
         # Copy main app directory (onedir build)
-        bundled_dir = self.base_path / "YourDaddy_Assistant"
+        bundled_dir = self.base_path / "Pulsar_Assistant"
         
         if bundled_dir.exists() and bundled_dir.is_dir():
             try:
@@ -234,8 +234,8 @@ class SetupWizard(tk.Tk):
         else:
             print("Bundled directory not found, checking for executable fallback...")
             # Fallback to single exe
-            bundled_exe = self.base_path / "YourDaddy_Assistant.exe"
-            dest_exe = self.install_dir / "YourDaddy_Assistant.exe"
+            bundled_exe = self.base_path / "Pulsar_Assistant.exe"
+            dest_exe = self.install_dir / "Pulsar_Assistant.exe"
             if bundled_exe.exists():
                 try:
                     shutil.copy2(bundled_exe, dest_exe)
@@ -246,10 +246,10 @@ class SetupWizard(tk.Tk):
                 time.sleep(1)
         
         # Copy uninstaller
-        bundled_uninstaller = self.base_path / "Uninstall_YourDaddy.exe"
+        bundled_uninstaller = self.base_path / "Uninstall_Pulsar.exe"
         if bundled_uninstaller.exists():
             try:
-                shutil.copy2(bundled_uninstaller, self.install_dir / "Uninstall_YourDaddy.exe")
+                shutil.copy2(bundled_uninstaller, self.install_dir / "Uninstall_Pulsar.exe")
             except Exception as e:
                 print(f"Uninstaller copy failed: {e}")
         
@@ -264,8 +264,8 @@ class SetupWizard(tk.Tk):
     def create_shortcut(self):
         import tempfile
         desktop = Path(os.path.expanduser("~/Desktop"))
-        shortcut_path = desktop / "YourDaddy Assistant.lnk"
-        target_path = self.install_dir / "YourDaddy_Assistant.exe"
+        shortcut_path = desktop / "Pulsar Assistant.lnk"
+        target_path = self.install_dir / "Pulsar_Assistant.exe"
         icon_path = self.install_dir / "icon.ico"
         
         if target_path.exists():
@@ -299,15 +299,15 @@ class SetupWizard(tk.Tk):
         """Register app in Windows Add/Remove Programs"""
         try:
             import winreg
-            uninstall_exe = self.install_dir / "Uninstall_YourDaddy.exe"
+            uninstall_exe = self.install_dir / "Uninstall_Pulsar.exe"
             icon_path = self.install_dir / "icon.ico"
             
-            key_path = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\YourDaddyAssistant"
+            key_path = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\PulsarAssistant"
             with winreg.CreateKey(winreg.HKEY_CURRENT_USER, key_path) as key:
-                winreg.SetValueEx(key, "DisplayName", 0, winreg.REG_SZ, "YourDaddy AI Assistant")
+                winreg.SetValueEx(key, "DisplayName", 0, winreg.REG_SZ, "Pulsar AI Assistant")
                 winreg.SetValueEx(key, "UninstallString", 0, winreg.REG_SZ, str(uninstall_exe))
                 winreg.SetValueEx(key, "InstallLocation", 0, winreg.REG_SZ, str(self.install_dir))
-                winreg.SetValueEx(key, "Publisher", 0, winreg.REG_SZ, "YourDaddy")
+                winreg.SetValueEx(key, "Publisher", 0, winreg.REG_SZ, "Pulsar")
                 if icon_path.exists():
                     winreg.SetValueEx(key, "DisplayIcon", 0, winreg.REG_SZ, str(icon_path))
                 winreg.SetValueEx(key, "NoModify", 0, winreg.REG_DWORD, 1)
@@ -338,12 +338,12 @@ class SetupWizard(tk.Tk):
 
     def finish_setup(self):
         if self.launch_var.get():
-            target_path = getattr(self, 'install_dir', self.base_path) / "YourDaddy_Assistant.exe"
+            target_path = getattr(self, 'install_dir', self.base_path) / "Pulsar_Assistant.exe"
             if target_path.exists():
                 subprocess.Popen([str(target_path)], cwd=str(target_path.parent))
             else:
                 # Fallback for dev environment
-                app_script = self.base_path / "src" / "ai_assistant" / "apps" / "yourdaddy_app.py"
+                app_script = self.base_path / "src" / "ai_assistant" / "apps" / "pulsar_app.py"
                 if app_script.exists():
                     subprocess.Popen([sys.executable, str(app_script)])
         self.destroy()

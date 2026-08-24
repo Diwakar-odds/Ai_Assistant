@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 MCP Integration Enhancement for Conversational AI
 
@@ -272,12 +276,18 @@ async def enhance_with_mcp(conversational_ai):
         """Enhanced process_message that checks MCP tools first"""
         # Try MCP tools first
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                # If already in async context, create task
+            try:
+                loop = asyncio.get_running_loop()
+                is_running = True
+            except RuntimeError:
+                is_running = False
+
+            if is_running:
+                # If already in async context, we would need to schedule it differently.
+                # For now, skip or handle appropriately.
                 mcp_result = None
             else:
-                # Create new event loop if needed
+                # Safely run in a new event loop for this thread
                 mcp_result = asyncio.run(enhancer.check_and_call_mcp_tool(message))
             
             if mcp_result:
@@ -307,10 +317,10 @@ if __name__ == "__main__":
         success = await enhancer.initialize()
         
         if success:
-            print(f"✅ MCP enhancer initialized")
+            logger.info(f"✅ MCP enhancer initialized")
             print(f"\n{enhancer.get_available_mcp_tools_description()}")
         else:
-            print("❌ MCP enhancer initialization failed")
+            logger.error("❌ MCP enhancer initialization failed")
             print("💡 Enable MCP servers in config/mcp_servers.json")
     
     asyncio.run(test())

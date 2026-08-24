@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Cpu, HardDrive, Activity, TrendingUp, Zap, Server } from 'lucide-react';
 import { useDashboard } from '../../contexts/DashboardContext';
+import SystemLogs from '../RightColumn/SystemLogs';
 
 const DashboardDetail = () => {
   const { systemStats } = useDashboard();
@@ -15,13 +16,13 @@ const DashboardDetail = () => {
   ];
 
   return (
-    <div className="space-y-6">
-      <div>
+    <div className="space-y-6 flex flex-col h-full overflow-hidden pb-4">
+      <div className="flex-shrink-0">
         <h3 className="text-2xl font-bold text-white mb-2">System Dashboard</h3>
         <p className="text-[#9CA3AF]">Comprehensive overview of system performance and metrics</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 flex-shrink-0">
         {detailedStats.map((stat, index) => (
           <motion.div
             key={stat.label}
@@ -61,7 +62,7 @@ const DashboardDetail = () => {
       </div>
 
       {/* Additional system information */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-shrink-0">
         <div className="bg-[#1F2228] border border-[#2A2D35] rounded-lg p-6">
           <h4 className="text-lg font-semibold text-white mb-4">System Information</h4>
           <div className="space-y-3">
@@ -84,24 +85,8 @@ const DashboardDetail = () => {
           </div>
         </div>
 
-        <div className="bg-[#1F2228] border border-[#2A2D35] rounded-lg p-6">
-          <h4 className="text-lg font-semibold text-white mb-4">Resource Alerts</h4>
-          <div className="space-y-3">
-            <div className="flex items-start gap-3 p-3 bg-[#10B981]/10 border border-[#10B981]/30 rounded">
-              <div className="w-2 h-2 rounded-full bg-[#10B981] mt-1.5" />
-              <div className="flex-1">
-                <p className="text-sm text-white font-medium">All systems operational</p>
-                <p className="text-xs text-[#9CA3AF] mt-1">No issues detected</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 p-3 bg-[#F59E0B]/10 border border-[#F59E0B]/30 rounded">
-              <div className="w-2 h-2 rounded-full bg-[#F59E0B] mt-1.5" />
-              <div className="flex-1">
-                <p className="text-sm text-white font-medium">Disk cleanup recommended</p>
-                <p className="text-xs text-[#9CA3AF] mt-1">Free up space for optimal performance</p>
-              </div>
-            </div>
-          </div>
+        <div className="bg-[#1F2228] border border-[#2A2D35] rounded-lg p-6 flex flex-col h-full overflow-hidden">
+          <SystemLogs />
         </div>
       </div>
     </div>

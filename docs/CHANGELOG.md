@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to YourDaddy AI Assistant will be documented in this file.
+All notable changes to Pulsar AI Assistant will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -135,7 +135,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Version 3.1.0 Highlights
 
-This release represents a major leap forward for YourDaddy AI Assistant, introducing comprehensive multilingual support, advanced voice recognition, and modern web interface capabilities.
+This release represents a major leap forward for Pulsar AI Assistant, introducing comprehensive multilingual support, advanced voice recognition, and modern web interface capabilities.
 
 #### 🌍 Multilingual Revolution
 - **Three Language Support**: English, Hindi, and Hinglish
@@ -191,8 +191,8 @@ For users upgrading from version 2.x:
 
 3. **Update Launch Scripts**:
    ```bash
-   # Old: python yourdaddy_v2.py
-   # New: python yourdaddy_app.py
+   # Old: python pulsar_v2.py
+   # New: python pulsar_app.py
    ```
 
 ### Known Issues
@@ -228,7 +228,7 @@ For support and questions about any version:
 - **GitHub Issues**: Report bugs and request features
 - **Documentation**: Check our comprehensive docs
 - **Community**: Join our Discord server
-- **Email**: contact@yourdaddy.ai
+- **Email**: contact@pulsar.ai
 
 ---
 

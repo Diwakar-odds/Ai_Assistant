@@ -52,7 +52,7 @@ def main():
     url = f"http://{local_ip}:{port}"
     
     print("="*60)
-    print("🚀 YourDaddy AI - Mobile Quick Start")
+    print("🚀 Pulsar AI - Mobile Quick Start")
     print("="*60)
     
     print(f"\n📡 Your Computer's IP: {local_ip}")

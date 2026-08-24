@@ -3,7 +3,7 @@ import shutil
 
 def setup_keys():
     print("="*60)
-    print("YourDaddy Assistant - API Key Setup")
+    print("Pulsar Assistant - API Key Setup")
     print("="*60)
     print("To enable advanced AI features (like Gemini or ChatGPT),")
     print("you need to provide your API keys.")
@@ -17,7 +17,7 @@ def setup_keys():
         else:
             print("Error: .env.example not found. Creating a new .env file.")
             with open('.env', 'w') as f:
-                f.write("# YourDaddy Assistant Environment Variables\n")
+                f.write("# Pulsar Assistant Environment Variables\n")
 
     # Read existing .env
     env_content = {}

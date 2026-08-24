@@ -23,7 +23,7 @@ def start_backend_server():
     sys.path.insert(0, str(base_path / "shared"))
     sys.path.insert(0, str(base_path))
     
-    print("Starting YourDaddy AI Backend...")
+    print("Starting Pulsar AI Backend...")
     backend_script = base_path / "backend" / "modern_web_backend.py"
     try:
         runpy.run_path(str(backend_script), run_name="__main__")
@@ -49,7 +49,7 @@ def open_dashboard():
         # Server is up, create window
         print("Launching Native Windows GUI...")
         window = webview.create_window(
-            title="YourDaddy AI Assistant",
+            title="Pulsar AI Assistant",
             url="http://127.0.0.1:5000",
             width=1280,
             height=800,
@@ -71,5 +71,5 @@ if __name__ == "__main__":
     # We must run the GUI in the main thread.
     open_dashboard()
     
-    print("Shutting down YourDaddy Assistant...")
+    print("Shutting down Pulsar Assistant...")
     sys.exit(0)

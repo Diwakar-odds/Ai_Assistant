@@ -1,6 +1,10 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 # Email Management Module
 """
-Gmail integration and email management functions for the YourDaddy AI Assistant.
+Gmail integration and email management functions for the Pulsar AI Assistant.
 
 Provides:
 - OAuth2 authentication with Gmail API
@@ -31,7 +35,7 @@ try:
     GMAIL_AVAILABLE = True
 except ImportError:
     GMAIL_AVAILABLE = False
-    # print("WARNING: Gmail dependencies not found. Email features will be disabled.")
+    # logger.warning("WARNING: Gmail dependencies not found. Email features will be disabled.")
     pass
 
 # Gmail API scope for full access
@@ -132,7 +136,7 @@ class GmailManager:
    - Go to "APIs & Services" > "Credentials"
    - Click "Create Credentials" > "OAuth client ID"
    - Choose "Desktop app" as application type
-   - Give it a name (e.g., "YourDaddy Assistant")
+   - Give it a name (e.g., "Pulsar Assistant")
 5. Download the credentials:
    - Click the download button (⬇️) next to your OAuth client
    - Save as 'credentials.json' in the project root folder

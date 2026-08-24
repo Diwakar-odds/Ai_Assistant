@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "description": "MCP Server Configurations for YourDaddy AI Assistant",
+  "description": "MCP Server Configurations for Pulsar AI Assistant",
   "servers": {
     "filesystem": {
       "name": "filesystem",
@@ -22,7 +22,7 @@
       "name": "postgres",
       "description": "PostgreSQL database access for queries and data management",
       "command": "uvx",
-      "args": ["mcp-server-postgres", "postgresql://localhost:5432/yourdaddy_ai"],
+      "args": ["mcp-server-postgres", "postgresql://localhost:5432/pulsar_ai"],
       "enabled": false,
       "category": "database",
       "capabilities": [

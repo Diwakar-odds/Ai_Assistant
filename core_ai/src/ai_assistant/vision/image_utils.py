@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Image Processing Utilities for VLM
 
@@ -240,7 +244,7 @@ class ImageProcessor:
             print("Also requires poppler: https://github.com/oschwartz10612/poppler-windows/releases/")
             return None
         except Exception as e:
-            print(f"Error converting PDF to image: {e}")
+            logger.error(f"Error converting PDF to image: {e}")
             return None
     
     @staticmethod
@@ -274,7 +278,7 @@ class ImageProcessor:
             print("pdf2image not installed. Run: pip install pdf2image")
             return []
         except Exception as e:
-            print(f"Error converting PDF to images: {e}")
+            logger.error(f"Error converting PDF to images: {e}")
             return []
     
     @staticmethod

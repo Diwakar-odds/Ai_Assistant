@@ -1,5 +1,5 @@
-﻿"""
-YourDaddy AI Assistant - API Routes
+"""
+Pulsar AI Assistant - API Routes
 
 All REST API endpoints for the backend.
 Organized by feature domain.

@@ -110,13 +110,15 @@ interface AppSettings {
 const AI_PROVIDERS = [
   { value: 'gemini', label: '🔷 Google Gemini' },
   { value: 'openai', label: '🟢 OpenAI (GPT)' },
-  { value: 'ollama', label: '🤖 Ollama (Local)' }
+  { value: 'ollama', label: '🤖 Ollama (Local)' },
+  { value: 'gguf', label: '🧠 Pulsar 4.6GB (Local GGUF)' }
 ];
 
 const AI_MODELS: Record<string, string[]> = {
   gemini: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-flash-latest'],
   openai: ['gpt-4o-mini', 'gpt-3.5-turbo', 'gpt-4o'],
-  ollama: ['llama3.2', 'qwen2.5-coder:3b', 'mistral', 'gemma2']
+  ollama: ['llama3.2', 'qwen2.5-coder:3b', 'mistral', 'gemma2'],
+  gguf: ['pulsar-final-q4_k_m']
 };
 
 // --- Component ---

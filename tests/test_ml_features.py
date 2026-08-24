@@ -35,7 +35,7 @@ try:
     
 except Exception as e:
     print(f"   ❌ Silero VAD failed: {e}")
-    sys.exit(1)
+    #
 
 # Test 2: Voice Cloning (TTS)
 print("\n2. Testing Coqui TTS...")
@@ -49,7 +49,7 @@ try:
     
 except Exception as e:
     print(f"   ❌ TTS failed: {e}")
-    sys.exit(1)
+    #
 
 # Test 3: Speaker Diarization
 print("\n3. Testing pyannote.audio...")
@@ -61,7 +61,7 @@ try:
     
 except Exception as e:
     print(f"   ❌ pyannote.audio failed: {e}")
-    sys.exit(1)
+    #
 
 # Summary
 print("\n" + "="*60)

@@ -189,7 +189,7 @@ def api_save_settings():
         return jsonify({"success": True, "message": "Settings saved successfully"})
     
     except Exception as e:
-        print(f"Failed to save settings: {e}")
+        logger.error(f"Failed to save settings: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 @settings_bp.route('/api/settings/load')
@@ -205,7 +205,7 @@ def api_load_settings():
             return jsonify({"settings": None})
     
     except Exception as e:
-        print(f"Failed to load settings: {e}")
+        logger.error(f"Failed to load settings: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 @settings_bp.route('/api/settings/all', methods=['GET'])
@@ -838,4 +838,3 @@ def api_get_providers():
     
     except Exception as e:
         logger.error(f"Get providers error: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500

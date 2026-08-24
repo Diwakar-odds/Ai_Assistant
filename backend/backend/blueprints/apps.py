@@ -1,4 +1,8 @@
-﻿"""
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
+"""
 Apps Blueprint
 
 Handles application control, discovery, and automation endpoints.

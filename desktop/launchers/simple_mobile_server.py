@@ -49,7 +49,7 @@ def index():
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>YourDaddy AI Mobile</title>
+            <title>Pulsar AI Mobile</title>
             <style>
                 body {
                     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -73,7 +73,7 @@ def index():
         </head>
         <body>
             <div class="container">
-                <h1>🤖 YourDaddy AI Mobile</h1>
+                <h1>🤖 Pulsar AI Mobile</h1>
                 <div class="status">
                     <h2>✅ Server is Running!</h2>
                     <p>Mobile interface is active</p>
@@ -117,7 +117,7 @@ if __name__ == '__main__':
     local_ip = get_local_ip()
     
     print("="*60)
-    print("🚀 YourDaddy AI - Simple Mobile Server")
+    print("🚀 Pulsar AI - Simple Mobile Server")
     print("="*60)
     print(f"\n📱 Access from your phone:")
     print(f"   Local:  http://{local_ip}:{port}")

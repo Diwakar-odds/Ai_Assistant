@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 
 import time
 import psutil
@@ -62,7 +66,7 @@ def start_system_monitor(socketio):
                 socketio.emit('system_stats_update', stats)
                 
             except Exception as e:
-                print(f"❌ Error in system monitor: {e}")
+                logger.error(f"❌ Error in system monitor: {e}")
             
             socketio.sleep(2) # Non-blocking sleep for gevent/eventlet
 

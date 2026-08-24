@@ -1,5 +1,5 @@
-﻿"""
-YourDaddy AI Assistant - Complete Modular Backend
+"""
+Pulsar AI Assistant - Complete Modular Backend
 
 Main entry point for the modular backend system.
 Replaces the monolithic modern_web_backend.py
@@ -33,7 +33,7 @@ def main():
     """Main entry point"""
     try:
         logger.info("="*80)
-        logger.info("ðŸš€ YourDaddy AI Assistant - Complete Modular Backend")
+        logger.info("ðŸš€ Pulsar AI Assistant - Complete Modular Backend")
         logger.info("="*80)
         
         # Create Flask app and SocketIO

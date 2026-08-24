@@ -343,4 +343,3 @@ def api_activity():
         {"time": "1 hour ago", "action": "Calendar sync completed", "status": "success"},
         {"time": "3 hours ago", "action": "System optimization", "status": "info"}
     ]
-    return jsonify(activities)

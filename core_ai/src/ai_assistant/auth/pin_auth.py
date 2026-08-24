@@ -1,5 +1,5 @@
 """
-PIN Authentication System for YourDaddy AI Assistant
+PIN Authentication System for Pulsar AI Assistant
 
 This module handles PIN-based authentication for the AI Assistant,
 replacing traditional login pages with a simple PIN prompt at startup.
@@ -131,7 +131,7 @@ class PINAuth:
             True if authentication successful, False otherwise
         """
         if not self.is_pin_configured():
-            print("⚠️  PIN authentication not configured")
+            logger.warning("⚠️  PIN authentication not configured")
             print("Run 'python main.py --setup-pin' to configure PIN")
             return False
             
@@ -147,9 +147,9 @@ class PINAuth:
                 else:
                     remaining = max_attempts - attempt - 1
                     if remaining > 0:
-                        print(f"❌ Invalid PIN. {remaining} attempts remaining.")
+                        logger.error(f"❌ Invalid PIN. {remaining} attempts remaining.")
                     else:
-                        print("❌ Invalid PIN. Access denied.")
+                        logger.error("❌ Invalid PIN. Access denied.")
                     
                     if AUDIT_AVAILABLE:
                         audit_auth_failure("PIN authentication", "Invalid PIN")
@@ -159,7 +159,7 @@ class PINAuth:
                 return False
             except Exception as e:
                 logger.error(f"Error during PIN prompt: {e}")
-                print(f"❌ Error: {e}")
+                logger.error(f"❌ Error: {e}")
                 return False
         
         return False
@@ -177,13 +177,13 @@ class PINAuth:
         try:
             # Validate PIN
             if len(pin) < 4:
-                print("❌ PIN must be at least 4 digits long")
+                logger.error("❌ PIN must be at least 4 digits long")
                 if AUDIT_AVAILABLE:
                     audit_auth_failure("setup", "PIN too short during setup")
                 return False
             
             if not pin.isdigit():
-                print("❌ PIN must contain only numbers")
+                logger.error("❌ PIN must contain only numbers")
                 if AUDIT_AVAILABLE:
                     audit_auth_failure("setup", "Invalid PIN format during setup")
                 return False
@@ -199,7 +199,7 @@ class PINAuth:
             self.salt = salt
             
             logger.info("PIN configured successfully")
-            print("✅ PIN configured successfully!")
+            logger.info("✅ PIN configured successfully!")
             
             # Audit successful PIN setup
             if AUDIT_AVAILABLE:
@@ -212,7 +212,7 @@ class PINAuth:
             
         except Exception as e:
             logger.error(f"Error setting up PIN: {e}")
-            print(f"❌ Error setting up PIN: {e}")
+            logger.error(f"❌ Error setting up PIN: {e}")
             
             if AUDIT_AVAILABLE:
                 audit_security_event(
@@ -278,17 +278,17 @@ class PINAuth:
                 pin1 = getpass.getpass("Enter new PIN: ")
                 
                 if len(pin1) < 4:
-                    print("❌ PIN must be at least 4 digits long")
+                    logger.error("❌ PIN must be at least 4 digits long")
                     continue
                 
                 if not pin1.isdigit():
-                    print("❌ PIN must contain only numbers")
+                    logger.error("❌ PIN must contain only numbers")
                     continue
                 
                 pin2 = getpass.getpass("Confirm PIN: ")
                 
                 if pin1 != pin2:
-                    print("❌ PINs do not match. Please try again.")
+                    logger.error("❌ PINs do not match. Please try again.")
                     continue
                 
                 # Set up the PIN
@@ -296,14 +296,14 @@ class PINAuth:
                     print("\n✅ PIN setup complete! Please restart the assistant.")
                     return True
                 else:
-                    print("❌ Failed to setup PIN. Please try again.")
+                    logger.error("❌ Failed to setup PIN. Please try again.")
                     
             except KeyboardInterrupt:
                 print("\n❌ PIN setup cancelled")
                 return False
             except Exception as e:
                 logger.error(f"Error during PIN setup: {e}")
-                print(f"❌ PIN setup error: {e}")
+                logger.error(f"❌ PIN setup error: {e}")
                 return False
     
     def change_pin(self) -> bool:
@@ -315,7 +315,7 @@ class PINAuth:
         if self.is_pin_configured():
             current_pin = getpass.getpass("Enter current PIN: ")
             if not self.verify_pin(current_pin):
-                print("❌ Current PIN is incorrect")
+                logger.error("❌ Current PIN is incorrect")
                 if AUDIT_AVAILABLE:
                     audit_auth_failure("change_pin", "Invalid current PIN")
                 return False
@@ -355,25 +355,25 @@ def require_pin_auth(skip_auth_arg='--skip-auth'):
         print("🔐 PIN Authentication Required")
         print("-" * 30)
         if not authenticate():
-            print("❌ Authentication failed. Exiting...")
+            logger.error("❌ Authentication failed. Exiting...")
             sys.exit(1)
-        print("✅ Authentication successful!\n")
+        logger.info("✅ Authentication successful!\n")
 
 
 def setup_pin_cli():
     """CLI utility for PIN setup"""
-    print("🔐 YourDaddy Assistant - PIN Setup Utility")
+    print("🔐 Pulsar Assistant - PIN Setup Utility")
     print("=" * 50)
     
     auth = PINAuth()
     
     if auth.is_pin_configured():
-        print("✅ PIN is already configured")
+        logger.info("✅ PIN is already configured")
         choice = input("Do you want to change it? (y/N): ").lower()
         if choice == 'y':
             auth.change_pin()
     else:
-        print("⚠️  No PIN configured. Setting up new PIN...")
+        logger.warning("⚠️  No PIN configured. Setting up new PIN...")
         auth._setup_new_pin()
 
 

@@ -1,7 +1,11 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Flask Blueprints Package
 
-Organized route handlers for the YourDaddy Assistant backend.
+Organized route handlers for the Pulsar Assistant backend.
 Each blueprint handles a specific domain of functionality.
 """
 
@@ -23,78 +27,78 @@ def register_all_blueprints(app, assistant_instance):
     try:
         from . import chat
         app.register_blueprint(chat.create_blueprint(assistant_instance))
-        print("✅ Chat blueprint registered")
+        logger.info("✅ Chat blueprint registered")
     except Exception as e:
-        print(f"⚠️ Chat blueprint registration failed: {e}")
+        logger.warning(f"⚠️ Chat blueprint registration failed: {e}")
     
     try:
         from . import voice
         app.register_blueprint(voice.create_blueprint(assistant_instance))
-        print("✅ Voice blueprint registered")
+        logger.info("✅ Voice blueprint registered")
     except Exception as e:
-        print(f"⚠️ Voice blueprint registration failed: {e}")
+        logger.warning(f"⚠️ Voice blueprint registration failed: {e}")
     
     try:
         from . import apps
         app.register_blueprint(apps.create_blueprint(assistant_instance))
-        print("✅ Apps blueprint registered")
+        logger.info("✅ Apps blueprint registered")
     except Exception as e:
-        print(f"⚠️ Apps blueprint registration failed: {e}")
+        logger.warning(f"⚠️ Apps blueprint registration failed: {e}")
    
     try:
         from . import system
         app.register_blueprint(system.create_blueprint(assistant_instance))
-        print("✅ System blueprint registered")
+        logger.info("✅ System blueprint registered")
     except Exception as e:
-        print(f"⚠️ System blueprint registration failed: {e}")
+        logger.warning(f"⚠️ System blueprint registration failed: {e}")
     
     try:
         from . import auth
         app.register_blueprint(auth.create_blueprint(assistant_instance))
-        print("✅ Auth blueprint registered")
+        logger.info("✅ Auth blueprint registered")
     except Exception as e:
-        print(f"⚠️ Auth blueprint registration failed: {e}")
+        logger.warning(f"⚠️ Auth blueprint registration failed: {e}")
     
     try:
         from . import web
         app.register_blueprint(web.create_blueprint(assistant_instance))
-        print("✅ Web scraping blueprint registered")
+        logger.info("✅ Web scraping blueprint registered")
     except Exception as e:
-        print(f"⚠️ Web scraping blueprint registration failed: {e}")
+        logger.warning(f"⚠️ Web scraping blueprint registration failed: {e}")
     
     try:
         from . import learning
         app.register_blueprint(learning.create_blueprint(assistant_instance))
-        print("✅ Learning blueprint registered")
+        logger.info("✅ Learning blueprint registered")
     except Exception as e:
-        print(f"⚠️ Learning blueprint registration failed: {e}")
+        logger.warning(f"⚠️ Learning blueprint registration failed: {e}")
     
     try:
         from . import multimodal
         app.register_blueprint(multimodal.create_blueprint(assistant_instance))
-        print("✅ Multimodal blueprint registered")
+        logger.info("✅ Multimodal blueprint registered")
     except Exception as e:
-        print(f"⚠️ Multimodal blueprint registration failed: {e}")
+        logger.warning(f"⚠️ Multimodal blueprint registration failed: {e}")
     
     try:
         from . import preferences
         app.register_blueprint(preferences.create_blueprint(assistant_instance))
-        print("✅ Preferences blueprint registered")
+        logger.info("✅ Preferences blueprint registered")
     except Exception as e:
-        print(f"⚠️ Preferences blueprint registration failed: {e}")
+        logger.warning(f"⚠️ Preferences blueprint registration failed: {e}")
     
     try:
         from . import memory
         app.register_blueprint(memory.create_blueprint(assistant_instance))
-        print("✅ Memory & Language blueprint registered")
+        logger.info("✅ Memory & Language blueprint registered")
     except Exception as e:
-        print(f"⚠️ Memory blueprint registration failed: {e}")
+        logger.warning(f"⚠️ Memory blueprint registration failed: {e}")
     
     try:
         from . import utilities
         app.register_blueprint(utilities.create_blueprint(assistant_instance))
-        print("✅ Utilities blueprint registered")
+        logger.info("✅ Utilities blueprint registered")
     except Exception as e:
-        print(f"⚠️ Utilities blueprint registration failed: {e}")
+        logger.warning(f"⚠️ Utilities blueprint registration failed: {e}")
     
     print(f"📋 All blueprints registered successfully")

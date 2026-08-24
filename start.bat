@@ -1,9 +1,9 @@
 @echo off
-TITLE YourDaddy AI Assistant Launcher
+TITLE Pulsar AI Assistant Launcher
 color 0A
 
 echo ===================================================
-echo     Starting YourDaddy AI Assistant
+echo     Starting Pulsar AI Assistant
 echo ===================================================
 echo.
 
@@ -34,7 +34,7 @@ if %ERRORLEVEL% neq 0 (
 
 echo [1/2] Starting Python Backend Server...
 :: Start the backend in a new command window
-start "YourDaddy Backend" cmd /k "cd backend && python modern_web_backend.py"
+start "Pulsar Backend" cmd /k "cd backend && python modern_web_backend.py"
 
 echo [2/2] Starting React Frontend...
 cd frontend\web-app
@@ -45,7 +45,7 @@ if not exist "node_modules\" (
 )
 
 :: Start the frontend in a new command window
-start "YourDaddy Frontend" cmd /k "npm run dev"
+start "Pulsar Frontend" cmd /k "npm run dev"
 
 echo.
 echo ===================================================

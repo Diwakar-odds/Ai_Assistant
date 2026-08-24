@@ -175,10 +175,10 @@ See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for cloud deployment options.
 npm install -g react-native-cli
 
 # Create new app
-npx react-native init YourDaddyAssistant
+npx react-native init PulsarAssistant
 
 # Install dependencies
-cd YourDaddyAssistant
+cd PulsarAssistant
 npm install axios socket.io-client react-native-voice
 ```
 
@@ -209,7 +209,7 @@ export const sendVoiceCommand = async (audioBlob) => {
 # Download from: https://flutter.dev
 
 # Create new app
-flutter create yourdaddy_assistant
+flutter create pulsar_assistant
 
 # Add dependencies to pubspec.yaml:
 # - http: ^0.13.5

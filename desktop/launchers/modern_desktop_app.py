@@ -99,7 +99,7 @@ def check_server_and_redirect(window):
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Error Loading YourDaddy AI</title>
+        <title>Error Loading Pulsar AI</title>
         <style>
             body { background: #16181D; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: sans-serif; }
         </style>
@@ -118,7 +118,7 @@ def main():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Loading YourDaddy AI...</title>
+        <title>Loading Pulsar AI...</title>
         <style>
             body { background: #16181D; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: sans-serif; }
             .loader { border: 4px solid rgba(255,255,255,0.1); border-left-color: #3B82F6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 20px; }
@@ -144,7 +144,7 @@ def main():
 
     # We now serve the frontend via Flask on port 5000
     print("Opening native window with loading screen...")
-    window = webview.create_window('YourDaddy AI Assistant', html=loading_html, width=1280, height=800, min_size=(800, 600))
+    window = webview.create_window('Pulsar AI Assistant', html=loading_html, width=1280, height=800, min_size=(800, 600))
     
     # Start the polling thread to redirect the window once the server is ready
     import threading

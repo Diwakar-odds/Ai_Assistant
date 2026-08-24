@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Abstract VLM Provider Interface
 
@@ -77,7 +81,7 @@ class VLMResponse:
             
             return None
         except Exception as e:
-            print(f"Error extracting JSON: {e}")
+            logger.error(f"Error extracting JSON: {e}")
             return None
 
 

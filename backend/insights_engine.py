@@ -1,5 +1,5 @@
 """
-Insights Engine for YourDaddy AI Assistant
+Insights Engine for Pulsar AI Assistant
 Aggregates data from various sources to provide proactive intelligence.
 """
 

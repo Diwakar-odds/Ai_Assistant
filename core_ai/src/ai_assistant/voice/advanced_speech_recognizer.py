@@ -277,4 +277,4 @@ def get_advanced_speech_recognizer(
 # Example usage
 if __name__ == "__main__":
     recognizer = get_advanced_speech_recognizer()
-    print("✅ Advanced Speech Recognizer initialized")
+    logger.info("✅ Advanced Speech Recognizer initialized")

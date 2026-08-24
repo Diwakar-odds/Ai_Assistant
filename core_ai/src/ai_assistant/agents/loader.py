@@ -178,7 +178,7 @@ class AgentLoader:
             factory=lambda: AgentLoader._load_autonomous()
         )
 
-        print("✅ Registered 14 Agent Definitions (Lazy Load)")
+        logger.info("✅ Registered 14 Agent Definitions (Lazy Load)")
 
     # --- Lazy Factories ---
 

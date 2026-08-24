@@ -1,5 +1,5 @@
 """
-User Preferences Management for YourDaddy AI Assistant
+User Preferences Management for Pulsar AI Assistant
 Handles saving and loading user customization settings
 """
 

@@ -1,6 +1,6 @@
 ---
 name: Question
-about: Ask a question about YourDaddy Assistant
+about: Ask a question about Pulsar Assistant
 title: '[QUESTION] '
 labels: ['question', 'help-wanted']
 assignees: ''
@@ -8,7 +8,7 @@ assignees: ''
 ---
 
 ## ❓ Question
-What would you like to know about YourDaddy Assistant?
+What would you like to know about Pulsar Assistant?
 
 ## 📋 Category
 What is your question about?
@@ -28,7 +28,7 @@ What is your question about?
 **Your setup:**
 - OS: [e.g. Windows 10, macOS, Linux]
 - Python Version: [e.g. 3.9.7]
-- YourDaddy Assistant Version: [e.g. 3.1.0]
+- Pulsar Assistant Version: [e.g. 3.1.0]
 
 ## 🔍 What you've already tried
 Please describe what you've already tried or looked for:

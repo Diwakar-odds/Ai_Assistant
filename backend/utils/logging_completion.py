@@ -287,7 +287,7 @@ def create_logging_utilities():
     # Create log viewer script
     log_viewer_script = '''#!/usr/bin/env python3
 """
-Log Viewer Utility for YourDaddy Assistant
+Log Viewer Utility for Pulsar Assistant
 ==========================================
 
 Usage:
@@ -306,7 +306,7 @@ from datetime import datetime
 import argparse
 
 def main():
-    parser = argparse.ArgumentParser(description='View YourDaddy Assistant logs')
+    parser = argparse.ArgumentParser(description='View Pulsar Assistant logs')
     parser.add_argument('category', nargs='?', default='app', 
                        help='Log category to view (app, modules, backend, etc.)')
     parser.add_argument('--tail', '-t', action='store_true',
@@ -342,7 +342,7 @@ def main():
     except KeyboardInterrupt:
         print("\\nStopped")
     except Exception as e:
-        print(f"Error reading log file: {e}")
+        logger.error(f"Error reading log file: {e}")
 
 if __name__ == "__main__":
     main()
@@ -373,7 +373,7 @@ def main():
     
     # Print summary
     print("\\n" + "="*80)
-    print("🎯 LOGGING SYSTEM COMPLETION SUMMARY")
+    logger.info("🎯 LOGGING SYSTEM COMPLETION SUMMARY")
     print("="*80)
     
     print(f"📊 Validation Results:")

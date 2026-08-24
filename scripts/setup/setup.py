@@ -1,6 +1,6 @@
 !/usr/bin/env python3
 """
-YourDaddy Assistant - Unified Setup Script
+Pulsar Assistant - Unified Setup Script
 Installs and configures all features including multimodal AI, multilingual support, and core dependencies.
 """
 
@@ -69,7 +69,7 @@ class SetupManager:
     
     def show_menu(self):
         """Show feature selection menu"""
-        print("🎯 YourDaddy Assistant Setup - Feature Selection")
+        print("🎯 Pulsar Assistant Setup - Feature Selection")
         print("=" * 60)
         print("Select which features you want to install:")
         print()
@@ -321,7 +321,7 @@ class SetupManager:
         
         # Create .env file if it doesn't exist
         if not Path(".env").exists():
-            env_content = f"""# YourDaddy Assistant Configuration
+            env_content = f"""# Pulsar Assistant Configuration
 # Backend Mode: simple, enhanced, full
 BACKEND_MODE={'full' if self.features['multimodal'] else 'enhanced' if self.features['multilingual'] else 'simple'}
 
@@ -413,9 +413,9 @@ ADMIN_PASSWORD=changeme123
 
 def main():
     """Main setup function"""
-    print("🎯 YourDaddy Assistant - Unified Setup")
+    print("🎯 Pulsar Assistant - Unified Setup")
     print("=" * 60)
-    print("Welcome to the YourDaddy Assistant setup wizard!")
+    print("Welcome to the Pulsar Assistant setup wizard!")
     print("This will install all necessary dependencies for your chosen features.")
     print()
     

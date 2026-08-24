@@ -12,7 +12,7 @@ def test_context_optimizer():
     profile = co.get_current_profile()
     assert 'time_context' in profile
     assert profile['time_context'] in ['work', 'home', 'night']
-    print("✅ ContextOptimizer working correctly.")
+    logger.info("✅ ContextOptimizer working correctly.")
 
 def test_intent_recognizer():
     from ai_assistant.ai.intent_recognizer import IntentRecognizer
@@ -21,9 +21,9 @@ def test_intent_recognizer():
     try:
         res = ir.analyze_sentiment("I am so stressed out right now")
         assert res in ['frustrated', 'neutral', 'happy']
-        print("✅ IntentRecognizer sentiment analysis working correctly.")
+        logger.info("✅ IntentRecognizer sentiment analysis working correctly.")
     except Exception as e:
-        print(f"⚠️ IntentRecognizer warning: {e}")
+        logger.warning(f"⚠️ IntentRecognizer warning: {e}")
 
 if __name__ == "__main__":
     print("Running Personalization Tests...")

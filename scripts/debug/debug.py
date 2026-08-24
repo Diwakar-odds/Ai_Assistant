@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-YourDaddy Assistant - Unified Debug Tool
+Pulsar Assistant - Unified Debug Tool
 Debug and test various components of the assistant system
 """
 
@@ -50,7 +50,7 @@ class DebugManager:
     
     def show_main_menu(self):
         """Show main debug menu"""
-        print("🐛 YourDaddy Assistant - Debug Tool")
+        print("🐛 Pulsar Assistant - Debug Tool")
         print("=" * 50)
         print()
         print("Available debug options:")
@@ -475,7 +475,7 @@ class DebugManager:
 
 def main():
     """Main debug function"""
-    print("🐛 YourDaddy Assistant Debug Tool")
+    print("🐛 Pulsar Assistant Debug Tool")
     print("=" * 50)
     
     if len(sys.argv) > 1:

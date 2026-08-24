@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 """
 Model Context Protocol (MCP) Client Integration
 
@@ -438,7 +442,7 @@ if __name__ == "__main__":
         client = MCPClient()
         
         if not client.available:
-            print("❌ MCP not available. Install with: pip install mcp")
+            logger.error("❌ MCP not available. Install with: pip install mcp")
             return
         
         # Example: Connect to filesystem server (if available)
@@ -464,7 +468,7 @@ if __name__ == "__main__":
                 "read_file",
                 {"path": "README.md"}
             )
-            print(f"✅ Read result: {result}")
+            logger.info(f"✅ Read result: {result}")
         """
         
         print("\n✅ MCP Client test complete")

@@ -1,4 +1,4 @@
-# PIN Authentication System for YourDaddy AI Assistant
+# PIN Authentication System for Pulsar AI Assistant
 
 Your AI Assistant now features a secure PIN authentication system that replaces traditional login pages. This system requires a PIN to be entered every time the assistant starts, providing better security and a simpler authentication experience.
 

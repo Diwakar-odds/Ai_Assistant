@@ -190,4 +190,3 @@ def get_chain_history():
         return jsonify({"chains": history})
         
     except Exception as e:
-        return jsonify({"error": str(e)}), 500

@@ -1,7 +1,7 @@
-/* Service Worker for YourDaddy AI React App */
+/* Service Worker for Pulsar AI React App */
 
 const CACHE_VERSION = 'v1.0.0';
-const CACHE_NAME = `yourdaddy-ai-${CACHE_VERSION}`;
+const CACHE_NAME = `pulsar-ai-${CACHE_VERSION}`;
 
 const PRECACHE_URLS = [
   '/',

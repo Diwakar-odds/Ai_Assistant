@@ -1,6 +1,6 @@
 ﻿#!/usr/bin/env python3
 """
-YourDaddy Assistant - Unified Main Application
+Pulsar Assistant - Unified Main Application
 Entry point that includes system checks, configuration, and application startup
 """
 
@@ -30,7 +30,7 @@ except ImportError:
 
 def show_help():
     """Show help information"""
-    print("ðŸ¤– YourDaddy Assistant v3.1 - Usage Guide")
+    print("ðŸ¤– Pulsar Assistant v3.1 - Usage Guide")
     print("=" * 50)
     print()
     print("Usage: python app.py [mode] [options]")
@@ -92,8 +92,8 @@ def start_gui_app():
     try:
         logger.info("ðŸ–¥ï¸ Starting GUI application")
         
-        from yourdaddy_app import YourDaddyAssistant
-        assistant = YourDaddyAssistant()
+        from pulsar_app import PulsarAssistant
+        assistant = PulsarAssistant()
         assistant.run()
         
     except ImportError:
@@ -126,7 +126,7 @@ def start_cli_app():
             from ai_assistant.ai.conversational_ai import AdvancedConversationalAI
             ai = AdvancedConversationalAI()
             
-            print("\nðŸ¤– YourDaddy Assistant CLI")
+            print("\nðŸ¤– Pulsar Assistant CLI")
             if learning_active:
                 print("ðŸ§  Learning Mode: ACTIVE")
             print("Type 'quit', 'exit', or Ctrl+C to stop\n")
@@ -179,7 +179,7 @@ def start_cli_app():
         
         except ImportError:
             # Fallback simple CLI
-            print("\nðŸ¤– YourDaddy Assistant - Simple CLI")
+            print("\nðŸ¤– Pulsar Assistant - Simple CLI")
             print("(Advanced AI not available)")
             print("Type 'quit' to exit\n")
             
@@ -257,7 +257,7 @@ def run_tests():
 
 def main():
     """Main application entry point"""
-    parser = argparse.ArgumentParser(description='YourDaddy Assistant v3.1')
+    parser = argparse.ArgumentParser(description='Pulsar Assistant v3.1')
     parser.add_argument('mode', nargs='?', default='gui', 
                        choices=['gui', 'cli', 'web', 'check', 'setup', 'test', 'help'],
                        help='Application mode')
@@ -304,7 +304,7 @@ def main():
         logger.setLevel(logging.DEBUG)
         os.environ['DEBUG'] = 'true'
     
-    print("ðŸ¤– YourDaddy Assistant v3.1")
+    print("ðŸ¤– Pulsar Assistant v3.1")
     print("=" * 40)
     
     # Run system checks (unless skipped)

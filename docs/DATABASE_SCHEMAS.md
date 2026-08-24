@@ -1,6 +1,6 @@
 # Database Schema Documentation
 
-This document describes the database schemas used in the YourDaddy AI Assistant project.
+This document describes the database schemas used in the Pulsar AI Assistant project.
 
 ## Database Files
 

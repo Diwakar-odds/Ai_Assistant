@@ -77,7 +77,7 @@ def api_command():
 
 if __name__ == '__main__':
     print("=" * 60)
-    print("🚀 YourDaddy Assistant - Simple React UI Server")
+    print("🚀 Pulsar Assistant - Simple React UI Server")
     print("=" * 60)
     print("🌐 Server starting on: http://localhost:5000")
     print("📱 React frontend (Bolt UI) will be served")

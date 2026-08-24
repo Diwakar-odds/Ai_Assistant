@@ -2,7 +2,7 @@
 
 ## Overview
 
-YourDaddy AI Assistant now uses `.env` files for configuration instead of `api_keys.json`. This provides:
+Pulsar AI Assistant now uses `.env` files for configuration instead of `api_keys.json`. This provides:
 - ✅ Better security (`.env` is gitignored by default)
 - ✅ Standard industry practice
 - ✅ Easier deployment across environments

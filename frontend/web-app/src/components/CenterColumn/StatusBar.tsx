@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Wifi, Bell, Battery, Mic } from 'lucide-react';
+import { Wifi, Bell, Battery, Mic, Terminal } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
 
@@ -7,7 +7,7 @@ const StatusBar = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [batteryLevel, setBatteryLevel] = useState<number>(0);
   const [isCharging, setIsCharging] = useState(false);
-  const { isVoiceActive, isConnected } = useDashboard();
+  const { isVoiceActive, isConnected, setSelectedView } = useDashboard();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -84,7 +84,16 @@ const StatusBar = () => {
     >
       <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
         <motion.div
-          className="relative"
+          className="relative cursor-pointer"
+          whileHover={{ scale: 1.1 }}
+          onClick={() => setSelectedView('dashboard')}
+          title="System Logs & Dashboard"
+        >
+          <Terminal className="w-4 h-4 sm:w-4 sm:h-4 text-[#9CA3AF] hover:text-[#00f3ff] transition-colors" strokeWidth={1.5} />
+        </motion.div>
+
+        <motion.div
+          className="relative cursor-pointer"
           whileHover={{ scale: 1.1 }}
         >
           <Bell className="w-4 h-4 sm:w-4 sm:h-4 text-[#9CA3AF] hover:text-white transition-colors" strokeWidth={1.5} />

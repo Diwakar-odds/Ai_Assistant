@@ -15,25 +15,25 @@ class PrintToLoggerConverter:
         self.project_root = Path(project_root)
         self.conversion_map = {
             # Error/warning patterns
-            r'print\(f?"❌.*?\)': ('logger.error', 'ERROR'),
-            r'print\(f?"⚠️.*?\)': ('logger.warning', 'WARNING'),
-            r'print\(f?"ERROR.*?\)': ('logger.error', 'ERROR'),
-            r'print\(f?"Warning.*?\)': ('logger.warning', 'WARNING'),
-            r'print\(f?"FAILED.*?\)': ('logger.error', 'ERROR'),
+            r'logger.info((f?"❌.*?\))': ('logger.error', 'ERROR'),
+            r'logger.info((f?"⚠️.*?\))': ('logger.warning', 'WARNING'),
+            r'logger.error((f?"ERROR.*?\))': ('logger.error', 'ERROR'),
+            r'logger.warning((f?"Warning.*?\))': ('logger.warning', 'WARNING'),
+            r'logger.error((f?"FAILED.*?\))': ('logger.error', 'ERROR'),
             
             # Success patterns
-            r'print\(f?"✅.*?\)': ('logger.info', 'INFO'),
-            r'print\(f?"OK.*?\)': ('logger.info', 'INFO'),
-            r'print\(f?"SUCCESS.*?\)': ('logger.info', 'INFO'),
+            r'logger.info((f?"✅.*?\))': ('logger.info', 'INFO'),
+            r'logger.info((f?"OK.*?\))': ('logger.info', 'INFO'),
+            r'logger.info((f?"SUCCESS.*?\))': ('logger.info', 'INFO'),
             
             # Info patterns
-            r'print\(f?"🔍.*?\)': ('logger.info', 'INFO'),
-            r'print\(f?"📁.*?\)': ('logger.info', 'INFO'),
-            r'print\(f?"🎯.*?\)': ('logger.info', 'INFO'),
+            r'logger.info((f?"🔍.*?\))': ('logger.info', 'INFO'),
+            r'logger.info((f?"📁.*?\))': ('logger.info', 'INFO'),
+            r'logger.info((f?"🎯.*?\))': ('logger.info', 'INFO'),
             
             # Debug patterns (for testing/development files)
-            r'print\(f?"Test.*?\)': ('logger.debug', 'DEBUG'),
-            r'print\(f?"Debug.*?\)': ('logger.debug', 'DEBUG'),
+            r'logger.debug((f?"Test.*?\))': ('logger.debug', 'DEBUG'),
+            r'logger.debug((f?"Debug.*?\))': ('logger.debug', 'DEBUG'),
         }
         
         self.files_updated = []
@@ -50,7 +50,7 @@ class PrintToLoggerConverter:
             if self._convert_file(py_file):
                 self.files_updated.append(py_file)
         
-        print(f"✅ Conversion complete!")
+        logger.info(f"✅ Conversion complete!")
         print(f"   Files updated: {len(self.files_updated)}")
         print(f"   Total conversions: {self.total_conversions}")
         

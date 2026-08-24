@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-YourDaddy Assistant Launcher
+Pulsar Assistant Launcher
 Professional startup script with comprehensive error handling and system checks
 """
 
@@ -172,7 +172,7 @@ class SystemChecker:
         
         # Print summary
         print("\n" + "="*60)
-        print("🤖 YourDaddy Assistant - System Check Results")
+        print("🤖 Pulsar Assistant - System Check Results")
         print("="*60)
         
         if self.errors:
@@ -283,17 +283,17 @@ def download_voice_models():
             logger.error(f"Failed to download {model['name']} model: {e}")
 
 def start_assistant():
-    """Start the YourDaddy Assistant"""
-    logger.info("🚀 Starting YourDaddy Assistant...")
+    """Start the Pulsar Assistant"""
+    logger.info("🚀 Starting Pulsar Assistant...")
     
     try:
         # Import and start the assistant
-        from yourdaddy_app import YourDaddyAssistant
+        from pulsar_app import PulsarAssistant
         
-        assistant = YourDaddyAssistant()
+        assistant = PulsarAssistant()
         
         logger.info("✅ Assistant initialized successfully")
-        logger.info("🎉 YourDaddy Assistant is ready!")
+        logger.info("🎉 Pulsar Assistant is ready!")
         
         # Start the assistant
         assistant.run()
@@ -309,7 +309,7 @@ def start_assistant():
 
 def main():
     """Main launcher function"""
-    print("🤖 YourDaddy Assistant v3.1 - Professional AI Assistant")
+    print("🤖 Pulsar Assistant v3.1 - Professional AI Assistant")
     print("=" * 60)
     
     # System check
@@ -338,7 +338,7 @@ def main():
             logger.warning(f"Failed to download models: {e}")
     
     # Start the assistant
-    print("\n🚀 Launching YourDaddy Assistant...")
+    print("\n🚀 Launching Pulsar Assistant...")
     return start_assistant()
 
 if __name__ == "__main__":

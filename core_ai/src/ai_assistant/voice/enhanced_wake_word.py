@@ -1,3 +1,7 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 #!/usr/bin/env python3
 """
 Enhanced wake word detection with fuzzy matching

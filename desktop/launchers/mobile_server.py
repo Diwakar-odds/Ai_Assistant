@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Mobile-Optimized Server for YourDaddy AI Assistant
+Mobile-Optimized Server for Pulsar AI Assistant
 Provides easy access for phones with automatic network detection
 """
 
@@ -43,7 +43,7 @@ def print_access_info(host, port, https=False):
     local_ip = get_local_ip()
     
     print("\n" + "="*60)
-    print("🚀 YourDaddy AI Assistant - Mobile Server Started!")
+    print("🚀 Pulsar AI Assistant - Mobile Server Started!")
     print("="*60)
     print(f"\n📱 Access from your phone:\n")
     print(f"   Local Network:  {protocol}://{local_ip}:{port}")
@@ -113,7 +113,7 @@ def start_ngrok(port):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Mobile-optimized server for YourDaddy AI Assistant"
+        description="Mobile-optimized server for Pulsar AI Assistant"
     )
     parser.add_argument(
         "--host", 

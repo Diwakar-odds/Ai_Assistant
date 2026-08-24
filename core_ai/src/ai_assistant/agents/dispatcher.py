@@ -5,7 +5,8 @@ and launches the workflow via the launcher agent.
 """
 
 from typing import Dict, Any, Optional
-from src.ai_assistant.nlp.intent_extractor import IntentExtractor, IntentResult
+from src.ai_assistant.nlp.intent_extractor import IntentResult
+from src.ai_assistant.nlp.unified_intent_classifier import UnifiedIntentClassifier
 from src.ai_assistant.workflow.intent_registry import intent_registry
 from src.ai_assistant.agents.launcher import LauncherAgent
 from src.ai_assistant.automation.task_scheduler import TaskScheduler, ScheduleType
@@ -19,7 +20,7 @@ class Dispatcher:
     """
 
     def __init__(self):
-        self.intent_extractor = IntentExtractor()
+        self.intent_extractor = UnifiedIntentClassifier()
         self.launcher = LauncherAgent()
         self.scheduler = TaskScheduler()
         logger.info("Dispatcher initialized")
@@ -37,7 +38,7 @@ class Dispatcher:
         logger.info(f"Processing user input: {user_input}")
         
         # Extract intent and entities
-        extraction_result = self.intent_extractor.extract(user_input)
+        extraction_result = self.intent_extractor.classify(user_input)
         intent = extraction_result.intent
         entities = extraction_result.entities
         confidence = extraction_result.confidence

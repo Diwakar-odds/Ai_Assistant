@@ -183,7 +183,7 @@ def handle_connect():
     print(f"Client connected: {request.sid}")
     
     emit('connected', {
-        'message': 'Connected to YourDaddy Assistant',
+        'message': 'Connected to Pulsar Assistant',
         'timestamp': datetime.now().isoformat()
     })
     

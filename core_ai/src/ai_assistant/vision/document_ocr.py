@@ -1,4 +1,4 @@
-# Document Analysis and OCR Module for YourDaddy Assistant
+# Document Analysis and OCR Module for Pulsar Assistant
 """
 Advanced document analysis and optical character recognition:
 - Text extraction from images and PDFs

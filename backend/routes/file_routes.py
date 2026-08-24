@@ -273,4 +273,3 @@ def api_extract_key_information():
     
     except Exception as e:
         logger.error(f"Information extraction error: {e}")
-        return jsonify({"success": False, "error": str(e)}), 500

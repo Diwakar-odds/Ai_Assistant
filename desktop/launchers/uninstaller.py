@@ -8,14 +8,14 @@ import sys
 class UninstallWizard(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("YourDaddy Assistant - Uninstall")
+        self.title("Pulsar Assistant - Uninstall")
         self.geometry("450x300")
         self.resizable(False, False)
         
         # Determine install directory
         local_app_data = Path(os.environ.get('LOCALAPPDATA', os.path.expanduser('~')))
-        self.install_dir = local_app_data / "YourDaddy_Assistant"
-        self.desktop_shortcut = Path(os.path.expanduser("~/Desktop")) / "YourDaddy Assistant.lnk"
+        self.install_dir = local_app_data / "Pulsar_Assistant"
+        self.desktop_shortcut = Path(os.path.expanduser("~/Desktop")) / "Pulsar Assistant.lnk"
         
         # Configure style
         style = ttk.Style(self)
@@ -31,11 +31,11 @@ class UninstallWizard(tk.Tk):
         self.main_frame = ttk.Frame(self)
         self.main_frame.pack(fill="both", expand=True, padx=30, pady=20)
         
-        ttk.Label(self.main_frame, text="Uninstall YourDaddy Assistant", style='Header.TLabel').pack(pady=(10, 20))
+        ttk.Label(self.main_frame, text="Uninstall Pulsar Assistant", style='Header.TLabel').pack(pady=(10, 20))
         
         ttk.Label(
             self.main_frame,
-            text="This will completely remove YourDaddy Assistant from your computer,\n"
+            text="This will completely remove Pulsar Assistant from your computer,\n"
                  "including the application files and Desktop shortcut.\n\n"
                  "Your personal data in the Knowledge Graph will also be deleted.",
             justify="center", wraplength=400
@@ -62,7 +62,7 @@ class UninstallWizard(tk.Tk):
     def start_uninstall(self):
         confirm = messagebox.askyesno(
             "Confirm Uninstall",
-            "Are you sure you want to completely remove YourDaddy Assistant?\n\n"
+            "Are you sure you want to completely remove Pulsar Assistant?\n\n"
             "This action cannot be undone."
         )
         if not confirm:
@@ -102,7 +102,7 @@ class UninstallWizard(tk.Tk):
         
         messagebox.showinfo(
             "Uninstall Complete",
-            "YourDaddy Assistant has been successfully removed from your computer."
+            "Pulsar Assistant has been successfully removed from your computer."
         )
         self.destroy()
     
@@ -118,7 +118,7 @@ class UninstallWizard(tk.Tk):
         """Remove Add/Remove Programs entry"""
         try:
             import winreg
-            key_path = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\YourDaddyAssistant"
+            key_path = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\PulsarAssistant"
             winreg.DeleteKey(winreg.HKEY_CURRENT_USER, key_path)
         except FileNotFoundError:
             pass  # Key doesn't exist, nothing to clean

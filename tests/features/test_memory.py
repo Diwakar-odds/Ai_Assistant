@@ -82,7 +82,7 @@ class TestMemoryModule(unittest.TestCase):
     def test_save_to_memory(self):
         """Test saving conversations to memory."""
         memory.save_to_memory("User", "Hello, how are you?")
-        memory.save_to_memory("YourDaddy", "I'm doing well, thank you!")
+        memory.save_to_memory("Pulsar", "I'm doing well, thank you!")
         
         # Verify data was saved
         with memory.get_db_connection() as conn:
@@ -114,7 +114,7 @@ class TestMemoryModule(unittest.TestCase):
         import time
         memory.save_to_memory("User", "First message")
         time.sleep(1)
-        memory.save_to_memory("YourDaddy", "First response")
+        memory.save_to_memory("Pulsar", "First response")
         time.sleep(1)
         memory.save_to_memory("User", "Second message")
         
@@ -125,7 +125,7 @@ class TestMemoryModule(unittest.TestCase):
     def test_search_memory(self):
         """Test searching through memory."""
         memory.save_to_memory("User", "Can you help me with Python?")
-        memory.save_to_memory("YourDaddy", "Sure! What do you need help with?")
+        memory.save_to_memory("Pulsar", "Sure! What do you need help with?")
         memory.save_to_memory("User", "I need to learn about lists")
         
         result = memory.search_memory("Python", limit=5)
@@ -185,7 +185,7 @@ class TestMemoryModule(unittest.TestCase):
         today = datetime.datetime.utcnow().strftime("%Y-%m-%d")
         
         memory.save_to_memory("User", "Test message 1")
-        memory.save_to_memory("YourDaddy", "Test response 1")
+        memory.save_to_memory("Pulsar", "Test response 1")
         
         result = memory.get_conversation_summary(today)
         self.assertIn("SUMMARY", result)

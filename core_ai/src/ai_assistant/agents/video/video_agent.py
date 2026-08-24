@@ -195,7 +195,7 @@ class VideoAgent(BaseAgent):
             # Or we return error. Let's return error but allow "notepad" for testing
             if "notepad" not in app_name.lower() and "premiere" not in app_name.lower():
                  return TaskResult(success=False, error=f"Could not find or focus window: {app_name}")
-            print(f"Warning: Could not focus {app_name}, proceeding blindly or creating new if possible not implemented.")
+            logger.warning(f"Warning: Could not focus {app_name}, proceeding blindly or creating new if possible not implemented.")
         
         # 2. Execute Action
         if action:
@@ -215,7 +215,7 @@ class VideoAgent(BaseAgent):
         if verify_flag:
             state_verified = self.verifier.verify_state(f"after_{action}", app_name)
             if not state_verified:
-                 print("Warning: Visual verification failed.")
+                 logger.warning("Warning: Visual verification failed.")
             
         return TaskResult(success=True, data={"message": f"Executed action '{action}' on '{app_name}'"})
 

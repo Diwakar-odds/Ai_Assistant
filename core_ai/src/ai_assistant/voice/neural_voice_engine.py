@@ -1,5 +1,5 @@
 """
-Neural Voice Engine for YourDaddy AI Assistant
+Neural Voice Engine for Pulsar AI Assistant
 Provides high-quality neural voice synthesis using KittenTTS (primary, offline) and Edge-TTS (fallback, online).
 """
 import asyncio

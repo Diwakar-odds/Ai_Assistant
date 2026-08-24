@@ -1,6 +1,6 @@
 {
-  "name": "YourDaddy AI Assistant",
-  "short_name": "YourDaddy AI",
+  "name": "Pulsar AI Assistant",
+  "short_name": "Pulsar AI",
   "description": "Advanced AI Assistant with voice, automation, and multimodal capabilities",
   "start_url": "/",
   "display": "standalone",

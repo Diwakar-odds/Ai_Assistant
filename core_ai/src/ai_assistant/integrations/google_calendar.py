@@ -1,7 +1,11 @@
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
 # Google Calendar Integration Module
 """
 Google Calendar integration for scheduling and event management
-in the YourDaddy AI Assistant.
+in the Pulsar AI Assistant.
 
 Provides:
 - OAuth2 authentication with Google Calendar API
@@ -25,7 +29,7 @@ try:
     GOOGLE_CALENDAR_AVAILABLE = True
 except ImportError:
     GOOGLE_CALENDAR_AVAILABLE = False
-    # print("WARNING: Google Calendar dependencies not found. Calendar features will be disabled.")
+    # logger.warning("WARNING: Google Calendar dependencies not found. Calendar features will be disabled.")
     pass
 
 # Calendar scope for read/write access
@@ -127,7 +131,7 @@ class CalendarManager:
    - Go to "APIs & Services" > "Credentials"
    - Click "Create Credentials" > "OAuth client ID"
    - Choose "Desktop app" as application type
-   - Give it a name (e.g., "YourDaddy Assistant")
+   - Give it a name (e.g., "Pulsar Assistant")
 5. Download the credentials:
    - Click the download button (⬇️) next to your OAuth client
    - Save as 'credentials.json' in the project root folder

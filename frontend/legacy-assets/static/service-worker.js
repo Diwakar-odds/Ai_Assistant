@@ -1,10 +1,10 @@
 /**
- * Service Worker for YourDaddy AI Assistant PWA
+ * Service Worker for Pulsar AI Assistant PWA
  * Handles offline caching, background sync, and push notifications
  */
 
 const CACHE_VERSION = 'v1.0.0';
-const CACHE_NAME = `yourdaddy-ai-${CACHE_VERSION}`;
+const CACHE_NAME = `pulsar-ai-${CACHE_VERSION}`;
 
 // Assets to cache immediately on install
 const PRECACHE_URLS = [
@@ -260,7 +260,7 @@ self.addEventListener('push', (event) => {
   console.log('[SW] Push notification received');
   
   const data = event.data ? event.data.json() : {};
-  const title = data.title || 'YourDaddy AI';
+  const title = data.title || 'Pulsar AI';
   const options = {
     body: data.body || 'You have a new notification',
     icon: '/static/icons/icon-192x192.png',

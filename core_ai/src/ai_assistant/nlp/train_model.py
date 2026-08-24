@@ -10,7 +10,7 @@ def main():
     # 1. Load Dataset
     data_path = os.path.join(os.path.dirname(__file__), "commands_dataset.csv")
     if not os.path.exists(data_path):
-        print(f"Error: Dataset not found at {data_path}. Run generate_dataset.py first.")
+        logger.error(f"Error: Dataset not found at {data_path}. Run generate_dataset.py first.")
         return
 
     df = pd.read_csv(data_path)

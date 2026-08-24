@@ -1,4 +1,8 @@
-# Music Control Module for YourDaddy Assistant
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
+# Music Control Module for Pulsar Assistant
 """
 Advanced music control functionality supporting:
 - Spotify integration with OAuth authentication
@@ -27,7 +31,7 @@ try:
     SPOTIPY_AVAILABLE = True
 except ImportError:
     SPOTIPY_AVAILABLE = False
-    print("WARNING: spotipy not installed. Spotify features will be disabled.")
+    logger.warning("WARNING: spotipy not installed. Spotify features will be disabled.")
     print("Install with: pip install spotipy")
 
 try:
@@ -35,7 +39,7 @@ try:
     YTMUSIC_AVAILABLE = True
 except ImportError:
     YTMUSIC_AVAILABLE = False
-    print("WARNING: ytmusicapi not installed. YouTube Music features will be disabled.")
+    logger.warning("WARNING: ytmusicapi not installed. YouTube Music features will be disabled.")
     print("Install with: pip install ytmusicapi")
 
 class SpotifyController:
@@ -70,7 +74,7 @@ class SpotifyController:
         ])
         
         # Cache path for token storage
-        self.cache_path = Path.home() / ".yourdaddy" / ".spotify_cache"
+        self.cache_path = Path.home() / ".pulsar" / ".spotify_cache"
         self.sp = None
         self._initialized = True
         
@@ -169,7 +173,7 @@ class YouTubeMusicController:
             return
             
         self.ytmusic = None
-        self.auth_file = Path.home() / ".yourdaddy" / "ytmusic_oauth.json"
+        self.auth_file = Path.home() / ".pulsar" / "ytmusic_oauth.json"
         self._initialized = True
         
     def setup_ytmusic_auth(self) -> str:

@@ -70,28 +70,9 @@ def api_chat():
             # Continue to normal processing
         # === END: Multi-step Orchestration ===
         
-        # Check if user wants to use local AI
-        use_local_ai = data.get('use_local_ai', False) or data.get('offline_mode', False)
-        
-        if use_local_ai and local_ai_initialized and local_ai_manager:
-            # Use local Ollama model
-            try:
-                logger.info(f"Using local AI for: {message[:50]}...")
-                local_response = local_ai_manager.chat(message, max_tokens=512)
-                
-                return jsonify({
-                    "message": message,
-                    "response": local_response,
-                    "features_used": ["local_ai", "ollama"],
-                    "model": local_ai_manager.current_model,
-                    "suggestions": [],
-                    "mood": "neutral",
-                    "user": current_user,
-                    "timestamp": datetime.now().isoformat()
-                })
-            except Exception as local_error:
-                logger.error(f"Local AI error: {local_error}, falling back to cloud")
-                # Fall through to cloud AI below
+        # Extract preferences
+        model_preference = data.get('model')
+        provider_preference = data.get('provider')
         
         # Apply learning-enhanced response generation
         try:
@@ -104,10 +85,13 @@ def api_chat():
         except Exception as e:
             logger.warning(f"Learning enhancement skipped: {e}")
         
-        # Try cloud AI (Gemini) first, fallback to local if it fails
         try:
-            # Process with full AI capabilities (Gemini)
-            response = assistant.process_enhanced_chat(message, context, image_data)
+            # Process with full AI capabilities
+            response = assistant.process_enhanced_chat(
+                message, context, image_data,
+                model_preference=model_preference,
+                provider_preference=provider_preference
+            )
             
             return jsonify({
                 "message": message,
@@ -116,34 +100,23 @@ def api_chat():
                 "suggestions": response.get("suggestions", []),
                 "mood": response.get("mood", "neutral"),
                 "context_id": response.get("context_id"),
+                "provider": response.get("provider"),
+                "model": response.get("model"),
                 "user": current_user,
                 "timestamp": datetime.now().isoformat()
             })
-        except Exception as cloud_error:
-            # If Gemini fails (quota, network, etc.) and local AI is available, use it
-            if local_ai_initialized and local_ai_manager:
-                logger.warning(f"Cloud AI failed ({str(cloud_error)[:100]}), using local AI fallback")
-                try:
-                    local_response = local_ai_manager.chat(message, max_tokens=512)
-                    
-                    return jsonify({
-                        "message": message,
-                        "response": local_response,
-                        "features_used": ["local_ai_fallback", "ollama"],
-                        "model": local_ai_manager.current_model,
-                        "suggestions": [],
-                        "mood": "neutral",
-                        "fallback": True,
-                        "user": current_user,
-                        "timestamp": datetime.now().isoformat()
-                    })
-                except Exception as local_error:
-                    logger.error(f"Local AI fallback also failed: {local_error}")
-                    # Re-raise original cloud error
-                    raise cloud_error
-            else:
-                # No local AI available, re-raise original error
-                raise cloud_error
+        except Exception as fallback_error:
+            logger.error(f"Fallback error in api_chat: {fallback_error}")
+            return jsonify({
+                "message": message,
+                "response": f"I'm sorry, I encountered an internal error. Please check the logs.",
+                "features_used": ["safe_fallback"],
+                "provider": "offline",
+                "model": "error",
+                "suggestions": [],
+                "user": current_user,
+                "timestamp": datetime.now().isoformat()
+            })
                 
     except Exception as e:
         logging.error(f"Chat API error: {str(e)}")
@@ -510,7 +483,11 @@ def api_chat_stream():
                             )
                         else:
                             # Fallback if LLM not available
-                            yield f"data: {json.dumps({'error': 'LLM provider not available'})}\n\n"
+                            yield f"data: {json.dumps({'error': 'LLM provider not available'})}\n\n# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="app")
+
+\n"
                             return
                     
                     chat = chat_sessions[session_id]

@@ -1,4 +1,8 @@
-# Web Scraping Module for YourDaddy Assistant
+# Setup centralized logging
+from utils.logging_config import get_logger
+logger = get_logger(__name__, log_category="backend")
+
+# Web Scraping Module for Pulsar Assistant
 """
 Web scraping and online services integration:
 - Real-time news aggregation from multiple sources
@@ -26,7 +30,7 @@ try:
     FEEDPARSER_AVAILABLE = True
 except ImportError:
     FEEDPARSER_AVAILABLE = False
-    print("⚠️ feedparser not found. RSS features will be disabled.")
+    logger.warning("⚠️ feedparser not found. RSS features will be disabled.")
 
 class WebScrapingManager:
     """
@@ -438,7 +442,7 @@ def get_trending_topics(platform: str = "general") -> str:
         if platform.lower() == "reddit":
             # Get trending from Reddit
             url = "https://www.reddit.com/r/all/hot.json?limit=10"
-            headers = {'User-Agent': 'YourDaddy Assistant 1.0'}
+            headers = {'User-Agent': 'Pulsar Assistant 1.0'}
             
             response = requests.get(url, headers=headers, timeout=10)
             

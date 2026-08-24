@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-PIN Setup Utility for YourDaddy AI Assistant
+PIN Setup Utility for Pulsar AI Assistant
 
 Standalone utility to setup, change, or manage PIN authentication.
 """
@@ -15,7 +15,7 @@ sys.path.insert(0, str(project_root))
 
 def main():
     """Main function for PIN setup utility"""
-    print("\n🔐 YourDaddy AI Assistant - PIN Management Utility")
+    print("\n🔐 Pulsar AI Assistant - PIN Management Utility")
     print("=" * 60)
     
     try:
@@ -96,7 +96,7 @@ def main():
 def show_help():
     """Show help information"""
     print("""
-PIN Management Utility for YourDaddy AI Assistant
+PIN Management Utility for Pulsar AI Assistant
 
 This utility helps you manage PIN authentication for the AI Assistant.
 
