@@ -7,7 +7,7 @@
 # MEDIA DOWNLOADERS
 # =========================================
 yt-dlp>=2023.11.16
-static-ffmpeg>=2.5
+static-ffmpeg>=3.0
 
 # =========================================
 # WEB FRAMEWORK & API
