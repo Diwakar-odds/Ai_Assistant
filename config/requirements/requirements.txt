@@ -30,7 +30,7 @@ cryptography==45.0.0
 PyJWT==2.10.1
 secrets-manager==0.4
 keyring==25.5.0
-python-dotenv==1.0.1
+python-dotenv==1.2.3
 certifi==2025.10.5
 pycryptodome>=3.23.0
 
