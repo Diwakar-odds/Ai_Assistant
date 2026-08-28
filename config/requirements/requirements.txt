@@ -89,7 +89,7 @@ sounddevice>=0.5.0
 # =========================================
 scikit-learn>=1.4.0
 tensorflow>=2.16.0
-tf-keras>=2.16.0
+tf-keras>=2.21.0
 torch==2.3.1
 torchvision==0.18.1
 transformers==4.44.2
