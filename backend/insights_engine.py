@@ -118,7 +118,7 @@ class InsightsEngine:
             
         # Fallback/Mock
         return {
-            "temperature": "22°C",
+            "temperature": "22C",
             "condition": "Partly Cloudy",
             "humidity": "45%",
             "location": "New Delhi"

@@ -36,7 +36,7 @@ def api_chat():
             from ai_assistant.integrations.orchestrator_integration import should_use_orchestrator, process_with_orchestrator
             
             if should_use_orchestrator(message):
-                logger.info(f"Ã°Å¸â€â€” Multi-step command detected: {message}")
+                logger.info(f" Multi-step command detected: {message}")
                 orch_result = process_with_orchestrator(message, context)
                 
                 if orch_result['success']:
@@ -140,7 +140,7 @@ def api_command():
             from ai_assistant.integrations.orchestrator_integration import should_use_orchestrator, process_with_orchestrator
             
             if should_use_orchestrator(command):
-                logger.info(f"Ã°Å¸â€â€” Multi-step command detected: {command}")
+                logger.info(f" Multi-step command detected: {command}")
                 orch_result = process_with_orchestrator(command, {})
                 
                 if orch_result['success']:
@@ -174,11 +174,11 @@ def api_command():
         use_local_ai = data.get('use_local_ai', False) or data.get('offline_mode', False)
         
         # DEBUG: Log the offline mode request
-        logger.info(f"Ã°Å¸â€Â Command received: {command[:30]}...")
-        logger.info(f"Ã°Å¸â€Â offline_mode flag in request: {data.get('offline_mode')}")
-        logger.info(f"Ã°Å¸â€Â use_local_ai: {use_local_ai}")
-        logger.info(f"Ã°Å¸â€Â local_ai_initialized: {local_ai_initialized}")
-        logger.info(f"Ã°Å¸â€Â local_ai_manager exists: {local_ai_manager is not None}")
+        logger.info(f" Command received: {command[:30]}...")
+        logger.info(f" offline_mode flag in request: {data.get('offline_mode')}")
+        logger.info(f" use_local_ai: {use_local_ai}")
+        logger.info(f" local_ai_initialized: {local_ai_initialized}")
+        logger.info(f" local_ai_manager exists: {local_ai_manager is not None}")
         
         if use_local_ai and local_ai_initialized and local_ai_manager:
             # Use local Ollama model
@@ -200,7 +200,17 @@ def api_command():
         
         # Process command with cloud AI (default)
         try:
-            response = assistant.process_command(command)
+            # Extract provider/model preference
+            preferred_provider = data.get('provider')
+            preferred_model = data.get('model')
+            
+            if preferred_provider or preferred_model:
+                try:
+                    response = assistant.process_command(command, model_preference={'provider': preferred_provider, 'model': preferred_model})
+                except TypeError:
+                    response = assistant.process_command(command)
+            else:
+                response = assistant.process_command(command)
             
             return jsonify({
                 "success": True,

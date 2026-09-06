@@ -63,11 +63,11 @@ class IntentRegistry:
         with open(filepath, 'r', encoding='utf-8') as f:
             template_data = yaml.safe_load(f)
         
-        # Extract metadata for intent mapping
+        # Support both root-level and metadata-nested schemas
         metadata = template_data.get('metadata', {})
-        intent = metadata.get('intent')
-        entities = metadata.get('entities', [])
-        description = metadata.get('description', '')
+        intent = template_data.get('intent') or metadata.get('intent')
+        entities = template_data.get('entities') or metadata.get('entities', [])
+        description = template_data.get('description') or metadata.get('description', '')
         
         if intent:
             # Create intent mapping
@@ -78,12 +78,15 @@ class IntentRegistry:
                 description=description
             )
             
+            # Use upper and lowercase versions
             self.intent_mappings[intent] = mapping
+            self.intent_mappings[intent.lower()] = mapping
             
             # Also add any aliases if present
-            aliases = metadata.get('aliases', [])
+            aliases = template_data.get('aliases') or metadata.get('aliases', [])
             for alias in aliases:
                 self.intent_mappings[alias] = mapping
+                self.intent_mappings[alias.lower()] = mapping
     
     def get_intent_mapping(self, intent: str) -> Optional[IntentMapping]:
         """

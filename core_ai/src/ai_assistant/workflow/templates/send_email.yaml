@@ -1,0 +1,11 @@
+name: Send Email
+intent: SEND_EMAIL
+description: Send an email using Gmail integration.
+steps:
+  - id: step1
+    action: custom
+    parameters:
+      sub_type: email
+      recipient: "{{ contact }}"
+      subject: "{{ subject }}"
+      body: "{{ message }}"

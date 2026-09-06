@@ -1,0 +1,9 @@
+name: Close Application
+intent: CLOSE_APP
+description: Find and terminate an application process.
+steps:
+  - id: step1
+    action: app
+    parameters:
+      sub_type: close
+      app_name: "{{ app_name }}"

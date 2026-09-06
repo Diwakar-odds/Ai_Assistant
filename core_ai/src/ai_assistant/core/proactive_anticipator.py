@@ -16,6 +16,24 @@ class ProactiveAnticipator:
         self.thread = None
         self.last_check_hour = -1
         
+        try:
+            from ai_assistant.core.project_manager import ProjectManager
+            self.project_manager = ProjectManager()
+        except ImportError:
+            self.project_manager = None
+            
+        try:
+            from ai_assistant.core.commitment_tracker import CommitmentTracker
+            self.commitment_tracker = CommitmentTracker()
+        except ImportError:
+            self.commitment_tracker = None
+            
+        try:
+            from ai_assistant.ai.conversational_ai import get_conversational_ai
+            self.conversational_ai = get_conversational_ai()
+        except ImportError:
+            self.conversational_ai = None
+        
     def start(self):
         if not self.running:
             self.running = True
@@ -54,24 +72,41 @@ class ProactiveAnticipator:
         context = self.context_opt.get_time_context()
         proactive_msg = None
         
-        # Pattern-driven proactive logic
-        if peak_activity != 'unknown' and str(current_hour) in peak_activity:
-            proactive_msg = f"Sir, we are entering your peak activity period. Should I prepare your usual workflow? {', '.join(top_apps[:2])} perhaps?"
-        elif current_hour == 8 and context == "work":
-            proactive_msg = "Good morning! I've pre-fetched your daily briefing. Would you like a summary of today's schedule?"
-        elif current_hour == 18 and context == "home":
-            proactive_msg = "Good evening! It appears you've transitioned to your home context. Shall I prepare some relaxing music or focus on winding down?"
-        elif current_hour >= 23 and context == "night":
-            proactive_msg = "It's getting quite late. Based on your energy curve, I recommend wrapping up your current task soon."
-        elif len(frequent_topics) > 0 and current_hour == 13: # Lunch break suggestion
-            proactive_msg = f"Taking a break? You frequently ask about {frequent_topics[0]}. Would you like me to fetch the latest updates on that?"
+        # 1. Commitment Checks
+        if self.commitment_tracker:
+            overdue = self.commitment_tracker.get_overdue()
+            if overdue:
+                proactive_msg = f"Reminder: You have {len(overdue)} overdue commitments, including '{overdue[0].action}'. Shall we tackle them now?"
+                
+        # 2. Project Checks
+        if not proactive_msg and self.project_manager:
+            active_projects = self.project_manager.get_all_projects("active")
+            if active_projects and current_hour == 10:
+                proactive_msg = f"Your project '{active_projects[0].name}' is currently active. Want to make some progress on it today?"
+
+        # 3. Emotion / Pattern Checks
+        if not proactive_msg:
+            if self.conversational_ai and hasattr(self.conversational_ai, 'get_mood_trend'):
+                trend = self.conversational_ai.get_mood_trend(days=1)
+                if trend and "stressed" in trend.lower():
+                    proactive_msg = "You've seemed a bit stressed lately. Would you like me to block out some quiet time on your calendar?"
+                    
+        # 4. Routine Checks
+        if not proactive_msg:
+            if peak_activity != 'unknown' and str(current_hour) in peak_activity:
+                proactive_msg = f"Sir, we are entering your peak activity period. Should I prepare your usual workflow? {', '.join(top_apps[:2])} perhaps?"
+            elif current_hour == 8 and context == "work":
+                proactive_msg = "Good morning! I've pre-fetched your daily briefing. Would you like a summary of today's schedule?"
+            elif current_hour >= 23 and context == "night":
+                proactive_msg = "It's getting quite late. Based on your energy curve, I recommend wrapping up your current task soon."
             
         if proactive_msg and self.chat_interface:
             # We inject the proactive message into the chat as an assistant message
             self.chat_interface.add_message("assistant", proactive_msg)
-            # Depending on UI implementation, we might need to push this via socketio
+            
             try:
-                from ai_assistant.services.modern_web_backend import socketio
+                from ai_assistant.backend.routes.common import get_socketio
+                socketio = get_socketio()
                 if socketio:
                     socketio.emit('chat_response', {'data': proactive_msg})
             except ImportError:

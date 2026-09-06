@@ -295,6 +295,12 @@ class ContinuousListeningManager:
         self.wake_detector = AdvancedWakeWordDetector()
         self.voice_manager = VoiceProfileManager()
         
+        try:
+            from ai_assistant.voice.advanced_speech_recognizer import get_advanced_speech_recognizer
+            self.advanced_recognizer = get_advanced_speech_recognizer()
+        except ImportError:
+            self.advanced_recognizer = None
+        
         # Thread management
         self.listen_thread = None
         self.stop_event = threading.Event()
@@ -409,6 +415,13 @@ class ContinuousListeningManager:
     def _process_audio(self, audio):
         """Process captured audio"""
         try:
+            # Stop any ongoing speech playback (interrupt)
+            try:
+                import winsound
+                winsound.PlaySound(None, winsound.SND_PURGE)
+            except Exception:
+                pass
+                
             # Try to recognize speech
             text = self._recognize_speech(audio)
             
@@ -446,7 +459,31 @@ class ContinuousListeningManager:
     def _recognize_speech(self, audio) -> Optional[str]:
         """Recognize speech from audio"""
         try:
-            # Try different recognition methods
+            # 1. Try AdvancedSpeechRecognizer (Whisper / Hinglish)
+            if hasattr(self, 'advanced_recognizer') and self.advanced_recognizer:
+                import tempfile
+                import os
+                temp_path = ""
+                try:
+                    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_wav:
+                        temp_wav.write(audio.get_wav_data())
+                        temp_path = temp_wav.name
+                        
+                    # Use "hinglish" to support both English and Hindi seamlessly
+                    text, conf, model_name = self.advanced_recognizer.recognize(temp_path, language="hinglish")
+                    if text:
+                        logger.debug(f"Recognized with Advanced ({model_name}): '{text}'")
+                        return text.lower()
+                except Exception as e:
+                    logger.warning(f"Advanced recognition failed, falling back: {e}")
+                finally:
+                    if temp_path and os.path.exists(temp_path):
+                        try:
+                            os.remove(temp_path)
+                        except Exception:
+                            pass
+
+            # 2. Try different recognition methods (Fallback)
             recognition_methods = [
                 ("Google", lambda: self.recognizer.recognize_google(audio)),
                 ("Sphinx", lambda: self.recognizer.recognize_sphinx(audio)),

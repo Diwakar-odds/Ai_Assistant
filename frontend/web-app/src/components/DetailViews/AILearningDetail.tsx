@@ -5,7 +5,8 @@ import { useDashboard } from '../../contexts/DashboardContext';
 const AILearningDetail = () => {
   const { learningStats } = useDashboard();
 
-  const details = learningStats?.details || {};
+   
+  const details: any = learningStats?.details || {};
 
   // Extract real metrics if available
   const kgStats = details.knowledge_graph || {};
@@ -167,7 +168,7 @@ const AILearningDetail = () => {
             <p className="text-sm text-[#9CA3AF]">Active autonomous agents running in the system</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+            { }
             {details.agents.map((agent: any) => (
               <div key={agent.id} className="bg-[#1F2228] border border-[#2A2D35] rounded-lg p-4 hover:border-[#8B5CF6]/50 transition-all">
                 <div className="flex items-center gap-3 mb-3">

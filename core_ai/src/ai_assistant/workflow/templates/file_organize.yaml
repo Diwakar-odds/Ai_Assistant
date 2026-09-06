@@ -1,0 +1,9 @@
+name: Organize Files
+intent: FILE_OPS
+description: Scan and organize a directory.
+steps:
+  - id: step1
+    action: file
+    parameters:
+      sub_type: organize
+      directory: "{{ directory }}"

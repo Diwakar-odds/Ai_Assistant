@@ -1,0 +1,9 @@
+name: Volume Control
+intent: SYSTEM_CONTROL
+description: Adjust system volume.
+steps:
+  - id: step1
+    action: system
+    parameters:
+      sub_type: volume
+      level: "{{ level }}"

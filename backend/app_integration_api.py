@@ -354,6 +354,117 @@ def not_found(error):
 def internal_error(error):
     return jsonify({'error': 'Internal server error'}), 500
 
+# =============================================================================
+# Tauri Desktop App Hardware Endpoints
+# =============================================================================
+
+# Global flag to track recording state
+is_hardware_recording = False
+recording_thread = None
+
+@app.route('/api/hardware/mic/start', methods=['POST'])
+def start_hardware_mic():
+    """Start hardware microphone recording bypassing the browser"""
+    global is_hardware_recording, recording_thread
+    
+    if is_hardware_recording:
+        return jsonify({'success': False, 'message': 'Already recording'}), 400
+        
+    try:
+        import speech_recognition as sr
+        
+        def record_and_process():
+            global is_hardware_recording
+            recognizer = sr.Recognizer()
+            with sr.Microphone() as source:
+                logger.info("Hardware Mic: Calibrating ambient noise...")
+                recognizer.adjust_for_ambient_noise(source, duration=0.5)
+                logger.info("Hardware Mic: Listening...")
+                try:
+                    # Listen until stop is called or phrase ends
+                    audio = recognizer.listen(source, timeout=10, phrase_time_limit=15)
+                    logger.info("Hardware Mic: Audio captured, processing...")
+                    
+                    # Here we would normally pass this to the AI Assistant
+                    # Since we are in the API process, we can just save it or pass it to STT
+                    try:
+                        text = recognizer.recognize_google(audio)
+                        logger.info(f"Hardware Mic recognized: {text}")
+                        # You can emit this via SocketIO to the UI if needed
+                    except Exception as e:
+                        logger.error(f"Speech recognition failed: {e}")
+                except sr.WaitTimeoutError:
+                    logger.info("Hardware Mic: Listening timed out.")
+                except Exception as e:
+                    logger.error(f"Hardware Mic error: {e}")
+            
+            is_hardware_recording = False
+
+        is_hardware_recording = True
+        recording_thread = threading.Thread(target=record_and_process)
+        recording_thread.daemon = True
+        recording_thread.start()
+        
+        return jsonify({'success': True, 'message': 'Hardware microphone started'}), 200
+        
+    except ImportError:
+        is_hardware_recording = False
+        return jsonify({'success': False, 'error': 'speech_recognition module not installed'}), 500
+    except Exception as e:
+        is_hardware_recording = False
+        logger.error(f"Failed to start hardware mic: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/hardware/mic/stop', methods=['POST'])
+def stop_hardware_mic():
+    """Stop hardware microphone recording"""
+    global is_hardware_recording
+    is_hardware_recording = False
+    return jsonify({'success': True, 'message': 'Hardware microphone stopped'}), 200
+
+@app.route('/api/hardware/tts/play', methods=['POST'])
+def play_hardware_tts():
+    """Generate and play TTS directly through OS speakers"""
+    data = request.get_json() or {}
+    text = data.get('text', '')
+    
+    if not text:
+        return jsonify({'success': False, 'error': 'No text provided'}), 400
+        
+    try:
+        import pygame
+        # Initialize pygame mixer if not already
+        if not pygame.mixer.get_init():
+            pygame.mixer.init()
+            
+        # We need the path to the TTS engine. For now, let's assume we can import it
+        try:
+            from core_ai.src.ai_assistant.voice.neural_voice_engine import get_neural_voice_engine
+            engine = get_neural_voice_engine()
+            audio_file = engine.speak(text)
+            
+            if audio_file and os.path.exists(audio_file):
+                logger.info(f"Playing audio directly to hardware: {audio_file}")
+                pygame.mixer.music.load(audio_file)
+                pygame.mixer.music.play()
+                
+                # We could wait for it to finish, but returning immediately is better for API
+                return jsonify({'success': True, 'message': 'Playing audio on hardware speakers'}), 200
+            else:
+                return jsonify({'success': False, 'error': 'Failed to generate audio file'}), 500
+                
+        except ImportError as e:
+            logger.error(f"Could not load TTS engine: {e}")
+            return jsonify({'success': False, 'error': f'TTS Engine error: {e}'}), 500
+            
+    except ImportError:
+        return jsonify({'success': False, 'error': 'pygame module not installed'}), 500
+    except Exception as e:
+        logger.error(f"Hardware TTS error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+
 if __name__ == '__main__':
     # Auto-start configured apps when the API server starts
     try:

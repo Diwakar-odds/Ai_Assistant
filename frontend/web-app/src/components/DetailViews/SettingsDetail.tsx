@@ -1,8 +1,8 @@
-import { motion, _AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
-  _Bell, _Lock, _Palette, Globe, Database, Brain, Zap, _DollarSign, _Clock,
-  Mic, Volume2, Shield, _Download, _Upload, _RotateCcw, Save, Check, _X,
-  Cpu, _MessageSquare, _Key, _Terminal, Server, Layers, Speaker, HardDrive, Activity, _Wifi
+     Globe, Database, Brain, Zap,
+  Mic, Volume2, Shield, Save, Check,
+  Cpu, Server, Layers, Speaker, HardDrive, Activity
 } from 'lucide-react';
 import { useState, useEffect, useReducer } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
@@ -162,7 +162,7 @@ const SettingsDetail = () => {
     }
   };
 
-  const saveSettings = async (_category: string) => {
+  const saveSettings = async (category: string) => {
     if (!settings) return;
 
     try {
@@ -171,8 +171,8 @@ const SettingsDetail = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          _category: _category,
-          settings: settings[_category as keyof AppSettings]
+          category: category,
+          settings: settings[category as keyof AppSettings]
         })
       });
 
@@ -191,13 +191,13 @@ const SettingsDetail = () => {
     }
   };
 
-  const _resetSettings = async (_category?: string) => {
-    if (!confirm(`Are you sure you want to reset ${_category || 'all'} settings?`)) return;
+  const resetSettings = async (category?: string) => {
+    if (!confirm(`Are you sure you want to reset ${category || 'all'} settings?`)) return;
     try {
       const response = await fetch(apiUrl('/api/settings/reset'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ _category })
+        body: JSON.stringify({ category })
       });
       const result = await response.json();
       if (result.success) {
@@ -210,19 +210,19 @@ const SettingsDetail = () => {
   };
 
   // Helper to update state deeply
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleSettingChange = (_category: string, path: string[], value: any) => {
+   
+  const handleSettingChange = (category: string, path: string[], value: any) => {
     if (!settings) return;
 
     // Deep clone entire state
     const newState = JSON.parse(JSON.stringify(settings));
 
-    // Navigate to the _category
-    let current = newState[_category];
+    // Navigate to the category
+    let current = newState[category];
 
-    // If path is empty, replace the whole _category
+    // If path is empty, replace the whole category
     if (path.length === 0) {
-      newState[_category] = value;
+      newState[category] = value;
       setSettings(newState);
       return;
     }
@@ -239,7 +239,7 @@ const SettingsDetail = () => {
     // If voice_id changes, also update voice_name
     if (path[path.length - 1] === 'voice_id') {
       const availableVoices = (newState.voice && newState.voice.tts && newState.voice.tts.available_voices) || [];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       const selectedVoice = availableVoices.find((v: any) => v.id === value);
       if (selectedVoice) {
         current['voice_name'] = selectedVoice.name;
@@ -247,7 +247,7 @@ const SettingsDetail = () => {
     }
 
     // If defaultProvider changes, auto-select first model
-    if (_category === 'ai' && path.length === 1 && path[0] === 'defaultProvider') {
+    if (category === 'ai' && path.length === 1 && path[0] === 'defaultProvider') {
       const newProvider = value as string;
       const availableModels = AI_MODELS[newProvider] || [];
       if (availableModels.length > 0) {
@@ -304,7 +304,7 @@ const SettingsDetail = () => {
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             onClick={() => setActiveTab(tab.id as any)}
             className={`
               flex items-center gap-2 px-4 py-3 rounded-lg font-medium transition-all whitespace-nowrap
@@ -488,7 +488,7 @@ const SettingsDetail = () => {
             key={activeTab} // Force re-render on tab change to reset path context
             title={tabs.find(t => t.id === activeTab)?.label || ''}
             data={settings[activeTab as keyof AppSettings]}
-            _category={activeTab as string}
+            category={activeTab as string}
             onChange={(path, val) => handleSettingChange(activeTab as string, path, val)}
             onSave={() => saveSettings(activeTab as string)}
             saving={saving}
@@ -501,12 +501,12 @@ const SettingsDetail = () => {
 
 // --- Sub-components ---
 
-const EditableSection = ({ title, data, _category, onChange, onSave, saving }: {
+const EditableSection = ({ title, data, category, onChange, onSave, saving }: {
   title: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   data: any,
-  _category: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  category: string,
+   
   onChange: (path: string[], val: any) => void,
   onSave: () => void,
   saving: boolean
@@ -533,7 +533,7 @@ const EditableSection = ({ title, data, _category, onChange, onSave, saving }: {
   );
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const RecursiveFormRenderer = ({ data, onChange, path, rootData, depth = 0 }: { data: any, onChange: (path: string[], val: any) => void, path: string[], rootData?: any, depth?: number }) => {
   // Use rootData to look up siblings if needed (like defaultProvider)
   // If rootData is not passed, use data (only works at top level)
@@ -785,7 +785,7 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData, depth = 0 }: { 
   );
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const LiveMetrics = ({ stats }: { stats: any }) => {
   if (!stats) return null;
 

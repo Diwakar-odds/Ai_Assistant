@@ -2,14 +2,14 @@ import { motion } from 'framer-motion';
 import { useEffect, useRef } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
 
-interface _Message {
+interface Message {
   id: number;
   type: 'user' | 'ai';
   text: string;
   time: string;
 }
 
-interface _VoiceCommand {
+interface VoiceCommand {
   id: number;
   command: string;
   time: string;

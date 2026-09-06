@@ -88,17 +88,44 @@ class VoiceManager:
         return {"status": "stopped", "message": "Voice listening stopped"}
 
     def speak_text(self, text: str) -> bool:
-        """Speak text using TTS engine"""
+        """Speak text using TTS engine asynchronously"""
         if not text:
             return False
+            
+        self.stop_speaking()
+        
         try:
+            # Try to use Neural Voice Engine first if available
+            try:
+                from ai_assistant.voice.neural_voice_engine import get_neural_voice_engine
+                nve = get_neural_voice_engine()
+                wav_file = nve.speak(text)
+                if wav_file and os.path.exists(wav_file):
+                    import winsound
+                    winsound.PlaySound(wav_file, winsound.SND_FILENAME | winsound.SND_ASYNC)
+                    return True
+            except Exception as e:
+                logger.warning(f"Neural TTS failed, falling back to pyttsx3: {e}")
+                
             if self.tts_engine:
-                self.tts_engine.say(text)
+                import tempfile
+                import winsound
+                temp_file = os.path.join(tempfile.gettempdir(), "tts_temp.wav")
+                self.tts_engine.save_to_file(text, temp_file)
                 self.tts_engine.runAndWait()
+                winsound.PlaySound(temp_file, winsound.SND_FILENAME | winsound.SND_ASYNC)
                 return True
         except Exception as e:
             logger.error(f"TTS error: {e}")
         return False
+
+    def stop_speaking(self):
+        """Stop any ongoing speech playback"""
+        try:
+            import winsound
+            winsound.PlaySound(None, winsound.SND_PURGE)
+        except Exception as e:
+            logger.debug(f"Could not stop speech: {e}")
 
     def process_voice_audio(self, audio_data: str) -> Dict[str, Any]:
         """Process base64 audio data for speech recognition"""

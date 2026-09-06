@@ -3,7 +3,7 @@ import { Database, Activity, MessageSquare, Brain } from 'lucide-react';
 import { useEffect } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const StatCard = ({ icon: Icon, label, _value, targetValue, delay, onClick }: { icon: any; label: string; _value: string; targetValue: number; delay: number; onClick?: () => void }) => {
   const count = useMotionValue(0);
   const rounded = useTransform(count, (latest) => {

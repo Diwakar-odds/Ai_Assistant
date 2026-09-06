@@ -145,29 +145,39 @@ class PlanValidator:
         Returns:
             (is_valid, message)
         """
-        # Check for dangerous operations
+        # Check for dangerous operations using basic keywords and PermissionSystem
         command_lower = plan.original_command.lower()
         
         for keyword in PlanValidator.DANGER_KEYWORDS:
             if keyword in command_lower:
                 plan.safety_level = "dangerous"
                 plan.requires_confirmation = True
-                return True, f"âš ï¸ This action involves '{keyword}' and requires confirmation"
+                return True, f"⚠️ This action involves '{keyword}' and requires confirmation"
+                
+        try:
+            from ai_assistant.core.permission_system import get_permission_system
+            perm_sys = get_permission_system()
+            if perm_sys.require_confirmation(command_lower):
+                plan.safety_level = "dangerous"
+                plan.requires_confirmation = True
+                return True, "⚠️ This action is categorized as high risk and requires confirmation"
+        except ImportError:
+            pass
         
         # Check for blacklisted domains
         for domain in PlanValidator.BLACKLISTED_DOMAINS:
             if domain in command_lower:
-                return False, f"âŒ Operation blocked: contains blacklisted term '{domain}'"
+                return False, f" Œ Operation blocked: contains blacklisted term '{domain}'"
         
         # Check action count (prevent infinite loops)
         if len(plan.actions) > 50:
-            return False, "âŒ Too many actions (>50). Please simplify the command."
+            return False, "Œ Too many actions (>50). Please simplify the command."
         
         # Check for circular dependencies
         if PlanValidator._has_circular_dependencies(plan.actions):
-            return False, "âŒ Circular dependencies detected in action plan"
+            return False, "Œ Circular dependencies detected in action plan"
         
-        return True, "âœ… Plan validated successfully"
+        return True, "… Plan validated successfully"
     
     @staticmethod
     def _has_circular_dependencies(actions: List[Action]) -> bool:
@@ -219,7 +229,7 @@ class TaskPlanner:
         """
         self.llm = LLMFactory.create(llm_provider)
         self.validator = PlanValidator()
-        logger.info(f"âœ… TaskPlanner initialized with {llm_provider}")
+        logger.info(f"… TaskPlanner initialized with {llm_provider}")
     
     def create_plan(self, command: str, context: Optional[Dict[str, Any]] = None) -> TaskPlan:
         """
@@ -232,7 +242,7 @@ class TaskPlanner:
         Returns:
             TaskPlan object
         """
-        logger.info(f"ðŸ“ Planning task: {command}")
+        logger.info(f" Planning task: {command}")
         
         # Generate plan using LLM
         actions = self._generate_actions(command, context)
@@ -251,7 +261,7 @@ class TaskPlanner:
         if not is_valid:
             raise ValueError(f"Invalid plan: {message}")
         
-        logger.info(f"âœ… Created plan with {len(actions)} actions - {message}")
+        logger.info(f"… Created plan with {len(actions)} actions - {message}")
         return plan
     
     def generate_repair_actions(self, failed_action: Action, error_message: str, vlm_analysis: str) -> List[Action]:
@@ -294,7 +304,7 @@ If failed to "Type into search" because "Search bar not active", fix might be:
         try:
             response = self.llm.generate_response(messages)
             actions = self._parse_llm_response(response, f"Fix {failed_action.description}")
-            logger.info(f"ðŸ› ï¸ Generated {len(actions)} repair actions")
+            logger.info(f"›  Generated {len(actions)} repair actions")
             return actions
         except Exception as e:
             logger.error(f"Failed to generate repairs: {e}")
@@ -562,7 +572,7 @@ if __name__ == "__main__":
         
         try:
             plan = planner.create_plan(cmd)
-            print(f"\nâœ… Plan created: {len(plan.actions)} actions")
+            print(f"\n… Plan created: {len(plan.actions)} actions")
             print(f"Safety level: {plan.safety_level}")
             print(f"Estimated duration: {plan.estimated_duration}s")
             
@@ -574,5 +584,5 @@ if __name__ == "__main__":
                     print(f"   Dependencies: {action.dependencies}")
         
         except Exception as e:
-            print(f"\nâŒ Error: {e}")
+            print(f"\nŒ Error: {e}")
 

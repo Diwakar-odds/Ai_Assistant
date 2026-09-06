@@ -1,5 +1,6 @@
 import logging
 import psutil
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -24,27 +25,46 @@ class SituationAwareness:
             
     def get_active_context(self) -> str:
         """
-        Mock for cross-platform active window detection.
-        In a real scenario, this would use pywinauto (Windows) or AppKit (macOS).
+        Uses OS-specific APIs to detect the active window.
         """
-        # We can look at top processes by CPU or memory to guess the activity
+        top_process = ""
+        window_title = ""
+        
         try:
-            processes = sorted(
-                psutil.process_iter(['name', 'cpu_percent']),
-                key=lambda p: p.info['cpu_percent'] if p.info['cpu_percent'] else 0,
-                reverse=True
-            )
-            top_process = processes[0].info['name'].lower() if processes else ""
-            
-            if "code" in top_process or "idea" in top_process or "pycharm" in top_process:
+            if sys.platform == 'win32':
+                import win32gui
+                import win32process
+                window = win32gui.GetForegroundWindow()
+                if window:
+                    window_title = win32gui.GetWindowText(window).lower()
+                    _, pid = win32process.GetWindowThreadProcessId(window)
+                    try:
+                        p = psutil.Process(pid)
+                        top_process = p.name().lower()
+                    except psutil.NoSuchProcess:
+                        pass
+            else:
+                # Fallback for Linux/macOS if needed
+                processes = sorted(
+                    psutil.process_iter(['name', 'cpu_percent']),
+                    key=lambda p: p.info['cpu_percent'] if p.info['cpu_percent'] else 0,
+                    reverse=True
+                )
+                top_process = processes[0].info['name'].lower() if processes else ""
+                
+            # Heuristics based on window title and process name
+            if "code" in top_process or "idea" in top_process or "pycharm" in top_process or "visual studio" in window_title:
                 return "Coding/Development"
-            if "chrome" in top_process or "firefox" in top_process or "msedge" in top_process:
+            if "chrome" in top_process or "firefox" in top_process or "msedge" in top_process or "browser" in window_title:
                 return "Web Browsing"
             if "discord" in top_process or "slack" in top_process or "teams" in top_process:
                 return "Communicating"
-            return "General Desktop Use"
-            return "General Desktop Use"
-        except Exception:
+            if "cmd" in top_process or "powershell" in top_process or "terminal" in top_process:
+                return "Terminal/CLI"
+                
+            return f"Active App: {top_process}" if top_process else "General Desktop Use"
+        except Exception as e:
+            logger.debug(f"Error getting active context: {e}")
             return "General Desktop Use"
 
     def detect_context_switch(self) -> tuple[bool, str, str]:

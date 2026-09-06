@@ -12,6 +12,7 @@ import logging
 import subprocess
 import platform
 import os
+import asyncio
 from typing import Optional, Dict, Any
 
 # Optional dependencies
@@ -36,9 +37,9 @@ class SystemAutomation:
     
     def __init__(self):
         """Initialize system automation"""
-        logger.info("âš™ï¸ SystemAutomation initialized")
+        logger.info("š SystemAutomation initialized")
         if not BRIGHTNESS_AVAILABLE:
-            logger.warning("âš ï¸ 'screen_brightness_control' not installed. Brightness control will be limited.")
+            logger.warning("š  'screen_brightness_control' not installed. Brightness control will be limited.")
             
     # ===== BRIGHTNESS =====
     
@@ -46,14 +47,14 @@ class SystemAutomation:
         """
         Set screen brightness (0-100)
         """
-        logger.info(f"ðŸ”† Setting brightness to {level}%")
+        logger.info(f"† Setting brightness to {level}%")
         
         if BRIGHTNESS_AVAILABLE:
             try:
                 sbc.set_brightness(level)
                 return True
             except Exception as e:
-                logger.error(f"âŒ Failed to set brightness (sbc): {e}")
+                logger.error(f"Œ Failed to set brightness (sbc): {e}")
         
         # Fallback using PowerShell (WmiMonitorBrightnessMethods)
         # Note: This often requires admin privileges or specific driver support
@@ -62,7 +63,7 @@ class SystemAutomation:
             subprocess.run(["powershell", "-Command", cmd], capture_output=True)
             return True
         except Exception as e:
-            logger.error(f"âŒ Failed to set brightness (powershell): {e}")
+            logger.error(f"Œ Failed to set brightness (powershell): {e}")
             return False
 
     def get_brightness(self) -> int:
@@ -81,10 +82,10 @@ class SystemAutomation:
         Enable/Disable WiFi
         """
         action = "enable" if enable else "disable"
-        logger.info(f"ðŸ“¶ Toggling WiFi: {action}")
+        logger.info(f"¶ Toggling WiFi: {action}")
 
         if platform.system().lower() != "windows":
-            logger.error("âŒ WiFi toggle is currently implemented for Windows only")
+            logger.error("Œ WiFi toggle is currently implemented for Windows only")
             return False
 
         desired_state = "enabled" if enable else "disabled"
@@ -117,7 +118,7 @@ class SystemAutomation:
                     text=True,
                 )
                 if result.returncode == 0:
-                    logger.info(f"âœ… WiFi {desired_state} via adapter '{name}'")
+                    logger.info(f"… WiFi {desired_state} via adapter '{name}'")
                     return True
 
             # Fallback PowerShell command.
@@ -133,17 +134,17 @@ class SystemAutomation:
                 text=True,
             )
             if ps_result.returncode == 0:
-                logger.info(f"âœ… WiFi {desired_state} via PowerShell fallback")
+                logger.info(f"… WiFi {desired_state} via PowerShell fallback")
                 return True
 
             logger.error(
-                "âŒ WiFi toggle failed via netsh and PowerShell. "
+                "Œ WiFi toggle failed via netsh and PowerShell. "
                 f"PowerShell error: {ps_result.stderr or ps_result.stdout}"
             )
             return False
 
         except Exception as e:
-            logger.error(f"âŒ WiFi toggle error: {e}")
+            logger.error(f"Œ WiFi toggle error: {e}")
             return False
 
     def toggle_airplane_mode(self, enable: bool) -> bool:
@@ -152,7 +153,7 @@ class SystemAutomation:
         This is tricky via command line without specialized tools.
         Leaving as a placeholder or using GUI automation fallback if needed.
         """
-        logger.warning("âš ï¸ Airplane mode toggle requires GUI automation or specific registry hacks (unreliable).")
+        logger.warning("š  Airplane mode toggle requires GUI automation or specific registry hacks (unreliable).")
         return False
         
     # ===== VOLUME (Wrapper) =====
@@ -186,4 +187,66 @@ class SystemAutomation:
         if VOLUME_AVAILABLE:
             return unmute_volume()
         return "Volume module not available"
+
+    # ===== BATTERY =====
+    
+    def get_battery_status(self) -> str:
+        """Get current battery percentage and status."""
+        try:
+            import psutil
+            battery = psutil.sensors_battery()
+            if not battery:
+                return "Battery status not available (might be a desktop computer)."
+            
+            percent = battery.percent
+            plugged = battery.power_plugged
+            status = "plugged in and charging" if plugged else "running on battery"
+            
+            return f"Battery is at {percent}%, currently {status}."
+        except Exception as e:
+            logger.error(f"Failed to get battery status: {e}")
+            return "Could not retrieve battery status."
+
+    # ===== BLUETOOTH =====
+    
+    def toggle_bluetooth(self, enable: bool) -> bool:
+        """Toggle Bluetooth On/Off using Windows SDK"""
+        action = "On" if enable else "Off"
+        logger.info(f"Toggling Bluetooth: {action}")
+        
+        if platform.system().lower() != "windows":
+            logger.error("Bluetooth toggle is only supported on Windows")
+            return False
+            
+        try:
+            from winsdk.windows.devices.radios import Radio, RadioKind, RadioState
+            
+            async def _toggle():
+                radios = await Radio.get_radios_async()
+                for radio in radios:
+                    if radio.kind == RadioKind.BLUETOOTH:
+                        state = RadioState.ON if enable else RadioState.OFF
+                        await radio.set_state_async(state)
+                        return True
+                return False
+                
+            # Run in a new event loop
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            result = loop.run_until_complete(_toggle())
+            loop.close()
+            
+            if result:
+                logger.info(f"✅ Bluetooth turned {action}")
+                return True
+            else:
+                logger.warning("No Bluetooth radio found")
+                return False
+        except ImportError:
+            logger.error("winsdk not installed. Cannot toggle Bluetooth.")
+            return False
+        except Exception as e:
+            logger.error(f"Failed to toggle Bluetooth: {e}")
+            return False
+
 

@@ -28,7 +28,7 @@ def find_file_path(filename: str, search_root: str = None) -> Optional[str]:
     if not search_root:
         search_root = os.path.expanduser("~")
     
-    print(f"ðŸ” Searching for '{filename}' in {search_root}...")
+    print(f" Searching for '{filename}' in {search_root}...")
     
     # Simple walk for exact or partial match
     for root, dirs, files in os.walk(search_root):
@@ -43,7 +43,7 @@ def read_pdf_content(file_path: str) -> Optional[str]:
     Reads text content from a PDF file.
     """
     try:
-        print(f"ðŸ“– Reading PDF: {file_path}")
+        print(f"– Reading PDF: {file_path}")
         text = ""
         with open(file_path, 'rb') as file:
             reader = PyPDF2.PdfReader(file)
@@ -61,7 +61,7 @@ def summarize_text(text: str) -> str:
     """
     Summarizes the given text using the LLM.
     """
-    print("ðŸ§  Summarizing content...")
+    print("  Summarizing content...")
     llm = UnifiedChatInterface()
     prompt = (
         "Please provide a concise summary of the following text. "
@@ -91,7 +91,7 @@ def process_file_workflow(filename: str, contact_name: str) -> str:
                         break
         
         if not file_path:
-            return f"âŒ I couldn't find a file named '{filename}' in your home folder or common drives."
+            return f"Œ I couldn't find a file named '{filename}' in your home folder or common drives."
 
     # 2. Open (Visual confirmation for user)
     try:
@@ -102,20 +102,20 @@ def process_file_workflow(filename: str, contact_name: str) -> str:
             import subprocess
             subprocess.call(('xdg-open', file_path))
     except Exception as e:
-        print(f"âš ï¸ Could not open file visually: {e}")
+        print(f"š  Could not open file visually: {e}")
 
     # 3. Summarize (if PDF)
     if file_path.lower().endswith('.pdf'):
         content = read_pdf_content(file_path)
         if not content:
-            return f"âŒ I found '{file_path}' but couldn't read its content."
+            return f"Œ I found '{file_path}' but couldn't read its content."
         
         summary = summarize_text(content)
     else:
-        return f"âŒ I found '{file_path}', but I currently only support summarizing PDF files."
+        return f"Œ I found '{file_path}', but I currently only support summarizing PDF files."
 
     # 4. Send WhatsApp
-    message = f"ðŸ“„ Summary of {os.path.basename(file_path)}:\n\n{summary}"
+    message = f"„ Summary of {os.path.basename(file_path)}:\n\n{summary}"
     result = send_whatsapp_message(contact_name, message)
     
     return result

@@ -1,0 +1,8 @@
+name: Take Screenshot
+intent: SCREENSHOT
+description: Capture a screenshot of the current screen.
+steps:
+  - id: step1
+    action: system
+    parameters:
+      sub_type: screenshot

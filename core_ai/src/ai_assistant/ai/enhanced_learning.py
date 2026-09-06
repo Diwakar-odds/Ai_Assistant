@@ -148,6 +148,28 @@ class EnhancedLearningSystem:
             )
         ''')
         
+        # FTS5 for knowledge search
+        cursor.execute('''
+            CREATE VIRTUAL TABLE IF NOT EXISTS knowledge_fts USING fts5(
+                content,
+                node_type,
+                node_id UNINDEXED
+            )
+        ''')
+        
+        # Trigger to auto-update FTS
+        cursor.execute('''
+            CREATE TRIGGER IF NOT EXISTS knowledge_ai_insert AFTER INSERT ON knowledge_nodes BEGIN
+                INSERT INTO knowledge_fts(rowid, content, node_type, node_id) 
+                VALUES (new.rowid, new.content, new.node_type, new.node_id);
+            END;
+        ''')
+        cursor.execute('''
+            CREATE TRIGGER IF NOT EXISTS knowledge_ai_delete AFTER DELETE ON knowledge_nodes BEGIN
+                DELETE FROM knowledge_fts WHERE node_id = old.node_id;
+            END;
+        ''')
+        
         # Predictions table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS predictions (
@@ -558,6 +580,78 @@ class PersonalKnowledgeGraph:
         
         if NETWORKX_AVAILABLE and self.graph.has_node(source_id) and self.graph.has_node(target_id):
             self.graph.add_edge(source_id, target_id, relationship=relationship_type, weight=strength)
+            
+    def _search_fts(self, query: str, limit: int = 5) -> List[Dict[str, Any]]:
+        """Search knowledge nodes using FTS5"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        try:
+            # Check if FTS table exists
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='knowledge_fts'")
+            if not cursor.fetchone():
+                return []
+                
+            cursor.execute('''
+                SELECT k.node_id, k.content, k.node_type, k.metadata, k.importance_score
+                FROM knowledge_fts f
+                JOIN knowledge_nodes k ON f.node_id = k.node_id
+                WHERE knowledge_fts MATCH ?
+                ORDER BY rank LIMIT ?
+            ''', (query, limit))
+            
+            results = []
+            for row in cursor.fetchall():
+                results.append({
+                    "id": row[0],
+                    "content": row[1],
+                    "type": row[2],
+                    "metadata": json.loads(row[3] or "{}"),
+                    "importance": row[4]
+                })
+            return results
+        except sqlite3.OperationalError:
+            return []
+        finally:
+            conn.close()
+
+    def who_is(self, name: str) -> List[Dict[str, Any]]:
+        """Find information about a person by name"""
+        return self._search_fts(f"node_type:person AND content:{name}")
+        
+    def what_project(self, project_name: str) -> List[Dict[str, Any]]:
+        """Find information about a project by name"""
+        return self._search_fts(f"node_type:project AND content:{project_name}")
+        
+    def related_to(self, entity_id: str, limit: int = 10) -> List[Dict[str, Any]]:
+        """Find entities related to the given entity id"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        try:
+            cursor.execute('''
+                SELECT n.node_id, n.content, n.node_type, e.relationship_type, e.strength 
+                FROM knowledge_edges e
+                JOIN knowledge_nodes n ON e.target_node = n.node_id
+                WHERE e.source_node = ?
+                UNION
+                SELECT n.node_id, n.content, n.node_type, e.relationship_type, e.strength 
+                FROM knowledge_edges e
+                JOIN knowledge_nodes n ON e.source_node = n.node_id
+                WHERE e.target_node = ?
+                ORDER BY strength DESC LIMIT ?
+            ''', (entity_id, entity_id, limit))
+            
+            results = []
+            for row in cursor.fetchall():
+                results.append({
+                    "id": row[0],
+                    "content": row[1],
+                    "type": row[2],
+                    "relationship": row[3],
+                    "strength": row[4]
+                })
+            return results
+        finally:
+            conn.close()
     
     def update_from_interaction(self, context: Dict[str, Any], action: str, outcome: str):
         """Update knowledge graph from interaction"""

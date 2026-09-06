@@ -26,10 +26,8 @@ import re
 import webbrowser
 import subprocess
 from ai_assistant.vision.gemini_vision_provider import GeminiVisionProvider
-try:
-    from ai_assistant.workflow.intent_router import IntentRouter
-except ImportError:
-    IntentRouter = None
+from ai_assistant.ai.rag_trace import write_trace
+
 
 try:
     from PIL import ImageGrab
@@ -76,7 +74,7 @@ class TokenCounter:
                 return len(self.encoder.encode(text))
             except:
                 pass
-        # Fallback: rough estimation (1 token â‰ˆ 4 characters)
+        # Fallback: rough estimation (1 token ‰ˆ 4 characters)
         return len(text) // 4
     
     def count_messages(self, messages: List[Dict[str, str]]) -> int:
@@ -200,6 +198,20 @@ class AdvancedConversationalAI:
         self._init_database()
         self._load_contexts()
         
+        # Initialize Long-Term Memory Retrieval (RAG)
+        self.memory_retrieval = None
+        self.historical_rag = None
+        try:
+            from ai_assistant.ai.memory_retrieval import MemoryRetrieval
+            self.memory_retrieval = MemoryRetrieval(self.db_path)
+            print("✅ Long-Term Memory (RAG) initialized")
+            
+            from ai_assistant.ai.historical_rag import HistoricalRAG
+            self.historical_rag = HistoricalRAG()
+            print("✅ Historical RAG initialized")
+        except Exception as e:
+            print(f"⚠️  Long-Term Memory init failed: {e}")
+        
         # Background thread for proactive suggestions
         self.proactive_thread = None
         self.running = True
@@ -208,22 +220,10 @@ class AdvancedConversationalAI:
         # Initialize VLM Provider
         try:
             self.vision_provider = GeminiVisionProvider(model_name="gemini-2.5-flash")
-            print("âœ… Vision Provider initialized (Gemini)")
+            print("✅ Vision Provider initialized (Gemini)")
         except Exception as e:
-            print(f"âš ï¸ Vision Provider init failed: {e}")
+            print(f"⚠️   Vision Provider init failed: {e}")
             self.vision_provider = None
-
-        # Initialize Semantic Intent Router
-        try:
-            if IntentRouter:
-                self.intent_router = IntentRouter()
-                print("âœ… Semantic Intent Router initialized")
-            else:
-                self.intent_router = None
-                print("âš ï¸ IntentRouter module not found")
-        except Exception as e:
-            print(f"âš ï¸ Intent Router init failed: {e}")
-            self.intent_router = None
 
         # Initialize MCP Enhancer
         try:
@@ -237,12 +237,12 @@ class AdvancedConversationalAI:
                     loop.run_until_complete(enhance_with_mcp(self))
                     loop.close()
                 except Exception as e:
-                    print(f"âš ï¸ Failed to apply MCP enhancement: {e}")
+                    print(f"⚠️   Failed to apply MCP enhancement: {e}")
             
             # Run in background to not block initialization
             threading.Thread(target=_apply_mcp_enhancement, daemon=True).start()
         except Exception as e:
-            print(f"âš ï¸ MCP loading error: {e}")
+            print(f"⚠️   MCP loading error: {e}")
 
     def _init_llm_provider(self):
         """Initialize the LLM provider for generating real-time AI responses."""
@@ -266,7 +266,7 @@ class AdvancedConversationalAI:
             
             # Add a system prompt for the assistant
             system_prompt = (
-                "You are Pulsar, a smart, helpful, and concise AI assistant created by Divakar. "
+                "You are Pulsar, a smart, helpful, and concise AI assistant created by Diwakar. "
                 "You MUST NEVER identify as a large language model trained by Google or any other company. "
                 "You MUST NEVER mention Gemma, OpenAI, Google, or any base models. "
                 "Keep your answers brief and directly address the user. "
@@ -317,7 +317,7 @@ class AdvancedConversationalAI:
                                 user_name = rows[0][0]
                             
                             if user_name:
-                                print(f"âœ… Loaded detailed user profile for: {user_name}")
+                                print(f"✅ Loaded detailed user profile for: {user_name}")
                                 system_prompt += f"\n\n### USER PROFILE ###\n"
                                 system_prompt += f"You are assisting {user_name}"
                                 if user_role:
@@ -340,7 +340,7 @@ class AdvancedConversationalAI:
                                     
                                 system_prompt += "\n\nAddress the user by name occasionally when appropriate to build rapport."
                     except Exception as db_err:
-                        print(f"âš ï¸  Note: Could not read user profile: {db_err}")
+                        print(f"⚠️   Note: Could not read user profile: {db_err}")
                     finally:
                         conn.close()
 
@@ -355,7 +355,7 @@ class AdvancedConversationalAI:
                             system_prompt += f"- Top Apps: {', '.join(summary.get('top_apps', []))}\n"
                             system_prompt += f"- Frequent Topics: {', '.join(summary.get('frequent_topics', []))}\n"
                     except Exception as pattern_err:
-                        print(f"âš ï¸  Note: Could not inject usage patterns: {pattern_err}")
+                        print(f"⚠️   Note: Could not inject usage patterns: {pattern_err}")
 
                     # Inject User DNA (Living Profile)
                     try:
@@ -367,15 +367,15 @@ class AdvancedConversationalAI:
                             for key, value in dna_profile.items():
                                 system_prompt += f"- {key.capitalize()}: {value}\n"
                     except Exception as dna_err:
-                        print(f"âš ï¸  Note: Could not inject User DNA: {dna_err}")
+                        print(f"⚠️   Note: Could not inject User DNA: {dna_err}")
 
             except Exception as e:
-                print(f"âš ï¸  Error loading user profile: {e}")
+                print(f"⚠️   Error loading user profile: {e}")
 
             self.llm_provider.add_system_message(system_prompt)
-            print("âœ… LLM provider initialized for real-time AI responses")
+            print("✅ LLM provider initialized for real-time AI responses")
         except Exception as e:
-            print(f"âš ï¸ LLM provider initialization failed: {e}")
+            print(f"⚠️   LLM provider initialization failed: {e}")
             print("   Falling back to rule-based responses. Set OPENAI_API_KEY or GEMINI_API_KEY for AI responses.")
             self.llm_provider = None
     
@@ -384,9 +384,9 @@ class AdvancedConversationalAI:
         try:
             from ai_assistant.ai.advanced_feedback_learning import AdaptiveLearningEngine
             self.feedback_system = AdaptiveLearningEngine()
-            print("âœ… Training data feedback loop initialized")
+            print("✅ Training data feedback loop initialized")
         except Exception as e:
-            print(f"âš ï¸ Feedback system initialization failed: {e}")
+            print(f"⚠️   Feedback system initialization failed: {e}")
             self.feedback_system = None
         
     def _init_database(self):
@@ -653,6 +653,22 @@ class AdvancedConversationalAI:
     
     def save_interaction_feedback(self, prompt: str, response: str, feedback_type: str = "implicit", rating: float = 0.8):
         """Save interaction to training data with optional feedback."""
+        if getattr(self, 'historical_rag', None):
+            try:
+                score = rating
+                if feedback_type == "thumbs_up":
+                    score = 1.0
+                elif feedback_type == "thumbs_down":
+                    score = 0.0
+                self.historical_rag.add_interaction(
+                    prompt, 
+                    response, 
+                    context={'mood': self.user_mood.value, 'active_context': self.active_context_id}, 
+                    success_score=score
+                )
+            except Exception as hr_err:
+                logger.warning(f"⚠️ Failed to save to historical RAG: {hr_err}")
+
         if self.feedback_system:
             try:
                 # Update User DNA implicitly
@@ -684,6 +700,13 @@ class AdvancedConversationalAI:
                         is_positive=True,
                         context={'mood': self.user_mood.value}
                     )
+                elif feedback_type == "thumbs_down":
+                    self.feedback_system.process_thumbs_feedback(
+                        prompt=prompt,
+                        response=response,
+                        is_positive=False,
+                        context={'mood': self.user_mood.value}
+                    )
             except Exception as e:
                 logger.warning(f"⚠️ Failed to save training data: {e}")
     
@@ -699,6 +722,11 @@ class AdvancedConversationalAI:
             # Detect mood from user messages
             if role == "user":
                 self.detect_mood(message)
+                try:
+                    from ai_assistant.ai.user_dna import UserDNA
+                    UserDNA().extract_facts_from_text(message)
+                except Exception as e:
+                    pass
             
             # Check for context switch
             is_switch, switch_msg, new_ctx_id = self.handle_context_switch_request(message)
@@ -724,10 +752,12 @@ class AdvancedConversationalAI:
                     cmd_res = self._execute_play_command(message_lower, f"play {song} on {app_name}")
                     if cmd_res:
                         return cmd_res
-            # Chain of Action: Split by separators (and, then, aur, ,)
-            # Use regex to split but keep delimiters to reconstruct if needed, or just split.
+                        
+            # Chain of Action: Split by separators (and, then, aur, &)
+            # Use regex to split but keep delimiters to reconstruct if needed.
             # Handles: "open chrome and search google", "youtube khol aur song baja"
-            chain_separators = r'\s+(?:and|then|aur|&)\s+|,\s*'
+            # NOTE: Removed comma from chain_separators to prevent natural sentences from being split
+            chain_separators = r'\s+(?:and|then|aur|&)\s+'
             
             # Simple heuristic: If multiple parts found, process sequentially
             parts = re.split(chain_separators, message_lower)
@@ -797,8 +827,8 @@ class AdvancedConversationalAI:
                 action_words = ['open', 'close', 'start', 'stop', 'launch', 'run', 'play', 'search', 'find', 
                                'create', 'make', 'set', 'change', 'show', 'get', 'check',
                                'khol', 'band', 'chala', 'baja', 'sun', 'dikha', 'bhejo', 'dhund', 'khoj']
-                if any(word in message_lower for word in action_words):
-                    return "ðŸ¤” I can sense you want me to do something! Could you be more specific? Here are some examples:\n\nðŸ“± 'open chrome' - Opens Google Chrome\nðŸŽµ 'play music' - Plays music on YouTube\nðŸ” 'search for python' - Searches Google\nðŸ“ 'create a document' - Opens Word\n\nWhat exactly would you like me to do?"
+                if any(re.search(rf'\b{word}\b', message_lower) for word in action_words):
+                    return "¤ I can sense you want me to do something! Could you be more specific? Here are some examples:\n\n📱 'open chrome' - Opens Google Chrome\nŽ 'play music' - Plays music on YouTube\n  'search for python' - Searches Google\n  'create a document' - Opens Word\n\nWhat exactly would you like me to do?"
             
             # Default: Generate contextual response with LLM
             response = self._generate_contextual_response(message, provider, model)
@@ -820,11 +850,11 @@ class AdvancedConversationalAI:
             
             # More user-friendly error messages based on the error type
             if "automation" in str(e).lower():
-                return "ðŸ”§ I'm having trouble connecting to some system features right now. Please try again, or try a different command."
+                return " I'm having trouble connecting to some system features right now. Please try again, or try a different command."
             elif "network" in str(e).lower() or "connection" in str(e).lower():
-                return "ðŸŒ There seems to be a network issue. Please check your connection and try again."
+                return "Œ  There seems to be a network issue. Please check your connection and try again."
             else:
-                return "ðŸ˜… I encountered a small hiccup while processing that. Could you try rephrasing your request or try a different command?"
+                return "˜… I encountered a small hiccup while processing that. Could you try rephrasing your request or try a different command?"
     
     def process_query(self, query: str) -> str:
         """
@@ -840,7 +870,7 @@ class AdvancedConversationalAI:
             
             # Extract numbers and operations
             if 'pie' in query_lower or 'pi' in query_lower:
-                return "The value of Ï€ (pi) is approximately 3.14159265359. It's the ratio of a circle's circumference to its diameter."
+                return "The value of Ï (pi) is approximately 3.14159265359. It's the ratio of a circle's circumference to its diameter."
             
             # Simple arithmetic patterns
             patterns = [
@@ -912,31 +942,13 @@ class AdvancedConversationalAI:
         """Try to execute actionable commands and return result."""
         try:
             # Clean query to remove emojis and extra symbols for better matching
-            # This handles cases like "ðŸš€ Open Chrome" -> "open chrome"
+            # This handles cases like "🚀 Open Chrome" -> "open chrome"
             clean_query = re.sub(r'[^\w\s\d\.\-\?\!]', '', query_lower).strip()
             
             # Heuristic: Check first few words for command verbs to avoid false positives
             # e.g. "I can see you didn't open chrome" should NOT trigger "open chrome"
             words = clean_query.split()
             first_few_words = words[:4] if len(words) > 4 else words
-            
-            # --- SEMANTIC ROUTING LAYER ---
-            if self.intent_router:
-                route, score = self.intent_router.determine_intent(query)
-                if route:
-                    print(f"ðŸ§  Semantic Route: {route} (Confidence: {score})")
-                    if route == 'vision':
-                        return self._execute_vision_command(query, clean_query)
-                    elif route == 'open':
-                         return self._execute_open_command(query, clean_query)
-                    elif route == 'close':
-                        return self._execute_close_command(query, clean_query)
-                    elif route == 'search':
-                        return self._execute_search_command(query, clean_query)
-                    elif route == 'play':
-                         return self._execute_play_command(query, clean_query)
-            # ------------------------------
-
             
             # PRIORITY 1: System/Settings commands (more specific than generic open)
             if ('settings' in clean_query or 'control panel' in clean_query or \
@@ -967,6 +979,16 @@ class AdvancedConversationalAI:
 
 
             
+            # PRIORITY 3.9: Hardware Status & Toggles (Battery, Apps, Bluetooth)
+            if any(word in clean_query for word in ['battery', 'charge', 'betri']):
+                return self._execute_battery_command(query, clean_query)
+                
+            if any(word in clean_query for word in ['open apps', 'khule hain', 'running apps', 'chal rahe apps', 'kaun se apps']) or ('running' in clean_query and 'app' in clean_query):
+                return self._execute_open_apps_command(query, clean_query)
+                
+            if 'bluetooth' in clean_query and any(word in clean_query for word in ['on', 'off', 'chalu', 'band', 'start', 'stop']):
+                return self._execute_bluetooth_toggle(query, clean_query)
+
             # PRIORITY 4: Searching - Google, web search
             if any(word in first_few_words for word in ['google', 'search', 'find', 'lookup', 'dhund', 'khoj', 'pata']) and 'download' not in clean_query:
                 return self._execute_search_command(query, clean_query)
@@ -984,6 +1006,12 @@ class AdvancedConversationalAI:
                any(doc in clean_query for doc in ['ppt', 'powerpoint', 'presentation', 'pdf', 'document', 'doc', 'word']):
                 return self._execute_create_document(query, clean_query)
             
+            # PRIORITY 6.5: Creating folders
+            create_verbs = ['create', 'make', 'creaate', 'banao', 'bana', 'karo', 'तीरिट', 'बनाओ', 'बना']
+            folder_nouns = ['folder', 'directory', 'pulder', 'polder', 'पुल्डर', 'फ़ोल्डर']
+            if any(word in query_lower for word in create_verbs) and any(folder in query_lower for folder in folder_nouns):
+                return self._execute_create_folder_command(query, query_lower)
+            
             # PRIORITY 7: Volume control
             if 'volume' in clean_query or 'sound' in clean_query or 'mute' in clean_query:
                 return self._execute_volume_command(query, clean_query)
@@ -997,7 +1025,7 @@ class AdvancedConversationalAI:
         except Exception as e:
             import traceback
             print(f"Command execution error: {traceback.format_exc()}")
-            return f"âŒ Error executing command: {str(e)}"
+            return f"Œ Error executing command: {str(e)}"
     
     def _execute_download_command(self, query: str, query_lower: str) -> str:
         """Execute download commands (YouTube audio)."""
@@ -1010,7 +1038,7 @@ class AdvancedConversationalAI:
         if not search_term:
             return "What song or video would you like me to download?"
             
-        return f"â¬‡ï¸ Downloading '{search_term}'... This might take a moment.\n\n" + \
+        return f"¬‡ Downloading '{search_term}'... This might take a moment.\n\n" + \
                self._perform_download_task(search_term)
 
     def _perform_download_task(self, search_term: str) -> str:
@@ -1020,18 +1048,18 @@ class AdvancedConversationalAI:
         try:
             result = youtube_downloader.search_and_download_audio(search_term)
             if result['status'] == 'success':
-                return f"âœ… Success! Downloaded: {result['title']}\nSaved to: {result['file_path']}"
+                return f"✅ Success! Downloaded: {result['title']}\nSaved to: {result['file_path']}"
             else:
-                return f"âŒ Download failed: {result['message']}"
+                return f"Œ Download failed: {result['message']}"
         except Exception as e:
-            return f"âŒ Error: {str(e)}"
+            return f"Œ Error: {str(e)}"
 
     def _verify_execution_visually(self, command_text: str, expected_app_name: str) -> str:
         """Uses Gemini Vision to verify if a command actually succeeded on screen."""
         if not self.vision_provider:
-            return "âš ï¸ (Visual verification skipped: Vision Provider not initialized. Set GEMINI_API_KEY)"
+            return "⚠️  (Visual verification skipped: Vision Provider not initialized. Set GEMINI_API_KEY)"
     
-        print(f"ðŸ‘€ Verifying execution of: {expected_app_name}...")
+        print(f"‘ Verifying execution of: {expected_app_name}...")
         
         # 1. Wait a moment for the application/UI to load
         time.sleep(3.0) 
@@ -1054,21 +1082,59 @@ class AdvancedConversationalAI:
             text_result = result.get("text", "").strip().upper()
             
             if "SUCCESS" in text_result:
-                return "âœ… (Visually Verified by AI)"
+                return "✅ (Visually Verified by AI)"
             else:
-                return "âŒ (Warning: App did not appear on screen. It might be loading slowly or failed.)"
+                return "Œ (Warning: App did not appear on screen. It might be loading slowly or failed.)"
                 
         except Exception as e:
-            return f"âš ï¸ (Visual verification error: {str(e)})"
+            return f"⚠️  (Visual verification error: {str(e)})"
 
     def _execute_open_command(self, query: str, query_lower: str) -> str:
-        """Execute open application commands."""
-        # Extract app name - remove command words
-        app_name = query_lower
-        for word in ['open', 'launch', 'start', 'run', 'the', 'app', 'application', 'program', 'khol', 'chalu', 'karo']:
-            app_name = app_name.replace(word, '')
-        app_name = app_name.strip()
-        
+        """Execute open application commands with smart NLP negation and matching."""
+        # --- Smart App Extraction & Negation Logic ---
+        app_name = ""
+        try:
+            from ai_assistant.automation.app_discovery import app_discovery
+            
+            # 1. Find all known apps mentioned in the query
+            mentioned_apps = []
+            for known_app in app_discovery.apps_database.keys():
+                if known_app in query_lower:
+                    mentioned_apps.append(known_app)
+            
+            # Sort by length descending (so "youtube music" is found before "youtube")
+            mentioned_apps.sort(key=len, reverse=True)
+            
+            target_app = None
+            if mentioned_apps:
+                negations = ["don't", "do not", "mat", "nahi", "not"]
+                if any(neg in query_lower for neg in negations):
+                    # Find the app that is NOT immediately preceded by a negation
+                    for m_app in mentioned_apps:
+                        idx = query_lower.find(m_app)
+                        if idx != -1:
+                            # Look at the text before the app (up to 20 chars)
+                            prefix = query_lower[max(0, idx-20):idx].strip()
+                            # Check if prefix contains any negation
+                            if not any(neg in prefix for neg in negations):
+                                target_app = m_app
+                                break
+                else:
+                    # No negation, just pick the longest matched known app
+                    target_app = mentioned_apps[0]
+            
+            if target_app:
+                app_name = target_app
+        except Exception as e:
+            print(f"Error in smart open matching: {e}")
+            
+        # Fallback to basic keyword removal if smart extraction failed or app isn't known yet
+        if not app_name:
+            app_name = query_lower
+            for word in ['open', 'launch', 'start', 'run', 'the', 'app', 'application', 'program', 'khol', 'chalu', 'karo', 'don\'t', 'do not', 'mat', 'nahi', 'instead']:
+                app_name = app_name.replace(word, '')
+            app_name = app_name.strip()
+            
         if not app_name:
             return "Which application would you like me to open?"
         
@@ -1111,6 +1177,47 @@ class AdvancedConversationalAI:
             return self._format_success(f"✅ {result}", f"open {app_name}")
         except Exception as e:
             return f"❌ Could not find application '{app_name}'. Try being more specific or check if it's installed."
+
+    def _execute_create_folder_command(self, query: str, query_lower: str) -> str:
+        """Execute create folder command (e.g. create a folder named HP on desktop)."""
+        words = query_lower.split()
+        
+        # Extract folder name
+        # English: "named HP", "name hp"
+        eng_match = re.search(r'(?:named|called|name is|name)\s+([a-zA-Z0-9_\-]+)', query_lower)
+        # Hindi/Hinglish: "HP naam ka", "एच्पी नाम को"
+        hindi_match = re.search(r'([^\s]+)\s+(?:naam|nam|नाम)\s+(?:ka|ko|ki|का|को|की)', query_lower)
+        
+        if hindi_match:
+            folder_name = hindi_match.group(1)
+        elif eng_match:
+            folder_name = eng_match.group(1)
+        else:
+            # Fallback: look for words after 'folder' that aren't stop words
+            parts = re.split(r'folder|directory|पुल्डर|फ़ोल्डर', query_lower)
+            if len(parts) > 1:
+                after_folder = parts[1].strip()
+                words_after = [w for w in after_folder.split() if w not in ['on', 'the', 'my', 'create', 'make', 'in', 'par', 'karo', 'ek', 'पर', 'एक', 'करो']]
+                folder_name = words_after[0] if words_after else "NewFolder"
+            else:
+                folder_name = "NewFolder"
+                
+        # Extract location
+        dest = "desktop"
+        if any(w in query_lower for w in ["document", "dastavez", "दस्तावेज़"]): dest = "documents"
+        elif any(w in query_lower for w in ["download", "daunlod", "डाउनलोड"]): dest = "downloads"
+        
+        if self.automation_callback:
+            try:
+                param = f"{folder_name}|{dest}"
+                result = self.automation_callback('create_folder', param)
+                if result and 'error' not in str(result).lower():
+                    return self._format_success(f"✅ {result}", f"create folder {folder_name} on {dest}")
+            except Exception as e:
+                logger.error(f"Automation create_folder error: {e}")
+                return f"❌ Failed to create folder: {str(e)}"
+                
+        return f"❌ I don't have permission to create folders."
 
     def _execute_close_command(self, query: str, query_lower: str) -> str:
         """Execute close application commands."""
@@ -1268,18 +1375,18 @@ class AdvancedConversationalAI:
                     if word.isdigit():
                         level = int(word)
                         result = self.automation_callback('set_volume', level)
-                        return f"ðŸ”Š {result}" if result else f"Volume set to {level}%"
+                        return f" {result}" if result else f"Volume set to {level}%"
                 
                 # Check for up/down
                 if 'up' in query_lower or 'increase' in query_lower or 'raise' in query_lower:
                     result = self.automation_callback('volume_up', None)
-                    return f"ðŸ”Š Volume increased"
+                    return f" Volume increased"
                 elif 'down' in query_lower or 'decrease' in query_lower or 'lower' in query_lower:
                     result = self.automation_callback('volume_down', None)
-                    return f"ðŸ”Š Volume decreased"
+                    return f" Volume decreased"
                 elif 'mute' in query_lower:
                     result = self.automation_callback('mute', None)
-                    return f"ðŸ”‡ Volume muted"
+                    return f"‡ Volume muted"
             except:
                 pass
         
@@ -1290,43 +1397,77 @@ class AdvancedConversationalAI:
         try:
             if 'wifi' in query_lower or 'network' in query_lower:
                 subprocess.Popen('ms-settings:network', shell=True)
-                return "âš™ï¸ Opening Network Settings"
+                return "⚠️ Opening Network Settings"
             elif 'bluetooth' in query_lower:
                 subprocess.Popen('ms-settings:bluetooth', shell=True)
-                return "âš™ï¸ Opening Bluetooth Settings"
+                return "⚠️ Opening Bluetooth Settings"
+                return "⚠️  Opening Bluetooth Settings"
             elif 'display' in query_lower or 'screen' in query_lower:
                 subprocess.Popen('ms-settings:display', shell=True)
-                return "âš™ï¸ Opening Display Settings"
+                return "⚠️  Opening Display Settings"
             elif 'sound' in query_lower or 'audio' in query_lower:
                 subprocess.Popen('ms-settings:sound', shell=True)
-                return "âš™ï¸ Opening Sound Settings"
+                return "⚠️  Opening Sound Settings"
             elif 'system' in query_lower:
                 subprocess.Popen('ms-settings:about', shell=True)
-                return "âš™ï¸ Opening System Settings"
+                return "⚠️  Opening System Settings"
             else:
                 subprocess.Popen('ms-settings:', shell=True)
-                return "âš™ï¸ Opening Windows Settings"
+                return "⚠️  Opening Windows Settings"
         except Exception as e:
-            return f"âŒ Could not open settings: {str(e)}"
+            return f" Œ Could not open settings: {str(e)}"
     
     def _execute_system_command(self, query: str, query_lower: str) -> str:
         """Execute system commands like shutdown, restart, etc."""
         try:
             if 'shutdown' in query_lower:
                 # Don't actually shutdown without confirmation!
-                return "âš ï¸ To shutdown your computer, please use the Start menu or confirm this action."
+                return "⚠️   To shutdown your computer, please use the Start menu or confirm this action."
             elif 'restart' in query_lower:
-                return "âš ï¸ To restart your computer, please use the Start menu or confirm this action."
+                return "⚠️   To restart your computer, please use the Start menu or confirm this action."
             elif 'lock' in query_lower:
                 subprocess.Popen('rundll32.exe user32.dll,LockWorkStation', shell=True)
-                return "ðŸ”’ Locking your computer..."
+                return " Locking your computer..."
             elif 'sleep' in query_lower:
                 subprocess.Popen('rundll32.exe powrprof.dll,SetSuspendState 0,1,0', shell=True)
-                return "ðŸ˜´ Putting computer to sleep..."
+                return "˜´ Putting computer to sleep..."
             else:
                 return "I can help with: lock, sleep. For shutdown/restart, please use the Start menu for safety."
         except Exception as e:
-            return f"âŒ Could not execute system command: {str(e)}"
+            return f" Œ Could not execute system command: {str(e)}"
+
+    def _execute_battery_command(self, query: str, query_lower: str) -> str:
+        """Execute battery status check."""
+        try:
+            from ai_assistant.automation.system_automation import SystemAutomation
+            sys_auto = SystemAutomation()
+            return sys_auto.get_battery_status()
+        except Exception as e:
+            return f"❌ Error checking battery: {e}"
+
+    def _execute_open_apps_command(self, query: str, query_lower: str) -> str:
+        """Execute open apps check."""
+        try:
+            from ai_assistant.automation.app_automation import AppAutomation
+            app_auto = AppAutomation()
+            return app_auto.get_open_apps()
+        except Exception as e:
+            return f"❌ Error checking open apps: {e}"
+
+    def _execute_bluetooth_toggle(self, query: str, query_lower: str) -> str:
+        """Execute bluetooth toggle."""
+        enable = 'on' in query_lower or 'chalu' in query_lower or 'start' in query_lower
+        try:
+            from ai_assistant.automation.system_automation import SystemAutomation
+            sys_auto = SystemAutomation()
+            success = sys_auto.toggle_bluetooth(enable)
+            status = "On" if enable else "Off"
+            if success:
+                return f"✅ Bluetooth is now {status}"
+            else:
+                return f"❌ Failed to turn {status} Bluetooth."
+        except Exception as e:
+            return f"❌ Error toggling bluetooth: {e}"
 
     def _get_active_window_title(self) -> str:
         """Get the title of the currently active window."""
@@ -1343,10 +1484,10 @@ class AdvancedConversationalAI:
     def _execute_vision_command(self, query: str, query_lower: str) -> str:
         """Execute vision/VLM commands by analyzing the screen."""
         if not self.vision_provider:
-             return "âš ï¸ Vision features are not initialized. Please check GEMINI_API_KEY."
+             return "⚠️  Vision features are not initialized. Please check GEMINI_API_KEY."
         
         if not ImageGrab:
-             return "âš ï¸ PIL ImageGrab is not available. Cannot capture screen."
+             return "⚠️  PIL ImageGrab is not available. Cannot capture screen."
 
         try:
             # 1. Capture Screen
@@ -1365,10 +1506,10 @@ class AdvancedConversationalAI:
                 full_prompt = f"Analyze this screen and answer: {query}"
             
             # 3. Analyze
-            return f"ðŸ‘€ Looking at screen...\n" + self.vision_provider.analyze_image(screenshot, full_prompt).text
+            return f"‘ Looking at screen...\n" + self.vision_provider.analyze_image(screenshot, full_prompt).text
             
         except Exception as e:
-            return f"âŒ Vision verification failed: {str(e)}"
+            return f"Œ Vision verification failed: {str(e)}"
 
     def _verify_task_completion(self, original_command: str) -> str:
         """Wait and verify task completion using VLM."""
@@ -1385,7 +1526,7 @@ class AdvancedConversationalAI:
             screenshot = ImageGrab.grab()
             
             # 3. Ask VLM
-            prompt = f"I just executed command: '{original_command}'. Check if '{target_app}' is visible/open/active on the screen. Reply with 'âœ… Verified' or 'âŒ Issue' and a very short reason."
+            prompt = f"I just executed command: '{original_command}'. Check if '{target_app}' is visible/open/active on the screen. Reply with '✅ Verified' or 'Œ Issue' and a very short reason."
             
             res = self.vision_provider.analyze_image(screenshot, prompt)
             return f"\n\n[Vision Audit]: {res.text}"
@@ -1421,7 +1562,7 @@ class AdvancedConversationalAI:
              current_name = active_provider.provider_name.lower() if hasattr(active_provider, 'provider_name') else ''
              if provider.lower() not in current_name:
                   try:
-                       print(f"ðŸ”„ Temporarily switching LLM: {current_name} -> {provider}")
+                       print(f"🔄 Temporarily switching LLM: {current_name} -> {provider}")
                        from ai_assistant.ai.llm_provider import UnifiedChatInterface
                        # Create temp provider
                        active_provider = UnifiedChatInterface(provider=provider, model=model, use_fallback=True)
@@ -1433,7 +1574,7 @@ class AdvancedConversationalAI:
                             active_provider.add_system_message("You are Pulsar, powered by Google Gemini.")
                             
                   except Exception as e:
-                       print(f"âš ï¸ Failed to switch provider: {e}")
+                       print(f"⚠️  Failed to switch provider: {e}")
                        active_provider = self.llm_provider # Fallback to default
 
         # FIRST: Try to use the LLM provider for real-time AI responses
@@ -1451,75 +1592,169 @@ class AdvancedConversationalAI:
                         if content:
                             conversation_context += f"{role.capitalize()}: {content}\n"
                 
+                # RAG: Search long-term memory if user is asking about the past
+                memory_context = ""
+                retrieved_ids = []
+                retrieval_source = "none"
+                if self.memory_retrieval:
+                    # Check gate
+                    gated = False
+                    if getattr(self.memory_retrieval, "RUN_AS_BACKGROUND_CONTEXT", False):
+                        gated = True
+                    else:
+                        # 1. LLM-Based Intent Classification
+                        try:
+                            router_prompt = f"""
+Analyze the user message and determine if they are asking to retrieve information from past conversations, past events, or memory.
+Reply with ONLY the word TRUE if they are asking about the past, or FALSE if they are not.
+
+User Message: "{message}"
+"""                     
+                            intent_response = active_provider.chat(router_prompt, stream=False)
+                            if intent_response and "TRUE" in str(intent_response).upper():
+                                gated = True
+                                print(f"🧠 LLM Intent Router: Detected memory request.")
+                        except Exception as e:
+                            logger.warning(f"⚠️ LLM intent classification failed: {e}")
+                            # 2. Fallback to smart regex
+                            gated = self.memory_retrieval.is_memory_query(message)
+
+                    if gated:
+                        try:
+                            # 1. Search recent/raw memory
+                            results = self.memory_retrieval.search_memory(message)
+                            if results:
+                                memory_context = self.memory_retrieval.format_for_llm(results)
+                                retrieved_ids = [r.get('conversation_id') for r in results if r.get('conversation_id') is not None]
+                                retrieval_source = results[0].get('source', 'memory_retrieval')
+                                print(f"🧠 Retrieved {len(results)} memories for context")
+                                
+                            # 2. Search highly-rated historical interactions
+                            if getattr(self, 'historical_rag', None):
+                                hist_results = self.historical_rag.retrieve_similar(message, top_k=3, min_success_score=0.7)
+                                if hist_results:
+                                    hist_context = "\n--- High-Quality Past Interactions ---\n"
+                                    for idx, hr in enumerate(hist_results, 1):
+                                        hist_context += f"Past Interaction {idx}:\nUser: {hr.get('query')}\nAssistant: {hr.get('response')}\n\n"
+                                    
+                                    memory_context += hist_context
+                                    retrieved_ids.extend([hr.get('id') for hr in hist_results])
+                                    if retrieval_source == "none":
+                                        retrieval_source = "historical_rag"
+                                    else:
+                                        retrieval_source = "hybrid"
+                                    print(f"🧠 Retrieved {len(hist_results)} highly-rated historical interactions")
+                                    
+                        except Exception as mem_err:
+                            logger.warning(f"⚠️ Memory retrieval failed: {mem_err}")
+                
+                # Inject memory context into the prompt if we found relevant memories
+                augmented_message = message
+                
+                # DNA Injection
+                try:
+                    from ai_assistant.ai.user_dna import UserDNA
+                    dna = UserDNA().get_full_profile()
+                    if dna:
+                        dna_context = "\n\n[SYSTEM INSTRUCTION: Always remember the following facts about the user]\n" + "\n".join([f"- {k}: {v}" for k, v in dna.items()])
+                        augmented_message += dna_context
+                except Exception as dna_err:
+                    pass
+
+                if memory_context:
+                    augmented_message += f"\n\n{memory_context}"
+
+                # Trace: log retrieval context for downstream inspection.
+                # No-op on failure; never blocks the live path.
+                if 'gated' in locals():
+                    if not retrieved_ids:
+                        write_trace(
+                            query=message,
+                            retriever="memory_retrieval",
+                            retrieved_ids=[],
+                            injected_preview="",
+                            source="no_match",
+                            extra={"gated": gated}
+                        )
+                    else:
+                        write_trace(
+                            query=message,
+                            retriever="memory_retrieval",
+                            retrieved_ids=retrieved_ids,
+                            injected_preview=memory_context,
+                            source=retrieval_source,
+                            extra={"gated": gated}
+                        )
+                
                 # Generate response using LLM
-                print(f"ðŸ¤– Generating AI response for: {message[:50]}...")
-                response = active_provider.chat(message, stream=False)
+                print(f"🤖 Generating AI response for: {message[:50]}...")
+                response = active_provider.chat(augmented_message, stream=False)
                 
                 logger.debug(f"DEBUG: LLM response type: {type(response)}, length: {len(str(response)) if response else 0}")
                 logger.debug(f"DEBUG: Response content: {str(response)[:100]}")
                 
                 if response and "Error" not in str(response) and len(str(response)) > 5:
-                    print(f"âœ… AI response generated successfully")
+                    print(f"✅ AI response generated successfully")
                     return response
                 else:
-                    print(f"âš ï¸ LLM returned empty or error response, using fallback")
+                    print(f"⚠️  LLM returned empty or error response, using fallback")
                     print(f"   Response was: {response}")
             except Exception as e:
-                print(f"âš ï¸ LLM response generation failed: {e}, using rule-based fallback")
+                print(f"⚠️   LLM response generation failed: {e}, using rule-based fallback")
         
         # FALLBACK: Rule-based responses for common queries (when LLM unavailable)
         # Handle greetings
         greetings = ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening']
         if any(greeting in message_lower for greeting in greetings):
-            return "ðŸ‘‹ Hello! I'm your assistant. I can help you open apps, search the web, play music, create documents, and much more. What would you like me to do?"
+            return "👋 Hello! I'm your assistant. I can help you open apps, search the web, play music, create documents, and much more. What would you like me to do?"
         
         # Handle "how are you" type questions
         if any(phrase in message_lower for phrase in ['how are you', 'how r u', 'how do you feel']):
-            return "I'm doing great, thank you for asking! ðŸ˜Š I'm ready to help you with any tasks. What can I do for you today?"
+            return "I'm doing great, thank you for asking! 😊 I'm ready to help you with any tasks. What can I do for you today?"
         
         # Handle capability questions
         if any(phrase in message_lower for phrase in ['what can you do', 'what are you capable of', 'help me', 'what features']):
-            return "ðŸš€ I can help you with many things:\n\nðŸ“± Open applications (chrome, notepad, calculator, etc.)\nðŸ” Search Google for anything\nðŸŽµ Play music on YouTube/Spotify\nðŸ“ Create documents and presentations\nðŸ”§ Control system settings (volume, WiFi, etc.)\nðŸ“Š Perform calculations\nâ° Tell you time and date\n\nJust ask me naturally! For example: 'open chrome', 'play some music', or 'search for python tutorials'."
+            return "🚀 I can help you with many things:\n\n📱 Open applications (chrome, notepad, calculator, etc.)\n🔍 Search Google for anything\n🎵 Play music on YouTube/Spotify\n📄 Create documents and presentations\n🔧 Control system settings (volume, WiFi, etc.)\n📊 Perform calculations\n⏰ Tell you time and date\n\nJust ask me naturally! For example: 'open chrome', 'play some music', or 'search for python tutorials'."
         
         # Handle thank you messages
         if any(phrase in message_lower for phrase in ['thank you', 'thanks', 'appreciate']):
-            return "You're very welcome! ðŸ˜Š I'm always here to help. Is there anything else you need?"
+            return "You're very welcome! 😊 I'm always here to help. Is there anything else you need?"
         
         # Handle questions about assistant
         if any(phrase in message_lower for phrase in ['who are you', 'what are you', 'tell me about yourself']):
-            return "I'm Pulsar Assistant! ðŸ¤– I'm an AI assistant designed to help you with daily tasks like opening applications, searching the web, playing music, managing files, and much more. Think of me as your personal digital helper!"
+            return "I'm Pulsar Assistant! 🤖 I'm an AI assistant designed to help you with daily tasks like opening applications, searching the web, playing music, managing files, and much more. Think of me as your personal digital helper!"
         
         # Handle unclear requests
         if any(phrase in message_lower for phrase in ['do something', 'help', 'assist', 'i need']):
-            return "I'd be happy to help! ðŸ’ª Here are some things I can do for you:\n\nâ€¢ Open applications: 'open chrome'\nâ€¢ Search: 'google python tutorial'\nâ€¢ Play music: 'play believer'\nâ€¢ Create files: 'create a document'\nâ€¢ System control: 'volume up'\n\nWhat would you like me to help with?"
+            return "I'd be happy to help! 💪 Here are some things I can do for you:\n\n• Open applications: 'open chrome'\n• Search: 'google python tutorial'\n• Play music: 'play believer'\n• Create files: 'create a document'\n• System control: 'volume up'\n\nWhat would you like me to help with?"
         
         # Return context-aware response for ongoing conversations
         if self.active_context_id:
             context = self.contexts[self.active_context_id]
             if len(context.messages) > 3:
-                return f"I'm following our conversation about {context.topic}. What else can I help you with? ðŸš€"
+                return f"I'm following our conversation about {context.topic}. What else can I help you with? 🚀"
         
         # For general knowledge questions without LLM - indicate limitation
         question_words = ['what', 'why', 'how', 'when', 'where', 'who', 'which', 'explain', 'tell me about']
         if any(word in message_lower for word in question_words):
             return (
-                "ðŸ¤” That's a great question! However, I'm currently running in offline mode without access to AI. "
+                "🤔 That's a great question! However, I'm currently running in offline mode without access to AI. "
                 "To get intelligent answers to your questions, please configure an API key:\n\n"
-                "â€¢ Set OPENAI_API_KEY for GPT models, or\n"
-                "â€¢ Set GEMINI_API_KEY for Google Gemini\n\n"
+                "• Set OPENAI_API_KEY for GPT models, or\n"
+                "• Set GEMINI_API_KEY for Google Gemini\n\n"
                 "In the meantime, I can still help you with:\n"
-                "â€¢ Opening apps: 'open chrome'\n"
-                "â€¢ Playing music: 'play [song name]'\n"
-                "â€¢ Searching: 'search for [query]'\n"
-                "â€¢ Basic calculations: 'what is 10 times 5'"
+                "• Opening apps: 'open chrome'\n"
+                "• Playing music: 'play [song name]'\n"
+                "• Searching: 'search for [query]'\n"
+                "• Basic calculations: 'what is 10 times 5'"
             )
         
         # Random thoughtful responses for variety
         import random
         thoughtful_responses = [
-            "That's interesting! I'd love to help you with that. For intelligent responses, please set up an AI API key (OPENAI_API_KEY or GEMINI_API_KEY). ðŸ’¡",
-            "I hear you! For detailed AI-powered responses, please configure your API keys. Meanwhile, try commands like 'open chrome' or 'play music'! ðŸ˜Š",
-            "Got it! To unlock my full potential, please set OPENAI_API_KEY or GEMINI_API_KEY. I can still help with app control and searches! ðŸŽ¯"
+            "That's interesting! I'd love to help you with that. For intelligent responses, please set up an AI API key (OPENAI_API_KEY or GEMINI_API_KEY). 💡",
+            "I hear you! For detailed AI-powered responses, please configure your API keys. Meanwhile, try commands like 'open chrome' or 'play music'! 😊",
+            "Got it! To unlock my full potential, please set OPENAI_API_KEY or GEMINI_API_KEY. I can still help with app control and searches! 🎯"
         ]
         return random.choice(thoughtful_responses)
     
@@ -1764,6 +1999,15 @@ class AdvancedConversationalAI:
                 json.dumps(context.metadata),
                 context.priority
             ))
+        
+        # Update the FTS search index for long-term memory retrieval
+        if hasattr(self, 'memory_retrieval') and self.memory_retrieval:
+            try:
+                self.memory_retrieval.index_conversation(
+                    context.id, context.topic, context.messages, context.last_activity
+                )
+            except Exception as e:
+                logger.warning(f"⚠️ FTS index update failed: {e}")
     
     def _load_contexts(self):
         """Load conversation contexts from database."""

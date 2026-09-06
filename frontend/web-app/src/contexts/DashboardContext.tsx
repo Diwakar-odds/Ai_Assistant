@@ -129,15 +129,18 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     const [recognition, setRecognition] = useState<unknown>(null);
     const [voiceLanguage, setVoiceLanguageState] = useState('auto'); // Auto-detect language
     const [_isRecognitionStarted, _setIsRecognitionStarted] = useState(false);
+    const accumulatedFinalTranscriptRef = useRef('');
+    const transcriptTimeoutRef = useRef<any>(null);
 
     // MediaRecorder & Audio Context for Faster-Whisper
-    const silenceTimerRef = useRef<unknown>(null);
+    const silenceTimerRef = useRef<any>(null);
     const [userStoppedVoice, setUserStoppedVoice] = useState(false); // Track if user manually stopped
     const userStoppedRef = useRef(false); // Ref to track stop state without causing re-renders
 
-    const [aiMode, setAIMode] = useState<'online' | 'offline'>('online'); // 'online' = GPT/Gemini, 'offline' = Ollama
-    const [aiProvider, setAIProviderState] = useState<'gemini' | 'openai' | 'ollama' | 'gguf'>('openai'); // Current AI provider
+    const [aiMode, setAIMode] = useState<'online' | 'offline'>('online'); // Default to online (Gemini)
+    const [aiProvider, setAIProviderState] = useState<'gemini' | 'openai' | 'ollama' | 'gguf'>('openai'); // Added aiProvider state
     const [aiModel, setAIModel] = useState<string>(''); // Current AI model
+    
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const isVoiceActiveRef = useRef(false); // Ref to track voice active state for reliable checks in handlers
@@ -156,11 +159,11 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                         const aiSettings = data.settings.ai;
                         if (aiSettings.defaultProvider) {
                             setAIProviderState(aiSettings.defaultProvider);
-                            console.log(`🔄 Synced Provider from settings: ${aiSettings.defaultProvider}`);
+                            console.log(`≡ƒöä Synced Provider from settings: ${aiSettings.defaultProvider}`);
                         }
                         if (aiSettings.defaultModel) {
                             setAIModel(aiSettings.defaultModel);
-                            console.log(`🔄 Synced Model from settings: ${aiSettings.defaultModel}`);
+                            console.log(`≡ƒöä Synced Model from settings: ${aiSettings.defaultModel}`);
                         }
 
                         // Sync AI Mode
@@ -186,10 +189,10 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         addSystemLog('info', `Processing: ${command}`);
 
         const useOfflineMode = aiMode === 'offline';
-        console.log(`🤖 AI Mode: ${aiMode} | Provider: ${aiProvider} | Model: ${aiModel}`);
+        console.log(`≡ƒñû AI Mode: ${aiMode} | Provider: ${aiProvider} | Model: ${aiModel}`);
 
         if (socket && socket.connected) {
-            console.log('📤 Sending command via socket:', command);
+            console.log('≡ƒôñ Sending command via socket:', command);
             socket.emit('command', {
                 command,
                 message: command,
@@ -233,26 +236,30 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     // ... (keep existing code) ...
 
     const setAIProvider = (provider: 'gemini' | 'openai' | 'ollama' | 'gguf') => {
-        console.log(`🔄 Switching AI provider to: ${provider}`);
         setAIProviderState(provider);
-        // Reset model when provider changes (optional, or set to first available)
-        // setAIModel(''); 
+        
+        // Ensure aiModel matches the newly selected provider
+        if (provider === 'gguf') setAIModel('pulsar-final-q4_k_m');
+        else if (provider === 'gemini') setAIModel('gemini-2.5-flash');
+        else if (provider === 'openai') setAIModel('gpt-4o-mini');
+        else if (provider === 'ollama') setAIModel('llama3.1:8b');
+        else setAIModel('');
 
         // Update aiMode based on provider
         if (provider === 'ollama' || provider === 'gguf') {
             setAIMode('offline');
             const providerName = provider === 'gguf' ? 'GGUF' : 'Ollama';
-            addSystemLog('info', `🤖 Switched to ${providerName} (Offline)`);
+            addSystemLog('info', `≡ƒñû Switched to ${providerName} (Offline)`);
         } else {
             setAIMode('online');
             const providerName = provider === 'gemini' ? 'Gemini' : 'OpenAI';
-            addSystemLog('info', `🔷 Switched to ${providerName} (Online)`);
+            addSystemLog('info', `≡ƒö╖ Switched to ${providerName} (Online)`);
         }
     };
 
     // Expose setAIModel
-    const _setAIModelByName = (model: string) => {
-        console.log(`🔄 Switching AI model to: ${model}`);
+    const setAIModelByName = (model: string) => {
+        console.log(`≡ƒöä Switching AI model to: ${model}`);
         setAIModel(model);
     };
 
@@ -280,7 +287,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
     // SAFETY: Use a ref to hold the active recognition instance
     // This persists across re-renders and ensures we always clean up the *actual* active instance
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const activeRecognitionRef = useRef<any>(null);
     const hasGreetedRef = useRef(false); // Fix for double greeting
 
@@ -312,9 +319,9 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         });
 
         // Listen for live settings changes
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         newSocket.on('settings_updated', async (data: any) => {
-            console.log(`⚙️ Settings updated live: ${data.category}`, data);
+            console.log(`ΓÜÖ∩╕Å Settings updated live: ${data.category}`, data);
             addSystemLog('info', `${data.category} settings updated`);
 
             // Re-fetch all settings to update local state
@@ -329,24 +336,24 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                             const newMode = provider === 'local' ? 'offline' : 'online';
                             if (newMode !== aiMode) {
                                 setAIMode(newMode);
-                                console.log(`🔄 AI Mode hot-switched to ${newMode}`);
+                                console.log(`≡ƒöä AI Mode hot-switched to ${newMode}`);
                             }
                         }
                     }
                 }
-            } catch (_err) {
+            } catch (err) {
                 console.error('Failed to sync settings live:', err);
             }
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         newSocket.on('command_response', (data: any) => {
-            console.log('📢 command_response received:', data);
+            console.log('≡ƒôó command_response received:', data);
             if (data.success) {
                 const message = data.response || data.message;
                 addChatMessage(message, 'ai');
                 // Add speak here too for command_response
-                console.log('🔊 Speaking from command_response:', message?.substring(0, 50));
+                console.log('≡ƒöè Speaking from command_response:', message?.substring(0, 50));
                 speak(message, voiceLanguage, data.audio_base64);
             } else {
                 const errorMsg = 'Error: ' + (data.error || 'Unknown error');
@@ -355,7 +362,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             }
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         newSocket.on('system_stats_update', (stats: any) => {
             setSystemStats({
                 cpu: Math.round(stats.cpu_usage || 0),
@@ -365,12 +372,12 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             });
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         newSocket.on('log_update', (log: any) => {
             addSystemLog(log.type || 'info', log.message);
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         newSocket.on('learning_stats_update', (stats: any) => {
             setLearningStats({
                 database: stats.database || '--',
@@ -380,7 +387,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         });
 
         // Handle voice command responses with talkback
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         newSocket.on('voice_transcript', (data: any) => {
             console.log(' Voice transcript received:', data);
             if (data.text) {
@@ -390,18 +397,18 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         });
 
         newSocket.on('voice_response', (data: any) => {
-            console.log('🎤 Voice response received:', data);
-            console.log('🔊 voiceLanguage:', voiceLanguage);
-            console.log('🔊 data.success:', data.success);
-            console.log('🔊 data.response:', data.response?.substring(0, 100));
+            console.log('≡ƒÄñ Voice response received:', data);
+            console.log('≡ƒöè voiceLanguage:', voiceLanguage);
+            console.log('≡ƒöè data.success:', data.success);
+            console.log('≡ƒöè data.response:', data.response?.substring(0, 100));
 
             if (data.success && data.response) {
                 addChatMessage(data.response, 'ai');
 
                 // Speak the response back to user (talkback)
-                console.log('🔊 About to call speak() with:', { text: data.response.substring(0, 50), lang: voiceLanguage });
+                console.log('≡ƒöè About to call speak() with:', { text: data.response.substring(0, 50), lang: voiceLanguage });
                 speak(data.response, voiceLanguage, data.audio_base64);
-                console.log('✅ speak() called successfully');
+                console.log('Γ£à speak() called successfully');
 
                 addSystemLog('success', `Command processed: ${data.response.substring(0, 50)}...`);
             } else if (data.error) {
@@ -414,15 +421,15 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
 
         // Google Speech Recognition handlers
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         newSocket.on('google_ready', (data: any) => {
-            console.log('🌐 Google Speech Recognition ready:', data);
+            console.log('≡ƒîÉ Google Speech Recognition ready:', data);
             addSystemLog('success', `Online recognition enabled (${data.language})`);
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         newSocket.on('google_transcript', (data: any) => {
-            console.log('🌐 Google transcript:', data);
+            console.log('≡ƒîÉ Google transcript:', data);
             if (data.isFinal) {
                 setInterimTranscript('');
                 // Process as voice command
@@ -433,9 +440,9 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             }
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         newSocket.on('google_error', (data: any) => {
-            console.error('❌ Google Speech error:', data);
+            console.error('Γ¥î Google Speech error:', data);
             addSystemLog('error', `Online recognition error: ${data.error}`);
         });
 
@@ -452,7 +459,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     // Initialize Voice Recognition
     useEffect(() => {
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
             const recog = new SpeechRecognition();
             recog.continuous = true;  // Keep listening continuously
@@ -462,18 +469,18 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             if (voiceLanguage === 'auto') {
                 // Use browser's default language or Hindi as fallback
                 recog.lang = navigator.language || 'hi-IN';
-                console.log(`🌐 Auto-detect: Using language ${recog.lang}`);
+                console.log(`≡ƒîÉ Auto-detect: Using language ${recog.lang}`);
             } else {
                 recog.lang = voiceLanguage;
-                console.log(`🌐 Using selected language: ${recog.lang}`);
+                console.log(`≡ƒîÉ Using selected language: ${recog.lang}`);
             }
             // Cleanup previous instance if it exists
             if (activeRecognitionRef.current) {
-                console.log('🧹 Aborting previous recognition instance');
+                console.log('≡ƒº╣ Aborting previous recognition instance');
                 try {
                     activeRecognitionRef.current.abort();
                     activeRecognitionRef.current.onend = null; // Prevent restart loops from old instance
-                } catch (_e) {
+                } catch (e) {
                     console.warn('Error aborting previous recognition:', e);
                 }
             }
@@ -482,7 +489,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             activeRecognitionRef.current = recog;
 
             recog.onstart = () => {
-                console.log('🎤 Voice recognition started');
+                console.log('≡ƒÄñ Voice recognition started');
                 console.log('   Language:', recog.lang);
                 console.log('   Continuous:', recog.continuous);
                 console.log('   Interim Results:', recog.interimResults);
@@ -496,35 +503,35 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     _setIsRecognitionStarted(true);
 
                     // Start audio level monitoring immediately
-                    console.log('🎧 Initiating audio level monitoring...');
+                    console.log('≡ƒÄº Initiating audio level monitoring...');
                     startAudioLevelMonitoring().catch(err => {
-                        console.error('❌ Audio monitoring failed:', err);
-                        console.log('📊 Falling back to simulated audio levels');
+                        console.error('Γ¥î Audio monitoring failed:', err);
+                        console.log('≡ƒôè Falling back to simulated audio levels');
                         simulateAudioLevel();
                     });
                 } else {
-                    console.log('⚠️ Recognition started but user stopped - stopping immediately');
+                    console.log('ΓÜá∩╕Å Recognition started but user stopped - stopping immediately');
                     _setIsRecognitionStarted(false);
                     recog.stop();
                 }
             };
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             recog.onresult = (event: any) => {
                 // Check if this instance is still the active one
                 if (activeRecognitionRef.current !== recog) {
-                    console.log('🛑 Ghost listener detected - ignoring result from stale instance');
+                    console.log('≡ƒ¢æ Ghost listener detected - ignoring result from stale instance');
                     return;
                 }
 
                 // PREVENT FEEDBACK LOOP (ECHO)
                 // If the AI is speaking (or just finished speaking), ignore mic input entirely.
                 if (ttsSpeakingRef.current || window.speechSynthesis.speaking || window.speechSynthesis.pending) {
-                    // console.log('🙊 AI is speaking or in cooldown, ignoring mic input to prevent echo loop.');
+                    // console.log('≡ƒÖè AI is speaking or in cooldown, ignoring mic input to prevent echo loop.');
                     return;
                 }
 
-                console.log('🎯 Recognition event received:', {
+                console.log('≡ƒÄ» Recognition event received:', {
                     resultIndex: event.resultIndex,
                     resultsLength: event.results.length,
                     isFinal: event.results[event.resultIndex]?.isFinal
@@ -551,11 +558,11 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     : interim;
 
                 if (fullInterim) {
-                    console.log('💬 Setting interim transcript:', fullInterim);
+                    console.log('≡ƒÆ¼ Setting interim transcript:', fullInterim);
                     setInterimTranscript(fullInterim);
                     interimTranscriptRef.current = fullInterim; // Update ref for simulation
                 } else {
-                    console.log('⚠️ No interim text');
+                    console.log('ΓÜá∩╕Å No interim text');
                 }
 
                 // Reset timer whenever there is speech (interim or final)
@@ -567,7 +574,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 if (final) {
                     // FAST STOP: Intercept stop commands client-side for zero latency
                     if (final.trim().match(/^(stop|quiet|silence|shutup|shut up|cancel|terminate|wait)$/i)) {
-                        console.log('🛑 Fast Stop Triggered');
+                        console.log('≡ƒ¢æ Fast Stop Triggered');
                         window.speechSynthesis.cancel();
                         setInterimTranscript('');
                         interimTranscriptRef.current = '';
@@ -592,7 +599,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                         const commandToSend = accumulatedFinalTranscriptRef.current.trim();
                         accumulatedFinalTranscriptRef.current = '';
 
-                        console.log('✅ Final transcript (accumulated):', commandToSend);
+                        console.log('Γ£à Final transcript (accumulated):', commandToSend);
                         setInterimTranscript('');
                         interimTranscriptRef.current = ''; // Clear ref
 
@@ -601,7 +608,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
                         // Check Global Variable (protects against duplicate listeners/instances)
                         if (globalLastCommandInfo.text === commandToSend && (now - globalLastCommandInfo.time) < 2000) {
-                            console.log('🚫 Global duplicate command ignored:', commandToSend);
+                            console.log('≡ƒÜ½ Global duplicate command ignored:', commandToSend);
                             return;
                         }
 
@@ -609,7 +616,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                         if (lastProcessedCommandRef.current &&
                             lastProcessedCommandRef.current.text === commandToSend &&
                             (now - lastProcessedCommandRef.current.time) < 2000) {
-                            console.log('🚫 Local duplicate command ignored:', commandToSend);
+                            console.log('≡ƒÜ½ Local duplicate command ignored:', commandToSend);
                             return;
                         }
 
@@ -623,7 +630,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                             const detectedWake = wakeWords.find(wake => commandToSend.toLowerCase().includes(wake));
 
                             if (detectedWake) {
-                                console.log('🎯 Wake word detected:', detectedWake);
+                                console.log('≡ƒÄ» Wake word detected:', detectedWake);
                                 setWakeWordDetected(true);
                                 setIsProcessingCommand(true);
 
@@ -648,7 +655,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                                 return;
                             } else {
                                 // In wake word mode, ignore commands without wake word
-                                console.log('⏭️ Skipping - waiting for wake word');
+                                console.log('ΓÅ¡∩╕Å Skipping - waiting for wake word');
                                 return;
                             }
                         }
@@ -657,25 +664,26 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                         const shouldProcess = !alwaysActive || !requireWakeWord || isProcessingCommand;
 
                         if (shouldProcess) {
-                            console.log('🎯 Processing voice command:', final);
+                            console.log('≡ƒÄ» Processing voice command:', final);
                             addVoiceCommand(final);
 
                             // Send via socket for voice command processing, using REFs to avoid stale closures
                             const currentSocket = socketRef.current;
 
                             if (currentSocket && currentSocket.connected) {
-                                console.log('📤 Sending voice_command event to backend:', final);
-                                console.log(`🤖 Voice AI Mode: ${aiMode}`);
+                                console.log('≡ƒôñ Sending voice_command event to backend:', final);
+                                console.log(`≡ƒñû Voice AI Mode: ${aiMode}`);
                                 currentSocket.emit('voice_command', {
                                     text: final,
                                     language: voiceLanguage,
                                     timestamp: new Date().toISOString(),
                                     offline_mode: aiMode === 'offline',
-                                    provider: aiProvider
+                                    provider: aiProvider,
+                                    model: aiModel
                                 });
-                                console.log('✅ voice_command emitted successfully');
+                                console.log('Γ£à voice_command emitted successfully');
                             } else {
-                                console.warn('⚠️ Socket not connected, using direct fallback (avoiding duplicate chat entry)');
+                                console.warn('ΓÜá∩╕Å Socket not connected, using direct fallback (avoiding duplicate chat entry)');
 
                                 // Log processing
                                 addSystemLog('info', `Processing Voice: ${final}`);
@@ -688,7 +696,8 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                                     body: JSON.stringify({
                                         command: final,
                                         offline_mode: aiMode === 'offline',
-                                        provider: aiProvider
+                                        provider: aiProvider,
+                                        model: aiModel
                                     }),
                                 })
                                     .then((res) => res.json())
@@ -718,9 +727,9 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 } // End of if (accumulatedFinalTranscriptRef.current)
             };
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             recog.onerror = (event: any) => {
-                console.error('🚨 Speech recognition error:', event.error);
+                console.error('≡ƒÜ¿ Speech recognition error:', event.error);
 
                 // Ignore 'aborted' errors during normal stop
                 if (event.error === 'aborted') {
@@ -730,19 +739,19 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
                 // Temporary errors - just log, continuous mode will handle it
                 if (event.error === 'no-speech') {
-                    // console.log('⚠️ No speech detected, continuous mode will continue...');
+                    // console.log('ΓÜá∩╕Å No speech detected, continuous mode will continue...');
                     return;
                 }
 
                 if (event.error === 'audio-capture') {
-                    console.error('⚠️ Audio capture error - microphone issue');
+                    console.error('ΓÜá∩╕Å Audio capture error - microphone issue');
                     // Don't try to restart, let the user handle it
                     return;
                 }
 
                 // Critical errors - stop listening
                 if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-                    console.error('🚫 Microphone access denied');
+                    console.error('≡ƒÜ½ Microphone access denied');
                     alert('Microphone access denied. Please allow microphone access in your browser settings.');
                     setIsVoiceActive(false);
                     isVoiceActiveRef.current = false;
@@ -754,13 +763,13 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
                 // Network errors
                 if (event.error === 'network') {
-                    console.error('🌐 Network error during recognition');
+                    console.error('≡ƒîÉ Network error during recognition');
                     return;
                 }
 
                 // Language not supported
                 if (event.error === 'language-not-supported') {
-                    console.error('❌ Language not supported:', voiceLanguage);
+                    console.error('Γ¥î Language not supported:', voiceLanguage);
                     alert(`Language "${voiceLanguage}" is not supported. Please select a different language.`);
                     setIsVoiceActive(false);
                     isVoiceActiveRef.current = false;
@@ -772,7 +781,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             };
 
             recog.onend = () => {
-                console.log('🔴 Recognition ended, current state:', isVoiceActiveRef.current, 'userStopped:', userStoppedRef.current);
+                console.log('⏳ Recognition ended, current state:', isVoiceActiveRef.current, 'userStopped:', userStoppedRef.current);
                 _setIsRecognitionStarted(false);
 
                 // Stop audio monitoring when recognition ends
@@ -785,11 +794,16 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 if (!userStoppedRef.current && isVoiceActiveRef.current && !alwaysActive) {
                     console.log('🔄 Recognition ended unexpectedly, restarting in 1000ms...');
                     setTimeout(() => {
+                        // Echo prevention: don't restart mic while TTS is speaking or in cooldown
+                        if (ttsSpeakingRef.current) {
+                            console.log('🔇 Skipping recognition restart — TTS still speaking/cooling down');
+                            return;
+                        }
                         if (!userStoppedRef.current && isVoiceActiveRef.current && recog) {
                             try {
                                 recog.start();
                                 console.log('✅ Recognition restarted');
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                 
                             } catch (error: any) {
                                 if (!error.message?.includes('already started')) {
                                     console.error('❌ Failed to restart:', error);
@@ -800,7 +814,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                         }
                     }, 1000);
                 } else {
-                    console.log('🛑 Not restarting - userStopped:', userStoppedRef.current, 'active:', isVoiceActiveRef.current, 'alwaysActive:', alwaysActive);
+                    console.log('🚫 Not restarting - userStopped:', userStoppedRef.current, 'active:', isVoiceActiveRef.current, 'alwaysActive:', alwaysActive);
                     if (!alwaysActive) {
                         setIsVoiceActive(false);
                         isVoiceActiveRef.current = false;
@@ -823,7 +837,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     try {
                         oldRecog.abort();
                         console.log('✅ Stopped active recognition instance');
-                    } catch (_e) {
+                    } catch (e) {
                         // ignore errors on abort
                     }
                     activeRecognitionRef.current = null;
@@ -834,11 +848,11 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
     // Audio Level Monitoring Functions
     const startAudioLevelMonitoring = async () => {
-        console.log('🔧 Starting audio level monitoring...');
+        console.log('🔊 Starting audio level monitoring...');
 
         // First, try using simulated levels to avoid microphone conflicts
         // Web Speech API already has microphone access, requesting again can cause issues
-        console.log('💡 Using simulated audio levels to avoid conflicts with Speech Recognition');
+        console.log('⚙️ Using simulated audio levels to avoid conflicts with Speech Recognition');
         simulateAudioLevel();
 
         /* Disabled real audio monitoring to prevent conflicts with Web Speech API
@@ -857,11 +871,11 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-            console.log('🔊 Audio context created, state:', audioContext.state);
+            console.log('🎚️ Audio context created, state:', audioContext.state);
             
             if (audioContext.state === 'suspended') {
                 await audioContext.resume();
-                console.log('▶️ Audio context resumed');
+                console.log('⚠️ Audio context resumed');
             }
             
             const analyser = audioContext.createAnalyser();
@@ -872,12 +886,12 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             analyser.minDecibels = -90;
             analyser.maxDecibels = -10;
             microphone.connect(analyser);
-            console.log('📊 Analyser configured');
+            console.log('🎧 Analyser configured');
 
             audioContextRef.current = audioContext;
             analyserRef.current = analyser;
 
-            _analyzeAudioLevel();
+            analyzeAudioLevel();
             console.log('✅ Audio level monitoring started successfully');
         } catch (error) {
             console.error('❌ Failed to start audio monitoring:', error);
@@ -886,7 +900,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         */
     };
 
-    const _analyzeAudioLevel = () => {
+    const analyzeAudioLevel = () => {
         if (!analyserRef.current) {
             console.warn('⚠️ No analyser available for audio level monitoring');
             return;
@@ -899,7 +913,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
         const updateLevel = () => {
             if (!analyserRef.current || !isVoiceActiveRef.current) {
-                console.log('⏹️ Stopping audio level monitoring');
+                console.log('🛑 Stopping audio level monitoring');
                 return; // Stop if no longer active
             }
 
@@ -924,7 +938,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
                 // Log every 30 frames (~0.5 seconds) for debugging
                 if (frameCount % 30 === 0) {
-                    console.log('📊 Audio level:', newLevel.toFixed(1), '(RMS:', rms.toFixed(3), ')');
+                    console.log('🎧 Audio level:', newLevel.toFixed(1), '(RMS:', rms.toFixed(3), ')');
                 }
                 frameCount++;
 
@@ -935,7 +949,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             animationFrameRef.current = requestAnimationFrame(updateLevel);
         };
 
-        console.log('🎬 Starting audio level animation loop');
+        console.log('🚀 Starting audio level animation loop');
         updateLevel();
     };
 
@@ -986,7 +1000,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             animationFrameRef.current = requestAnimationFrame(simulate);
         };
 
-        console.log('📊 Using simulated audio levels (visual feedback mode)');
+        console.log('🎧 Using simulated audio levels (visual feedback mode)');
         simulate();
     };
 
@@ -995,7 +1009,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         if (animationFrameRef.current) {
             try {
                 cancelAnimationFrame(animationFrameRef.current);
-            } catch (_e) { /* empty */ }
+            } catch (e) { /* empty */ }
             animationFrameRef.current = null;
         }
 
@@ -1013,7 +1027,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
         analyserRef.current = null;
         setAudioLevel(0);
-        console.log('🎧 Audio level monitoring stopped');
+        console.log('🛑 Audio level monitoring stopped');
     };
 
     // Load Learning Stats
@@ -1115,7 +1129,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
 
     const setVoiceLanguage = (lang: string) => {
-        console.log(`🌍 Changing language to: ${lang}`);
+        console.log(`🌐 Changing language to: ${lang}`);
         setVoiceLanguageState(lang);
 
         // Simply update the language property - recognition will use it on next start
@@ -1130,7 +1144,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
     const toggleVoice = async () => {
         if (isVoiceActive) {
-            console.log('🛑 Stopping voice recording');
+            console.log('🚫 Stopping voice recording');
             setUserStoppedVoice(true);
             userStoppedRef.current = true;
             setIsVoiceActive(false);
@@ -1139,20 +1153,27 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             setInterimTranscript('');
 
             if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-                try { mediaRecorderRef.current.stop(); } catch (_e) { /* empty */ }
+                try { mediaRecorderRef.current.stop(); } catch (e) { /* empty */ }
             }
             if (audioContextRef.current) {
-                try { audioContextRef.current.close(); } catch (_e) { /* empty */ }
+                try { audioContextRef.current.close(); } catch (e) { /* empty */ }
                 audioContextRef.current = null;
             }
             if (activeRecognitionRef.current) {
-                try { activeRecognitionRef.current.stop(); } catch (_e) { /* empty */ }
+                try { activeRecognitionRef.current.stop(); } catch (e) { /* empty */ }
             }
         } else {
+            // Don't start recording while TTS is playing or in cooldown (prevent echo/self-listening)
+            if (ttsSpeakingRef.current) {
+                console.log('🔇 Skipping mic start — TTS still speaking/cooling down');
+                return;
+            }
+
             setUserStoppedVoice(false);
             userStoppedRef.current = false;
 
             // ALWAYS use backend Faster-Whisper for voice transcription, regardless of LLM provider
+            // eslint-disable-next-line no-constant-condition
             if (true) {
                 console.log('▶️ Starting voice recording (MediaRecorder for Faster Whisper)');
                 try {
@@ -1171,12 +1192,19 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     };
 
                     mediaRecorderRef.current.onstop = () => {
+                        // Don't send audio if TTS started playing while we were recording (echo prevention)
+                        if (ttsSpeakingRef.current) {
+                            console.log('🔇 Discarding recorded audio — TTS is active (echo prevention)');
+                            stream.getTracks().forEach(track => track.stop());
+                            return;
+                        }
+
                         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
                         const reader = new FileReader();
                         reader.readAsDataURL(audioBlob);
                         reader.onloadend = () => {
                             if (socket) {
-                                console.log('📤 Sending audio to Faster-Whisper backend');
+                                console.log('📡 Sending audio to Faster-Whisper backend');
                                 socket.emit('voice_audio_data', { audio_data: reader.result });
                             }
                         };
@@ -1207,7 +1235,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                             if (!silenceTimerRef.current) {
                                 silenceTimerRef.current = setTimeout(() => {
                                     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-                                        console.log('🔇 Silence detected, processing...');
+                                        console.log('⏳ Silence detected, processing...');
                                         mediaRecorderRef.current.stop();
                                         setIsVoiceActive(false);
                                         isVoiceActiveRef.current = false;
@@ -1228,7 +1256,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     setInterimTranscript('Microphone access denied');
                 }
             } else {
-                console.log('▶️ Starting voice recording (SpeechRecognition for real-time text)');
+                console.log('⚠️ Starting voice recording (SpeechRecognition for real-time text)');
                 if (activeRecognitionRef.current) {
                     try {
                         activeRecognitionRef.current.start();
@@ -1246,24 +1274,28 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     // Text-to-Speech function
     const speak = (text: string, lang: string = 'en-US', audioBase64?: string) => {
         try {
+            // IMMEDIATELY stop all recording to prevent echo/self-listening
+            ttsSpeakingRef.current = true;
+            if (activeRecognitionRef.current) {
+                try { activeRecognitionRef.current.stop(); } catch (e) { /* ignore */ }
+            }
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+                try { mediaRecorderRef.current.stop(); } catch (e) { /* ignore */ }
+            }
+
             if (audioBase64) {
                 console.log('🔊 Playing backend generated audio (KittenTTS)');
                 const audio = new Audio("data:audio/wav;base64," + audioBase64);
-                ttsSpeakingRef.current = true;
-
-                // Mute mic if necessary
-                if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-                    try { mediaRecorderRef.current.stop(); } catch (_e) { /* ignore */ }
-                }
 
                 audio.onended = () => {
-                    console.log('🔊 TTS ended, starting cooldown');
+                    console.log('🎧 TTS ended, starting cooldown');
                     setTimeout(() => {
                         ttsSpeakingRef.current = false;
+                        console.log('🔊 TTS cooldown complete, mic unlocked');
                         if (alwaysActive && !userStoppedVoice) {
                             toggleVoice(); // Restart listening automatically
                         }
-                    }, 300);
+                    }, 1200); // 1.2s cooldown to let room echo dissipate
                 };
 
                 audio.onerror = (e) => {
@@ -1275,10 +1307,12 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 return;
             }
 
-            // Browser TTS fallback permanently disabled per user request
+            // No audio to play — reset the TTS flag immediately since nothing will trigger onended
             console.warn('⚠️ No audioBase64 provided to speak(). Browser TTS fallback disabled.');
+            ttsSpeakingRef.current = false;
         } catch (error) {
             console.error('❌ TTS error:', error);
+            ttsSpeakingRef.current = false;
         }
     };
 
@@ -1287,7 +1321,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         const newState = !alwaysActive;
         setAlwaysActive(newState);
 
-        console.log('🔄 Always-active mode:', newState ? 'ON' : 'OFF');
+        console.log('≡ƒöä Always-active mode:', newState ? 'ON' : 'OFF');
         console.log('   Wake word required:', requireWakeWord);
 
         if (newState) {
@@ -1324,7 +1358,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     const toggleWakeWord = () => {
         const newState = !requireWakeWord;
         setRequireWakeWord(newState);
-        console.log('🔄 Wake word requirement:', newState ? 'ON' : 'OFF');
+        console.log('≡ƒöä Wake word requirement:', newState ? 'ON' : 'OFF');
 
         const message = newState
             ? 'Wake word enabled. Say "Hey Assistant" before commands.'
@@ -1339,7 +1373,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         const newMode: 'online' | 'offline' = aiMode === 'online' ? 'offline' : 'online';
         const provider = newMode === 'online' ? 'google' : 'local';
 
-        console.log(`🤖 Switching AI mode to: ${newMode} (provider: ${provider})`);
+        console.log(`≡ƒñû Switching AI mode to: ${newMode} (provider: ${provider})`);
         addSystemLog('info', `Switching to ${newMode} AI...`);
 
         try {
@@ -1359,15 +1393,15 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             if (result.success) {
                 setAIMode(newMode);
                 const modeName = newMode === 'online' ? 'Online AI (Google)' : 'Offline AI (Ollama)';
-                console.log(`✅ AI mode switched to: ${modeName}`);
+                console.log(`Γ£à AI mode switched to: ${modeName}`);
                 addSystemLog('success', `Switched to ${modeName}`);
                 speak(`Switched to ${modeName}`, voiceLanguage);
             } else {
-                console.error('❌ Failed to switch AI mode:', result.error);
+                console.error('Γ¥î Failed to switch AI mode:', result.error);
                 addSystemLog('error', `Failed to switch AI mode: ${result.error}`);
             }
         } catch (error) {
-            console.error('❌ Error switching AI mode:', error);
+            console.error('Γ¥î Error switching AI mode:', error);
             addSystemLog('error', 'Error switching AI mode');
         }
     };
@@ -1377,7 +1411,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
 
     // Start Google Speech Recognition (online)
-    const _startGoogleRecognition = async () => {
+    const startGoogleRecognition = async () => {
         if (!socket) {
             addSystemLog('error', 'Not connected to server');
             return;
@@ -1423,16 +1457,16 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             mediaRecorder.start(100); // Capture in 100ms chunks for real-time processing
             setIsVoiceActive(true);
             _setIsRecognitionStarted(true);
-            console.log('🌐 Google Speech Recognition started');
+            console.log('≡ƒîÉ Google Speech Recognition started');
 
         } catch (error) {
-            console.error('❌ Microphone access denied:', error);
+            console.error('Γ¥î Microphone access denied:', error);
             addSystemLog('error', 'Microphone access denied');
         }
     };
 
     // Stop Google Speech Recognition
-    const _stopGoogleRecognition = () => {
+    const stopGoogleRecognition = () => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
             mediaRecorderRef.current.stop();
             mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
@@ -1445,7 +1479,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         setIsVoiceActive(false);
         _setIsRecognitionStarted(false);
         setInterimTranscript('');
-        console.log('🚫 Google Speech Recognition stopped');
+        console.log('≡ƒÜ½ Google Speech Recognition stopped');
     };
 
     const closeDetailView = () => {
@@ -1615,7 +1649,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         if (stored) {
             try {
                 setConversationHistory(JSON.parse(stored));
-            } catch (_e) {
+            } catch (e) {
                 console.error('Failed to load conversation history:', e);
             }
         }
@@ -1638,7 +1672,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             const msgs = chatMessagesRef.current;
             const cmds = voiceCommandsRef.current;
 
-            console.log('💾 Auto-saving session on unmount:', {
+            console.log('≡ƒÆ╛ Auto-saving session on unmount:', {
                 id: session?.id,
                 msgCount: msgs.length
             });
@@ -1670,7 +1704,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 history = [sessionToSave, ...history].slice(0, 50);
                 localStorage.setItem('conversationHistory', JSON.stringify(history));
 
-                console.log('✅ Session saved to localStorage');
+                console.log('Γ£à Session saved to localStorage');
             }
         };
     }, []);

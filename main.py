@@ -17,10 +17,12 @@ import logging
 import traceback
 from pathlib import Path
 
-# Fix Windows console encoding for emojis
-if sys.platform == 'win32':
-    sys.stdout.reconfigure(encoding='utf-8') if hasattr(sys.stdout, 'reconfigure') else None
-    sys.stderr.reconfigure(encoding='utf-8') if hasattr(sys.stderr, 'reconfigure') else None
+# Fix Windows console encoding for emojis using the new bootstrap
+try:
+    from core_ai.src.ai_assistant.utils.utf8_bootstrap import configure_utf8_stdout
+    configure_utf8_stdout()
+except Exception:
+    pass
 
 # Setup basic logging first
 logging.basicConfig(

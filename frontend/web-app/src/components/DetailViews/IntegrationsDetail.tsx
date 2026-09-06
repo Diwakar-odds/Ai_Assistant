@@ -12,13 +12,13 @@ interface Integration {
   name: string;
   description: string;
   category: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   icon: any; // Lucide icon
   color: string;
   status: IntegrationStatus;
   lastSync?: string;
   error?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   tools?: any[];
   isEnabled?: boolean;
 }
@@ -86,7 +86,7 @@ const IntegrationsDetail = () => {
       const data = await res.json();
       
       // Fetch MCP status
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       let mcpServers: any[] = [];
       try {
         const mcpRes = await fetch(apiUrl('/api/integrations/mcp'));
@@ -94,7 +94,7 @@ const IntegrationsDetail = () => {
         if (mcpData.success && mcpData.servers) {
           mcpServers = mcpData.servers;
         }
-      } catch (_err) {
+      } catch (err) {
         console.error("Failed to fetch MCP status", err);
       }
 
@@ -143,7 +143,7 @@ const IntegrationsDetail = () => {
         return updated;
       });
 
-    } catch (_e) {
+    } catch (e) {
       console.error("Failed to fetch integration status", e);
     } finally {
       setLoading(false);
@@ -177,7 +177,7 @@ const IntegrationsDetail = () => {
           prev.map(init => init.id === id ? { ...init, status: 'disconnected' } : init)
         );
       }
-    } catch (_e) {
+    } catch (e) {
       console.error(e);
       alert("Error reaching server to connect.");
       setIntegrations(prev => 
@@ -235,7 +235,7 @@ const IntegrationsDetail = () => {
         {['all', 'connected', 'productivity', 'communication', 'media'].map((tab) => (
           <button
             key={tab}
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+             
             onClick={() => setActiveTab(tab as any)}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 whitespace-nowrap ${
               activeTab === tab

@@ -103,7 +103,7 @@ class StartupSequence:
         """Check AI core services (Gemini, OpenAI)"""
         status = {
             "name": "AI Core",
-            "icon": "ðŸ§ ",
+            "icon": " ",
             "status": "operational",
             "message": "Gemini 2.0 Pro ready",
             "details": {}
@@ -128,7 +128,7 @@ class StartupSequence:
         """Check voice recognition and TTS systems"""
         status = {
             "name": "Voice System",
-            "icon": "ðŸŽ¤",
+            "icon": "Ž¤",
             "status": "operational",
             "message": "Voice recognition ready",
             "details": {}
@@ -155,7 +155,7 @@ class StartupSequence:
         """Check automation and app control systems"""
         status = {
             "name": "Automation",
-            "icon": "âš™ï¸",
+            "icon": "š",
             "status": "operational",
             "message": "Automation tools active",
             "details": {}
@@ -180,7 +180,7 @@ class StartupSequence:
         """Check AI learning and memory systems"""
         status = {
             "name": "Learning System",
-            "icon": "ðŸ“š",
+            "icon": "š",
             "status": "operational",
             "message": "Learning systems active",
             "details": {}
@@ -212,7 +212,7 @@ class StartupSequence:
         """Check network connectivity"""
         status = {
             "name": "Network",
-            "icon": "ðŸŒ",
+            "icon": "Œ",
             "status": "operational",
             "message": "Connected",
             "details": {}
@@ -241,7 +241,7 @@ class StartupSequence:
         """Check disk storage status"""
         status = {
             "name": "Storage",
-            "icon": "ðŸ’¾",
+            "icon": "¾",
             "status": "operational",
             "message": "Storage healthy",
             "details": {}
@@ -286,7 +286,7 @@ class StartupSequence:
         now = datetime.now()
         briefing["items"].append({
             "type": "time",
-            "icon": "ðŸ•",
+            "icon": "•",
             "message": now.strftime("%A, %B %d, %Y | %I:%M %p")
         })
         
@@ -303,7 +303,7 @@ class StartupSequence:
                 loc = weather.get('location', '')
                 briefing["items"].append({
                     "type": "weather",
-                    "icon": "ðŸŒ¤ï¸",
+                    "icon": "Œ¤",
                     "message": f"{temp}, {desc} in {loc}"
                 })
             
@@ -314,13 +314,13 @@ class StartupSequence:
                 event_time = datetime.fromisoformat(next_event['start']).strftime("%I:%M %p")
                 briefing["items"].append({
                     "type": "calendar",
-                    "icon": "ðŸ“…",
+                    "icon": "…",
                     "message": f"Next: {next_event['title']} at {event_time}"
                 })
             else:
                 briefing["items"].append({
                     "type": "calendar",
-                    "icon": "ðŸ“…",
+                    "icon": "…",
                     "message": "No upcoming events scheduled"
                 })
                 
@@ -330,7 +330,7 @@ class StartupSequence:
             
             briefing["items"].append({
                 "type": "tasks",
-                "icon": "âœ…",
+                "icon": "…",
                 "message": f"{len(tasks)} pending tasks ({pending_high_priority} high priority)"
             })
 
@@ -347,7 +347,7 @@ class StartupSequence:
                     hours = int(uptime.total_seconds() // 3600)
                     briefing["items"].append({
                         "type": "uptime",
-                        "icon": "â±ï¸",
+                        "icon": "±",
                         "message": f"System uptime: {hours} hours"
                     })
                 except Exception:

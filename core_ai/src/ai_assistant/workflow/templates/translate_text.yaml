@@ -1,0 +1,10 @@
+name: Translate Text
+intent: TRANSLATE
+description: Detect language and translate text.
+steps:
+  - id: step1
+    action: custom
+    parameters:
+      sub_type: translation
+      text: "{{ text }}"
+      target_language: "{{ target_language }}"

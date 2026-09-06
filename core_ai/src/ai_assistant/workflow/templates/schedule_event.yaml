@@ -1,0 +1,10 @@
+name: Schedule Event
+intent: SCHEDULE
+description: Create a calendar event.
+steps:
+  - id: step1
+    action: api
+    parameters:
+      sub_type: calendar
+      title: "{{ title }}"
+      time: "{{ time }}"

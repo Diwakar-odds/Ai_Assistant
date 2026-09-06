@@ -1,7 +1,7 @@
-import React, { useState, _useEffect } from 'react';
+import  { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, ArrowRight, Shield, Mic, Wand2 } from 'lucide-react';
-import { _apiService } from '../lib/api';
+
 
 export default function OnboardingModal({ onComplete }: { onComplete: () => void }) {
   const [step, setStep] = useState(1);
@@ -18,7 +18,7 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
         method: 'POST',
       });
       onComplete();
-    } catch (_e) {
+    } catch (e) {
       console.error('Failed to complete onboarding', e);
       onComplete(); // Still complete even if it fails so they don't get stuck
     }
@@ -29,7 +29,7 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
       await navigator.mediaDevices.getUserMedia({ audio: true });
       setMicGranted(true);
       handleNext();
-    } catch (_err) {
+    } catch (err) {
       alert("Microphone access is required for voice commands.");
     }
   };

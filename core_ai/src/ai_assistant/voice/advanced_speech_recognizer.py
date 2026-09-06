@@ -18,6 +18,13 @@ except ImportError:
     WHISPER_API_AVAILABLE = False
 
 try:
+    from transformers import pipeline
+    import torch
+    LOCAL_WHISPER_AVAILABLE = True
+except ImportError:
+    LOCAL_WHISPER_AVAILABLE = False
+
+try:
     from utils.logging_config import get_logger
     logger = get_logger(__name__)
 except ImportError:
@@ -37,6 +44,7 @@ class RecognitionModel(Enum):
     """Available recognition models"""
     WHISPER_API = "whisper_api"  # Best accuracy (online)
     OFFLINE_WHISPER = "offline_whisper"  # Whisper local
+    LOCAL_HINGLISH_WHISPER = "local_hinglish_whisper"
 
 
 class AdvancedSpeechRecognizer:
@@ -75,6 +83,9 @@ class AdvancedSpeechRecognizer:
         # Performance tracking
         self.recognition_history = []
         
+        # Local Hinglish Model
+        self.local_hinglish_model = None
+        
         # Initialize Advanced Noise Reduction
         self.noise_reducer = None
         if self.noise_reduction:
@@ -102,6 +113,31 @@ class AdvancedSpeechRecognizer:
                 logger.info("✅ Whisper API configured")
             except Exception as e:
                 logger.warning(f"⚠️ Whisper API setup failed: {e}")
+                
+        # Local Hinglish Whisper
+        if LOCAL_WHISPER_AVAILABLE:
+            try:
+                device = "cuda:0" if torch.cuda.is_available() else "cpu"
+                logger.info("⏳ Loading Local Hinglish Whisper Model (models/whisper-hinglish)...")
+                from transformers import WhisperForConditionalGeneration, WhisperProcessor
+                
+                model_path = "models/whisper-hinglish"
+                if not Path(model_path).exists():
+                    model_path = "Hhsjsnns/whisper-small-hinglish" # Fallback if not moved yet
+                    
+                model = WhisperForConditionalGeneration.from_pretrained(model_path)
+                processor = WhisperProcessor.from_pretrained("openai/whisper-small")
+                
+                self.local_hinglish_model = pipeline(
+                    "automatic-speech-recognition",
+                    model=model,
+                    tokenizer=processor.tokenizer,
+                    feature_extractor=processor.feature_extractor,
+                    device=device
+                )
+                logger.info("✅ Local Hinglish Whisper Model loaded successfully!")
+            except Exception as e:
+                logger.warning(f"⚠️ Local Hinglish Whisper setup failed: {e}")
     
     def reduce_noise(self, audio_data, sr: int = 16000) -> np.ndarray:
         """Apply noise reduction to audio data"""
@@ -197,21 +233,23 @@ class AdvancedSpeechRecognizer:
         """Recognize speech with automatic model selection and fallback"""
         normalized_lang = language.lower()
         
-        if normalized_lang in ["en", "en-us", "en-in", "en-gb", "english", "auto"]:
+        if normalized_lang in ["en", "en-us", "en-in", "en-gb", "english"]:
             whisper_lang = "en"
-        elif normalized_lang in ["hinglish"]:
+        elif normalized_lang in ["hinglish", "auto"]:
             whisper_lang = "auto"
         elif normalized_lang in ["hi", "hi-in", "hindi"]:
             whisper_lang = "hi"
         else:
-            whisper_lang = "en"
+            whisper_lang = "auto"  # Default to auto-detect for better mixed language support
         
         models_to_try = []
         
+        # Try Local Hinglish Model first if available
+        if self.local_hinglish_model:
+            models_to_try.append(("local_hinglish_whisper", audio_input, whisper_lang))
+            
         if self.whisper_api_key:
             models_to_try.append(("whisper_api", audio_input, whisper_lang))
-            
-        # You could also add logic for local whisper model here if required
         
         for model_info in models_to_try:
             model_name = model_info[0]
@@ -229,6 +267,16 @@ class AdvancedSpeechRecognizer:
                     text, conf = loop.run_until_complete(
                         self.recognize_whisper_api(audio, lang_code, context)
                     )
+                elif model_name == "local_hinglish_whisper":
+                    try:
+                        logger.info(f"🎤 Local Hinglish Whisper: Transcribing...")
+                        result = self.local_hinglish_model(audio)
+                        text = result.get("text", "").strip()
+                        conf = 0.95 if text else 0.0
+                        logger.info(f"✅ Local Whisper recognized: {text}")
+                    except Exception as e:
+                        logger.error(f"❌ Local Whisper failed: {e}")
+                        text, conf = None, 0.0
                 else:
                     continue
                 

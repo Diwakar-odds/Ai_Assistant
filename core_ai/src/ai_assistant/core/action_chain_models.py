@@ -98,6 +98,8 @@ class ActionChain:
     created_at: datetime = field(default_factory=datetime.now)
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
+    requires_confirmation: bool = False
+    safety_level: str = "safe"
     
     # Error handling
     errors: List[str] = field(default_factory=list)

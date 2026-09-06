@@ -35,7 +35,7 @@ try:
     OCR_AVAILABLE = True
 except Exception as e:
     OCR_AVAILABLE = False
-    print(f"âš ï¸ OCR not available: {e}")
+    print(f"š  OCR not available: {e}")
 
 # WhatsApp helpers are lazy-loaded to avoid heavy optional import chains.
 send_whatsapp_message = None
@@ -47,7 +47,7 @@ try:
     TTS_AVAILABLE = True
 except Exception as e:
     TTS_AVAILABLE = False
-    print(f"âš ï¸ TTS not available: {e}")
+    print(f"š  TTS not available: {e}")
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ def _ensure_pyautogui() -> bool:
         return True
     except Exception as e:
         WINDOWS_AUTO_AVAILABLE = False
-        logger.error(f"âŒ pyautogui unavailable: {e}")
+        logger.error(f"Œ pyautogui unavailable: {e}")
         return False
 
 
@@ -79,7 +79,7 @@ def _get_desktop_class():
 
         return Desktop
     except Exception as e:
-        logger.error(f"âŒ pywinauto unavailable: {e}")
+        logger.error(f"Œ pywinauto unavailable: {e}")
         return None
 
 
@@ -99,7 +99,7 @@ def _ensure_whatsapp_module() -> bool:
         return True
     except Exception as e:
         WHATSAPP_MODULE_AVAILABLE = False
-        logger.error(f"âŒ WhatsApp module unavailable: {e}")
+        logger.error(f"Œ WhatsApp module unavailable: {e}")
         return False
 
 
@@ -112,6 +112,53 @@ class AppAutomation:
         """Initialize app automation"""
         self.active_windows = {}
         logger.info("✅ AppAutomation initialized")
+        
+    def get_open_apps(self) -> str:
+        """Get a list of currently open visible windows/apps."""
+        logger.info("📱 Fetching list of open apps...")
+        if os.name != 'nt':
+            return "Getting open apps is only supported on Windows."
+            
+        try:
+            import ctypes
+            
+            EnumWindows = ctypes.windll.user32.EnumWindows
+            EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int))
+            GetWindowText = ctypes.windll.user32.GetWindowTextW
+            GetWindowTextLength = ctypes.windll.user32.GetWindowTextLengthW
+            IsWindowVisible = ctypes.windll.user32.IsWindowVisible
+            
+            titles = []
+            
+            def foreach_window(hwnd, lParam):
+                if IsWindowVisible(hwnd):
+                    length = GetWindowTextLength(hwnd)
+                    if length > 0:
+                        buff = ctypes.create_unicode_buffer(length + 1)
+                        GetWindowText(hwnd, buff, length + 1)
+                        title = buff.value
+                        # Filter out basic Windows system elements
+                        if title not in ["Program Manager", "Settings", "Microsoft Text Input Application", "Taskbar"] and "Default IME" not in title:
+                            if title not in titles:
+                                titles.append(title)
+                return True
+                
+            EnumWindows(EnumWindowsProc(foreach_window), 0)
+            
+            if not titles:
+                return "No visible apps are currently open."
+                
+            # Format nicely
+            result = "Currently open apps:\n"
+            for t in titles[:10]: # Limit to avoid massive lists
+                # Simplify long titles (e.g., browsers)
+                clean_title = t.split('-')[0].strip() if '-' in t else t
+                if clean_title not in result:
+                    result += f"• {clean_title}\n"
+            return result
+        except Exception as e:
+            logger.error(f"❌ Failed to get open apps: {e}")
+            return f"Error getting open apps: {e}"
     
     def open_app(self, app_name: str) -> bool:
         """
@@ -247,11 +294,11 @@ class AppAutomation:
         if not _ensure_pyautogui():
             return False
         try:
-            logger.info(f"âŒ¨ï¸ Typing: {text}")
+            logger.info(f"Œ¨ Typing: {text}")
             pyautogui.write(text, interval=interval)
             return True
         except Exception as e:
-            logger.error(f"âŒ Failed to type text: {e}")
+            logger.error(f"Œ Failed to type text: {e}")
             return False
             
     def press_key(self, key_name: str) -> bool:
@@ -259,11 +306,11 @@ class AppAutomation:
         if not _ensure_pyautogui():
             return False
         try:
-            logger.info(f"âŒ¨ï¸ Pressing key: {key_name}")
+            logger.info(f"Œ¨ Pressing key: {key_name}")
             pyautogui.press(key_name)
             return True
         except Exception as e:
-            logger.error(f"âŒ Failed to press key: {e}")
+            logger.error(f"Œ Failed to press key: {e}")
             return False
 
     def click(self, x: int = None, y: int = None) -> bool:
@@ -277,16 +324,16 @@ class AppAutomation:
                 pyautogui.click()
             return True
         except Exception as e:
-            logger.error(f"âŒ Failed to click: {e}")
+            logger.error(f"Œ Failed to click: {e}")
             return False
     
     def close_app(self, app_name: str) -> bool:
         """Close an application"""
         if not app_name:
-            logger.error("âŒ close_app called without an app name")
+            logger.error("Œ close_app called without an app name")
             return False
 
-        logger.info(f"ðŸ›‘ Closing app: {app_name}")
+        logger.info(f"›‘ Closing app: {app_name}")
 
         def _run_taskkill(args: List[str]) -> subprocess.CompletedProcess:
             try:
@@ -297,7 +344,7 @@ class AppAutomation:
                     timeout=6,
                 )
             except subprocess.TimeoutExpired:
-                logger.warning(f"âš ï¸ taskkill timed out: {' '.join(args)}")
+                logger.warning(f"š  taskkill timed out: {' '.join(args)}")
                 return subprocess.CompletedProcess(args=args, returncode=1, stdout="", stderr="timeout")
 
         # Use taskkill first to avoid UI Automation hangs on some systems.
@@ -334,13 +381,13 @@ class AppAutomation:
                 or "not found" in combined_output
                 or "no instances" in combined_output
             ):
-                logger.info(f"â„¹ï¸ App already closed or not found: {app_name}")
+                logger.info(f"„¹ App already closed or not found: {app_name}")
                 return True
 
-            logger.warning(f"âš ï¸ Could not close app: {app_name}")
+            logger.warning(f"š  Could not close app: {app_name}")
             return False
         except Exception as e:
-            logger.error(f"âŒ Failed to close app '{app_name}': {e}")
+            logger.error(f"Œ Failed to close app '{app_name}': {e}")
             return False
     
     def focus_window(self, window_title: str) -> bool:
@@ -356,14 +403,14 @@ class AppAutomation:
             for window in windows:
                 if window_title.lower() in window.window_text().lower():
                     window.set_focus()
-                    logger.info(f"âœ… Focused window: {window.window_text()}")
+                    logger.info(f"… Focused window: {window.window_text()}")
                     return True
             
-            logger.warning(f"âš ï¸ Window not found: {window_title}")
+            logger.warning(f"š  Window not found: {window_title}")
             return False
             
         except Exception as e:
-            logger.error(f"âŒ Failed to focus window: {e}")
+            logger.error(f"Œ Failed to focus window: {e}")
             return False
 
 
@@ -383,10 +430,10 @@ class StickyNotesAutomation(AppAutomation):
     
     def open_sticky_notes(self) -> bool:
         """Open Sticky Notes app"""
-        logger.info("ðŸ“ Opening Sticky Notes...")
+        logger.info(" Opening Sticky Notes...")
 
         if not _ensure_pyautogui():
-            logger.error("âŒ Windows automation not available for Sticky Notes")
+            logger.error("Œ Windows automation not available for Sticky Notes")
             return False
         
         # Try to open via start menu search
@@ -398,11 +445,11 @@ class StickyNotesAutomation(AppAutomation):
             pyautogui.press('enter')
             time.sleep(2)
             
-            logger.info("âœ… Sticky Notes opened")
+            logger.info("… Sticky Notes opened")
             return True
             
         except Exception as e:
-            logger.error(f"âŒ Failed to open Sticky Notes: {e}")
+            logger.error(f"Œ Failed to open Sticky Notes: {e}")
             return False
     
     def read_notes(self, speak: bool = False) -> List[str]:
@@ -416,10 +463,10 @@ class StickyNotesAutomation(AppAutomation):
             List of note contents
         """
         if not OCR_AVAILABLE:
-            logger.error("âŒ OCR not available")
+            logger.error("Œ OCR not available")
             return []
         
-        logger.info("ðŸ“– Reading sticky notes...")
+        logger.info("– Reading sticky notes...")
         
         try:
             # Focus Sticky Notes window
@@ -436,7 +483,7 @@ class StickyNotesAutomation(AppAutomation):
             notes = [line.strip() for line in text.split('\n') if line.strip()]
             notes = [note for note in notes if len(note) > 3]  # Filter short false positives
             
-            logger.info(f"âœ… Found {len(notes)} notes")
+            logger.info(f"… Found {len(notes)} notes")
             
             # Speak notes if requested
             if speak and self.tts_engine and notes:
@@ -447,7 +494,7 @@ class StickyNotesAutomation(AppAutomation):
             return notes
             
         except Exception as e:
-            logger.error(f"âŒ Failed to read notes: {e}")
+            logger.error(f"Œ Failed to read notes: {e}")
             return []
     
     def create_note(self, content: str) -> bool:
@@ -460,10 +507,10 @@ class StickyNotesAutomation(AppAutomation):
         Returns:
             Success status
         """
-        logger.info(f"ðŸ“ Creating note: {content[:50]}...")
+        logger.info(f" Creating note: {content[:50]}...")
 
         if not _ensure_pyautogui():
-            logger.error("âŒ Windows automation not available for creating notes")
+            logger.error("Œ Windows automation not available for creating notes")
             return False
         
         try:
@@ -480,11 +527,11 @@ class StickyNotesAutomation(AppAutomation):
             # Type content
             pyautogui.typewrite(content, interval=0.05)
             
-            logger.info("âœ… Note created")
+            logger.info("… Note created")
             return True
             
         except Exception as e:
-            logger.error(f"âŒ Failed to create note: {e}")
+            logger.error(f"Œ Failed to create note: {e}")
             return False
 
 
@@ -504,19 +551,19 @@ class WhatsAppAutomation(AppAutomation):
         Returns:
             Success status
         """
-        logger.info(f"ðŸ’¬ Sending WhatsApp to {contact}")
+        logger.info(f"¬ Sending WhatsApp to {contact}")
         
         # Use existing WhatsApp module
         if _ensure_whatsapp_module():
             try:
                 result = send_whatsapp_message(contact, message)
-                logger.info(f"âœ… WhatsApp result: {result}")
-                return "âœ…" in result
+                logger.info(f"… WhatsApp result: {result}")
+                return "…" in result
             except Exception as e:
-                logger.error(f"âŒ WhatsApp failed: {e}")
+                logger.error(f"Œ WhatsApp failed: {e}")
                 return False
         else:
-            logger.error("âŒ WhatsApp module not available")
+            logger.error("Œ WhatsApp module not available")
             return False
     
     def send_with_attachment(self, contact: str, message: str, file_path: str) -> bool:
@@ -531,14 +578,14 @@ class WhatsAppAutomation(AppAutomation):
         Returns:
             Success status
         """
-        logger.info(f"ðŸ“Ž Sending WhatsApp to {contact} with attachment: {file_path}")
+        logger.info(f"Ž Sending WhatsApp to {contact} with attachment: {file_path}")
         
         if not os.path.exists(file_path):
-            logger.error(f"âŒ Attachment not found: {file_path}")
+            logger.error(f"Œ Attachment not found: {file_path}")
             return False
 
         if not _ensure_pyautogui():
-            logger.error("âŒ Windows automation (pyautogui/pywinauto) not available")
+            logger.error("Œ Windows automation (pyautogui/pywinauto) not available")
             return False
             
         try:
@@ -563,7 +610,7 @@ class WhatsAppAutomation(AppAutomation):
             else:
                 # If no phone number, we assume the contact name is searchable or recently used
                 # This is a bit risky. Fallback: Request manual open or implement UI search.
-                logger.warning(f"âš ï¸ No phone number for {contact}. Attempting to focus WhatsApp.")
+                logger.warning(f"š  No phone number for {contact}. Attempting to focus WhatsApp.")
                 
                 # Focus WhatsApp
                 if not self.focus_window("WhatsApp"):
@@ -641,7 +688,7 @@ class WhatsAppAutomation(AppAutomation):
                 text=True,
             )
             if clipboard_result.returncode != 0:
-                logger.error(f"âŒ Failed to place attachment on clipboard: {clipboard_result.stderr}")
+                logger.error(f"Œ Failed to place attachment on clipboard: {clipboard_result.stderr}")
                 return False
             
             time.sleep(1)
@@ -653,11 +700,11 @@ class WhatsAppAutomation(AppAutomation):
             # Press Enter to send
             pyautogui.press('enter')
             
-            logger.info("âœ… File pasted and sent")
+            logger.info("… File pasted and sent")
             return True
             
         except Exception as e:
-            logger.error(f"âŒ Failed to attach/send: {e}")
+            logger.error(f"Œ Failed to attach/send: {e}")
             return False
 
 

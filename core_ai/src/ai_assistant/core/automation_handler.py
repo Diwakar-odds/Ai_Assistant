@@ -81,7 +81,7 @@ class AutomationHandler:
         if any(w in cmd_lower for w in ['weather', 'mausam', 'temperature']):
             if self.available:
                 return str(get_weather_info())
-            return "Weather is sunny, 24°C"
+            return "Weather is sunny, 24C"
             
         # Write note
         match = re.match(r'^(?:note down|write note|likho)\s+(.+)$', cmd_lower)

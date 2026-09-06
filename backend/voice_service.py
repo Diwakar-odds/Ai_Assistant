@@ -106,7 +106,7 @@ class VoiceServiceManager:
         # Initialize components
         self._initialize_components()
         
-        self.logger.info(f"âœ… Voice Service Manager initialized")
+        self.logger.info(f"… Voice Service Manager initialized")
         self.logger.info(f"   Wake Word: {self.enable_wake_word}")
         self.logger.info(f"   Neural TTS: {self.enable_neural_tts}")
         self.logger.info(f"   VAD: {self.enable_vad}")
@@ -122,7 +122,7 @@ class VoiceServiceManager:
                     detection_mode=WakeWordDetectionMode.ALWAYS_ON
                 )
                 self.wake_word_manager.detector.on_wake_word_detected = self._handle_wake_word
-                self.logger.info("âœ… Wake word detector initialized")
+                self.logger.info("… Wake word detector initialized")
             except Exception as e:
                 self.logger.error(f"Failed to initialize wake word detector: {e}")
                 self.enable_wake_word = False
@@ -131,7 +131,7 @@ class VoiceServiceManager:
         if self.enable_neural_tts:
             try:
                 self.tts_engine = get_neural_voice_engine()
-                self.logger.info("âœ… Neural TTS engine initialized")
+                self.logger.info("… Neural TTS engine initialized")
             except Exception as e:
                 self.logger.error(f"Failed to initialize TTS engine: {e}")
                 self.enable_neural_tts = False
@@ -142,7 +142,7 @@ class VoiceServiceManager:
                 self.vad_detector = create_vad_detector(
                     sensitivity=VADSensitivity.MEDIUM
                 )
-                self.logger.info("âœ… VAD initialized")
+                self.logger.info("… VAD initialized")
             except Exception as e:
                 self.logger.error(f"Failed to initialize VAD: {e}")
                 self.enable_vad = False
@@ -151,7 +151,7 @@ class VoiceServiceManager:
         if self.enable_speaker_recognition:
             try:
                 self.voice_profile_manager = VoiceProfileManager()
-                self.logger.info("âœ… Voice profile manager initialized")
+                self.logger.info("… Voice profile manager initialized")
             except Exception as e:
                 self.logger.error(f"Failed to initialize voice profiles: {e}")
                 self.enable_speaker_recognition = False
@@ -163,7 +163,7 @@ class VoiceServiceManager:
                     prefer_online=True,
                     noise_reduction=True
                 )
-                self.logger.info("âœ… Advanced speech recognizer initialized")
+                self.logger.info("… Advanced speech recognizer initialized")
             except Exception as e:
                 self.logger.error(f"Failed to initialize speech recognizer: {e}")
     
@@ -179,7 +179,7 @@ class VoiceServiceManager:
         if self.enable_wake_word and self.wake_word_manager:
             try:
                 self.wake_word_manager.start()
-                self.logger.info("ðŸŽ¤ Wake word detection started")
+                self.logger.info("Ž¤ Wake word detection started")
             except Exception as e:
                 self.logger.error(f"Failed to start wake word detection: {e}")
         
@@ -187,11 +187,11 @@ class VoiceServiceManager:
         if ADVANCED_VOICE_AVAILABLE and self.continuous_listener:
             try:
                 self.continuous_listener.start_listening()
-                self.logger.info("ðŸ‘‚ Continuous listening started")
+                self.logger.info("‘‚ Continuous listening started")
             except Exception as e:
                 self.logger.error(f"Failed to start continuous listening: {e}")
         
-        self.logger.info("âœ… All voice services started")
+        self.logger.info("… All voice services started")
     
     def stop(self):
         """Stop all voice services"""
@@ -220,7 +220,7 @@ class VoiceServiceManager:
     
     def _handle_wake_word(self, wake_word: str, confidence: float):
         """Handle wake word detection"""
-        self.logger.info(f"ðŸŽ¯ Wake word detected: '{wake_word}' (confidence: {confidence:.2f})")
+        self.logger.info(f"Ž Wake word detected: '{wake_word}' (confidence: {confidence:.2f})")
         
         self.is_listening_for_command = True
         
@@ -256,15 +256,14 @@ class VoiceServiceManager:
             voice_gender = VoiceGender.FEMALE if gender == 'female' else VoiceGender.MALE
             
             # Synthesize speech
-            audio_file = self.tts_engine.synthesize(
+            audio_file = self.tts_engine.speak(
                 text,
                 language=language,
                 gender=voice_gender,
-                style=SpeakingStyle.FRIENDLY,
-                prefer_online=True
+                style=SpeakingStyle.FRIENDLY
             )
             
-            self.logger.info(f"ðŸ”Š TTS: '{text}' â†’ {audio_file}")
+            self.logger.info(f" TTS: '{text}' † {audio_file}")
             return audio_file
             
         except Exception as e:
@@ -301,7 +300,7 @@ class VoiceServiceManager:
             
             if speaker:
                 self.current_speaker = speaker
-                self.logger.info(f"ðŸ‘¤ Speaker identified: {speaker}")
+                self.logger.info(f"‘¤ Speaker identified: {speaker}")
                 
                 if self.on_speaker_identified:
                     self.on_speaker_identified(speaker)
@@ -319,7 +318,7 @@ class VoiceServiceManager:
         
         try:
             self.voice_profile_manager.add_voice_sample(speaker_name, audio_data)
-            self.logger.info(f"âœ… Added voice sample for {speaker_name}")
+            self.logger.info(f"… Added voice sample for {speaker_name}")
             return True
         except Exception as e:
             self.logger.error(f"Speaker training failed: {e}")
@@ -411,10 +410,10 @@ if __name__ == "__main__":
     
     # Set up callbacks
     def on_wake_word(word, confidence):
-        print(f"ðŸŽ¯ Wake word: {word} ({confidence:.2f})")
+        print(f"Ž Wake word: {word} ({confidence:.2f})")
     
     def on_speaker(speaker):
-        print(f"ðŸ‘¤ Speaker: {speaker}")
+        print(f"‘¤ Speaker: {speaker}")
     
     voice_manager.on_wake_word_detected = on_wake_word
     voice_manager.on_speaker_identified = on_speaker
@@ -738,7 +737,7 @@ def prewarm_voice_cache():
         logging.warning("Cannot prewarm cache: Edge-TTS not available")
         return
     
-    logging.info("ðŸ”„ Pre-warming voice preview cache...")
+    logging.info("„ Pre-warming voice preview cache...")
     success_count = 0
     
     for voice in AVAILABLE_VOICES:
@@ -748,11 +747,11 @@ def prewarm_voice_cache():
             cache_key = preview_cache.get_cache_key(voice_id, DEFAULT_PREVIEW_TEXT)
             preview_cache.set(cache_key, audio_data)
             success_count += 1
-            logging.info(f"   âœ… Cached preview for {voice['name']}")
+            logging.info(f"   … Cached preview for {voice['name']}")
         except Exception as e:
-            logging.warning(f"   âš ï¸ Failed to cache {voice['name']}: {e}")
+            logging.warning(f"   š  Failed to cache {voice['name']}: {e}")
     
-    logging.info(f"âœ… Cache pre-warming complete: {success_count}/{len(AVAILABLE_VOICES)} voices cached")
+    logging.info(f"… Cache pre-warming complete: {success_count}/{len(AVAILABLE_VOICES)} voices cached")
 
 
 # ============================================================================
@@ -774,7 +773,7 @@ def init_professional_voice_services(socketio=None):
         return False
     
     try:
-        logging.info("ðŸŽ¤ Initializing Professional Voice System...")
+        logging.info("Ž¤ Initializing Professional Voice System...")
         
         voice_manager = get_voice_service_manager(
             enable_wake_word=True,
@@ -804,7 +803,7 @@ def init_professional_voice_services(socketio=None):
         # Start services
         voice_manager.start()
         
-        logging.info("âœ… Professional Voice System activated!")
+        logging.info("… Professional Voice System activated!")
         return True
         
     except Exception as e:
@@ -950,6 +949,36 @@ def set_learning_router(router):
     global learning_router
     learning_router = router
 
+# ==============================================
+# Echo Prevention: Server-side TTS-active flag
+# ==============================================
+# Uses a time-based approach: when TTS audio is generated, we set
+# a cooldown window. Audio arriving within that window is rejected.
+# The window auto-expires so even if no explicit reset comes, the
+# system recovers automatically.
+_tts_cooldown_until = 0
+
+def set_tts_active(active: bool, cooldown_ms: int = 10000):
+    """Mark TTS as active with a cooldown window to prevent echo/self-listening.
+    
+    When active=True, sets a cooldown for cooldown_ms (default 10s, enough for
+    most TTS audio to finish + room echo to dissipate).
+    When active=False, sets a shorter 1.5s cooldown for lingering echo.
+    """
+    global _tts_cooldown_until
+    if active:
+        # TTS is about to play — block audio for up to cooldown_ms
+        _tts_cooldown_until = _time_module.time() + (cooldown_ms / 1000)
+        logger.info(f"[ECHO] TTS active flag set — blocking audio for {cooldown_ms}ms")
+    else:
+        # Explicit reset with short tail cooldown
+        _tts_cooldown_until = _time_module.time() + 1.5
+        logger.info("[ECHO] TTS active flag reset with 1.5s tail cooldown")
+
+def is_tts_active():
+    """Check if TTS is active or still in cooldown period"""
+    return _time_module.time() < _tts_cooldown_until
+
 # SocketIO will be injected
 _socketio = None
 
@@ -965,7 +994,7 @@ def set_socketio(sio):
     sio.on_event('voice_command', handle_voice_command)
     sio.on_event('voice_audio_data', handle_voice_audio)
     
-    print("âœ… Command handlers registered with socketio")
+    print("… Command handlers registered with socketio")
 
 # ==============================================
 # WebSocket Event Handlers (as regular functions)
@@ -989,12 +1018,12 @@ def get_cached_ai_settings():
                     _ai_settings_cache = settings.get('ai', {})
                     _ai_settings_mtime = current_mtime
     except Exception as e:
-        print(f"âš ï¸ Cache read error for app_settings.json: {e}")
+        print(f"š  Cache read error for app_settings.json: {e}")
     return _ai_settings_cache
 
 def handle_connect():
     """Handle client connection"""
-    print(f'âœ… Client connected: {request.sid}')
+    print(f'… Client connected: {request.sid}')
     emit('connection_established', {
         'status': 'connected',
         'sid': request.sid,
@@ -1003,7 +1032,7 @@ def handle_connect():
 
 def handle_disconnect():
     """Handle client disconnection"""
-    print(f'âŒ Client disconnected: {request.sid}')
+    print(f'Œ Client disconnected: {request.sid}')
 
 def handle_command(data):
     """
@@ -1039,6 +1068,7 @@ def handle_command(data):
                             b64 = assistant.speak_text(payload['response'])
                             if b64:
                                 payload['audio_base64'] = b64
+                                set_tts_active(True)  # Echo prevention: mark TTS as active
                     except Exception as e:
                         logger.error(f"Failed to generate TTS: {e}")
                 
@@ -1096,7 +1126,7 @@ def handle_command(data):
                     "what would you like"
                 ]):
                     used_local_tools = True
-                    print(f'âœ… [LOCAL TOOLS] {response_text[:100]}...')
+                    print(f'… [LOCAL TOOLS] {response_text[:100]}...')
                     
                     # Emit response
                     safe_emit('command_response', {
@@ -1115,14 +1145,14 @@ def handle_command(data):
                             lr.route_conversation(speaker='user', content=command_text, input_mode=source)
                             lr.route_conversation(speaker='assistant', content=response_text, input_mode=source)
                     except Exception as e:
-                        print(f"âš ï¸ Could not log learning: {e}")
+                        print(f"š  Could not log learning: {e}")
                     
                     return  # Successfully handled
                     
             except ImportError:
-                print('âš ï¸ AdvancedConversationalAI import failed')
+                print('š  AdvancedConversationalAI import failed')
             except Exception as e:
-                print(f'âš ï¸ Local processing attempt failed: {e}')
+                print(f'š  Local processing attempt failed: {e}')
                 import traceback
                 traceback.print_exc()
         
@@ -1155,7 +1185,7 @@ def handle_command(data):
                         preferred_model = "gpt-4o-mini"
                 
                 
-                print(f"ðŸ”§ Initializing Chat with Provider: {preferred_provider}, Model: {preferred_model}")
+                print(f" Initializing Chat with Provider: {preferred_provider}, Model: {preferred_model}")
 
                 # Initialize Chat with user preference
                 chat = UnifiedChatInterface(
@@ -1168,7 +1198,7 @@ def handle_command(data):
                 provider_name = chat.provider_name.lower()
                 model_name = chat.model
                 
-                print(f"â„¹ï¸ Actual Provider: {provider_name}, Actual Model: {model_name}")
+                print(f"„¹ Actual Provider: {provider_name}, Actual Model: {model_name}")
 
                 if 'openai' in provider_name or 'gpt' in model_name:
                     system_msg = (
@@ -1196,7 +1226,7 @@ def handle_command(data):
                 # Get response from external AI
                 response_text = chat.chat(command_text)
                 
-                print(f'âœ… [EXTERNAL AI - {provider_name.upper()}] {response_text[:100]}...')
+                print(f'… [EXTERNAL AI - {provider_name.upper()}] {response_text[:100]}...')
                 
                 # Log learning
                 try:
@@ -1206,7 +1236,7 @@ def handle_command(data):
                         lr.route_conversation(speaker='user', content=command_text, input_mode=source)
                         lr.route_conversation(speaker='assistant', content=response_text, input_mode=source)
                 except Exception as e:
-                    print(f"âš ï¸ Could not log learning: {e}")
+                    print(f"š  Could not log learning: {e}")
                 
                 # Emit response (safe_emit will catch any socket errors)
                 safe_emit('command_response', {
@@ -1222,7 +1252,7 @@ def handle_command(data):
                 return  # Successfully handled
                 
             except Exception as llm_error:
-                print(f'âŒ External AI error: {llm_error}')
+                print(f'Œ External AI error: {llm_error}')
                 # Don't return here, let it fall through to fallback if needed, or emit error silently
                 # But typically if AI fails we want to know, just not crash socket
         
@@ -1241,10 +1271,10 @@ def handle_command(data):
         })
             
     except OSError as e:
-         print(f"âš ï¸ Critical Socket/OS Error caught in handle_command: {e}")
+         print(f"š  Critical Socket/OS Error caught in handle_command: {e}")
          # DO NOT EMIT TO USER, just log it. This prevents the "Error: [Errno 22]" chat message
     except Exception as e:
-        print(f'âŒ Command handling error: {e}')
+        print(f'Œ Command handling error: {e}')
         import traceback
         print(traceback.format_exc())
         
@@ -1274,7 +1304,7 @@ def handle_voice_command(data):
             })
             return
         
-        print(f'ðŸŽ¤ Voice command: {transcript} (confidence: {confidence}, lang: {language})')
+        print(f'Ž¤ Voice command: {transcript} (confidence: {confidence}, lang: {language})')
         
         # Forward to command handler with all context
         handle_command({
@@ -1286,7 +1316,7 @@ def handle_voice_command(data):
         })
         
     except Exception as e:
-        print(f'â Œ Voice command error: {e}')
+        print(f' Œ Voice command error: {e}')
         emit('voice_response', {
             'success': False,
             'error': str(e)
@@ -1294,10 +1324,15 @@ def handle_voice_command(data):
 
 def handle_voice_audio(data):
     """Handle raw audio data from Faster-Whisper frontend (Note: now generates KittenTTS audio_base64)"""
+    # Echo prevention: ignore audio while TTS is playing or in cooldown
+    if is_tts_active():
+        logger.info("[VOICE] Ignoring voice_audio_data — TTS active or in cooldown (echo prevention)")
+        return
+
     audio_data = data.get('audio_data', '')
     if not audio_data:
         return
-        
+
     logger.info(f"[VOICE] Received voice_audio_data! Length: {len(audio_data)}")
     
     def process_and_emit():
@@ -1345,7 +1380,8 @@ def handle_voice_audio(data):
                     }
                     if audio_base64:
                         payload['audio_base64'] = audio_base64
-                        
+                        set_tts_active(True)  # Echo prevention: mark TTS as active
+
                     _socketio.emit('voice_response', payload)
             else:
                 if _socketio:

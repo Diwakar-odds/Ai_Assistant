@@ -31,7 +31,7 @@ class ResearchManager:
         2. Scrapes top results.
         3. Synthesizes a report using LLM.
         """
-        print(f"ðŸ” Starting research on: {topic}")
+        print(f" Starting research on: {topic}")
         
         # 1. Search
         urls = self._search_web(topic)

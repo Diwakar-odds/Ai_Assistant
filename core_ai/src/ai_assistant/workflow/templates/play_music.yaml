@@ -1,0 +1,15 @@
+name: Play Music
+intent: PLAY_MEDIA
+description: Play music on Spotify or YouTube.
+steps:
+  - id: step1
+    action: app
+    parameters:
+      sub_type: open
+      app_name: "Spotify"
+  - id: step2
+    action: system
+    parameters:
+      sub_type: media_control
+      command: "play"
+    dependencies: ["step1"]

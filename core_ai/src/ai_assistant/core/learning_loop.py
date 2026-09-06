@@ -2,6 +2,8 @@ import logging
 import threading
 from typing import Dict, Any
 
+from ai_assistant.knowledge.fact_extractor import FactExtractor
+
 logger = logging.getLogger(__name__)
 
 
@@ -13,6 +15,7 @@ class LearningLoop:
       - UserDNA (evolve the user profile with implicit traits)
       - RelationshipManager (increment trust)
       - Memory (store the semantic embedding via save_to_memory)
+      - FactExtractor (extract facts and relationships)
     
     All updates are fire-and-forget on a background thread to avoid
     blocking the main chat response latency.
@@ -22,6 +25,7 @@ class LearningLoop:
         self.emotional_intelligence = None
         self.dna = None
         self.relationship = None
+        self.fact_extractor = FactExtractor()
 
         try:
             from ai_assistant.ai.emotional_intelligence import EmotionalIntelligence
@@ -63,6 +67,15 @@ class LearningLoop:
     def _process_async(self, prompt: str, response: str, context: Dict[str, Any]):
         """Internal: runs all learning hooks off the main thread."""
         logger.info("Executing post-interaction learning loop...")
+        
+        # 0. Fact Extraction — extract entities, relationships, commitments
+        try:
+            if prompt:
+                extraction_result = self.fact_extractor.extract_from_turn(prompt, response)
+                if extraction_result.get("success"):
+                    logger.debug(f"Fact extraction complete. Found LLM relations: {extraction_result.get('llm_relations_found')}")
+        except Exception as e:
+            logger.error(f"Fact extraction failed: {e}")
 
         # 1. Emotional Intelligence — detect the user's mood from the prompt
         mood = context.get("mood", "neutral")

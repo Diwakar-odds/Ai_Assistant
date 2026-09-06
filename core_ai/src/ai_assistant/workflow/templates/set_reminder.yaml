@@ -1,0 +1,10 @@
+name: Set Reminder
+intent: REMINDER
+description: Create a scheduled reminder.
+steps:
+  - id: step1
+    action: system
+    parameters:
+      sub_type: reminder
+      message: "{{ message }}"
+      time: "{{ time }}"

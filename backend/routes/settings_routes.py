@@ -409,7 +409,7 @@ def api_update_settings():
                     save_secure_key(key_name, key_val)
                     if key_name in env_map:
                         os.environ[env_map[key_name]] = key_val
-                        logger.info(f"Ã°Å¸â€â€˜ Secure Key '{key_name}' updated & loaded at runtime")
+                        logger.info(f"˜ Secure Key '{key_name}' updated & loaded at runtime")
             
             # Wipe actual values from settings_data before writing to JSON file
             cleaned_keys = {}

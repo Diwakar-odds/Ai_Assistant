@@ -2,7 +2,7 @@
 """
 AI Assistant - Windows Desktop Application
 ===========================================
-Wraps the web backend in a native Windows desktop application using pywebview.
+Wraps the modern web backend in a lightweight native Windows desktop window.
 """
 
 import sys
@@ -10,126 +10,149 @@ import os
 import threading
 import time
 import logging
-import webview
+import urllib.request
+import urllib.error
 from pathlib import Path
 
-# Setup logging
+# Setup correct project paths (Handles both standalone Python and PyInstaller frozen .exe)
+if getattr(sys, 'frozen', False):
+    # PyInstaller bundle
+    bundle_dir = Path(getattr(sys, '_MEIPASS', Path(sys.executable).parent))
+    exe_dir = Path(sys.executable).parent
+    project_root = bundle_dir
+    log_file = exe_dir / 'desktop_app.log'
+else:
+    current_file = Path(__file__).resolve()
+    project_root = current_file.parent.parent.parent
+    exe_dir = project_root
+    log_file = project_root / 'desktop_app.log'
+
+backend_dir = project_root / 'backend'
+core_ai_src = project_root / 'core_ai' / 'src'
+shared_dir = project_root / 'shared'
+
+for path_entry in [str(project_root), str(backend_dir), str(core_ai_src), str(shared_dir), str(exe_dir)]:
+    if path_entry not in sys.path:
+        sys.path.insert(0, path_entry)
+
+# Setup logging to both console (if available) and file
+handlers = [logging.FileHandler(str(log_file), encoding='utf-8')]
+if sys.stdout is not None:
+    handlers.append(logging.StreamHandler(sys.stdout))
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s | %(levelname)-8s | %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    datefmt='%Y-%m-%d %H:%M:%S',
+    handlers=handlers
 )
 logger = logging.getLogger(__name__)
 
-# Add project root to path
-# Add project root to path (src directory)
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
+try:
+    import webview
+    WEBVIEW_AVAILABLE = True
+except ImportError:
+    WEBVIEW_AVAILABLE = False
+    logger.warning("pywebview is not installed. Will fallback to default web browser.")
 
 
-class WindowsApp:
-    """Main Windows Desktop Application"""
+class WindowsDesktopApp:
+    """Main Windows Desktop Application Controller"""
     
-    def __init__(self):
+    def __init__(self, port: int = 5000):
+        self.port = port
         self.backend_thread = None
-        self.flask_app = None
-        self.socketio = None
         self.server_running = False
-        self.port = 5000
         
     def start_backend(self):
-        """Start the Flask backend in a separate thread"""
+        """Start the backend in background thread"""
         try:
-            logger.info("Starting Flask backend server...")
-            
-            # Import and run the backend
-            import runpy
-            
-            # This will start the Flask server
-            runpy.run_module('ai_assistant.services.modern_web_backend', run_name='__main__')
-            
+            logger.info("🚀 Launching AI Assistant Backend...")
+            import modern_web_backend
+            if hasattr(modern_web_backend, 'socketio') and hasattr(modern_web_backend, 'app'):
+                modern_web_backend.socketio.run(
+                    modern_web_backend.app,
+                    host='127.0.0.1',
+                    port=self.port,
+                    debug=False,
+                    allow_unsafe_werkzeug=True
+                )
         except Exception as e:
-            logger.error(f"Failed to start backend: {e}")
+            logger.error(f"❌ Backend error: {e}")
             import traceback
             traceback.print_exc()
-    
-    def wait_for_server(self, timeout=30):
-        """Wait for the Flask server to be ready"""
-        import urllib.request
-        import urllib.error
-        
+
+    def wait_for_server(self, timeout: int = 45) -> bool:
+        """Wait for the Flask backend to be ready"""
         start_time = time.time()
+        url = f'http://127.0.0.1:{self.port}'
+        logger.info(f"⏳ Waiting for backend at {url}...")
+        
         while time.time() - start_time < timeout:
             try:
-                urllib.request.urlopen(f'http://127.0.0.1:{self.port}', timeout=1)
-                logger.info("Backend server is ready!")
-                self.server_running = True
-                return True
+                with urllib.request.urlopen(url, timeout=1) as response:
+                    if response.status in (200, 302, 304):
+                        logger.info("✅ Backend server is live!")
+                        self.server_running = True
+                        return True
             except (urllib.error.URLError, ConnectionRefusedError, OSError):
                 time.sleep(0.5)
         
-        logger.error("Backend server failed to start in time")
+        logger.error("❌ Backend server failed to start within timeout.")
         return False
-    
-    def create_window(self):
-        """Create the desktop window"""
-        logger.info("Creating desktop window...")
+
+    def launch(self):
+        """Launch the desktop app window"""
+        logger.info("=" * 60)
+        logger.info("🤖 Pulsar AI Assistant - Windows Desktop App")
+        logger.info("=" * 60)
         
-        # Create the main window
-        window = webview.create_window(
-            title='AI Assistant',
-            url=f'http://127.0.0.1:{self.port}',
-            width=1400,
-            height=900,
-            resizable=True,
-            fullscreen=False,
-            min_size=(800, 600),
-            background_color='#1a1a1a',
-            text_select=True
-        )
-        
-        return window
-    
-    def run(self):
-        """Run the Windows desktop application"""
-        logger.info("="*60)
-        logger.info("AI Assistant - Windows Desktop App")
-        logger.info("="*60)
-        
-        # Start backend in separate thread
-        logger.info("Launching backend server...")
+        # 1. Start backend thread
         self.backend_thread = threading.Thread(target=self.start_backend, daemon=True)
         self.backend_thread.start()
         
-        # Wait for server to be ready
+        # 2. Wait for backend to be ready
         if not self.wait_for_server():
-            logger.error("Failed to start the application. Exiting...")
+            logger.error("Could not connect to backend. Please check logs.")
             return
+
+        # 3. Open desktop window
+        app_url = f'http://127.0.0.1:{self.port}'
         
-        # Create and start the desktop window
-        window = self.create_window()
-        
-        # Start the GUI (blocking call)
-        logger.info("Opening desktop window...")
-        webview.start(debug=False, http_server=False)
-        
-        logger.info("Application closed.")
+        if WEBVIEW_AVAILABLE:
+            logger.info("🖥️ Opening Native Desktop Window...")
+            window = webview.create_window(
+                title='Pulsar AI Assistant',
+                url=app_url,
+                width=1440,
+                height=900,
+                resizable=True,
+                fullscreen=False,
+                min_size=(960, 640),
+                background_color='#0f172a',
+                text_select=True
+            )
+            webview.start(debug=False, http_server=False)
+        else:
+            import webbrowser
+            logger.info(f"🌐 Opening default browser at {app_url}...")
+            webbrowser.open(app_url)
+            try:
+                while True:
+                    time.sleep(1)
+            except KeyboardInterrupt:
+                pass
 
 
 def main():
-    """Main entry point"""
-    app = WindowsApp()
-    app.run()
+    app = WindowsDesktopApp(port=5000)
+    app.launch()
 
 
 if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt:
-        logger.info("\nShutdown requested...")
+        logger.info("Shutdown requested.")
         sys.exit(0)
-    except Exception as e:
-        logger.error(f"Application error: {e}")
-        import traceback
-        traceback.print_exc()
-        sys.exit(1)
+

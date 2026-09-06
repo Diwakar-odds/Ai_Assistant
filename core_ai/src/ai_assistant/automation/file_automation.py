@@ -161,6 +161,36 @@ class FileAutomation:
             logger.error(f"❌ Failed to move file: {e}")
             return False
 
+    def create_folder(self, folder_name: str, dst_folder: str = "desktop") -> bool:
+        """
+        Create a new folder at a destination
+        
+        Args:
+            folder_name: Name of the new folder
+            dst_folder: Destination path or standard folder name (default: desktop)
+            
+        Returns:
+            Success status
+        """
+        try:
+            # Resolve destination if it's a standard folder name
+            std_dst = self.get_standard_folder(dst_folder)
+            if std_dst:
+                dst_folder = std_dst
+                
+            if not os.path.exists(dst_folder):
+                # If destination doesn't exist, we'll try to create it anyway
+                os.makedirs(dst_folder, exist_ok=True)
+                
+            new_path = os.path.join(dst_folder, folder_name)
+            os.makedirs(new_path, exist_ok=True)
+            logger.info(f"✅ Created folder: {new_path}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to create folder: {e}")
+            return False
+
     def copy_file(self, src: str, dst_folder: str) -> bool:
         """
         Copy a file to a destination folder

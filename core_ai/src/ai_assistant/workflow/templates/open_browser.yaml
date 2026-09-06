@@ -1,0 +1,9 @@
+name: Open Browser
+intent: OPEN_BROWSER
+description: Launch a web browser and optionally navigate to a URL.
+steps:
+  - id: step1
+    action: browser
+    parameters:
+      sub_type: navigate
+      url: "{{ url }}"

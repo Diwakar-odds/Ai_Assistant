@@ -44,6 +44,8 @@ Recent integrations have massive upgraded the assistant's autonomy and personali
 - **Proactive Diagnostics**: Scans for low disk space, expired backups, and API keys.
 - **Trust-Scaling Personality Engine**: Seamlessly transitions from a formal, robotic AI (Low Trust) to a highly sarcastic companion who drops custom catchphrases (High Trust).
 - **Continuous Dashboard**: Real-time React dashboard visualizing Self-Healing Engine logs and User DNA trust scores.
+- **Zero-Dependency Long-Term Memory (RAG)**: A custom-built Retrieval-Augmented Generation system using SQLite `FTS5` full-text search to persist and recall past conversations with lightning speed and zero extra RAM footprint.
+- **Optimized Voice Loop**: Supercharged real-time voice inference using `faster-whisper` and dynamic chunking for instantaneous transcription.
 
 ---
 

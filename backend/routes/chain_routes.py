@@ -36,12 +36,12 @@ def _broadcast_chain_progress(progress):
 @chain_bp.route('/api/chains/create', methods=['POST'])
 @jwt_required()
 def create_chain():
-    """Create a new action chain from command"""
+    """Create a new action chain from command or intercept cancellations"""
     if not MULTI_AGENT_AVAILABLE:
         return jsonify({"error": "Multi-Agent System not available"}), 503
         
     data = request.get_json()
-    command = data.get("command")
+    command = data.get("command", "").strip()
     
     if not command:
         return jsonify({"error": "Command is required"}), 400
@@ -49,6 +49,26 @@ def create_chain():
     try:
         manager = get_chain_manager()
         
+        # 🧠 BRAIN LOOP: Intercept commands if something is already running
+        command_lower = command.lower()
+        override_keywords = ['stop', 'cancel', 'halt', 'abort', 'wait', 'ruko', 'band karo', 'nahi']
+        
+        # Find active chains
+        running_chains = [c for c in manager.active_chains.values() if c.status.value in ['pending', 'planning', 'executing']]
+        
+        if running_chains and any(kw in command_lower for kw in override_keywords):
+            for rc in running_chains:
+                logger.warning(f"🧠 EXECUTIVE OVERRIDE: Cancelling active chain {rc.id} due to command: {command}")
+                rc.status = rc.status.__class__.CANCELLED
+                manager.completed_chains[rc.id] = manager.active_chains.pop(rc.id)
+            
+            return jsonify({
+                "status": "cancelled",
+                "message": f"Successfully interrupted previous task.",
+                "command": command
+            })
+            
+        # Standard creation
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         chain = loop.run_until_complete(manager.create_chain(command))
@@ -152,11 +172,26 @@ def resume_chain(chain_id):
     if not MULTI_AGENT_AVAILABLE:
         return jsonify({"error": "Multi-Agent System not available"}), 503
         
-    data = request.get_json()
+    data = request.get_json() or {}
     user_input = data.get("input")
     action = data.get("action", "proceed")
     
-    return jsonify({"status": "resumed", "message": "Resume signal sent (Not fully implemented)"})
+    try:
+        manager = get_chain_manager()
+        chain = manager.active_chains.get(chain_id)
+        if not chain:
+            return jsonify({"error": "Chain not found or already completed"}), 404
+            
+        if action.lower() == "cancel":
+            chain.status = chain.status.__class__.CANCELLED
+            return jsonify({"status": "cancelled", "message": "Chain cancelled by user"})
+        else:
+            chain.status = chain.status.__class__.EXECUTING
+            return jsonify({"status": "resumed", "message": "Chain resumed successfully"})
+            
+    except Exception as e:
+        logger.error(f"Error resuming chain: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @chain_bp.route('/api/chains/<chain_id>', methods=['GET'])
 @jwt_required()

@@ -303,7 +303,7 @@ class LocalLLMProvider(LLMProvider):
     
     def count_tokens(self, text: str) -> int:
         """Estimate tokens for local LLM."""
-        # Simple estimation: 1 token â‰ˆ 4 characters
+        # Simple estimation: 1 token ‰ˆ 4 characters
         return len(text) // 4
     
     def _format_messages(self, messages: List[Dict[str, str]]) -> str:
@@ -559,7 +559,7 @@ class UnifiedChatInterface:
         
         # Enforce strong assistant persona for all models (especially local GGUF which defaults to Google/Gemma identity)
         default_system_prompt = (
-            "You are Pulsar, a smart, helpful, and concise AI assistant created by Divakar. "
+            "You are Pulsar, a smart, helpful, and concise AI assistant created by Diwakar. "
             "You MUST NEVER identify as a large language model trained by Google or any other company. "
             "You MUST NEVER mention Gemma, OpenAI, Google, or any base models. "
             "Keep your answers brief and directly address the user."
@@ -569,7 +569,7 @@ class UnifiedChatInterface:
         self.offline_mode = isinstance(self.provider, OfflineProvider)
         
         if self.offline_mode:
-            logger.warning("âš ï¸ Running in offline mode - features may be limited")
+            logger.warning("š  Running in offline mode - features may be limited")
     
     def is_offline(self) -> bool:
         """Check if currently in offline mode."""

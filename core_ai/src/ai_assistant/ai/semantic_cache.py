@@ -405,7 +405,7 @@ if __name__ == "__main__":
     
     # Test 1: Exact match
     logger.debug("Test 1: Exact match")
-    cache.set("What is the weather?", "It's sunny and 72°F")
+    cache.set("What is the weather?", "It's sunny and 72F")
     result = cache.get("What is the weather?")
     print(f"Result: {result}\n")
     

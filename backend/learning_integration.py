@@ -22,7 +22,7 @@ try:
     LEARNING_SYSTEMS_AVAILABLE = True
 except ImportError as e:
     LEARNING_SYSTEMS_AVAILABLE = False
-    print(f"âš ï¸ Learning systems not available: {e}")
+    print(f"š  Learning systems not available: {e}")
 
 
 def get_learning_stats():

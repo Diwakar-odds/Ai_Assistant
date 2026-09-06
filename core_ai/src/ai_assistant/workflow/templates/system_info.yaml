@@ -1,0 +1,8 @@
+name: System Info
+intent: SYSTEM_STATUS
+description: Collect system health metrics.
+steps:
+  - id: step1
+    action: system
+    parameters:
+      sub_type: status

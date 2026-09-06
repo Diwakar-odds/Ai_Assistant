@@ -1,0 +1,9 @@
+name: Search Web
+intent: SEARCH_WEB
+description: Search the web for a given query.
+steps:
+  - id: step1
+    action: browser
+    parameters:
+      sub_type: navigate
+      url: "https://www.google.com/search?q={{ query }}"

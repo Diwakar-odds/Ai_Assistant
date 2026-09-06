@@ -62,7 +62,7 @@ def handle_chat_stream(data):
             emit('chat_stream_error', {'error': 'No message provided'})
             return
         
-        logger.info(f"ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ WebSocket chat stream started: {session_id}")
+        logger.info(f"ƒ…‚¬‚ WebSocket chat stream started: {session_id}")
         
         # Get or create chat session
         with chat_session_lock:

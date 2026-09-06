@@ -56,7 +56,7 @@ const CameraFeed = () => {
         }
       }, 100);
 
-    } catch (_err) {
+    } catch (err) {
       console.error('❌ Camera access error:', err);
       setError('Camera access denied');
       setHasPermission(false);

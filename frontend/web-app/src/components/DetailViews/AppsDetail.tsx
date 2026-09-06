@@ -50,7 +50,7 @@ const AppsDetail = () => {
         setError('Received unexpected data format from server');
         setApps([]);
       }
-    } catch (_err) {
+    } catch (err) {
       console.error('Error fetching apps:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to load apps';
       setError(`${errorMessage}. Is the backend running?`);
@@ -79,7 +79,7 @@ const AppsDetail = () => {
         // Fallback to fetching apps again
         await fetchApps();
       }
-    } catch (_err) {
+    } catch (err) {
       console.error('Error refreshing apps:', err);
       setError('Failed to refresh apps');
     } finally {
@@ -101,7 +101,7 @@ const AppsDetail = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ app_name: appName }),
         });
-      } catch (_err) {
+      } catch (err) {
         console.error('Failed to launch app:', err);
       }
     }
@@ -119,7 +119,7 @@ const AppsDetail = () => {
   // Listen for apps_discovered WebSocket event
   useEffect(() => {
     if (socket) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       const handleAppsDiscovered = (data: any) => {
         console.log('🎉 Apps discovered event received:', data);
         // Auto-refresh app list when backend completes scan
@@ -153,7 +153,7 @@ const AppsDetail = () => {
   };
 
   // Category color mapping
-  const _getCategoryColor = (category: string): string => {
+  const getCategoryColor = (category: string): string => {
     const colorMap: { [key: string]: string } = {
       'Browser': '#3B82F6',
       'Communication': '#06B6D4',

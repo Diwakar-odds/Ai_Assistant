@@ -1,0 +1,9 @@
+name: Research Topic
+intent: RESEARCH
+description: Web search, scrape, and summarize a topic.
+steps:
+  - id: step1
+    action: custom
+    parameters:
+      sub_type: research
+      topic: "{{ topic }}"

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Mic, Volume2, _Languages, Clock, Loader2, Play, Check } from 'lucide-react';
+import { Mic, Volume2, Clock, Loader2, Play, Check } from 'lucide-react';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useState, useEffect } from 'react';
 
@@ -13,9 +13,9 @@ interface VoiceOption {
 }
 
 const VoiceDetail = () => {
-  const { voiceCommands, isVoiceActive, toggleVoice, _alwaysActive, _toggleAlwaysActive } = useDashboard();
+  const { voiceCommands, isVoiceActive, toggleVoice, alwaysActive, toggleAlwaysActive } = useDashboard();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const [settings, setSettings] = useState<any>(null);
   const [voices, setVoices] = useState<VoiceOption[]>([]);
   const [loading, setLoading] = useState(true);

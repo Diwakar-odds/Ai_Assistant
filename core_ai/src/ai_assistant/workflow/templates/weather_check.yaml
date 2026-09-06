@@ -1,0 +1,9 @@
+name: Check Weather
+intent: WEATHER
+description: Check the weather for a location.
+steps:
+  - id: step1
+    action: api
+    parameters:
+      sub_type: weather
+      location: "{{ location }}"

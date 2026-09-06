@@ -10,6 +10,7 @@ intent classification and text generation.
 """
 
 import os
+import sys
 import logging
 import threading
 from pathlib import Path
@@ -56,12 +57,24 @@ class GGUFModelManager:
             raise ImportError("llama-cpp-python is not installed. Please run: pip install llama-cpp-python")
             
         with self._lock:
-            if self.llm is None:
-                self.model_path = self.base_dir / "models" / self.model_filename
+                possible_paths = [
+                    self.base_dir / "models" / self.model_filename,
+                    Path(os.getcwd()) / "models" / self.model_filename,
+                    Path(sys.executable).parent / "models" / self.model_filename,
+                    Path(__file__).resolve().parent.parent.parent.parent.parent / "models" / self.model_filename
+                ]
                 
-                if not self.model_path.exists():
-                    logger.error(f"Offline model not found at {self.model_path}")
-                    raise FileNotFoundError(f"Offline model not found at {self.model_path}")
+                found_path = None
+                for p in possible_paths:
+                    if p.exists():
+                        found_path = p
+                        break
+                        
+                if not found_path:
+                    logger.error(f"Offline model not found in any standard path for {self.model_filename}")
+                    raise FileNotFoundError(f"Offline model {self.model_filename} not found.")
+                
+                self.model_path = found_path
                     
                 logger.info(f"Loading offline command model into memory: {self.model_filename}")
                 print(f"Loading offline command model into memory: {self.model_filename}")

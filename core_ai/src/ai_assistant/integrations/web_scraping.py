@@ -71,7 +71,7 @@ def get_weather_info(location: str = "New York", api_key: str = None) -> str:
                 wind_speed = data['wind']['speed']
                 
                 return f"""🌤️ Weather in {location}:
-🌡️ Temperature: {temp}°C (feels like {feels_like}°C)
+🌡️ Temperature: {temp}C (feels like {feels_like}C)
 ☁️ Conditions: {description}
 💧 Humidity: {humidity}%
 💨 Wind Speed: {wind_speed} m/s"""
@@ -92,7 +92,7 @@ def get_weather_info(location: str = "New York", api_key: str = None) -> str:
                 wind_speed = current['windspeedKmph']
                 
                 return f"""🌤️ Weather in {location}:
-🌡️ Temperature: {temp_c}°C (feels like {feels_like}°C)
+🌡️ Temperature: {temp_c}C (feels like {feels_like}C)
 ☁️ Conditions: {description}
 💧 Humidity: {humidity}%
 💨 Wind Speed: {wind_speed} km/h"""
@@ -131,7 +131,7 @@ def get_weather_forecast(location: str = "New York", days: int = 3) -> str:
                 day_name = date_obj.strftime('%A, %B %d')
                 
                 forecast += f"📅 {day_name}\n"
-                forecast += f"🌡️ High: {max_temp}°C | Low: {min_temp}°C\n"
+                forecast += f"🌡️ High: {max_temp}C | Low: {min_temp}C\n"
                 forecast += f"☁️ {description}\n\n"
             
             return forecast

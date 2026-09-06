@@ -13,7 +13,7 @@ export const usePWA = () => {
   useEffect(() => {
     // Check if already installed
     const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches ||
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       (window.navigator as any).standalone ||
       document.referrer.includes('android-app://');
     

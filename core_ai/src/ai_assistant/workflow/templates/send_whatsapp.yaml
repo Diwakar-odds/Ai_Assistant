@@ -1,0 +1,10 @@
+name: Send WhatsApp
+intent: SEND_MESSAGE
+description: Send a WhatsApp message to a contact.
+steps:
+  - id: step1
+    action: custom
+    parameters:
+      sub_type: whatsapp
+      contact: "{{ contact }}"
+      message: "{{ message }}"

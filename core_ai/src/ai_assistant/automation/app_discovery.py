@@ -66,7 +66,7 @@ class AppDiscovery:
         - Official Windows application registry
         - What users expect to see
         """
-        print("âš™ï¸ Scanning from Windows Settings > Apps & Features sources...")
+        print("š Scanning from Windows Settings > Apps & Features sources...")
         apps = {}
         
         # Method 1: Registry Uninstall Keys (Desktop Apps)
@@ -74,7 +74,7 @@ class AppDiscovery:
         apps.update(self._scan_apps_and_features_registry())
         
         # Method 2: AppX Packages (Microsoft Store Apps)
-        print("  ðŸª Reading AppX Packages (Store Apps)...")
+        print("  ª Reading AppX Packages (Store Apps)...")
         apps.update(self._scan_appx_packages())
         
         # Method 3: Start Menu Shortcuts (PWAs and Utilities)
@@ -194,7 +194,7 @@ class AppDiscovery:
                 except json.JSONDecodeError:
                     pass
         except Exception as e:
-            print(f"  âš ï¸ AppX scan failed: {e}")
+            print(f"  š  AppX scan failed: {e}")
         
         return apps
     
@@ -282,7 +282,7 @@ class AppDiscovery:
         import time
         
         def delayed_refresh():
-            print(f"â° Scheduled app refresh will start in {delay_seconds} seconds...")
+            print(f" Scheduled app refresh will start in {delay_seconds} seconds...")
             time.sleep(delay_seconds)
             if not self._is_refreshing:
                 print("🔄 Starting scheduled background app refresh...")
@@ -318,13 +318,13 @@ class AppDiscovery:
                             'timestamp': datetime.now().isoformat(),
                             'message': f'Discovered {len(new_apps)} applications'
                         })
-                        print("ðŸ“¡ Sent apps_discovered event to frontend")
+                        print(" Sent apps_discovered event to frontend")
             except (RuntimeError, ImportError) as e:
                 # Not running in Flask context or socketio not available
-                print(f"â„¹ï¸ WebSocket notification skipped: {e}")
+                print(f"„¹ WebSocket notification skipped: {e}")
                 
         except Exception as e:
-            print(f"âš ï¸ Background refresh failed: {e}")
+            print(f"š  Background refresh failed: {e}")
         finally:
             self._is_refreshing = False
     
@@ -797,6 +797,17 @@ def smart_open_application(app_name: str, action_type: str = 'open_app') -> str:
     # First, try to find in discovered apps
     app_path = app_discovery.find_app(app_name)
     
+    # If not found, and we are currently refreshing, wait a bit and try again
+    if not app_path and getattr(app_discovery, '_is_refreshing', False):
+        print("  ⏳ Waiting for app scan to complete...")
+        import time
+        # wait up to 5 seconds
+        for _ in range(25):
+            time.sleep(0.2)
+            app_path = app_discovery.find_app(app_name)
+            if app_path:
+                break
+                
     if app_path:
         try:
             # METHOD 1: NATIVE WINDOWS APP OR SHORTCUT (.exe / .lnk)
@@ -851,9 +862,12 @@ def smart_open_application(app_name: str, action_type: str = 'open_app') -> str:
         for key, url in web_fallbacks.items():
             if key in app_lower:
                 try:
-                    import webbrowser
                     print(f"  🌐 Launching Web App fallback: {url}")
-                    webbrowser.open(url)
+                    try:
+                        os.startfile(url)
+                    except AttributeError:
+                        import webbrowser
+                        webbrowser.open(url)
                     app_discovery.track_app_launch(app_name, url, success=True)
                     app_discovery.record_action_preference(action_type, app_name, 'web')
                     return f"✅ Opened Web App: {app_name}"
@@ -886,7 +900,7 @@ def list_installed_apps() -> str:
     if not apps:
         return "No applications discovered yet. Run application discovery first."
     
-    app_list = "\n".join([f"â€¢ {name.title()}" for name in sorted(apps.keys())][:50])  # Limit to 50
+    app_list = "\n".join([f" {name.title()}" for name in sorted(apps.keys())][:50])  # Limit to 50
     total = len(apps)
     
     return f"Found {total} applications (showing first 50):\n{app_list}"
@@ -898,9 +912,9 @@ def get_apps_for_web() -> List[Dict[str, str]]:
     apps = app_discovery.get_apps_for_api()
     
     if len(apps) == 0:
-        print("â„¹ï¸ No apps in cache - user can click refresh or wait for auto-refresh")
+        print("„¹ No apps in cache - user can click refresh or wait for auto-refresh")
     else:
-        print(f"ðŸ“¦ Returning {len(apps)} cached apps to API")
+        print(f"¦ Returning {len(apps)} cached apps to API")
     
     return apps
 
@@ -909,14 +923,14 @@ def get_app_usage_stats() -> str:
     most_used = app_discovery.get_most_used_apps(10)
     recent = app_discovery.get_recent_apps(10)
     
-    report = "ðŸ“Š APPLICATION USAGE STATISTICS\n"
-    report += "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\n"
+    report = " APPLICATION USAGE STATISTICS\n"
+    report += "\n\n"
     
-    report += "ðŸ”¥ MOST USED APPS:\n"
+    report += "¥ MOST USED APPS:\n"
     for i, (app_name, count) in enumerate(most_used, 1):
         report += f"{i}. {app_name.title()}: {count} launches\n"
     
-    report += "\nâ° RECENTLY USED:\n"
+    report += "\n RECENTLY USED:\n"
     for i, (app_name, last_time) in enumerate(recent, 1):
         report += f"{i}. {app_name.title()} (Last: {last_time})\n"
     
@@ -936,10 +950,10 @@ def start_periodic_refresh(interval_hours: int = 168):  # 168 hours = 1 week
             try:
                 time.sleep(interval_hours * 3600)  # Convert hours to seconds
                 if not app_discovery._is_refreshing:
-                    print(f"ðŸ“… Weekly scheduled refresh starting...")
+                    print(f"… Weekly scheduled refresh starting...")
                     app_discovery._background_refresh()
             except Exception as e:
-                print(f"âš ï¸ Periodic refresh error: {e}")
+                print(f"š  Periodic refresh error: {e}")
     
     thread = threading.Thread(target=periodic_refresh_loop, daemon=True)
     thread.start()
@@ -956,7 +970,7 @@ def search_apps_by_name(query: str) -> str:
     if not results:
         return f"No applications found matching '{query}'"
     
-    report = f"ðŸ” SEARCH RESULTS for '{query}':\n"
+    report = f" SEARCH RESULTS for '{query}':\n"
     for i, (name, path, score) in enumerate(results, 1):
         report += f"{i}. {name.title()} (Score: {score})\n   Path: {path}\n"
     
@@ -1023,7 +1037,7 @@ class TaskbarDetector:
         Returns:
             Dictionary with application information including PIDs, names, and window titles
         """
-        print("ðŸ” Detecting running applications...")
+        print(" Detecting running applications...")
         
         applications = {
             "processes": [],
@@ -1120,7 +1134,7 @@ class TaskbarDetector:
         if not self.multimodal:
             return {"error": "Visual analysis not available - Multimodal AI not initialized"}
         
-        print("ðŸ‘ï¸ Analyzing taskbar visually...")
+        print("‘ Analyzing taskbar visually...")
         
         try:
             # Capture the screen
@@ -1176,7 +1190,7 @@ class TaskbarDetector:
         if not PIL_AVAILABLE:
             return {"error": "PIL not available for screen capture"}
         
-        print("ðŸ” Analyzing taskbar region specifically...")
+        print(" Analyzing taskbar region specifically...")
         
         try:
             # Get screen dimensions
@@ -1223,7 +1237,7 @@ class TaskbarDetector:
         Returns:
             Comprehensive desktop and taskbar analysis
         """
-        print("ðŸ–¥ï¸ Performing complete desktop analysis...")
+        print("–¥ Performing complete desktop analysis...")
         
         results = {
             "timestamp": datetime.now().isoformat(),
@@ -1281,7 +1295,7 @@ class TaskbarDetector:
         Returns:
             Information about whether the app is found and its status
         """
-        print(f"ðŸ” Looking for '{app_name}' in taskbar...")
+        print(f" Looking for '{app_name}' in taskbar...")
         
         # Check running processes first
         app_found_in_processes = False
@@ -1336,23 +1350,23 @@ def detect_taskbar_apps() -> str:
     
     # Format results for human reading
     report_lines = []
-    report_lines.append("ðŸ“Š TASKBAR & RUNNING APPS ANALYSIS")
+    report_lines.append(" TASKBAR & RUNNING APPS ANALYSIS")
     report_lines.append("=" * 50)
     
     # Process information
     if "process_analysis" in analysis and "summary" in analysis["process_analysis"]:
         summary = analysis["process_analysis"]["summary"]
         report_lines.append(f"🔄 Total Running Processes: {summary.get('total_processes', 0)}")
-        report_lines.append(f"📦Ÿ Visible Windows: {summary.get('total_windows', 0)}")
+        report_lines.append(f"📦 Visible Windows: {summary.get('total_windows', 0)}")
     
     # Visual analysis
     if "visual_analysis" in analysis and "visual_analysis" in analysis["visual_analysis"]:
-        report_lines.append("\nðŸ‘ï¸ VISUAL TASKBAR ANALYSIS:")
+        report_lines.append("\n‘ VISUAL TASKBAR ANALYSIS:")
         report_lines.append(analysis["visual_analysis"]["visual_analysis"])
     
     # Focused taskbar analysis  
     if "taskbar_analysis" in analysis and "taskbar_analysis" in analysis["taskbar_analysis"]:
-        report_lines.append("\nðŸŽ¯ FOCUSED TASKBAR ANALYSIS:")
+        report_lines.append("\nŽ FOCUSED TASKBAR ANALYSIS:")
         report_lines.append(analysis["taskbar_analysis"]["taskbar_analysis"])
     
     # Running processes summary
@@ -1361,11 +1375,11 @@ def detect_taskbar_apps() -> str:
         # Show top processes by memory usage
         top_processes = sorted(processes, key=lambda x: x.get('memory_mb', 0), reverse=True)[:10]
         
-        report_lines.append("\nðŸ’¾ TOP MEMORY-USING PROCESSES:")
+        report_lines.append("\n¾ TOP MEMORY-USING PROCESSES:")
         for proc in top_processes:
             name = proc.get('name', 'Unknown')[:20].ljust(20)
             memory = f"{proc.get('memory_mb', 0):.1f}MB".rjust(10)
-            report_lines.append(f"  â€¢ {name} {memory}")
+            report_lines.append(f"   {name} {memory}")
     
     return "\n".join(report_lines)
 
@@ -1388,17 +1402,17 @@ def can_see_taskbar() -> str:
     if WIN32_AVAILABLE:
         capabilities.append("✅ Window Detection - I can see window titles and states")
     else:
-        limitations.append("âŒ Win32 API - Limited window information available")
+        limitations.append("Œ Win32 API - Limited window information available")
     
     # Check visual analysis
     if detector.multimodal:
         capabilities.append("✅ Visual Analysis - I can see and analyze your screen/taskbar")
         capabilities.append("✅ Icon Recognition - I can identify app icons in the taskbar")
     else:
-        limitations.append("âŒ Computer Vision - Cannot visually analyze taskbar")
+        limitations.append("Œ Computer Vision - Cannot visually analyze taskbar")
     
     report = []
-    report.append("ðŸ” TASKBAR DETECTION CAPABILITIES")
+    report.append(" TASKBAR DETECTION CAPABILITIES")
     report.append("=" * 40)
     report.append("\nWhat I CAN do:")
     report.extend(capabilities)

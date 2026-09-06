@@ -171,6 +171,9 @@ class ChainOfActionsManager:
             try:
                 plan = self.task_planner.create_plan(chain.command)
                 
+                chain.requires_confirmation = getattr(plan, "requires_confirmation", False)
+                chain.safety_level = getattr(plan, "safety_level", "safe")
+                
                 for i, planned_action in enumerate(plan.actions):
                     # Inject specific type into parameters for execution
                     # If type is an Enum, get its value, otherwise use it as string
@@ -323,6 +326,25 @@ class ChainOfActionsManager:
         
         logger.info(f"🚀 STEP 4 - ASSIGN & EXECUTE: Starting execution of chain {chain_id}")
         
+        if getattr(chain, "requires_confirmation", False):
+            logger.warning(f"⚠️ Chain {chain_id} requires user confirmation. Pausing.")
+            chain.status = ChainStatus.PAUSED
+            await self._notify_progress(chain)
+            
+            # Wait until status is resumed or cancelled
+            while chain.status == ChainStatus.PAUSED:
+                await asyncio.sleep(1)
+            
+            if chain.status == ChainStatus.CANCELLED:
+                logger.warning(f"🛑 Chain {chain_id} was cancelled by user during confirmation.")
+                return ExecutionReport(
+                    chain_id=chain.id,
+                    status=ChainStatus.CANCELLED,
+                    actions_completed=0,
+                    actions_failed=0,
+                    duration_seconds=0.0
+                )
+        
         chain.status = ChainStatus.EXECUTING
         chain.started_at = datetime.now()
         await self._notify_progress(chain)
@@ -337,6 +359,11 @@ class ChainOfActionsManager:
             while i < len(chain.actions):
                 action = chain.actions[i]
                 chain.current_action_index = i
+                
+                # 🧠 EXECUTIVE OVERRIDE CHECK
+                if chain.status == ChainStatus.CANCELLED:
+                    logger.warning(f"🛑 Chain {chain.id} was CANCELLED by user mid-execution. Aborting.")
+                    break
                 
                 # Check dependencies
                 if not await self._check_dependencies(action, chain):
