@@ -1,20 +1,77 @@
 import { motion } from 'framer-motion';
-import { Video, VideoOff } from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
+import { Video, VideoOff, Camera, UserCheck } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { useDashboard } from '../../contexts/DashboardContext';
 
 const CameraFeed = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
   const [error, setError] = useState<string>('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  
+  const { analyzeCameraFrame, checkPresence, presenceData } = useDashboard();
 
+  // Clean up on unmount
   useEffect(() => {
-    startCamera();
     return () => {
       stopCamera();
     };
   }, []);
+
+  // Frame capture utility
+  const captureFrame = useCallback((): string | null => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      
+      // Ensure canvas matches video dimensions
+      if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+      }
+      
+      const context = canvas.getContext('2d');
+      if (context) {
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL('image/jpeg', 0.6); // Compress to 60% quality
+      }
+    }
+    return null;
+  }, []);
+
+  // Presence detection loop
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+    
+    if (isRecording && hasPermission) {
+      // Check presence every 10 seconds
+      intervalId = setInterval(() => {
+        const frame = captureFrame();
+        if (frame) {
+          checkPresence(frame);
+        }
+      }, 10000);
+    }
+    
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isRecording, hasPermission, captureFrame, checkPresence]);
+
+  const handleShowAndAsk = () => {
+    const frame = captureFrame();
+    if (frame) {
+      setIsAnalyzing(true);
+      analyzeCameraFrame(frame, "What is the main object or text visible in this image? Be concise.");
+      
+      // Reset analyzing state after a delay (or based on response if we tracked specific request IDs)
+      setTimeout(() => setIsAnalyzing(false), 3000);
+    }
+  };
 
   const startCamera = async () => {
     try {
@@ -121,26 +178,56 @@ const CameraFeed = () => {
             />
 
             {isRecording && (
-              <motion.div
-                className="absolute top-3 right-3 flex items-center gap-2 bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded-full z-10"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.5 }}
-              >
+              <>
                 <motion.div
-                  className="w-2 h-2 bg-red-500 rounded-full"
-                  animate={{
-                    opacity: [1, 0.3, 1],
-                    scale: [1, 0.8, 1],
-                  }}
-                  transition={{
-                    duration: 1.5,
-                    repeat: Infinity,
-                    ease: 'easeInOut',
-                  }}
-                />
-                <span className="text-xs font-medium text-white">REC</span>
-              </motion.div>
+                  className="absolute top-3 left-3 flex items-center gap-2 bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded-full z-10"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  <motion.div
+                    className="w-2 h-2 bg-red-500 rounded-full"
+                    animate={{
+                      opacity: [1, 0.3, 1],
+                      scale: [1, 0.8, 1],
+                    }}
+                    transition={{
+                      duration: 1.5,
+                      repeat: Infinity,
+                      ease: 'easeInOut',
+                    }}
+                  />
+                  <span className="text-xs font-medium text-white">REC</span>
+                </motion.div>
+
+                {presenceData && presenceData.analysis && (
+                   <motion.div
+                     className="absolute top-3 right-3 flex items-center gap-2 bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded-full z-10"
+                     initial={{ opacity: 0, scale: 0.8 }}
+                     animate={{ opacity: 1, scale: 1 }}
+                   >
+                     <UserCheck className={`w-3 h-3 ${presenceData.analysis.present ? 'text-green-400' : 'text-gray-400'}`} />
+                     <span className="text-xs font-medium text-white capitalize">{presenceData.analysis.mood || (presenceData.analysis.present ? 'Present' : 'Away')}</span>
+                   </motion.div>
+                )}
+
+                <div className="absolute bottom-3 left-0 right-0 flex justify-center z-10">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleShowAndAsk}
+                    disabled={isAnalyzing}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-all ${
+                      isAnalyzing 
+                        ? 'bg-blue-500/50 text-white cursor-wait' 
+                        : 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.5)]'
+                    }`}
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    {isAnalyzing ? 'Analyzing...' : 'Show & Ask'}
+                  </motion.button>
+                </div>
+              </>
             )}
           </div>
         ) : (
@@ -183,6 +270,9 @@ const CameraFeed = () => {
           </>
         )}
       </div>
+      
+      {/* Hidden canvas for frame extraction */}
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
     </motion.div>
   );
 };

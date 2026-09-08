@@ -1,5 +1,5 @@
-import { motion } from 'framer-motion';
-import { Wifi, Bell, Battery, Mic, Terminal } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Wifi, Bell, Battery, Mic, Terminal, PanelLeft, PanelRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
 
@@ -7,7 +7,8 @@ const StatusBar = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [batteryLevel, setBatteryLevel] = useState<number>(0);
   const [isCharging, setIsCharging] = useState(false);
-  const { isVoiceActive, isConnected, setSelectedView } = useDashboard();
+  const [showNotifications, setShowNotifications] = useState(false);
+  const { isVoiceActive, isConnected, setSelectedView, isLeftSidebarOpen, isRightSidebarOpen, toggleLeftSidebar, toggleRightSidebar, systemLogs } = useDashboard();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -77,95 +78,156 @@ const StatusBar = () => {
 
   return (
     <motion.div
-      className="glass-panel rounded-lg px-3 sm:px-4 md:px-4 py-2 sm:py-2 flex items-center justify-between flex-shrink-0"
+      className="w-full bg-[#1a1f2e]/40 backdrop-blur-md rounded-lg border border-white/5 px-4 sm:px-6 py-3 flex items-center justify-between shadow-sm"
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 }}
     >
-      <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
+      {/* Left Group */}
+      <div className="flex items-center gap-4 sm:gap-6 flex-1">
+        {/* Left Sidebar Toggle */}
         <motion.div
           className="relative cursor-pointer"
+          whileHover={{ scale: 1.1 }}
+          onClick={toggleLeftSidebar}
+          title={isLeftSidebarOpen ? "Hide Left Sidebar" : "Show Left Sidebar"}
+        >
+          <PanelLeft className={`w-5 h-5 transition-colors ${isLeftSidebarOpen ? 'text-[#00f3ff]' : 'text-[#9CA3AF] hover:text-white'}`} strokeWidth={1.5} />
+        </motion.div>
+
+        {/* Terminal/Logs */}
+        <motion.div
+          className="relative cursor-pointer hidden sm:block"
           whileHover={{ scale: 1.1 }}
           onClick={() => setSelectedView('dashboard')}
           title="System Logs & Dashboard"
         >
-          <Terminal className="w-4 h-4 sm:w-4 sm:h-4 text-[#9CA3AF] hover:text-[#00f3ff] transition-colors" strokeWidth={1.5} />
+          <Terminal className="w-5 h-5 text-[#9CA3AF] hover:text-[#00f3ff] transition-colors" strokeWidth={1.5} />
         </motion.div>
-
-        <motion.div
-          className="relative cursor-pointer"
-          whileHover={{ scale: 1.1 }}
-        >
-          <Bell className="w-4 h-4 sm:w-4 sm:h-4 text-[#9CA3AF] hover:text-white transition-colors" strokeWidth={1.5} />
-          <span className="absolute -top-1 -right-1 w-3 h-3 bg-[#EF4444] rounded-full text-[8px] flex items-center justify-center text-white font-bold">
-            3
-          </span>
-        </motion.div>
-
-        <div className="flex items-center gap-1 sm:gap-1.5">
-          <Wifi className={`w-4 h-4 sm:w-4 sm:h-4 ${isConnected ? 'text-[#10B981]' : 'text-[#EF4444]'} transition-colors`} strokeWidth={1.5} />
-          <span className="text-[10px] sm:text-[10px] text-[#9CA3AF] hidden sm:inline">{isConnected ? 'Connected' : 'Disconnected'}</span>
-        </div>
       </div>
 
+      {/* Center Group - Clock */}
+      <div className="flex items-center justify-center">
+        <span className="text-lg sm:text-xl font-mono text-white tracking-widest font-light drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">
+          {formatTime(currentTime)}
+        </span>
+      </div>
+
+      {/* Right Group */}
       <motion.div
-        className="flex items-center gap-2 sm:gap-3 md:gap-4"
+        className="flex items-center gap-5 sm:gap-7 flex-1 justify-end"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.3 }}
       >
-        <div className="flex items-center gap-1 sm:gap-1.5">
-          <motion.span
-            animate={isCharging ? {
-              scale: [1, 1.1, 1],
-            } : {}}
-            transition={isCharging ? {
-              duration: 1,
-              repeat: Infinity,
-              ease: 'easeInOut',
-            } : {}}
-          >
-            {getBatteryIcon()}
-          </motion.span>
-          <Battery className={`w-3 h-3 sm:w-4 sm:h-4 ${getBatteryColor()}`} strokeWidth={1.5} />
-          <span className={`text-[9px] sm:text-[10px] ${getBatteryColor()}`}>
-            {batteryLevel}%{isCharging ? ' ⚡' : ''}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-1 sm:gap-1.5">
+        {/* Bell Notification */}
+        <div className="relative">
           <motion.div
-            animate={isVoiceActive ? {
-              scale: [1, 1.2, 1],
-            } : {}}
-            transition={isVoiceActive ? {
-              duration: 0.8,
-              repeat: Infinity,
-              ease: 'easeInOut',
-            } : {}}
+            className="cursor-pointer"
+            whileHover={{ scale: 1.1 }}
+            onClick={() => setShowNotifications(!showNotifications)}
           >
-            <Mic className={`w-3 h-3 sm:w-4 sm:h-4 ${isVoiceActive ? 'text-[#3B82F6]' : 'text-[#9CA3AF]'} transition-colors`} strokeWidth={1.5} />
+            <Bell className={`w-5 h-5 transition-colors ${showNotifications ? 'text-white' : 'text-[#9CA3AF] hover:text-white'}`} strokeWidth={1.5} />
+            {/* Show dot only if there are logs (or unread logic later) */}
+            {systemLogs.length > 0 && (
+              <span className="absolute 1 top-0 right-0 w-2 h-2 bg-[#EF4444] rounded-full border-2 border-[#1a1f2e]" />
+            )}
           </motion.div>
-          <motion.span
-            className={`text-[9px] sm:text-[10px] font-semibold ${isVoiceActive ? 'text-[#3B82F6]' : 'text-[#9CA3AF]'}`}
-            animate={isVoiceActive ? {
-              opacity: [1, 0.6, 1],
-            } : {}}
-            transition={isVoiceActive ? {
-              duration: 1,
-              repeat: Infinity,
-              ease: 'easeInOut',
-            } : {}}
-          >
-            {isVoiceActive ? '● LISTENING' : 'READY'}
-          </motion.span>
+
+          {/* Dropdown Menu */}
+          <AnimatePresence>
+            {showNotifications && (
+              <>
+                {/* Backdrop to close when clicking outside */}
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setShowNotifications(false)}
+                />
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute right-0 top-10 w-72 bg-[#1a1f2e]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] z-50 overflow-hidden"
+                >
+                  <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between bg-black/20">
+                    <span className="text-xs font-bold tracking-widest text-[#9CA3AF] uppercase">Recent Activity</span>
+                    <span className="text-[10px] text-white/40">{systemLogs.length} logs</span>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-white/10">
+                    {systemLogs.length > 0 ? (
+                      systemLogs.slice(0, 5).map((log) => {
+                        const colors = {
+                          info: 'text-[#00f3ff] bg-[#00f3ff]/10',
+                          success: 'text-[#10B981] bg-[#10B981]/10',
+                          warning: 'text-[#F59E0B] bg-[#F59E0B]/10',
+                          error: 'text-[#EF4444] bg-[#EF4444]/10'
+                        };
+                        return (
+                          <div key={log.id} className="flex gap-3 items-start p-2.5 rounded-lg hover:bg-white/5 transition-colors">
+                            <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${colors[log.type] ? colors[log.type].split(' ')[0].replace('text', 'bg') : 'bg-gray-400'}`} />
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-xs text-white/90 leading-snug">{log.message}</span>
+                              <span className="text-[9px] text-white/40 font-mono">{log.time}</span>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="p-4 text-center text-xs text-white/40">No recent activity</div>
+                    )}
+                  </div>
+                  <div 
+                    className="p-2 border-t border-white/5 text-center bg-black/20 cursor-pointer hover:bg-white/5 transition-colors"
+                    onClick={() => {
+                      setSelectedView('dashboard');
+                      setShowNotifications(false);
+                    }}
+                  >
+                    <span className="text-[10px] text-[#00f3ff] uppercase tracking-widest font-semibold">View All Logs</span>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
         </div>
 
-        <div className="px-2 sm:px-3 py-0.5 sm:py-1 bg-[#3B82F6]/10 rounded-lg">
-          <span className="text-[10px] sm:text-xs font-mono text-white font-semibold tracking-wider">
-            {formatTime(currentTime)}
-          </span>
+        {/* Connection Status */}
+        <div className="flex items-center" title={isConnected ? 'Backend Connected' : 'Backend Disconnected'}>
+          <div className="relative flex items-center justify-center">
+            <Wifi className={`w-5 h-5 ${isConnected ? 'text-[#10B981]' : 'text-[#EF4444]'} transition-colors`} strokeWidth={1.5} />
+            {isConnected ? (
+              <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-[#10B981] rounded-full shadow-[0_0_8px_rgba(16,185,129,1)] animate-pulse" />
+            ) : (
+              <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-[#EF4444] rounded-full shadow-[0_0_8px_rgba(239,68,68,1)] animate-ping" />
+            )}
+          </div>
         </div>
+
+        {/* Minimal Battery */}
+        <div className="flex items-center gap-2" title={`Battery: ${batteryLevel}% ${isCharging ? '(Charging)' : ''}`}>
+          <div className="relative w-7 h-3.5 rounded-sm border border-[#9CA3AF] flex items-center p-[1px]">
+            {/* Battery fill */}
+            <motion.div 
+              className={`h-full rounded-sm ${isCharging ? 'bg-[#3B82F6]' : batteryLevel > 20 ? 'bg-[#10B981]' : 'bg-[#EF4444]'}`}
+              initial={{ width: 0 }}
+              animate={{ width: `${batteryLevel}%` }}
+              transition={{ duration: 1 }}
+            />
+            {/* Battery tip */}
+            <div className="absolute -right-[3px] top-1/2 -translate-y-1/2 w-[2px] h-1.5 bg-[#9CA3AF] rounded-r-sm" />
+          </div>
+        </div>
+
+        {/* Right Sidebar Toggle */}
+        <motion.div
+          className="relative cursor-pointer hidden md:block ml-2"
+          whileHover={{ scale: 1.1 }}
+          onClick={toggleRightSidebar}
+          title={isRightSidebarOpen ? "Hide Conversation History" : "Show Conversation History"}
+        >
+          <PanelRight className={`w-5 h-5 transition-colors ${isRightSidebarOpen ? 'text-[#00f3ff]' : 'text-[#9CA3AF] hover:text-white'}`} strokeWidth={1.5} />
+        </motion.div>
       </motion.div>
     </motion.div>
   );

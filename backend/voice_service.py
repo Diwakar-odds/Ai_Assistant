@@ -593,6 +593,23 @@ def generate_voice_preview(voice_id: str, text: str) -> dict:
 # API ENDPOINTS
 # ============================================================================
 
+@voice_bp.route('/settings', methods=['GET'])
+def api_get_voice_settings():
+    from ai_assistant.voice.voice_settings_manager import get_settings_manager
+    manager = get_settings_manager()
+    return jsonify({
+        'success': True,
+        'settings': manager.load_settings()
+    })
+
+@voice_bp.route('/settings', methods=['POST'])
+def api_save_voice_settings():
+    from flask import request
+    from ai_assistant.voice.voice_settings_manager import get_settings_manager
+    data = request.json
+    manager = get_settings_manager()
+    manager.save_settings(data)
+    return jsonify({'success': True, 'settings': manager.load_settings()})
 @voice_bp.route('/list', methods=['GET'])
 def api_list_voices():
     """Get list of available AI voices"""
@@ -982,6 +999,140 @@ def is_tts_active():
 # SocketIO will be injected
 _socketio = None
 
+
+# ==============================================
+# ?? PHASE 2: LIVE STREAMING & VAD ENGINE
+# (Designed for Zero-Latency Windows App)
+# ==============================================
+import math
+import struct
+import io
+import time
+
+class LiveVoiceStreamer:
+    """Manages raw PCM audio streams and applies Energy-based VAD"""
+    def __init__(self):
+        self.sessions = {}
+        
+    def calculate_rms(self, pcm_bytes):
+        """Calculate Root Mean Square (Volume/Energy) of raw PCM data"""
+        if not pcm_bytes or len(pcm_bytes) < 2: return 0
+        # Assuming 16-bit PCM mono
+        count = len(pcm_bytes) // 2
+        try:
+            shorts = struct.unpack(f"<{count}h", pcm_bytes[:count*2])
+            sum_squares = sum(s*s for s in shorts)
+            return math.sqrt(sum_squares / count)
+        except Exception:
+            return 0
+            
+    def start_session(self, sid, config):
+        self.sessions[sid] = {
+            'buffer': bytearray(),
+            'config': config,
+            'last_speech_time': time.time(),
+            'is_speaking': False,
+            'silence_threshold': 500,  # VAD RMS threshold
+            'max_silence_s': 0.7       # 700ms silence = stop
+        }
+        logger.info(f"[VAD] Stream session started for {sid}")
+        
+    def add_chunk(self, sid, pcm_chunk):
+        if sid not in self.sessions:
+            return None # No session
+            
+        session = self.sessions[sid]
+        session['buffer'].extend(pcm_chunk)
+        
+        # VAD Logic
+        rms = self.calculate_rms(pcm_chunk)
+        if rms > session['silence_threshold']:
+            session['is_speaking'] = True
+            session['last_speech_time'] = time.time()
+        else:
+            # Check for silence timeout
+            if session['is_speaking'] and (time.time() - session['last_speech_time']) > session['max_silence_s']:
+                logger.info(f"[VAD] Silence detected for {sid}. Triggering transcription!")
+                return self.end_session(sid)
+        return None
+        
+    def end_session(self, sid):
+        if sid in self.sessions:
+            session = self.sessions.pop(sid)
+            return session['buffer'], session['config']
+        return None, None
+
+live_streamer = LiveVoiceStreamer()
+
+def handle_stream_start(data):
+    """Called by Windows App / Client when mic opens"""
+    from flask import request
+    live_streamer.start_session(request.sid, data)
+    
+def handle_stream_chunk(data):
+    """Receives live PCM audio chunks (e.g. 100ms each)"""
+    from flask import request
+    result = live_streamer.add_chunk(request.sid, data.get('audio_bytes', b''))
+    
+    # If VAD detected silence, result contains the full buffer
+    if result and result[0]:
+        pcm_buffer, config = result
+        process_live_stream_buffer(pcm_buffer, config)
+        
+def handle_stream_end(data):
+    """Manual stop (fallback if VAD doesn't trigger)"""
+    from flask import request
+    result = live_streamer.end_session(request.sid)
+    if result and result[0]:
+        pcm_buffer, config = result
+        process_live_stream_buffer(pcm_buffer, config)
+
+def process_live_stream_buffer(pcm_buffer, config):
+    """Sends the raw PCM buffer directly to Whisper"""
+    import sys
+    assistant = None
+    if hasattr(sys.modules.get('__main__'), 'assistant'):
+        assistant = sys.modules['__main__'].assistant
+    
+    if not assistant:
+        return
+        
+    # We would convert raw PCM to WAV in-memory for Whisper
+    import wave
+    wav_io = io.BytesIO()
+    with wave.open(wav_io, 'wb') as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(16000)
+        wav_file.writeframes(pcm_buffer)
+        
+    wav_io.seek(0)
+    wav_io.name = "stream.wav"
+    
+    def on_transcript(text):
+        if _socketio:
+            _socketio.emit('voice_transcript', {'text': text, 'confidence': 1.0})
+            
+    # Process
+    import concurrent.futures
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        # We need a new assistant method or adapt the existing one for raw BytesIO
+        future = executor.submit(assistant.whisper_model.transcribe, wav_io, beam_size=1)
+        segments, _ = future.result()
+        text = " ".join([s.text for s in segments]).strip()
+        
+    if text:
+        logger.info(f"[STREAM-VAD] Transcribed: {text}")
+        handle_command({
+            'command': text,
+            'source': 'voice',
+            'provider': config.get('provider'),
+            'model': config.get('model'),
+            'offline_mode': config.get('offline_mode', False)
+        })
+
+# ==============================================
+
 def set_socketio(sio):
     """Set SocketIO instance and register handlers"""
     global _socketio
@@ -993,6 +1144,11 @@ def set_socketio(sio):
     sio.on_event('command', handle_command)
     sio.on_event('voice_command', handle_voice_command)
     sio.on_event('voice_audio_data', handle_voice_audio)
+    
+    # Phase 2: Live Streaming Endpoints
+    sio.on_event('stream_start', handle_stream_start)
+    sio.on_event('stream_chunk', handle_stream_chunk)
+    sio.on_event('stream_end', handle_stream_end)
     
     print("… Command handlers registered with socketio")
 
@@ -1086,6 +1242,31 @@ def handle_command(data):
         # and the cross-module check was broken. Commands proceed directly.
 
         # ============================================
+        # PRIORITY 0: Executive Brain (Central Routing)
+        # ============================================
+        try:
+            from ai_assistant.core.command_brain import get_executive_brain
+            brain = get_executive_brain()
+            brain_response = brain.receive_command(command_text, source=source)
+            
+            if brain_response.action_taken != 'chatting':
+                # Brain handled it (executing, cancelled, paused, etc.)
+                logger.info(f"🧠 Brain handled chat command: {brain_response.action_taken}")
+                safe_emit('command_response', {
+                    'success': brain_response.success,
+                    'response': brain_response.message,
+                    'brain_action': brain_response.action_taken,
+                    'chain_id': brain_response.chain_id,
+                    'active_chains': brain_response.active_chains,
+                    'timestamp': datetime.now().isoformat()
+                })
+                return
+        except ImportError:
+            logger.debug("Executive Brain not available, using legacy handler")
+        except Exception as brain_err:
+            logger.warning(f"Brain routing failed for chat: {brain_err}")
+
+        # ============================================
         # PRIORITY 1: Local Command Processing
         # ============================================
         # Try AdvancedConversationalAI first (has built-in intent detection & tool execution)
@@ -1115,8 +1296,10 @@ def handle_command(data):
                 
                 conv_ai = AdvancedConversationalAI(automation_callback=automation_callback)
                 
+                provider = data.get('provider')
+                model = data.get('model')
                 # Process through conversational AI (has intent detection built-in)
-                response_text = conv_ai.process_message(command_text)
+                response_text = conv_ai.process_message(command_text, provider=provider, model=model)
                 
                 # Check if it actually executed something or just returned generic response
                 if response_text and not any(phrase in response_text.lower() for phrase in [
@@ -1287,7 +1470,7 @@ def handle_command(data):
             })
 
 def handle_voice_command(data):
-    """Handle voice command specifically"""
+    """Handle voice command specifically and route to unified command handler."""
     try:
         # FIX: Frontend sends 'text', not 'transcript'. Support both for compatibility.
         transcript = data.get('text') or data.get('transcript', '')
@@ -1304,9 +1487,10 @@ def handle_voice_command(data):
             })
             return
         
-        print(f'Ž¤ Voice command: {transcript} (confidence: {confidence}, lang: {language})')
+        print(f'🎤 Voice command: {transcript} (confidence: {confidence}, lang: {language})')
         
-        # Forward to command handler with all context
+        # Forward to unified command handler which guarantees 100% parity between Text and Voice.
+        # It routes through ExecutiveBrain first, then falls back to Conversational AI.
         handle_command({
             'command': transcript,
             'source': 'voice',
@@ -1316,7 +1500,7 @@ def handle_voice_command(data):
         })
         
     except Exception as e:
-        print(f' Œ Voice command error: {e}')
+        print(f' ❌ Voice command error: {e}')
         emit('voice_response', {
             'success': False,
             'error': str(e)
@@ -1363,35 +1547,28 @@ def handle_voice_audio(data):
             
             if result.get('success') and result.get('transcript'):
                 logger.info(f"[VOICE] Processed audio. Transcript: {result.get('transcript')}")
-                logger.info(f"[VOICE] AI Response: {result.get('response', '<no response>')}")
-                
-                # Generate TTS for offline mode
-                audio_base64 = None
-                if result.get('response') and assistant:
-                    audio_base64 = assistant.speak_text(result['response'])
-                
-                # Emit the response directly since process_voice_audio already generated it
-                if result.get('response') and _socketio:
-                    payload = {
-                        'success': True,
-                        'response': result['response'],
-                        'provider': 'gguf',  # Fallback provider name if needed
-                        'timestamp': __import__('datetime').datetime.now().isoformat()
-                    }
-                    if audio_base64:
-                        payload['audio_base64'] = audio_base64
-                        set_tts_active(True)  # Echo prevention: mark TTS as active
-
-                    _socketio.emit('voice_response', payload)
+                # Pass to unified command handler
+                handle_command({
+                    'command': result.get('transcript'),
+                    'source': 'voice',
+                    'provider': data.get('provider'),
+                    'model': data.get('model'),
+                    'offline_mode': data.get('offline_mode', False)
+                })
             else:
+                error_msg = result.get('error', 'Unknown audio processing error')
+                logger.warning(f"[VOICE] Audio processing failed: {error_msg}")
                 if _socketio:
-                    _socketio.emit('voice_audio_response', result)
+                    _socketio.emit('voice_response', {
+                        'success': False,
+                        'error': True,
+                        'response': f"Audio processing failed: {error_msg}"
+                    })
         except Exception as e:
             import traceback
             logger.error(f"Error in background voice processing: {e}")
-            traceback.print_exc()
             if _socketio:
-                _socketio.emit('voice_audio_response', {'success': False, 'error': str(e)})
+                _socketio.emit('voice_response', {'success': False, 'error': True, 'response': str(e)})
 
     if _socketio:
         _socketio.start_background_task(process_and_emit)
@@ -1416,6 +1593,7 @@ def broadcast_system_stats():
 # Start stats broadcaster thread
 stats_thread = threading.Thread(target=broadcast_system_stats, daemon=True)
 stats_thread.start()
+
 
 
 

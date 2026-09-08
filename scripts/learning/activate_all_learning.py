@@ -244,9 +244,8 @@ class LearningActivator:
         try:
             cached = 0
             for conv in conversations:
-                if '?' in conv['content']:  # It's a question
-                    # Cache the question (response would come from next message)
-                    system.add_query(conv['content'], f"Response to: {conv['content'][:50]}")
+                if '?' in conv['content'] and hasattr(system, 'set'):
+                    system.set(conv['content'], f"Response to: {conv['content'][:50]}")
                     cached += 1
             
             self.training_stats['query_cache'] = {

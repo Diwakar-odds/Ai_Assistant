@@ -14,6 +14,7 @@ Implements 7-step workflow:
 
 import logging
 import asyncio
+import threading
 from typing import Dict, Any, Optional, List, Callable
 from datetime import datetime
 from pathlib import Path
@@ -106,6 +107,9 @@ class ChainOfActionsManager:
         # Initialize Persistence
         self.tracker = get_progress_tracker()
         
+        # Cancellation events per chain (set by ExecutiveBrain)
+        self._cancel_events: Dict[str, threading.Event] = {}
+        
         # Performance tracking
         self.stats = {
             "total_chains": 0,
@@ -166,8 +170,14 @@ class ChainOfActionsManager:
         
         actions = []
         
-        # Use TaskPlanner if available
-        if self.task_planner:
+        # 0. Check for Workflow Templates first
+        template_actions = self._check_workflow_templates(chain.command)
+        if template_actions:
+            actions = template_actions
+            logger.info(f"✅ Decomposed into {len(actions)} actions using Workflow Template")
+            
+        # Use TaskPlanner if available and no template matched
+        elif self.task_planner:
             try:
                 plan = self.task_planner.create_plan(chain.command)
                 
@@ -211,6 +221,40 @@ class ChainOfActionsManager:
         
         return actions
     
+    def _check_workflow_templates(self, command: str) -> Optional[List[Action]]:
+        """Check if command matches a YAML workflow template."""
+        import os
+        import yaml
+        from pathlib import Path
+        
+        templates_dir = Path(r"d:\Projects\Ai_Assistant\core_ai\src\ai_assistant\workflow\templates")
+        if not templates_dir.exists():
+            return None
+            
+        cmd_lower = command.lower()
+        for file in templates_dir.glob("*.yaml"):
+            try:
+                with open(file, 'r') as f:
+                    template = yaml.safe_load(f)
+                    triggers = template.get('triggers', [])
+                    if any(t.lower() in cmd_lower for t in triggers):
+                        logger.info(f"Matched template: {template.get('name')}")
+                        actions = []
+                        for step in template.get('steps', []):
+                            action_type_str = step.get('action', 'SYSTEM')
+                            actions.append(Action(
+                                id=generate_action_id(),
+                                type=self._map_action_type(action_type_str),
+                                description=f"Template step: {action_type_str}",
+                                parameters=step.get('params', {}),
+                                dependencies=[]
+                            ))
+                        return actions
+            except Exception as e:
+                logger.error(f"Failed to parse template {file}: {e}")
+                
+        return None
+
     async def _simple_decomposition(self, command: str) -> List[Action]:
         """Fallback simple decomposition"""
         logger.info("Using simple decomposition (TaskPlanner not available)")
@@ -363,6 +407,13 @@ class ChainOfActionsManager:
                 # 🧠 EXECUTIVE OVERRIDE CHECK
                 if chain.status == ChainStatus.CANCELLED:
                     logger.warning(f"🛑 Chain {chain.id} was CANCELLED by user mid-execution. Aborting.")
+                    break
+                
+                # Check brain cancellation event
+                cancel_event = self._cancel_events.get(chain.id)
+                if cancel_event and cancel_event.is_set():
+                    logger.warning(f"🧠 Chain {chain.id} cancelled by Executive Brain.")
+                    chain.status = ChainStatus.CANCELLED
                     break
                 
                 # Check dependencies

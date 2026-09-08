@@ -156,8 +156,8 @@ def _get_memory_retriever_lazy():
     global memory_retriever, SMART_MEMORY_AVAILABLE
     if memory_retriever is None and SMART_MEMORY_AVAILABLE:
         try:
-            from ai_assistant.ai.smart_memory_retrieval import SmartMemoryRetrieval
-            memory_retriever = SmartMemoryRetrieval()
+            from ai_assistant.ai.memory_retrieval import MemoryRetrieval
+            memory_retriever = MemoryRetrieval()
             logger.info("✅ Smart memory retrieval initialized - AI can answer from past conversations")
         except Exception as e:
             logger.warning(f"  Smart memory retrieval not available: {e}")
@@ -679,15 +679,13 @@ except Exception as e:
 # =============================================================================
 print("📋 Registering blueprints...")
 try:
-    try:
-        from backend.blueprints import register_all_blueprints
-    except ImportError:
-        try:
-            from blueprints import register_all_blueprints
-        except ImportError:
-            from backend.backend.blueprints import register_all_blueprints
-    register_all_blueprints(app, assistant)
-    logger.info("✅ All blueprints registered")
+    from backend.routes import register_all_routes
+    # Need to pass socketio and learning_router if they are available
+    _socketio = socketio if 'socketio' in globals() else None
+    _learning_router = learning_router if 'learning_router' in globals() else None
+    
+    register_all_routes(app, assistant, _socketio, _learning_router, limiter)
+    logger.info("✅ All blueprints/routes registered")
 except Exception as e:
     print(f"⚠️ Blueprint registration failed: {e}")
 
@@ -1152,11 +1150,141 @@ try:
                     socketio.emit('system_stats_update', broadcast_stats)
             except Exception as e:
                 logger.error(f'Stats broadcast error: {e}')
+                
+            try:
+                from ai_assistant.core.command_brain import get_executive_brain
+                brain = get_executive_brain()
+                brain_status = {
+                    'is_busy': brain.is_busy(),
+                    'active_chains': [
+                        {
+                            'chain_id': c.chain_id,
+                            'command': c.command,
+                            'status': c.status.value,
+                            'progress': c.progress_percentage,
+                            'app_context': c.app_context
+                        }
+                        for c in brain._active_chains.values()
+                    ]
+                }
+                socketio.emit('brain_status', brain_status)
+            except Exception as e:
+                pass # Don't spam if brain not initialized
+                
             time.sleep(BROADCAST_INTERVAL)
 
     # Start stats broadcaster
     stats_thread = threading.Thread(target=broadcast_system_stats, daemon=True)
     stats_thread.start()
+
+    # ── Arc Reactor HUD Broadcaster ──
+    def get_hud_data():
+        """Collect HUD data from JARVIS subsystems."""
+        hud = {
+            'mood': 'neutral',
+            'mood_color': '#00f3ff',
+            'project_name': '',
+            'project_progress': 0,
+            'system_health': 100,
+            'pending_task': '',
+            'active_model': 'Gemini 3.1 Pro (Cloud)' # Default
+        }
+        try:
+            # Mood from EmotionalIntelligence
+            from ai_assistant.ai.emotional_intelligence import EmotionalIntelligence
+            ei = EmotionalIntelligence()
+            trend = ei.get_mood_trend(days=1)
+            if trend and isinstance(trend, str):
+                mood_lower = trend.lower()
+                if any(w in mood_lower for w in ['happy', 'positive', 'upbeat', 'great']):
+                    hud['mood'] = 'happy'
+                    hud['mood_color'] = '#facc15'
+                elif any(w in mood_lower for w in ['focused', 'productive', 'determined']):
+                    hud['mood'] = 'focused'
+                    hud['mood_color'] = '#22c55e'
+                elif any(w in mood_lower for w in ['calm', 'relaxed', 'peaceful']):
+                    hud['mood'] = 'calm'
+                    hud['mood_color'] = '#3b82f6'
+                elif any(w in mood_lower for w in ['stressed', 'anxious', 'tense']):
+                    hud['mood'] = 'stressed'
+                    hud['mood_color'] = '#f97316'
+                elif any(w in mood_lower for w in ['frustrated', 'angry', 'irritated']):
+                    hud['mood'] = 'frustrated'
+                    hud['mood_color'] = '#ef4444'
+        except Exception:
+            pass
+
+        try:
+            # Active project from ProjectManager
+            from ai_assistant.core.project_manager import ProjectManager
+            pm = ProjectManager()
+            projects = pm.get_all_projects('active')
+            if projects:
+                top = projects[0]
+                hud['project_name'] = top.name
+                hud['project_progress'] = round(top.progress_pct, 1)
+        except Exception:
+            pass
+
+        try:
+            # Pending task from CommitmentTracker
+            from ai_assistant.core.commitment_tracker import CommitmentTracker
+            ct = CommitmentTracker()
+            pending = ct.get_pending()
+            if pending:
+                hud['pending_task'] = pending[0].action or pending[0].text
+        except Exception:
+            pass
+
+        try:
+            import os
+            if os.getenv('USE_LOCAL_LLM', 'false').lower() == 'true':
+                from ai_assistant.ai.gguf_model_manager import GGUFModelManager
+                manager = GGUFModelManager()
+                
+                # Report which file it will load / has loaded
+                m_path = getattr(manager, 'model_path', None)
+                if m_path:
+                    m_name = os.path.basename(str(m_path))
+                else:
+                    # Not loaded yet, look at what it prefers
+                    # From gguf_model_manager.py logic: it looks for iq3 first
+                    if os.path.exists(os.path.join("models", "pulsar-final-iq3_xxs.gguf")):
+                        m_name = "pulsar-final-iq3_xxs.gguf"
+                    else:
+                        m_name = getattr(manager, 'model_filename', 'pulsar-final-q4_k_m.gguf')
+                        
+                # Just show the exact model name being used locally
+                hud['active_model'] = f"{m_name}"
+            else:
+                hud['active_model'] = 'Gemini 3.1 Pro (Cloud)'
+        except Exception:
+            pass
+
+        try:
+            # System health from psutil
+            import psutil
+            cpu = psutil.cpu_percent(interval=0)
+            mem = psutil.virtual_memory().percent
+            # Health = inverse of resource pressure (high CPU/mem = lower health)
+            hud['system_health'] = max(0, min(100, round(100 - (cpu * 0.5 + mem * 0.5))))
+        except Exception:
+            pass
+
+        return hud
+
+    def broadcast_hud():
+        """Broadcast HUD data every 30 seconds."""
+        while True:
+            try:
+                hud = get_hud_data()
+                socketio.emit('hud_update', hud)
+            except Exception as e:
+                logger.error(f'HUD broadcast error: {e}')
+            time.sleep(30)
+
+    hud_thread = threading.Thread(target=broadcast_hud, daemon=True)
+    hud_thread.start()
     
     
     logger.info("✅ Chat & Voice Socket.IO handlers registered")
@@ -1166,8 +1294,66 @@ except Exception as e:
 
 
 # ============================================================
-# MULTI-AGENT ACTION CHAIN ROUTES
+# JARVIS HUD API ENDPOINT
 # ============================================================
+@app.route('/api/jarvis/hud', methods=['GET'])
+def jarvis_hud():
+    """Return current HUD data for the Arc Reactor display."""
+    try:
+        hud = {
+            'mood': 'neutral',
+            'mood_color': '#00f3ff',
+            'project_name': '',
+            'project_progress': 0,
+            'system_health': 100,
+        }
+
+        try:
+            from ai_assistant.ai.emotional_intelligence import EmotionalIntelligence
+            ei = EmotionalIntelligence()
+            trend = ei.get_mood_trend(days=1)
+            if trend and isinstance(trend, str):
+                mood_lower = trend.lower()
+                if any(w in mood_lower for w in ['happy', 'positive', 'upbeat']):
+                    hud['mood'] = 'happy'
+                    hud['mood_color'] = '#facc15'
+                elif any(w in mood_lower for w in ['focused', 'productive']):
+                    hud['mood'] = 'focused'
+                    hud['mood_color'] = '#22c55e'
+                elif any(w in mood_lower for w in ['calm', 'relaxed']):
+                    hud['mood'] = 'calm'
+                    hud['mood_color'] = '#3b82f6'
+                elif any(w in mood_lower for w in ['stressed', 'anxious']):
+                    hud['mood'] = 'stressed'
+                    hud['mood_color'] = '#f97316'
+                elif any(w in mood_lower for w in ['frustrated', 'angry']):
+                    hud['mood'] = 'frustrated'
+                    hud['mood_color'] = '#ef4444'
+        except Exception:
+            pass
+
+        try:
+            from ai_assistant.core.project_manager import ProjectManager
+            pm = ProjectManager()
+            projects = pm.get_all_projects('active')
+            if projects:
+                top = projects[0]
+                hud['project_name'] = top.name
+                hud['project_progress'] = round(top.progress_pct, 1)
+        except Exception:
+            pass
+
+        try:
+            import psutil
+            cpu = psutil.cpu_percent(interval=0)
+            mem = psutil.virtual_memory().percent
+            hud['system_health'] = max(0, min(100, round(100 - (cpu * 0.5 + mem * 0.5))))
+        except Exception:
+            pass
+
+        return jsonify(hud)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 
@@ -1291,6 +1477,7 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"[ERROR] Server failed to start: {e}")
         sys.exit(1)
+
 
 
 

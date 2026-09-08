@@ -2,6 +2,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Mic, MicOff, Globe, Zap } from 'lucide-react';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useState, useEffect } from 'react';
+import ArcReactorRings from './ArcReactorRings';
+import DangerBanner from './DangerBanner';
 
 // Modern Circular Audio Waveform (like the reference image)
 const ModernWaveform = ({ audioLevel, isActive }: { audioLevel: number; isActive: boolean }) => {
@@ -98,7 +100,11 @@ const VoiceButton = () => {
     alwaysActive,
     toggleAlwaysActive,
     aiProvider,
-    setAIProvider
+    setAIProvider,
+    hudData,
+    pendingDangerAction,
+    authorizeAction,
+    cancelAction,
   } = useDashboard();
 
   const [showLangSelector, setShowLangSelector] = useState(false);
@@ -142,7 +148,7 @@ const VoiceButton = () => {
       transition={{ duration: 0.6, ease: 'easeOut' }}
     >
       {/* Main circular visualizer */}
-      <div className="relative w-full max-w-[180px] sm:max-w-[220px] md:max-w-[240px] lg:max-w-[260px] aspect-square overflow-visible">
+      <div className="relative w-[75%] max-w-[260px] aspect-square overflow-visible">
         {/* Outer glowing circle */}
         <motion.div
           className="absolute inset-0 rounded-full border-2 border-[#00f3ff]"
@@ -158,6 +164,15 @@ const VoiceButton = () => {
             repeat: Infinity,
             ease: 'easeInOut',
           }}
+        />
+
+        {/* Arc Reactor HUD Rings */}
+        <ArcReactorRings
+          mood={hudData.mood}
+          projectProgress={hudData.projectProgress}
+          projectName={hudData.projectName}
+          systemHealth={hudData.systemHealth}
+          dangerMode={!!pendingDangerAction}
         />
 
         {/* Waveform visualization */}
@@ -257,6 +272,13 @@ const VoiceButton = () => {
           </motion.p>
         )}
       </motion.div>
+
+      {/* Danger Authorization Banner */}
+      <DangerBanner
+        pendingAction={pendingDangerAction}
+        onAuthorize={authorizeAction}
+        onCancel={cancelAction}
+      />
 
       {/* Compact controls */}
       <div className="flex gap-2 sm:gap-3 items-center flex-wrap justify-center">

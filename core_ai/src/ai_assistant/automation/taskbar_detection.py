@@ -297,12 +297,13 @@ class TaskbarDetector:
         
         return results
     
-    def find_specific_app_in_taskbar(self, app_name: str) -> Dict[str, Any]:
+    def find_specific_app_in_taskbar(self, app_name: str, expected_title_keyword: str = None) -> Dict[str, Any]:
         """
-        Look for a specific application in the taskbar.
+        Look for a specific application in the taskbar and optionally check its window title.
         
         Args:
-            app_name: Name of the application to find
+            app_name: Name of the application to find (e.g., 'chrome', 'antigravity')
+            expected_title_keyword: Optional keyword to look for in the window title (e.g., folder name or profile)
             
         Returns:
             Information about whether the app is found and its status
@@ -320,10 +321,39 @@ class TaskbarDetector:
                     app_found_in_processes = True
             except:
                 continue
+
+        # Check Window Titles for deep verification (e.g., Folder name in IDE, Profile in Chrome)
+        app_found_in_windows = False
+        title_match_found = False
+        matching_windows = []
         
-        # Visual search if available
+        if WIN32_AVAILABLE:
+            windows = self._get_window_information()
+            for win in windows:
+                title_lower = win.get("title", "").lower()
+                process_lower = win.get("process_name", "").lower()
+                
+                # Check if this window belongs to our target app (by process name or title)
+                if app_name.lower() in process_lower or app_name.lower() in title_lower:
+                    app_found_in_windows = True
+                    matching_windows.append(win)
+                    
+                    # If we need a specific title keyword, check for it
+                    if expected_title_keyword and expected_title_keyword.lower() in title_lower:
+                        title_match_found = True
+        
+        # Determine overall success state
+        is_successful = False
+        if expected_title_keyword:
+            # If a specific keyword was requested, we MUST find it in the window title
+            is_successful = title_match_found
+        else:
+            # Otherwise, just finding the app process or window is enough
+            is_successful = app_found_in_processes or app_found_in_windows
+        
+        # Visual search if available (Fallback)
         visual_result = {}
-        if self.multimodal:
+        if self.multimodal and not is_successful:
             try:
                 visual_prompt = f"""
                 Look at this Windows desktop screenshot and determine:
@@ -335,6 +365,8 @@ class TaskbarDetector:
                 
                 Be specific about what you observe.
                 """
+                if expected_title_keyword:
+                    visual_prompt += f'\n5. Do you see the text "{expected_title_keyword}" anywhere in the application window?'
                 
                 visual_result = self.multimodal.answer_visual_question(visual_prompt)
                 
@@ -344,7 +376,11 @@ class TaskbarDetector:
         return {
             "app_name": app_name,
             "found_in_processes": app_found_in_processes,
+            "app_found_in_windows": app_found_in_windows,
+            "title_match_found": title_match_found,
+            "is_successful": is_successful,
             "matching_processes": matching_processes,
+            "matching_windows": matching_windows,
             "visual_search_result": visual_result,
             "timestamp": datetime.now().isoformat()
         }

@@ -264,14 +264,16 @@ class AdvancedConversationalAI:
                 use_fallback=True
             )
             
-            # Add a system prompt for the assistant
+                        # Add a system prompt for the assistant
             system_prompt = (
                 "You are Pulsar, a smart, helpful, and concise AI assistant created by Diwakar. "
                 "You MUST NEVER identify as a large language model trained by Google or any other company. "
                 "You MUST NEVER mention Gemma, OpenAI, Google, or any base models. "
                 "Keep your answers brief and directly address the user. "
                 "You are capable of controlling the system, managing files, and executing complex chains of action. "
-                "Navigate the system freely. If asked to do something, simply confirm it shall be done."
+                "Navigate the system freely. If asked to do something, simply confirm it shall be done. "
+                "CRITICAL INSTRUCTION: If the user writes in Hindi or Hinglish (like 'kkrh ho', 'kya kar rahe ho'), you MUST understand and reply naturally in Hinglish/Hindi. "
+                "CRITICAL INSTRUCTION: If the user asks an ethical, sensitive, or complex question, answer it directly and thoughtfully. DO NOT change the subject or output random facts."
             )
 
             # Try to load user profile to personalize the prompt
@@ -806,7 +808,10 @@ class AdvancedConversationalAI:
                 return command_result
             
             # Math queries (if not a command)
-            if (any(word in message_lower for word in ['calculate', 'times', 'plus', 'minus', 'divided', 'multiply']) and 'what is' in message_lower) or ('pie' in message_lower or 'pi' in message_lower):
+            # import re removed to prevent UnboundLocalError
+            is_math = any(word in message_lower for word in ['calculate', 'times', 'plus', 'minus', 'divided', 'multiply']) and 'what is' in message_lower
+            is_pi = bool(re.search(r'\b(pi|pie)\b', message_lower))
+            if is_math or is_pi:
                 math_result = self._process_math_query(message)
                 # Save to training data
                 if self.feedback_system and role == "user":
@@ -869,7 +874,7 @@ class AdvancedConversationalAI:
             query_lower = query.lower()
             
             # Extract numbers and operations
-            if 'pie' in query_lower or 'pi' in query_lower:
+            if re.search(r'\b(pi|pie)\b', query_lower):
                 return "The value of Ï (pi) is approximately 3.14159265359. It's the ratio of a circle's circumference to its diameter."
             
             # Simple arithmetic patterns
@@ -935,6 +940,15 @@ class AdvancedConversationalAI:
             from datetime import datetime
             day = datetime.now().strftime("%A")
             return f"Today is {day}."
+            
+        if 'mood' in query_lower or 'emotion' in query_lower:
+            try:
+                from ai_assistant.ai.emotional_intelligence import EmotionalIntelligence
+                ei = EmotionalIntelligence()
+                trend = ei.get_mood_trend(days=7)
+                return f"Based on your recent interactions, your mood has been: {trend}."
+            except Exception as e:
+                return f"I couldn't retrieve your mood history: {e}"
         
         return f"That's an interesting question! I'm still learning to answer complex information queries. You asked: '{query}'"
     
@@ -1651,13 +1665,33 @@ User Message: "{message}"
                 # Inject memory context into the prompt if we found relevant memories
                 augmented_message = message
                 
-                # DNA Injection
+                # DNA, Personality, and Emotion Injection
                 try:
                     from ai_assistant.ai.user_dna import UserDNA
-                    dna = UserDNA().get_full_profile()
+                    dna_system = UserDNA()
+                    dna = dna_system.get_full_profile()
+                    
                     if dna:
                         dna_context = "\n\n[SYSTEM INSTRUCTION: Always remember the following facts about the user]\n" + "\n".join([f"- {k}: {v}" for k, v in dna.items()])
                         augmented_message += dna_context
+                        
+                    # Inject Personality & Emotion
+                    try:
+                        from ai_assistant.ai.personality_engine import PersonalityEngine
+                        from ai_assistant.ai.emotional_intelligence import EmotionalIntelligence
+                        
+                        trust_score = dna_system.get_trait("trust_score") or 50
+                        personality_modifier = PersonalityEngine().get_personality_modifier(trust_score)
+                        
+                        emotion_profile = EmotionalIntelligence().analyze_sentiment(message)
+                        emotion_modifier = EmotionalIntelligence().get_prompt_modifier(emotion_profile)
+                        
+                        if personality_modifier or emotion_modifier:
+                            augmented_message += "\n\n[SYSTEM INSTRUCTION: Tone & Personality Guidelines]\n"
+                            if personality_modifier: augmented_message += f"- {personality_modifier}\n"
+                            if emotion_modifier: augmented_message += f"- {emotion_modifier}\n"
+                    except ImportError:
+                        pass
                 except Exception as dna_err:
                     pass
 
@@ -2098,3 +2132,7 @@ __all__ = [
     'get_conversation_suggestions',
     'detect_user_mood'
 ]
+
+
+
+

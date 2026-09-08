@@ -276,7 +276,7 @@ class LearningDataRouter:
         try:
             # Cache questions
             if speaker == 'user' and '?' in content:
-                self.query_cache.add_query(
+                self.query_cache.set(
                     query=content,
                     response="cached_response"
                 )

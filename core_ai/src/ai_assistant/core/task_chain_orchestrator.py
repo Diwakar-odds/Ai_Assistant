@@ -61,50 +61,7 @@ class TaskChainOrchestrator:
         self.app_controller = app_controller or get_universal_controller()
         self.parser = parser or MultiStepCommandParser()
         
-        # Initialize specialized automations
-        try:
-            from ai_assistant.automation.file_automation import FileAutomation
-            self.file_automation = FileAutomation()
-            logger.info("✅ FileAutomation connected")
-        except ImportError:
-            self.file_automation = None
-            logger.warning("⚠️ FileAutomation missing")
-            
-        try:
-            from ai_assistant.automation.system_automation import SystemAutomation
-            self.system_automation = SystemAutomation()
-            logger.info("✅ SystemAutomation connected")
-        except ImportError:
-            self.system_automation = None
-            logger.warning("⚠️ SystemAutomation missing")
-
-        try:
-            from ai_assistant.automation.app_automation import WhatsAppAutomation
-            self.whatsapp_automation = WhatsAppAutomation()
-        except ImportError:
-            self.whatsapp_automation = None
-            
-        try:
-            from ai_assistant.automation.taskbar_detection import TaskbarDetector
-            self.taskbar_detector = TaskbarDetector()
-            logger.info("✅ TaskbarDetector connected")
-        except ImportError:
-            self.taskbar_detector = None
-            logger.warning("⚠️ TaskbarDetector missing")
-
-        try:
-            from ai_assistant.multimodal import MultiModalAI
-            self.vlm = MultiModalAI()
-            logger.info("✅ VLM (MultiModalAI) connected")
-        except ImportError:
-            self.vlm = None
-            
-        try:
-            from ai_assistant.automation.visual_verification import get_visual_verifier
-            self.visual_verifier = get_visual_verifier()
-            logger.info("✅ Visual Verifier connected")
-        except ImportError:
-            self.visual_verifier = None
+        # Initialization of automations is now handled by IntentExecutor
         
         logger.info("Job Chain Orchestrator initialized")
     
@@ -191,6 +148,18 @@ class TaskChainOrchestrator:
         
         try:
             for step in steps:
+                # Check for cancellation/pause between steps
+                current_state = self.context_manager.get_state()
+                if current_state in [ExecutionState.PAUSED, ExecutionState.IDLE]:
+                    logger.warning(f"⏹️ Execution interrupted (state: {current_state.value}). Stopping at step {step.step}.")
+                    return ExecutionResult(
+                        success=steps_completed > 0,
+                        steps_completed=steps_completed,
+                        total_steps=len(steps),
+                        results=results,
+                        message=f"Execution interrupted after {steps_completed} steps."
+                    )
+                
                 logger.info(f"Executing step {step.step}/{len(steps)}: {step.intent}")
                 
                 # Check dependencies
@@ -205,12 +174,6 @@ class TaskChainOrchestrator:
                         error=error_msg
                     )
                 
-                # Execute step
-                step_result = self.execute_step(step)
-                results.append(step_result)
-                
-                if step_result['success']:
-                    steps_completed += 1
                 # Execute step with retry
                 step_success = False
                 step_result = None
@@ -287,7 +250,7 @@ class TaskChainOrchestrator:
     
     def execute_step(self, step: TaskStep) -> Dict[str, Any]:
         """
-        Execute a single task step.
+        Execute a single task step using the shared IntentExecutor.
         
         Args:
             step: TaskStep to execute
@@ -295,254 +258,19 @@ class TaskChainOrchestrator:
         Returns:
             Dict with execution result
         """
-        logger.debug(f"Executing step: {step.intent} with params: {step.params}")
-        
         try:
-            # Infer missing parameters from context
-            params = self.context_manager.infer_missing_params(step.intent, step.params)
-            
-            # Map intent to action
-            if step.intent == 'open_app':
-                app_name = params.get('app_name') or params.get('app')
-                if not app_name:
-                    return {
-                        'success': False,
-                        'step': step.step,
-                        'intent': step.intent,
-                        'error': 'No app name provided'
-                    }
-                
-                result = self.app_controller.open_app(app_name)
-                
-                # Update context
-                if result['success']:
-                    self.context_manager.set_var('current_app', app_name.lower())
-                    self.context_manager.set_var('last_action', 'opened_app')
-                
-                return {
-                    'success': result['success'],
-                    'step': step.step,
-                    'intent': step.intent,
-                    'result': result
-                }
-            
-            elif step.intent == 'send_message':
-                app_name = params.get('app_name', self.context_manager.get_var('current_app', 'WhatsApp'))
-                contact = params.get('contact')
-                message = params.get('message', '')
-                
-                if not contact:
-                    return {
-                        'success': False,
-                        'step': step.step,
-                        'intent': step.intent,
-                        'error': 'No contact specified'
-                    }
-                
-                result = self.app_controller.execute_action(app_name, 'send_message', {
-                    'contact': contact,
-                    'message': message
-                })
-                
-                # Update context
-                if result['success']:
-                    self.context_manager.set_var('selected_contact', contact)
-                    self.context_manager.set_var('last_message', message)
-                    self.context_manager.set_var('last_action', 'sent_message')
-                
-                return {
-                    'success': result.get('success', False),
-                    'step': step.step,
-                    'intent': step.intent,
-                    'result': result
-                }
-            
-                return {
-                    'success': result.get('success', False),
-                    'step': step.step,
-                    'intent': step.intent,
-                    'result': result
-                }
-            
-            # ===== FILE OPERATIONS =====
-            
-            elif step.intent == 'find_file':
-                filename = params.get('file_name') or params.get('name')
-                location = params.get('location')  # Optional
-                
-                if not filename:
-                     return {'success': False, 'step': step.step, 'error': 'No file name provided'}
-
-                if self.file_automation:
-                    path = self.file_automation.find_file(filename, location)
-                    if path:
-                        # Store in context for next steps!
-                        self.context_manager.set_var('found_file_path', path)
-                        self.context_manager.set_var('last_file', path)
-                        return {'success': True, 'step': step.step, 'result': path}
-                    else:
-                        return {'success': False, 'step': step.step, 'error': f'File not found: {filename}'}
-                else:
-                    return {'success': False, 'step': step.step, 'error': 'File automation not available'}
-
-            elif step.intent == 'open_folder' or step.intent == 'open_explorer':
-                path = params.get('path') or params.get('folder') or self.context_manager.get_var('found_file_path')
-                
-                if self.file_automation:
-                    success = self.file_automation.open_explorer(path)
-                    return {'success': success, 'step': step.step}
-                return {'success': False, 'step': step.step, 'error': 'File automation not available'}
-
-            elif step.intent == 'move_file':
-                src = params.get('source') or self.context_manager.get_var('found_file_path')
-                dst = params.get('destination')
-                
-                if not src or not dst:
-                    return {'success': False, 'step': step.step, 'error': 'Missing source or destination'}
-                    
-                if self.file_automation:
-                    success = self.file_automation.move_file(src, dst)
-                    return {'success': success, 'step': step.step}
-                return {'success': False, 'step': step.step, 'error': 'File automation not available'}
-            
-            # ===== SYSTEM OPERATIONS =====
-            
-            elif step.intent == 'set_brightness':
-                level_str = params.get('level', '50')
-                try:
-                    level = int(str(level_str).replace('%', ''))
-                except:
-                    level = 50
-                    
-                if self.system_automation:
-                    success = self.system_automation.set_brightness(level)
-                    return {'success': success, 'step': step.step}
-                return {'success': False, 'step': step.step, 'error': 'System automation not available'}
-                
-            elif step.intent == 'toggle_wifi':
-                action = params.get('action', 'on') # on/off/enable/disable
-                enable = action.lower() in ['on', 'enable', 'start']
-                
-                if self.system_automation:
-                    success = self.system_automation.toggle_wifi(enable)
-                    return {'success': success, 'step': step.step}
-                return {'success': False, 'step': step.step, 'error': 'System automation not available'}
-
-            # ===== ADVANCED APP OPERATIONS =====
-            
-            elif step.intent == 'send_file':
-                # e.g. "Send it to Mom"
-                contact = params.get('contact')
-                file_path = params.get('file') or self.context_manager.get_var('found_file_path') or self.context_manager.get_var('last_file')
-                message = params.get('message', "Sent via AI Assistant")
-                app = params.get('app', 'whatsapp').lower()
-                
-                if not contact or not file_path:
-                    return {'success': False, 'step': step.step, 'error': 'Missing contact or file path'}
-                
-                if 'whatsapp' in app and self.whatsapp_automation:
-                    success = self.whatsapp_automation.send_with_attachment(contact, message, file_path)
-                    return {'success': success, 'step': step.step}
-                else:
-                    return {'success': False, 'step': step.step, 'error': f'Unsupported app or missing automation: {app}'}
-
-            elif step.intent == 'check_taskbar':
-                # "Check if Chrome is in the taskbar" or "What apps are running"
-                app_name = params.get('app_name')
-                
-                if not self.taskbar_detector:
-                    return {'success': False, 'step': step.step, 'error': 'Taskbar detection not available'}
-                
-                if app_name:
-                    result = self.taskbar_detector.find_specific_app_in_taskbar(app_name)
-                    found = result.get('found_in_processes', False) or (result.get('visual_search_result', {}).get('found', False))
-                    
-                    self.context_manager.set_var('last_taskbar_check', result)
-                    return {
-                        'success': True, 
-                        'step': step.step, 
-                        'result': result,
-                        'message': f"Found {app_name}" if found else f"{app_name} not found"
-                    }
-                else:
-                    # General check
-                    result = self.taskbar_detector.get_complete_desktop_analysis()
-                    self.context_manager.set_var('desktop_state', result)
-                    return {'success': True, 'step': step.step, 'result': result}
-
-            elif step.intent == 'type_text':
-                app_name = params.get('app_name', self.context_manager.get_var('current_app'))
-                text = params.get('text', '')
-                
-                if not app_name:
-                    return {
-                        'success': False,
-                        'step': step.step,
-                        'intent': step.intent,
-                        'error': 'No app specified and no current app in context'
-                    }
-                
-                result = self.app_controller.execute_action(app_name, 'type_text', {
-                    'text': text
-                })
-                
-                return {
-                    'success': result.get('success', False),
-                    'step': step.step,
-                    'intent': step.intent,
-                    'result': result
-                }
-            
-            elif step.intent == 'play_video':
-                app_name = params.get('app_name', 'YouTube')
-                query = params.get('query', '')
-                
-                result = self.app_controller.execute_action(app_name, 'play_video', {
-                    'query': query
-                })
-                
-                return {
-                    'success': result.get('success', False),
-                    'step': step.step,
-                    'intent': step.intent,
-                    'result': result
-                }
-            
-            elif step.intent == 'skip_time':
-                app_name = params.get('app_name', self.context_manager.get_var('current_app', 'YouTube'))
-                minutes = params.get('minutes', 0)
-                
-                result = self.app_controller.execute_action(app_name, 'skip_time', {
-                    'minutes': minutes
-                })
-                
-                return {
-                    'success': result.get('success', False),
-                    'step': step.step,
-                    'intent': step.intent,
-                    'result': result
-                }
-            
-            else:
-                # Unknown intent - try generic execution
-                logger.warning(f"Unknown intent: {step.intent}, trying generic execution")
-                
-                return {
-                    'success': False,
-                    'step': step.step,
-                    'intent': step.intent,
-                    'error': f"Unknown intent: {step.intent}"
-                }
-        
-        except Exception as e:
-            logger.error(f"Step execution failed: {e}", exc_info=True)
+            from ai_assistant.core.intent_executor import get_intent_executor
+            executor = get_intent_executor()
+            return executor.execute(step.intent, step.params, self.context_manager)
+        except ImportError:
+            logger.error("IntentExecutor not available")
             return {
                 'success': False,
                 'step': step.step,
                 'intent': step.intent,
-                'error': str(e)
+                'error': 'IntentExecutor not found'
             }
-    
+
     # ===== VERIFICATION =====
 
     def _verify_step(self, step, result) -> bool:
@@ -552,79 +280,13 @@ class TaskChainOrchestrator:
         2. System State (os.exists, process list)
         3. Visual VLM (optional, for complex UI)
         """
-        intent = step.intent
-        logger.info(f"🕵️ Verifying step: {intent}")
-        
-        # 1. System State Verification
-        if intent in ['find_file', 'open_folder', 'move_file']:
-            # For file ops, we usually return the path. Check if it exists.
-            path = result.get('result')
-            # If move_file, we might return boolean, so let's check params
-            if intent == 'move_file':
-                dst = step.params.get('destination')
-                if dst:
-                    import os
-                    # Construct potential full path if dst is folder? 
-                    # Simpler to assume if the code returned True, shutil worked.
-                    # But let's check if we can.
-                    return True
-            
-            if isinstance(path, str) and (':' in path or '/' in path):
-                import os
-                exists = os.path.exists(path)
-                logger.info(f"   State Check (File Existence): {'✅' if exists else '❌'} ({path})")
-                return exists
-                
-        elif intent == 'check_taskbar':
-            # It already does the check inside.
-            return True
-            
-        elif intent in ['open_app', 'launch_app']:
-            app_name = step.params.get('app_name') or step.params.get('name')
-            if app_name and self.taskbar_detector:
-                # Give it a moment to appear
-                import time
-                time.sleep(1)
-                scan = self.taskbar_detector.find_specific_app_in_taskbar(app_name)
-                found = scan.get('found_in_processes', False)
-                logger.info(f"   State Check (Process Running): {'✅' if found else '❌'} ({app_name})")
-                return found
-                
-        elif intent in ['set_brightness', 'set_volume']:
-            # We could read back the value.
-            # implementing strict read-back might be overkill for now, assume success if no error.
-            return True
-        
-        # 2. Visual Verification (VLM)
-        # We generally use this for 'UI' heavy tasks (WhatsApp, unknown apps)
-        use_vlm = False
-        if intent == 'send_file' and 'whatsapp' in str(step.params).lower():
-            use_vlm = True
-        
-        if use_vlm and self.vlm:
-            logger.info("   👁️ Running Visual Verification (VLM)...")
-            try:
-                # Capture screen? The VLM module likely handles it or we pass image.
-                # Assuming vlm.analyze_screen handles capture.
-                prompt = f"I just tried to perform this action: '{intent}' with params {step.params}. " \
-                         f"Please verify if it looks successful. For WhatsApp, look for the message or 'sending' status." \
-                         f"Return 'YES' if successful, 'NO' if failed."
-                
-                # Run sync for now as this is a sync method context
-                # Ideally we should be async but Orchestrator is sync so far.
-                # We'll rely on VLM to be blocking or fast.
-                analysis = self.vlm.analyze_screen(prompt=prompt)
-                
-                is_success = "YES" in str(analysis.get('analysis', '')).upper()
-                logger.info(f"   VLM Verdict: {'✅' if is_success else '❌'} ({analysis.get('analysis')})")
-                return is_success
-                
-            except Exception as e:
-                logger.warning(f"   VLM Verification Execution Failed: {e}")
-                return True # Fallback to trusting the code execution if VLM fails to run
-        
-        # Default: Trust the method's return code
-        return True
+        try:
+            from ai_assistant.core.intent_executor import get_intent_executor
+            executor = get_intent_executor()
+            return executor.verify(step.intent, result, step.params)
+        except ImportError:
+            logger.error("IntentExecutor not available for verification")
+            return True # Fallback to trusting the method's return code
 
     # ===== DEPENDENCY MANAGEMENT =====
     

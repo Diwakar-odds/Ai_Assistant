@@ -488,16 +488,8 @@ def api_chat_stream():
                             )
                         else:
                             # Fallback if LLM not available
-                            yield f"data: {json.dumps({'error': 'LLM provider not available'})}\n\n# Setup centralized logging
-from utils.logging_config import get_logger
-logger = get_logger(__name__, log_category="app")
-
-\n"
+                            yield f"data: {json.dumps({'error': 'LLM provider not available'})}\n\n"
                             return
-                    
-                    chat = chat_sessions[session_id]
-                
-                # Stream the response
                 start_time = time.time()
                 tokens = 0
                 full_response = ""

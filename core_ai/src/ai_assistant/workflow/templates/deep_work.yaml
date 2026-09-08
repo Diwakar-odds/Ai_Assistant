@@ -1,0 +1,13 @@
+name: deep_work
+description: "Activates deep work mode by opening focus apps and blocking distractions"
+triggers:
+  - "deep work mode"
+  - "i need to focus"
+  - "do not disturb"
+steps:
+  - action: "open_app"
+    params:
+      app_name: "vscode"
+  - action: "say"
+    params:
+      text: "Deep work mode activated. All notifications will be queued."

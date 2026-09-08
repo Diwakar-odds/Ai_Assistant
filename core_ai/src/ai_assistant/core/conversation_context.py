@@ -244,6 +244,7 @@ class ContextManager:
         Handle command override.
         
         Pauses current execution and prepares for new command.
+        Now also signals the Executive Brain to cancel active chains.
         """
         logger.warning(f"Override detected: {new_command}")
         
@@ -254,9 +255,35 @@ class ContextManager:
         # Clear current task
         self.clear_task_chain()
         
+        # Signal Executive Brain to cancel active chains
+        try:
+            from ai_assistant.core.command_brain import get_executive_brain
+            brain = get_executive_brain()
+            brain._cancel_all_active(reason=new_command)
+        except ImportError:
+            pass
+        except Exception as e:
+            logger.warning(f"Brain cancel failed during override: {e}")
+        
         # Mark as override
         self.set_var('last_action', 'override')
         self.add_command(new_command, intent='override')
+    
+    def is_busy(self) -> bool:
+        """Check if any chains are currently active via the Executive Brain"""
+        try:
+            from ai_assistant.core.command_brain import get_executive_brain
+            return get_executive_brain().is_busy()
+        except Exception:
+            return self.get_state() == ExecutionState.EXECUTING
+    
+    def get_active_chain_ids(self):
+        """Get IDs of all active chains from the Executive Brain"""
+        try:
+            from ai_assistant.core.command_brain import get_executive_brain
+            return get_executive_brain().get_active_chain_ids()
+        except Exception:
+            return []
     
     # ===== CONTEXT-AWARE HELPERS =====
     

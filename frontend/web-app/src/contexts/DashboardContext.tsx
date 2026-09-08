@@ -86,6 +86,22 @@ interface DashboardContextType {
     deleteSession?: (sessionId: string) => void;
     startNewSession?: () => void;
     isConnected: boolean;
+
+    hudData: any;
+    pendingDangerAction: any;
+    authorizeAction: () => void;
+    cancelAction: () => void;
+    isLeftSidebarOpen: boolean;
+    isRightSidebarOpen: boolean;
+    toggleLeftSidebar: () => void;
+    toggleRightSidebar: () => void;
+    setSidebarAutoState: (state: any) => void;
+    brainStatus: any;
+
+    lastVisionAnalysis: any;
+    presenceData: any;
+    analyzeCameraFrame: (base64Image: string, prompt?: string) => void;
+    checkPresence: (base64Image: string) => void;
 }
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
@@ -108,6 +124,33 @@ interface DashboardProviderProps {
 export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }) => {
     const [socket, setSocket] = useState<Socket | null>(null);
     const [isConnected, setIsConnected] = useState(false);
+    
+    // Restored Uncommitted IDE States
+    const [hudData, setHudData] = useState<any>({ mood: 'neutral', projectProgress: 0, projectName: '', systemHealth: 100 });
+    const [pendingDangerAction, setPendingDangerAction] = useState<any>(null);
+    const [brainStatus, setBrainStatus] = useState<any>(null);
+    const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
+    const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
+    const toggleLeftSidebar = () => setIsLeftSidebarOpen(!isLeftSidebarOpen);
+    const toggleRightSidebar = () => setIsRightSidebarOpen(!isRightSidebarOpen);
+    
+    // Camera Vision States
+    const [lastVisionAnalysis, setLastVisionAnalysis] = useState<any>(null);
+    const [presenceData, setPresenceData] = useState<any>(null);
+
+    const analyzeCameraFrame = (base64Image: string, prompt: string = "What do you see in this image?") => {
+        if (socket && isConnected) {
+            console.log('Sending frame for analysis...');
+            socket.emit('analyze_image', { image: base64Image, prompt });
+        }
+    };
+
+    const checkPresence = (base64Image: string) => {
+        if (socket && isConnected) {
+            socket.emit('analyze_presence', { image: base64Image });
+        }
+    };
+    const setSidebarAutoState = (state: any) => {}; // Placeholder if needed
     const [chatMessages, setChatMessages] = useState<Message[]>([]);
     const [voiceCommands, setVoiceCommands] = useState<VoiceCommand[]>([]);
     const [systemStats, setSystemStats] = useState<SystemStats>({
@@ -363,6 +406,11 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         });
 
          
+        newSocket.on('hud_update', (data: any) => setHudData(data));
+        newSocket.on('brain_status', (data: any) => setBrainStatus(data));
+        newSocket.on('danger_action_pending', (data: any) => setPendingDangerAction(data));
+        newSocket.on('danger_action_resolved', () => setPendingDangerAction(null));
+        
         newSocket.on('system_stats_update', (stats: any) => {
             setSystemStats({
                 cpu: Math.round(stats.cpu_usage || 0),
@@ -384,6 +432,25 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 systems: stats.systems || '--',
                 conversations: stats.conversations || '--'
             });
+        });
+
+        // Vision Analysis Handlers
+        newSocket.on('image_analysis_response', (data: any) => {
+            console.log('Vision analysis received:', data);
+            setLastVisionAnalysis(data);
+            if (data.analysis && data.analysis.description) {
+                addChatMessage(`I see: ${data.analysis.description}`, 'ai');
+            }
+        });
+
+        newSocket.on('image_analysis_error', (data: any) => {
+            console.error('Vision analysis error:', data);
+            addSystemLog('error', `Vision error: ${data.error}`);
+        });
+
+        newSocket.on('presence_update', (data: any) => {
+            console.log('Presence update:', data);
+            setPresenceData(data);
         });
 
         // Handle voice command responses with talkback
@@ -1242,7 +1309,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                                         _setIsRecognitionStarted(false);
                                         setInterimTranscript('Processing with Whisper...');
                                     }
-                                }, 1500); // 1.5 seconds silence
+                                }, 700); // 0.7 seconds silence
                             }
                         }
                         requestAnimationFrame(checkSilence);
@@ -1758,6 +1825,38 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         loadSession,
         deleteSession,
         startNewSession,
+        
+        // Arc Reactor HUD
+        hudData,
+        pendingDangerAction,
+        authorizeAction: () => {
+            if (socket && pendingDangerAction) {
+                socket.emit('authorize_action', { id: pendingDangerAction.id });
+                setPendingDangerAction(null);
+            }
+        },
+        cancelAction: () => {
+            if (socket && pendingDangerAction) {
+                socket.emit('cancel_action', { id: pendingDangerAction.id });
+                setPendingDangerAction(null);
+            }
+        },
+        
+        // Sidebar State
+        isLeftSidebarOpen,
+        isRightSidebarOpen,
+        toggleLeftSidebar,
+        toggleRightSidebar,
+        setSidebarAutoState,
+        
+        // Executive Brain State
+        brainStatus,
+
+        // Vision Analysis
+        lastVisionAnalysis,
+        presenceData,
+        analyzeCameraFrame,
+        checkPresence
     };
 
     return <DashboardContext.Provider value={value}>{children}</DashboardContext.Provider>;

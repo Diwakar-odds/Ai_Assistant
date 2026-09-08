@@ -57,6 +57,7 @@ class GGUFModelManager:
             raise ImportError("llama-cpp-python is not installed. Please run: pip install llama-cpp-python")
             
         with self._lock:
+            if self.llm is None:
                 possible_paths = [
                     self.base_dir / "models" / self.model_filename,
                     Path(os.getcwd()) / "models" / self.model_filename,
@@ -88,7 +89,7 @@ class GGUFModelManager:
                 )
                 logger.info("Local GGUF model successfully loaded into RAM.")
                 
-            return self.llm
+        return self.llm
 
 # Expose a global instance
 gguf_manager = GGUFModelManager()

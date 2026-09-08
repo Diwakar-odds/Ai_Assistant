@@ -1,0 +1,13 @@
+name: relax_mode
+description: "Starts relaxation routine"
+triggers:
+  - "relax mode"
+  - "i want to chill"
+  - "time for a break"
+steps:
+  - action: "open_app"
+    params:
+      app_name: "spotify"
+  - action: "say"
+    params:
+      text: "Enjoy your break. Let me know when you're ready to return."

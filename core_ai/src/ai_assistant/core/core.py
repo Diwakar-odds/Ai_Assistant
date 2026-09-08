@@ -191,27 +191,7 @@ def close_application(app_name: str) -> str:
     except Exception as e:
         return f"Error closing {app_name}: {e}. (Is it already closed?)"
 
-def speak(text_to_speak: str) -> str:
-    """Speaks a given text string out loud."""
-    print(f"--- 'Hands' (speak) activated. Text: {text_to_speak} ---")
-    
-    try:
-        from ai_assistant.voice.neural_voice_engine import get_neural_voice_engine
-        engine = get_neural_voice_engine()
-        audio_file = engine.speak(text_to_speak)
-        
-        if audio_file:
-            pygame.mixer.init()
-            pygame.mixer.music.load(audio_file)
-            pygame.mixer.music.play()
-            while pygame.mixer.music.get_busy():
-                time.sleep(0.1)
-            pygame.mixer.quit()
-            return "Successfully spoke the text."
-        else:
-            return "Failed to synthesize speech."
-    except Exception as e:
-        return f"Error speaking text: {e}"
+
 
 def set_system_volume(level: int) -> str:
     """Sets the system's master volume to a specific level (0-100)."""

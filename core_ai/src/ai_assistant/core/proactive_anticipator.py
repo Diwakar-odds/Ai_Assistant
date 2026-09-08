@@ -100,9 +100,10 @@ class ProactiveAnticipator:
             elif current_hour >= 23 and context == "night":
                 proactive_msg = "It's getting quite late. Based on your energy curve, I recommend wrapping up your current task soon."
             
-        if proactive_msg and self.chat_interface:
+        if proactive_msg:
             # We inject the proactive message into the chat as an assistant message
-            self.chat_interface.add_message("assistant", proactive_msg)
+            if self.chat_interface:
+                self.chat_interface.add_message("assistant", proactive_msg)
             
             try:
                 from ai_assistant.backend.routes.common import get_socketio
@@ -111,3 +112,15 @@ class ProactiveAnticipator:
                     socketio.emit('chat_response', {'data': proactive_msg})
             except ImportError:
                 pass
+                
+            # Optionally trigger the brain for routine tasks automatically
+            if "prepare your usual workflow" in proactive_msg or "daily briefing" in proactive_msg:
+                try:
+                    from ai_assistant.core.command_brain import get_executive_brain
+                    brain = get_executive_brain()
+                    if "workflow" in proactive_msg:
+                        brain.receive_command("start morning routine", source="api")
+                    elif "briefing" in proactive_msg:
+                        brain.receive_command("give me my daily briefing", source="api")
+                except ImportError as e:
+                    logger.error(f"Failed to trigger ExecutiveBrain proactively: {e}")

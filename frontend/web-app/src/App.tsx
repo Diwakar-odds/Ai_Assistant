@@ -1,8 +1,8 @@
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardProvider, useDashboard } from './contexts/DashboardContext';
 import QuickOptions from './components/LeftColumn/QuickOptions';
 import CameraFeed from './components/LeftColumn/CameraFeed';
-import AILearningDashboard from './components/LeftColumn/AILearningDashboard';
+import BriefingCard from './components/LeftColumn/BriefingCard';
 import StatusBar from './components/CenterColumn/StatusBar';
 import VoiceButton from './components/CenterColumn/VoiceButton';
 import CommandInput from './components/CenterColumn/CommandInput';
@@ -24,7 +24,7 @@ import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 
 function AppContent() {
-  const { selectedView, closeDetailView } = useDashboard();
+  const { selectedView, closeDetailView, isLeftSidebarOpen, isRightSidebarOpen } = useDashboard();
   const [activeTab, setActiveTab] = useState<'main' | 'options' | 'stats'>('main');
   const [showOnboarding, setShowOnboarding] = useState(false);
 
@@ -165,7 +165,7 @@ function AppContent() {
             >
               <QuickOptions />
               <CameraFeed />
-              <AILearningDashboard />
+              <BriefingCard />
             </motion.div>
           )}
 
@@ -180,20 +180,28 @@ function AppContent() {
           )}
         </div>
 
-        {/* Desktop Layout - 3 columns on large screens */}
-        <div className="hidden md:grid grid-cols-12 gap-2 lg:gap-4 flex-1 overflow-hidden min-h-0">
-          <motion.div
-            className="col-span-3 lg:col-span-3 flex flex-col gap-3 overflow-y-auto min-h-0 pr-1"
-            variants={columnVariants}
-          >
-            <QuickOptions />
-            <CameraFeed />
-            <AILearningDashboard />
-          </motion.div>
+        {/* Desktop Layout - 3 columns flex layout on large screens */}
+        <div className="hidden md:flex gap-2 lg:gap-4 flex-1 overflow-hidden min-h-0 w-full relative">
+          <AnimatePresence initial={false}>
+            {isLeftSidebarOpen && (
+              <motion.div
+                initial={{ width: 0, opacity: 0, scale: 0.95 }}
+                animate={{ width: '25%', opacity: 1, scale: 1 }}
+                exit={{ width: 0, opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                className="shrink flex flex-col gap-3 overflow-y-auto min-h-0 pr-1 min-w-[140px] max-w-[300px]"
+              >
+                <QuickOptions />
+                <CameraFeed />
+                <BriefingCard />
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <motion.div
-            className="col-span-5 lg:col-span-6 flex flex-col gap-1.5 overflow-hidden min-h-0 px-1"
-            variants={columnVariants}
+            layout
+            className="flex-1 flex flex-col gap-1.5 overflow-hidden min-h-0 px-1"
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
           >
             <StatusBar />
             <div className="flex-1 flex items-center justify-center min-h-0 overflow-visible py-2">
@@ -203,12 +211,19 @@ function AppContent() {
             <TaskStatus />
           </motion.div>
 
-          <motion.div
-            className="col-span-4 lg:col-span-3 flex flex-col gap-3 overflow-hidden min-h-0 pl-1"
-            variants={columnVariants}
-          >
-            <ConversationTracker />
-          </motion.div>
+          <AnimatePresence initial={false}>
+            {isRightSidebarOpen && (
+              <motion.div
+                initial={{ width: 0, opacity: 0, scale: 0.95 }}
+                animate={{ width: '28%', opacity: 1, scale: 1 }}
+                exit={{ width: 0, opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                className="shrink flex flex-col gap-3 overflow-hidden min-h-0 pl-1 min-w-[140px] max-w-[350px]"
+              >
+                <ConversationTracker />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </motion.div>
 

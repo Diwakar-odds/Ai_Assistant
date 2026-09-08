@@ -89,6 +89,16 @@ class UserDNA:
         name = profile.get("user_name", "User")
         context_parts.append(f"User Name: {name}")
         
+        try:
+            from ai_assistant.knowledge.personal_knowledge_graph import get_knowledge_graph
+            pkg = get_knowledge_graph()
+            # Fetch generic context based on "user" to grab general relations
+            graph_context = pkg.get_context_for_command("user my")
+            if graph_context:
+                context_parts.append(graph_context)
+        except Exception as e:
+            logger.error(f"Failed to fetch PKG context in UserDNA: {e}")
+        
         # Group by category if possible or just list them
         relationships = []
         preferences = []

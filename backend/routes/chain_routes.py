@@ -13,10 +13,7 @@ except ImportError as e:
     MULTI_AGENT_AVAILABLE = False
     logger.warning(f"Multi-Agent System not available in chain_routes: {e}")
 
-try:
-    from backend.modern_web_backend import *
-except ImportError:
-    from modern_web_backend import *
+from .common import socketio, assistant
 
 from ai_assistant.core.chain_optimizer import ChainOptimizer
 chain_optimizer = ChainOptimizer()
@@ -47,53 +44,18 @@ def create_chain():
         return jsonify({"error": "Command is required"}), 400
         
     try:
-        manager = get_chain_manager()
+        from ai_assistant.core.command_brain import get_executive_brain
+        brain = get_executive_brain()
         
-        # 🧠 BRAIN LOOP: Intercept commands if something is already running
-        command_lower = command.lower()
-        override_keywords = ['stop', 'cancel', 'halt', 'abort', 'wait', 'ruko', 'band karo', 'nahi']
-        
-        # Find active chains
-        running_chains = [c for c in manager.active_chains.values() if c.status.value in ['pending', 'planning', 'executing']]
-        
-        if running_chains and any(kw in command_lower for kw in override_keywords):
-            for rc in running_chains:
-                logger.warning(f"🧠 EXECUTIVE OVERRIDE: Cancelling active chain {rc.id} due to command: {command}")
-                rc.status = rc.status.__class__.CANCELLED
-                manager.completed_chains[rc.id] = manager.active_chains.pop(rc.id)
-            
-            return jsonify({
-                "status": "cancelled",
-                "message": f"Successfully interrupted previous task.",
-                "command": command
-            })
-            
-        # Standard creation
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        chain = loop.run_until_complete(manager.create_chain(command))
-        
-        def run_chain_background(chain_obj):
-            async def _run():
-                manager.subscribe_progress(chain_obj.id, _broadcast_chain_progress)
-                await manager.decompose_command(chain_obj)
-                await manager.identify_executors(chain_obj)
-                report = await manager.execute_chain(chain_obj.id)
-                await manager.notify_completion(report)
-                
-            new_loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(new_loop)
-            new_loop.run_until_complete(_run())
-            new_loop.close()
-            
-        thread = threading.Thread(target=run_chain_background, args=(chain,))
-        thread.start()
+        # Route through the brain
+        brain_response = brain.receive_command(command, source='api')
         
         return jsonify({
-            "status": "started", 
-            "message": "Chain execution started",
-            "chain_id": chain.id,
-            "command": command
+            "status": "started" if brain_response.success else "error", 
+            "message": brain_response.message,
+            "chain_id": brain_response.chain_id,
+            "command": command,
+            "action_taken": brain_response.action_taken
         })
         
     except Exception as e:
@@ -225,3 +187,5 @@ def get_chain_history():
         return jsonify({"chains": history})
         
     except Exception as e:
+        logger.error(f"Error fetching history: {e}")
+        return jsonify({"error": str(e)}), 500

@@ -149,6 +149,27 @@ class MultiModalAI:
             sorted_items = sorted(self.screenshot_cache.items(), key=lambda x: x[1][2])
             for key, _ in sorted_items[:len(self.screenshot_cache) - self.cache_max_size]:
                 del self.screenshot_cache[key]
+                
+    def analyze_image_from_base64(self, b64_string: str, prompt: str = "Describe what you see in this image", use_cache: bool = True) -> Dict[str, Any]:
+        """
+        Analyze a base64 encoded image string.
+        """
+        try:
+            if b64_string.startswith('data:image'):
+                b64_string = b64_string.split(',')[1]
+                
+            image_data = base64.b64decode(b64_string)
+            image = Image.open(io.BytesIO(image_data)).convert('RGB')
+            return self.analyze_image(image, prompt, use_cache)
+        except Exception as e:
+            logger.error(f"Base64 image analysis failed: {e}")
+            return {
+                "description": f"Error: Could not decode base64 image - {str(e)}",
+                "objects_detected": [],
+                "text_found": False,
+                "structured_data": {},
+                "success": False
+            }
     
     def analyze_image(self, image: Image.Image, prompt: str = "Describe what you see in this image", use_cache: bool = True) -> Dict[str, Any]:
         """

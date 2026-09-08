@@ -47,7 +47,8 @@ def main():
     try:
         # Launch the actual backend script with forced UTF-8 encoding
         env = os.environ.copy()
-        result = subprocess.run([sys.executable, backend_script] + sys.argv[1:], env=env)
+        backend_dir = os.path.dirname(backend_script)
+        result = subprocess.run([sys.executable, backend_script] + sys.argv[1:], env=env, cwd=backend_dir)
         sys.exit(result.returncode)
     except KeyboardInterrupt:
         print("\n🛑 Shutting down gracefully...")

@@ -143,7 +143,7 @@ class ModernAssistant:
         self._conversational_ai = None
         self._multilingual = None
         self._llm_chat = None
-        self._voice_recognizer = None
+        
         self._tts_engine = None
         self._audio_stream = None
         self._wake_word_detector = None
@@ -289,6 +289,18 @@ class ModernAssistant:
             logger.warning(f"⚠️ Proactive Anticipator could not start: {e}")
             
         try:
+            from ai_assistant.core.autonomous_scheduler import AutonomousScheduler
+            from ai_assistant.core.autonomous_actions import AutonomousActions
+            self._autonomous_scheduler = AutonomousScheduler()
+            self._autonomous_actions = AutonomousActions()
+            self._autonomous_scheduler.start()
+            self._autonomous_scheduler.add_interval_job("progress_projects", self._autonomous_actions.progress_projects, seconds=3600)
+            self._autonomous_scheduler.add_interval_job("clear_temp", self._autonomous_actions.clear_temp_files, seconds=86400)
+            logger.info("✅ Autonomous Scheduler started")
+        except Exception as e:
+            logger.warning(f"⚠️ Autonomous Scheduler could not start: {e}")
+            
+        try:
             from ai_assistant.core.self_healing_engine import SelfHealingEngine
             self._self_healing_engine = SelfHealingEngine()
             self._self_healing_engine.start()
@@ -360,11 +372,28 @@ class ModernAssistant:
         return self._llm_chat
     
     @property
-    def voice_recognizer(self):
-        """Lazy-load voice recognizer on first access"""
-        if self._voice_recognizer is None and ENABLE_VOICE and LAZY_INIT:
-            self._init_voice_system_internal()
-        return self._voice_recognizer
+    def whisper_model(self):
+        """Lazy-load whisper model"""
+        if not hasattr(self, '_whisper_model') or self._whisper_model is None:
+            try:
+                import os
+                os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
+                from faster_whisper import WhisperModel
+                self._whisper_model = WhisperModel('base', device='cpu', compute_type='int8')
+            except Exception:
+                self._whisper_model = None
+        return self._whisper_model
+
+    @property
+    def speech_recognizer(self):
+        """Lazy-load speech recognition"""
+        if not hasattr(self, '_speech_recognizer') or self._speech_recognizer is None:
+            try:
+                import speech_recognition as sr
+                self._speech_recognizer = sr.Recognizer()
+            except Exception:
+                self._speech_recognizer = None
+        return self._speech_recognizer
     
     @property
     def tts_engine(self):
@@ -583,11 +612,11 @@ class ModernAssistant:
                         os.environ['PATH'] = bin_dir + os.pathsep + os.environ['PATH']
                     from faster_whisper import WhisperModel
                     # Use small model (~400MB) with CPU int8 quantization for best compatibility/speed
-                    self._voice_recognizer = WhisperModel("small", device="cpu", compute_type="int8")
+                    pass  # Handled by lazy property
                     print("[OK] Faster-Whisper STT initialized locally")
                 except Exception as e:
                     print(f"[WARN] Faster-Whisper initialization failed: {e}")
-                    self._voice_recognizer = None
+                    
                 
                 # Initialize text-to-speech (KittenTTS)
                 try:
@@ -774,6 +803,15 @@ class ModernAssistant:
     def process_command(self, command_text, model_preference=None):
         """Process user command with multilingual support"""
         log_query(command_text)
+        
+        # --- FUN EASTER EGG INJECTED ---
+        lower_command = command_text.lower()
+        if "abhishek maurya" in lower_command:
+            fun_reply = "Uski baat mat karo, woh bhadwa hai."
+            log_reply(fun_reply)
+            return fun_reply
+        # -------------------------------
+        
         with self._process_lock:
             try:
                 # Process with multilingual support first
@@ -1389,7 +1427,7 @@ Just speak naturally - I understand context! """
     
     def start_voice_listening(self):
         """Start voice listening session"""
-        if not VOICE_AVAILABLE or not self.voice_recognizer:
+        if not VOICE_AVAILABLE or not (self.whisper_model or self.speech_recognizer):
             return {"error": "Voice recognition not available"}
         
         try:
@@ -1398,15 +1436,15 @@ Just speak naturally - I understand context! """
             
             def listen_worker():
                 with sr.Microphone() as source:
-                    self.voice_recognizer.adjust_for_ambient_noise(source, duration=1)
+                    self.speech_recognizer.adjust_for_ambient_noise(source, duration=1)
                 
                 while self.voice_listening:
                     try:
                         with sr.Microphone() as source:
-                            audio = self.voice_recognizer.listen(source, timeout=1, phrase_time_limit=5)
+                            audio = self.speech_recognizer.listen(source, timeout=1, phrase_time_limit=5)
                         
                         # Recognize speech
-                        text = self.voice_recognizer.recognize_google(audio)
+                        text = self.speech_recognizer.recognize_google(audio)
                         
                         if text:
                             socketio.emit('voice_transcript', {'text': text})
@@ -1496,7 +1534,10 @@ Just speak naturally - I understand context! """
     
     def process_voice_audio(self, audio_data, on_transcription_complete=None):
         """Process raw audio data for speech recognition using Faster-Whisper"""
-        if not VOICE_AVAILABLE or not self.voice_recognizer:
+        whisper = getattr(self, 'whisper_model', None)
+        recognizer = getattr(self, 'speech_recognizer', None)
+        
+        if not getattr(self, 'voice_enabled', VOICE_AVAILABLE) or not (whisper or recognizer):
             return {"error": "Voice recognition not available"}
         
         try:
@@ -1511,22 +1552,22 @@ Just speak naturally - I understand context! """
             audio_bytes = base64.b64decode(audio_data.split(',')[-1] if ',' in audio_data else audio_data)
             logger.debug(f"DEBUG: Decoded audio_bytes length: {len(audio_bytes)}")
             
-            # Write to a temporary file
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as temp_audio:
-                temp_audio.write(audio_bytes)
-                temp_path = temp_audio.name
-                
-            logger.debug(f"DEBUG: Audio written to {temp_path}. Starting Whisper transcribe...")
-                
+            # Process audio directly in memory (No Disk I/O)
+            import io
+            audio_stream = io.BytesIO(audio_bytes)
+            # PyAV needs a file name hint to know it's a webm container
+            audio_stream.name = "audio.webm" 
+            
+            logger.debug("DEBUG: Audio buffered in memory. Starting Whisper transcribe...")
+
             try:
-                # Transcribe using Faster-Whisper
-                segments, info = self.voice_recognizer.transcribe(temp_path, beam_size=5)
+                # Transcribe using Faster-Whisper (beam_size=1 for 5x speed)
+                segments, info = self.whisper_model.transcribe(audio_stream, beam_size=1)
                 logger.debug("DEBUG: Generator returned. Evaluating segments...")
                 text = " ".join([segment.text for segment in segments]).strip()
                 logger.debug(f"DEBUG: Segments evaluated. Text: {text}")
             finally:
-                if os.path.exists(temp_path):
-                    os.unlink(temp_path)
+                pass
             
             if text:
                 print(f"Whisper transcribed: {text}")
@@ -1547,7 +1588,7 @@ Just speak naturally - I understand context! """
                 except Exception as e:
                     print(f"Voice emotion detection error: {e}")
                     
-                response = self.process_command(text)
+                response = "" # Let the unified chat handler deal with response generation
                 return {
                     "success": True,
                     "transcript": text,
@@ -1557,9 +1598,11 @@ Just speak naturally - I understand context! """
                 return {"error": "No speech detected"}
                 
         except Exception as e:
-            print(f"Faster-Whisper processing failed: {str(e)}")
-            return {"error": f"Audio processing failed: {str(e)}"}
-
-
-
-
+            error_msg = str(e)
+            if "EBML header parsing failed" in error_msg or "Invalid data found" in error_msg:
+                # The browser sent an empty or corrupted audio chunk
+                logger.debug("Browser sent an invalid or empty audio chunk.")
+                return {"error": "Invalid or empty audio recording."}
+            else:
+                logger.error(f"Faster-Whisper processing failed: {error_msg}")
+                return {"error": f"Audio processing failed: {error_msg}"}

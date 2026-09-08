@@ -27,10 +27,28 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on('error', (err: any, req, res) => {
+            if (err.code === 'ECONNREFUSED') {
+              // Suppress scary terminal errors during backend startup
+              if (!res.headersSent) {
+                res.writeHead(503, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Backend is starting up, please wait.' }));
+              }
+            }
+          });
+        }
       },
       '/socket.io': {
         target: 'http://localhost:5000',
         ws: true,
+        configure: (proxy) => {
+          proxy.on('error', (err: any) => {
+            if (err.code === 'ECONNREFUSED') {
+              // Suppress websocket connection errors silently during startup
+            }
+          });
+        }
       },
     },
   },

@@ -18,7 +18,7 @@ from .local_ai_routes import local_ai_bp
 from .settings_routes import settings_bp
 from .system_routes import system_bp
 from .taskbar_routes import taskbar_bp
-from .voice_routes import voice_bp
+# voice_routes removed, voice routes now handled in voice_service.py
 from .web_routes import web_bp
 
 ALL_BLUEPRINTS = [
@@ -31,7 +31,6 @@ ALL_BLUEPRINTS = [
     (settings_bp, None),
     (system_bp, None),
     (taskbar_bp, None),
-    (voice_bp, None),
     (web_bp, None),
 ]
 

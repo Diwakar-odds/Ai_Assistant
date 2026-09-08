@@ -1,0 +1,16 @@
+name: morning_routine
+description: "Starts the day with essential apps and info"
+triggers:
+  - "start morning routine"
+  - "good morning"
+  - "let's start the day"
+steps:
+  - action: "open_app"
+    params:
+      app_name: "chrome"
+  - action: "open_app"
+    params:
+      app_name: "vscode"
+  - action: "say"
+    params:
+      text: "Good morning! Your workspace is ready. Shall I fetch the daily briefing?"

@@ -141,6 +141,67 @@ def handle_analyze_image(data):
     except Exception as e:
         emit('image_analysis_error', {'error': f'Image analysis failed: {str(e)}'})
 
+@socketio.on('analyze_presence')
+def handle_analyze_presence(data):
+    """Handle periodic presence/mood analysis request from camera"""
+    try:
+        image_data = data.get('image')
+        
+        if not image_data:
+            return # Don't emit error for background tasks to avoid spam
+            
+        # 1. Local Face Identification
+        person_name = None
+        try:
+            from ai_assistant.vision.facial_recognition import facial_recognition_sys
+            person_name = facial_recognition_sys.identify_person(image_data)
+        except Exception as e:
+            logger.error(f"Local face recognition error: {e}")
+
+        # 2. Mood & Presence Detection via Gemini
+        prompt = "Analyze the person in this image. Answer with valid JSON only (no markdown, no backticks). Include keys: 'present' (boolean) and 'mood' (string, e.g., 'neutral', 'happy', 'focused', 'away'). Keep the explanation short in a third key 'description'."
+        if person_name and person_name != "Unknown":
+            prompt = f"Analyze {person_name} in this image. Answer with valid JSON only (no markdown, no backticks). Include keys: 'present' (boolean) and 'mood' (string, e.g., 'neutral', 'happy', 'focused', 'away'). Keep the explanation short in a third key 'description'."
+
+        if assistant.multimodal_ai:
+            raw_analysis = assistant.multimodal_ai.analyze_image_from_base64(image_data, prompt, use_cache=False)
+            
+            # Parse Gemini's JSON response
+            import json
+            parsed_data = {}
+            try:
+                # The text is in raw_analysis['analysis']
+                text = raw_analysis.get('analysis', '{}').strip()
+                if text.startswith('```json'):
+                    text = text.replace('```json', '').replace('```', '')
+                elif text.startswith('```'):
+                    text = text.replace('```', '')
+                parsed_data = json.loads(text)
+            except Exception as parse_e:
+                logger.error(f"Failed to parse presence JSON: {parse_e}")
+            
+            # Merge parsed data into raw_analysis for frontend
+            raw_analysis.update(parsed_data)
+            
+            # Inject person name if found
+            if person_name:
+                raw_analysis['person_name'] = person_name
+                if 'present' not in raw_analysis:
+                    raw_analysis['present'] = True
+                
+                # Override mood to include name if not already there
+                if 'mood' in raw_analysis and raw_analysis['mood'] and raw_analysis['mood'] != 'away':
+                    raw_analysis['mood'] = f"{person_name} ({raw_analysis['mood']})"
+                else:
+                    raw_analysis['mood'] = person_name
+
+            emit('presence_update', {
+                'analysis': raw_analysis,
+                'timestamp': datetime.now().isoformat()
+            })
+    except Exception as e:
+        logger.error(f"Presence analysis failed: {e}")
+
 @socketio.on('analyze_screen')
 def handle_analyze_screen(data):
     """Handle screen analysis request"""
