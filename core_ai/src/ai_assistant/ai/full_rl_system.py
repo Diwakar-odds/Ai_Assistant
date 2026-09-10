@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 """
 Full Reinforcement Learning System (PPO/A3C)
 Deep RL with policy gradients for complex decision making
@@ -122,7 +123,7 @@ class PPOAgent:
                  gamma: float = 0.99,
                  epsilon_clip: float = 0.2,
                  k_epochs: int = 4,
-                 db_path: str = "data/rl_ppo.db"):
+                 db_path: str = get_db_path_str("rl_ppo")):
         
         self.state_dim = state_dim
         self.action_dim = action_dim
@@ -131,7 +132,7 @@ class PPOAgent:
         self.k_epochs = k_epochs
         self.db_path = db_path
         
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         self._init_database()
         
         if TORCH_AVAILABLE:

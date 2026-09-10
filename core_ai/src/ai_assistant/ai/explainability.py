@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 # Setup centralized logging
 from utils.logging_config import get_logger
 logger = get_logger(__name__, log_category="app")
@@ -35,9 +36,9 @@ class ExplainabilityEngine:
     Provides interpretable explanations for predictions
     """
     
-    def __init__(self, db_path: str = "data/explainability.db"):
-        self.db_path = db_path
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+    def __init__(self, db_path: str = None):
+        self.db_path = db_path or get_db_path_str("explainability")
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         
         # Feature names for interpretation
         self.feature_names = []

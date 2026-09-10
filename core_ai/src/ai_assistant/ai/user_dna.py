@@ -147,17 +147,17 @@ class UserDNA:
         found_fact = False
         
         patterns = {
-            "user_name": r"(?:my name is|call me|i am|i'm)\s+([a-zA-Z\s]+?)(?:\.|!|,|$| and| but)",
-            "friend_name": r"(?:my friend'?s name is|my friend is)\s+([a-zA-Z\s]+?)(?:\.|!|,|$)",
+            "user_name": r"(?:my name is|call me|you can call me|mera naam|naam hai)\s+([a-zA-Z\s]+?)(?:\.|!|,|$| and| but| hai)",
+            "friend_name": r"(?:my friend'?s name is|my friend is|mera dost|mere dost ka naam)\s+([a-zA-Z\s]+?)(?:\.|!|,|$| hai)",
             "spouse_name": r"(?:my (?:wife|husband|spouse|partner)'?s name is|my (?:wife|husband|spouse|partner) is)\s+([a-zA-Z\s]+?)(?:\.|!|,|$)",
             "pet_name": r"(?:my (?:dog|cat|pet)'?s name is|my (?:dog|cat|pet) is)\s+([a-zA-Z\s]+?)(?:\.|!|,|$)",
             "boss_name": r"(?:my boss'?s name is|my manager is|my boss is)\s+([a-zA-Z\s]+?)(?:\.|!|,|$)",
-            "user_location": r"(?:i live in|i am from|i'm from|based in)\s+([a-zA-Z\s,]+?)(?:\.|!|,|$| and| but)",
-            "workplace": r"(?:i work at|i work for|my company is)\s+([a-zA-Z0-9\s,]+?)(?:\.|!|,|$| and)",
+            "user_location": r"(?:i live in|i am from|i'm from|based in|mai rehta hu|me rehta hu)\s+([a-zA-Z\s,]+?)(?:\.|!|,|$| and| but| me| mein)",
+            "workplace": r"(?:i work at|i work for|my company is|mai kaam karta hu)\s+([a-zA-Z0-9\s,]+?)(?:\.|!|,|$| and| me| mein)",
             "job_title": r"(?:i am a|i work as a|i'm a)\s+([a-zA-Z\s]+?)(?:\.|!|,|$| and| at)",
-            "favorite_color": r"(?:my favorite color is|i love the color)\s+([a-zA-Z\s]+?)(?:\.|!|,|$)",
-            "favorite_food": r"(?:my favorite food is|i love eating|i love to eat)\s+([a-zA-Z\s]+?)(?:\.|!|,|$)",
-            "favorite_drink": r"(?:my favorite drink is|i love drinking|i prefer to drink)\s+([a-zA-Z\s]+?)(?:\.|!|,|$)",
+            "favorite_color": r"(?:my favorite color is|mera favorite color|mera pasandida rang|i love the color)\s+([a-zA-Z\s]+?)(?:\.|!|,|$| hai)",
+            "favorite_food": r"(?:my favorite food is|mera favorite khana|i love eating|i love to eat)\s+([a-zA-Z\s]+?)(?:\.|!|,|$| hai)",
+            "favorite_drink": r"(?:my favorite drink is|i love drinking|i prefer to drink)\s+([a-zA-Z\s]+?)(?:\.|!|,|$| hai)",
             "hobby": r"(?:my hobby is|i like to|i love to|in my free time i)\s+([a-zA-Z\s]+?)(?:\.|!|,|$)",
             "dietary_restriction": r"(?:i am allergic to|i can't eat|i don't eat|i am a)\s+(vegan|vegetarian|gluten free|[a-zA-Z\s]+?)(?:\.|!|,|$)",
             "wake_up_time": r"(?:i usually wake up at|i wake up at)\s+([0-9:amp\s]+?)(?:\.|!|,|$)",
@@ -174,11 +174,12 @@ class UserDNA:
             match = re.search(regex_pattern, text_lower, re.IGNORECASE)
             if match:
                 value = match.group(1).strip().title()
-                # Clean trailing punctuation and small filler words
+                # Clean trailing punctuation, small filler words, and 'hai'
+                value = re.sub(r'\b(hai|hain|hu|hoon|the|a|an|is|was|my|it)\b', '', value, flags=re.IGNORECASE).strip()
                 value = re.sub(r'[^\w\s]', '', value).strip()
                 
-                # Sanity check to avoid matching filler responses like "I like to" matching "sleep" but not completely.
-                if len(value) > 1 and value.lower() not in ["the", "a", "an", "is", "was", "my", "it"]:
+                # Sanity check
+                if len(value) > 1 and value.lower() not in ["the", "a", "an", "is", "was", "my", "it", "hai"]:
                     self.update_trait(trait_key, value)
                     found_fact = True
                     logger.debug(f"UserDNA Extracted Fact: {trait_key} = {value}")

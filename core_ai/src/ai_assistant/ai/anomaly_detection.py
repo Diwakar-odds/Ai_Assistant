@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 # Setup centralized logging
 from utils.logging_config import get_logger
 logger = get_logger(__name__, log_category="app")
@@ -36,12 +37,12 @@ class AnomalyDetector:
     Detects anomalous behavior patterns
     """
     
-    def __init__(self, db_path: str = "data/anomaly_detection.db",
+    def __init__(self, db_path: str = None,
                  contamination: float = 0.1):
-        self.db_path = db_path
+        self.db_path = db_path or get_db_path_str("anomaly_detection")
         self.contamination = contamination  # Expected anomaly rate
         
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         
         if SKLEARN_AVAILABLE:
             self.model = IsolationForest(

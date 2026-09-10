@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 # Setup centralized logging
 from utils.logging_config import get_logger
 logger = get_logger(__name__, log_category="app")
@@ -40,14 +41,14 @@ class ContrastiveLearner:
     Contrastive learning for better embeddings
     """
     
-    def __init__(self, db_path: str = "data/contrastive_learning.db",
+    def __init__(self, db_path: str = None,
                  embedding_dim: int = 128,
                  temperature: float = 0.5):
-        self.db_path = db_path
+        self.db_path = db_path or get_db_path_str("contrastive_learning")
         self.embedding_dim = embedding_dim
         self.temperature = temperature
         
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         
         if TORCH_AVAILABLE:
             # Simple projection head

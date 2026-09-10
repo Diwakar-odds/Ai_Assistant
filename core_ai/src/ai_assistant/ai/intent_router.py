@@ -80,7 +80,10 @@ class IntentRouter:
                      f"(Tier 2 {'enabled' if self._router_llm else 'disabled'})")
 
     def _init_router_llm(self):
-        """Initialize a dedicated LLM instance for intent routing (doesn't pollute conversation history)."""
+        """Initialize local IntentClassifier for semantic routing (Tier 2)."""
+        self._router_llm = None
+        self._local_classifier = None
+        # We will lazy-load the local classifier in _semantic_route to save startup time
         try:
             import os
             api_key = os.getenv("GEMINI_API_KEY")
@@ -88,21 +91,9 @@ class IntentRouter:
                 import google.generativeai as genai
                 genai.configure(api_key=api_key)
                 self._router_llm = genai.GenerativeModel("gemini-2.5-flash")
-                logger.info("✅ IntentRouter Tier 2: Gemini function calling ready")
-                return
-            
-            # Fallback: try OpenAI
-            api_key = os.getenv("OPENAI_API_KEY")
-            if api_key:
-                # We'll use the llm_provider passed in for OpenAI
-                if self.llm_provider and not getattr(self.llm_provider, 'offline_mode', True):
-                    self._router_llm = "openai_fallback"
-                    logger.info("✅ IntentRouter Tier 2: OpenAI fallback ready")
-                    return
-            
-            logger.warning("⚠️ IntentRouter Tier 2 disabled: No API key found (GEMINI_API_KEY or OPENAI_API_KEY)")
+                logger.info("✅ IntentRouter Tier 3: Gemini function calling available")
         except Exception as e:
-            logger.warning(f"⚠️ IntentRouter Tier 2 init failed: {e}")
+            logger.warning(f"⚠️ IntentRouter Gemini init failed: {e}")
 
     # =========================================================================
     # INTENT REGISTRATION
@@ -234,8 +225,24 @@ class IntentRouter:
             tier1_patterns=[
                 r'bluetooth\s+(on|off|chalu|band|start|stop)',
                 r'(on|off|chalu|band|start|stop)\s+bluetooth',
+                r'(?:turn|switch)\s+(on|off|chalu|band|of)\s+bluetooth',
             ],
             examples=["bluetooth on karo", "turn off bluetooth", "bluetooth chalu karo"]
+        ))
+        
+        # 9.5 WiFi Toggle
+        self.register_intent(IntentDefinition(
+            name="wifi_toggle",
+            description="Turn wifi on or off",
+            parameters={
+                "enable": {"type": "boolean", "description": "True to turn on, False to turn off", "required": True}
+            },
+            tier1_patterns=[
+                r'wifi\s+(on|off|chalu|band|start|stop)',
+                r'(on|off|chalu|band|start|stop)\s+wifi',
+                r'(?:turn|switch)\s+(on|off|chalu|band|of)\s+wifi',
+            ],
+            examples=["wifi on karo", "turn off wifi", "turn of wifi", "wifi band karo"]
         ))
 
         # 10. Create Document
@@ -340,8 +347,8 @@ class IntentRouter:
                                 param_val = re.sub(rf'\s+{filler}\s*$', '', param_val).strip()
                             params[param_names[i]] = param_val
                     
-                    # Special handling for boolean params (bluetooth enable)
-                    if intent_name == "bluetooth_toggle":
+                    # Special handling for boolean params (bluetooth/wifi enable)
+                    if intent_name in ("bluetooth_toggle", "wifi_toggle"):
                         raw = (groups[0] if groups else "").lower()
                         params["enable"] = raw in ("on", "chalu", "start")
                     
@@ -414,9 +421,42 @@ class IntentRouter:
             logger.error(f"Failed to build Gemini tools: {e}")
             return []
 
+    def _semantic_route(self, message: str) -> Optional[IntentResult]:
+        """
+        Tier 2: Use local SentenceTransformers ML to determine intent.
+        """
+        try:
+            if self._local_classifier is None:
+                from ai_assistant.ai.intent_classification import IntentClassifier
+                from ai_assistant.core.database_config import get_db_path
+                self._local_classifier = IntentClassifier(db_path=str(get_db_path("intent_classifier")))
+            
+            start_time = time.time()
+            result = self._local_classifier.classify(message)
+            elapsed = time.time() - start_time
+            
+            intent_name = result.intent_name
+            confidence = result.confidence
+            
+            # system_intents matches our registered intents
+            if intent_name in self.intents and confidence > 0.40:
+                logger.info(f"Tier 2 matched: {intent_name} (conf: {confidence:.2f}) ({elapsed:.2f}s)")
+                return IntentResult(
+                    intent_name=intent_name,
+                    parameters=result.entities if hasattr(result, 'entities') else {},
+                    confidence=confidence,
+                    tier=2,
+                    raw_query=message
+                )
+                
+            return None
+        except Exception as e:
+            logger.warning(f"Tier 2 Semantic routing failed: {e}")
+            return None
+
     def _llm_route(self, message: str) -> Optional[IntentResult]:
         """
-        Tier 2: Use LLM function calling to determine intent.
+        Tier 3: Use LLM function calling (Gemini) to determine intent.
         Returns IntentResult if the LLM calls a function, None if it's just conversation.
         """
         if not self._router_llm:
@@ -457,7 +497,7 @@ class IntentRouter:
                 generation_config={"temperature": 0.1, "max_output_tokens": 100}
             )
             elapsed = time.time() - start_time
-            logger.debug(f"Tier 2 LLM routing took {elapsed:.2f}s")
+            logger.debug(f"Tier 3 LLM routing took {elapsed:.2f}s")
 
             # Check if the model called a function
             if response.candidates:
@@ -473,21 +513,21 @@ class IntentRouter:
                                 for key, value in fc.args.items():
                                     params[key] = value
 
-                            logger.info(f"Tier 2 matched: {intent_name} with params {params} ({elapsed:.2f}s)")
+                            logger.info(f"Tier 3 matched: {intent_name} with params {params} ({elapsed:.2f}s)")
                             return IntentResult(
                                 intent_name=intent_name,
                                 parameters=params,
                                 confidence=0.85,
-                                tier=2,
+                                tier=3,
                                 raw_query=message
                             )
 
             # No function call = conversation
-            logger.debug(f"Tier 2: No intent detected (conversation)")
+            logger.debug(f"Tier 3: No intent detected (conversation)")
             return None
 
         except Exception as e:
-            logger.warning(f"Tier 2 LLM routing failed: {e}")
+            logger.warning(f"Tier 3 LLM routing failed: {e}")
             return None
 
     # =========================================================================
@@ -505,16 +545,22 @@ class IntentRouter:
         if not message or not message.strip():
             return None
 
-        # Tier 1: Fast local match
+        # Tier 1: Fast local match (Regex)
         result = self._fast_match(message)
         if result:
             logger.info(f"🎯 Intent routed (Tier 1): {result.intent_name} → {result.parameters}")
             return result
 
-        # Tier 2: LLM function calling
-        result = self._llm_route(message)
+        # Tier 2: Local ML Semantic matching (SentenceTransformers)
+        result = self._semantic_route(message)
         if result:
             logger.info(f"🧠 Intent routed (Tier 2): {result.intent_name} → {result.parameters}")
+            return result
+
+        # Tier 3: LLM function calling (Gemini, if available)
+        result = self._llm_route(message)
+        if result:
+            logger.info(f"☁️ Intent routed (Tier 3): {result.intent_name} → {result.parameters}")
             return result
 
         # No intent detected — this is conversation

@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 """
 Domain-Adapted Embeddings
 Fine-tune embeddings for user's specific domain
@@ -75,12 +76,12 @@ class DomainAdaptedEmbeddings:
     def __init__(self,
                  base_model: str = "all-MiniLM-L6-v2",
                  adapter_dim: int = 64,
-                 db_path: str = "data/domain_embeddings.db"):
+                 db_path: str = get_db_path_str("domain_embeddings")):
         
         self.db_path = db_path
         self.adapter_dim = adapter_dim
         
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         self._init_database()
         
         # Load base embedding model

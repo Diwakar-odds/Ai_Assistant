@@ -80,7 +80,7 @@ class LearningSystemsActivation:
             ('data/feedback.db', 'FeedbackCollector'),
             ('data/behavior_clustering.db', 'BehaviorClusterer'),
             ('data/conversation_clustering.db', 'ConversationClusterer'),
-            ('data/knowledge_graph.db', 'PersonalKnowledgeGraph')
+            (get_db_path_str("knowledge_graph"), 'PersonalKnowledgeGraph')
         ]
         
         for db_path, system_name in databases_to_init:

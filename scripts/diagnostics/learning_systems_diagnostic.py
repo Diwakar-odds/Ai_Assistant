@@ -156,7 +156,7 @@ class LearningSystemsDiagnostic:
             'data/historical_rag.db': 'Historical RAG',
             'data/active_learning.db': 'Active learning',
             'data/feedback.db': 'User feedback',
-            'data/knowledge_graph.db': 'Knowledge graph',
+            get_db_path_str("knowledge_graph"): 'Knowledge graph',
             'data/behavior_clustering.db': 'Behavior patterns',
             'data/conversation_clustering.db': 'Conversation clusters',
             'data/query_cache.db': 'Query cache'

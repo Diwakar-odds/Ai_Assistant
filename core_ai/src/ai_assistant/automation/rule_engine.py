@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 """
 Automation Rule Engine
 
@@ -743,8 +744,8 @@ class AutomationRuleEngine:
     Main automation rule engine
     """
     
-    def __init__(self, db_path: str = "user_data/automation_rules.db"):
-        self.db_path = db_path
+    def __init__(self, db_path: str = None):
+        self.db_path = db_path or get_db_path_str("automation_rules")
         self.logger = logging.getLogger(__name__)
         
         # Core components

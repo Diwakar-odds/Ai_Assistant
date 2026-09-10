@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request, send_from_directory, render_template, Response, stream_with_context
 import os, json, sys, time, datetime
+from pathlib import Path
 from .common import (
     logger, api_logger, limiter, assistant, validate_input, sanitize_command,
     get_current_context, jwt_required, create_access_token, get_jwt_identity, verify_jwt_in_request,

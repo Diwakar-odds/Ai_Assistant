@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 """
 Adaptive Voice Recognition (Application)
 Voice model adaptation for better recognition
@@ -21,9 +22,9 @@ class AdaptiveVoiceRecognition:
     Learns user's voice patterns and improves accuracy
     """
     
-    def __init__(self, db_path: str = "data/adaptive_voice.db"):
-        self.db_path = db_path
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+    def __init__(self, db_path: str = None):
+        self.db_path = db_path or get_db_path_str("adaptive_voice")
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         self._init_database()
         
         self.user_vocabulary = defaultdict(int)

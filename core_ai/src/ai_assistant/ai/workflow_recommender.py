@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 """
 Workflow Recommender (Application)
 Intelligent workflow optimization and recommendations
@@ -21,9 +22,9 @@ class WorkflowRecommender:
     Suggests optimal workflows and automation opportunities
     """
     
-    def __init__(self, db_path: str = "data/workflow_recommender.db"):
-        self.db_path = db_path
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+    def __init__(self, db_path: str = None):
+        self.db_path = db_path or get_db_path_str("workflow_recommender")
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         self._init_database()
         
         self.workflow_patterns = defaultdict(list)

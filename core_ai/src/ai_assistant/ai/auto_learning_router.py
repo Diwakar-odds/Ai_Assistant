@@ -60,13 +60,14 @@ class LearningDataRouter:
             return
         
         try:
+            from ai_assistant.core.database_config import get_db_path_str
             self.behavior_clusterer = BehaviorClusterer()
             self.conversation_clusterer = ConversationClusterer()
             self.command_sequences = CommandMarkovChain()
             self.command_predictor = CommandSuccessPredictor()
             self.context_generator = ContextAwareResponseGenerator()
             self.smart_commands = SmartCommandPredictor()
-            self.knowledge_graph = PersonalKnowledgeGraph(db_path="data/core/personal_knowledge.db")
+            self.knowledge_graph = PersonalKnowledgeGraph(db_path=get_db_path_str("personal_knowledge"))
             self.query_cache = QuerySimilarityCache()
             logger.info("✅ Learning systems initialized")
         except Exception as e:
@@ -244,29 +245,28 @@ class LearningDataRouter:
                 import re
                 date_match = re.search(r'\d{1,2}\s*(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)', content_lower)
                 if date_match:
-                    self.knowledge_graph.add_fact(
-                        subject="exam",
-                        predicate="scheduled_on",
-                        object=date_match.group(),
-                        confidence=0.9
+                    self.knowledge_graph.add_knowledge_node(
+                        content=f"Exam scheduled on {date_match.group()}",
+                        node_type="event",
+                        metadata={"type": "exam", "date": date_match.group(), "confidence": 0.9}
                     )
             
             # Extract app usage
             apps = ['notepad', 'sticky', 'chrome', 'excel', 'word', 'calculator']
             for app in apps:
                 if app in content_lower:
-                    self.knowledge_graph.add_fact(
-                        subject="user",
-                        predicate="uses_app",
-                        object=app,
-                        confidence=0.8
+                    self.knowledge_graph.add_knowledge_node(
+                        content=f"User uses app {app}",
+                        node_type="preference",
+                        metadata={"type": "app_usage", "app": app, "confidence": 0.8}
                     )
             
             # High importance = potential skill
             if importance >= 4:
-                self.knowledge_graph.add_skill(
-                    skill_name=f"task_{len(self.conversation_history)}",
-                    proficiency=importance / 5.0
+                self.knowledge_graph.add_knowledge_node(
+                    content=f"task_{len(self.conversation_history)}",
+                    node_type="skill",
+                    metadata={"proficiency": importance / 5.0}
                 )
         except Exception as e:
             print(f"Knowledge graph error: {e}")

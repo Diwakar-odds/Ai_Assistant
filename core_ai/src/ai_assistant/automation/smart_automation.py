@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 # Setup centralized logging
 from utils.logging_config import get_logger
 logger = get_logger(__name__, log_category="app")
@@ -162,9 +163,9 @@ class WorkflowExecution:
 class SmartAutomationEngine:
     """Advanced automation and workflow management system."""
     
-    def __init__(self, db_path: str = "data/automation/automation_engine.db"):
+    def __init__(self, db_path: str = None):
         """Initialize the automation engine."""
-        self.db_path = db_path
+        self.db_path = db_path or get_db_path_str("automation_engine")
         self.workflows: Dict[str, WorkflowDefinition] = {}
         self.executions: Dict[str, WorkflowExecution] = {}
         self.running_workflows: Dict[str, threading.Thread] = {}

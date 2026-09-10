@@ -156,11 +156,19 @@ class GeminiProvider(LLMProvider):
     def generate_response(self, messages: List[Dict[str, str]], **kwargs) -> str:
         """Generate response from Gemini."""
         try:
+            system_prompt = "\n\n".join([m["content"] for m in messages if m.get("role") == "system"])
+            non_system = [m for m in messages if m.get("role") != "system"]
+            if not non_system:
+                non_system = [{"role": "user", "content": system_prompt}]
+                system_prompt = ""
+            elif system_prompt:
+                first_msg = dict(non_system[0])
+                first_msg["content"] = f"[System Instructions & Context]\n{system_prompt}\n\n{first_msg['content']}"
+                non_system = [first_msg] + non_system[1:]
+
             # Convert messages to Gemini format
             history = []
-            for msg in messages[:-1]:  # Everything except last
-                if msg["role"] == "system":
-                    continue
+            for msg in non_system[:-1]:  # Everything except last
                 history.append({
                     "role": "user" if msg["role"] == "user" else "model",
                     "parts": [msg["content"]]
@@ -170,7 +178,7 @@ class GeminiProvider(LLMProvider):
             chat = self.client.start_chat(history=history)
             
             # Send last message with generation config
-            last_message = messages[-1]["content"]
+            last_message = non_system[-1]["content"]
             
             # Create generation config
             generation_config = {
@@ -193,18 +201,26 @@ class GeminiProvider(LLMProvider):
     def stream_response(self, messages: List[Dict[str, str]], **kwargs) -> Generator[str, None, None]:
         """Stream response from Gemini."""
         try:
+            system_prompt = "\n\n".join([m["content"] for m in messages if m.get("role") == "system"])
+            non_system = [m for m in messages if m.get("role") != "system"]
+            if not non_system:
+                non_system = [{"role": "user", "content": system_prompt}]
+                system_prompt = ""
+            elif system_prompt:
+                first_msg = dict(non_system[0])
+                first_msg["content"] = f"[System Instructions & Context]\n{system_prompt}\n\n{first_msg['content']}"
+                non_system = [first_msg] + non_system[1:]
+
             # Convert messages
             history = []
-            for msg in messages[:-1]:
-                if msg["role"] == "system":
-                    continue
+            for msg in non_system[:-1]:
                 history.append({
                     "role": "user" if msg["role"] == "user" else "model",
                     "parts": [msg["content"]]
                 })
             
             chat = self.client.start_chat(history=history)
-            last_message = messages[-1]["content"]
+            last_message = non_system[-1]["content"]
             
             # Create generation config
             generation_config = {
@@ -395,13 +411,17 @@ class GGUFProvider(LLMProvider):
             print("🧠 [GGUF] Generating response using local model...")
             prompt = self._format_messages(messages)
             
-            response = self.llm.create_completion(
-                prompt=prompt,
-                max_tokens=kwargs.get("max_tokens", 1024),
-                temperature=kwargs.get("temperature", 0.7),
-                top_p=kwargs.get("top_p", 0.95),
-                stop=["<|eot_id|>", "<|end_of_text|>"]
-            )
+            completion_kwargs = {
+                "prompt": prompt,
+                "max_tokens": kwargs.get("max_tokens", 1024),
+                "temperature": kwargs.get("temperature", 0.7),
+                "top_p": kwargs.get("top_p", 0.95),
+                "stop": ["<|eot_id|>", "<|end_of_text|>"]
+            }
+            if "response_format" in kwargs:
+                completion_kwargs["response_format"] = kwargs["response_format"]
+                
+            response = self.llm.create_completion(**completion_kwargs)
             return response['choices'][0]['text'].strip()
         except Exception as e:
             logger.error(f"GGUF generation failed: {e}")
@@ -593,7 +613,15 @@ class UnifiedChatInterface:
         
         try:
             if stream:
-                return self.provider.stream_response(self.conversation_history, **kwargs)
+                def _capturing_stream():
+                    full_response = ""
+                    for chunk in self.provider.stream_response(self.conversation_history, **kwargs):
+                        if chunk:
+                            full_response += chunk
+                            yield chunk
+                    if full_response and not full_response.startswith("Error:"):
+                        self.add_assistant_message(full_response)
+                return _capturing_stream()
             else:
                 response = self.provider.generate_response(self.conversation_history, **kwargs)
                 if response.startswith("Error:"):
@@ -607,12 +635,6 @@ class UnifiedChatInterface:
                     yield f"Error: Generation failed: {e}"
                 return _error_stream()
             return f"Error: I encountered an error during generation: {e}"
-            
-            if stream:
-                def _error_stream():
-                    yield "Error: Generation failed."
-                return _error_stream()
-            return f"Error: I encountered an error during generation."
     
     def reset(self):
         """Reset conversation history."""

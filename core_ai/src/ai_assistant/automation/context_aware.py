@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 """
 Context-Aware Automation System
 
@@ -982,8 +983,8 @@ class ContextAwareAutomation:
     Main context-aware automation system
     """
     
-    def __init__(self, db_path: str = "user_data/context_automation.db"):
-        self.db_path = db_path
+    def __init__(self, db_path: str = None):
+        self.db_path = db_path or get_db_path_str("context_automation")
         self.logger = logging.getLogger(__name__)
         
         # Core components

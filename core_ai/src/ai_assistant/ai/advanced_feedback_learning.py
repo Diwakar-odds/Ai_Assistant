@@ -17,8 +17,12 @@ This is a production-ready, scalable feedback learning system.
 
 import sqlite3
 import json
-import numpy as np
+import logging
+import random
+from typing import Dict, List, Tuple, Optional
 from datetime import datetime, timedelta
+
+from ai_assistant.core.database_config import get_db_path_str
 from typing import Dict, List, Optional, Tuple, Any, Callable
 from dataclasses import dataclass, asdict
 from enum import Enum
@@ -453,13 +457,13 @@ class AdaptiveLearningEngine:
     Implements continuous learning with concept drift detection
     """
     
-    def __init__(self, db_path: str = "data/analytics/feedback_learning.db"):
-        self.db_path = db_path
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+    def __init__(self, db_path: str = None):
+        self.db_path = db_path or get_db_path_str("feedback_learning")
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         
-        self.reward_model = RewardModel(db_path)
+        self.reward_model = RewardModel(self.db_path)
         self.dpo_optimizer = DirectPreferenceOptimizer(beta=0.1)
-        self.feedback_collector = FeedbackCollector(db_path)
+        self.feedback_collector = FeedbackCollector(self.db_path)
         
         self.learning_rate = 0.01
         self.performance_history = deque(maxlen=1000)

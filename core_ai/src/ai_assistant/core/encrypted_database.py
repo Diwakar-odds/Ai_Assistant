@@ -45,7 +45,7 @@ class EncryptedDatabase:
         self.db_encryption = get_db_encryption()
         
         # Ensure database directory exists
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
     
     def add_encrypted_field(self, table_name: str, field_name: str):
         """Mark a field as encrypted for automatic handling"""

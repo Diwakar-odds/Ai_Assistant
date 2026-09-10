@@ -563,8 +563,16 @@ class ModernAssistant:
                             return "Volume decreased"
                         elif action == 'mute':
                             if AUTOMATION_AVAILABLE:
-                                return set_system_volume(0)
+                                from ai_assistant.core.core import mute_volume
+                                return mute_volume()
                             return "Muted"
+                        elif action == 'media_pause':
+                            if AUTOMATION_AVAILABLE:
+                                import ctypes
+                                ctypes.windll.user32.keybd_event(0xB3, 0, 0, 0)
+                                ctypes.windll.user32.keybd_event(0xB3, 0, 2, 0)
+                                return "✅ Media paused/played"
+                            return "Media paused"
                     except Exception as e:
                         return f"Error: {str(e)}"
                     return None

@@ -156,7 +156,7 @@ def api_all_learning_stats():
         stats = get_learning_stats()
         return jsonify({
             "success": True,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.datetime.now().isoformat(),
             "systems": stats,
             "total_systems": len(stats)
         })
@@ -331,7 +331,7 @@ def api_knowledge_graph_query():
             return jsonify({"error": "Learning systems not available"}), 503
         
         from ai_assistant.ai.enhanced_learning import PersonalKnowledgeGraph
-        kg = PersonalKnowledgeGraph(db_path="data/knowledge_graph.db")
+        kg = PersonalKnowledgeGraph(db_path=get_db_path_str("knowledge_graph"))
         
         data = request.get_json()
         query_type = data.get('type', 'stats')

@@ -102,7 +102,13 @@ class ChainOfActionsManager:
         # Initialize Automation Agents
         self.browser_agent = BrowserAutomation() if BROWSER_AUTO_AVAILABLE else None
         self.app_agent = AppAutomation() if APP_AUTO_AVAILABLE else None
-        self.vlm = MultiModalAI() if VLM_AVAILABLE else None
+        
+        self.vlm = None
+        if VLM_AVAILABLE:
+            try:
+                self.vlm = MultiModalAI()
+            except Exception as e:
+                logger.warning(f"Could not initialize MultiModalAI (possibly missing API key): {e}")
         
         # Initialize Persistence
         self.tracker = get_progress_tracker()

@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 """
 Context-Aware Response Generation (Application)
 Intelligent context-aware response generation
@@ -21,9 +22,9 @@ class ContextAwareResponseGenerator:
     Generates intelligent responses based on conversation context
     """
     
-    def __init__(self, db_path: str = "data/context/context_aware_responses.db"):
-        self.db_path = db_path
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+    def __init__(self, db_path: str = None):
+        self.db_path = db_path or get_db_path_str("context_aware_responses")
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         self._init_database()
         
         self.conversation_history = deque(maxlen=50)

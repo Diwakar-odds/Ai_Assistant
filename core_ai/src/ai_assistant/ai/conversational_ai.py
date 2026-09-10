@@ -23,6 +23,8 @@ from enum import Enum
 import sqlite3
 import os
 import re
+
+from ai_assistant.core.database_config import get_db_path_str
 import webbrowser
 import subprocess
 from ai_assistant.vision.gemini_vision_provider import GeminiVisionProvider
@@ -172,9 +174,9 @@ class ConversationContext:
 class AdvancedConversationalAI:
     """Advanced conversational AI system with context management."""
     
-    def __init__(self, db_path: str = "data/core/conversation_ai.db", automation_callback: Optional[Callable] = None):
+    def __init__(self, db_path: str = None, automation_callback: Optional[Callable] = None):
         """Initialize the conversational AI system."""
-        self.db_path = db_path
+        self.db_path = db_path or get_db_path_str("conversation_ai")
         self.contexts: Dict[str, ConversationContext] = {}
         self.active_context_id: Optional[str] = None
         self.user_mood: MoodType = MoodType.NEUTRAL
@@ -624,6 +626,7 @@ class AdvancedConversationalAI:
             context.topic = self._extract_topic(content)
         
         self._save_context(context)
+        self._maybe_summarize_context(context)
         return True
     
     def get_context_summary(self, context_id: str = None) -> Dict[str, Any]:
@@ -712,7 +715,7 @@ class AdvancedConversationalAI:
             except Exception as e:
                 logger.warning(f"⚠️ Failed to save training data: {e}")
     
-    def process_message(self, message: str, role: str = "user", provider: str = None, model: str = None) -> str:
+    def process_message(self, message: str, role: str = "user", provider: str = None, model: str = None, on_token=None) -> str:
         """Process a message and generate an intelligent response with REAL execution."""
         try:
             # Add message to conversation
@@ -720,123 +723,162 @@ class AdvancedConversationalAI:
             
             message_lower = message.lower()
 
-            
+            # Helper to save assistant response and avoid duplicate adds
+            _saved = False
+            def _save_and_return(resp):
+                nonlocal _saved
+                if not _saved and resp and role == "user":
+                    self.add_message("assistant", resp)
+                    _saved = True
+                return resp
+
+            # Feature 2: Time-gap Injection (if idle > 30 min)
+            if role == "user" and self.active_context_id in self.contexts:
+                context = self.contexts[self.active_context_id]
+                if len(context.messages) >= 2:
+                    prev_msg = context.messages[-2]
+                    try:
+                        prev_time = datetime.fromisoformat(prev_msg.get('timestamp', ''))
+                        now = datetime.now()
+                        gap = now - prev_time
+                        gap_minutes = gap.total_seconds() / 60
+                        
+                        if gap_minutes > 30:
+                            if gap_minutes > 1440:
+                                gap_str = f"{int(gap_minutes // 1440)} days and {int((gap_minutes % 1440) // 60)} hours"
+                            elif gap_minutes > 60:
+                                gap_str = f"{int(gap_minutes // 60)} hours and {int(gap_minutes % 60)} minutes"
+                            else:
+                                gap_str = f"{int(gap_minutes)} minutes"
+                            
+                            time_context = {
+                                "role": "system",
+                                "content": f"[System Notice: {gap_str} have passed since the last interaction. Current time is {now.strftime('%I:%M %p, %B %d')}. User just returned.]",
+                                "timestamp": now.isoformat(),
+                                "mood": None,
+                                "metadata": {"type": "time_gap", "gap_minutes": gap_minutes}
+                            }
+                            context.messages.insert(-1, time_context)
+                            print(f"⏰ Time gap detected: {gap_str}")
+                    except (ValueError, TypeError):
+                        pass
+
             # Detect mood from user messages
             if role == "user":
                 self.detect_mood(message)
-                try:
-                    from ai_assistant.ai.user_dna import UserDNA
-                    UserDNA().extract_facts_from_text(message)
-                except Exception as e:
-                    pass
+                
+                # Feature 4: Explicit DNA Save only (when user asks to remember/save)
+                save_triggers = [
+                    'yaad rakhna', 'yaad rakh', 'remember this', 'save this', 
+                    'note this', 'save kar', 'note kar', 'remember that',
+                    'ye yaad rakhna', 'isko save karo', 'note down', 'yaad rakho'
+                ]
+                if any(trigger in message_lower for trigger in save_triggers):
+                    try:
+                        from ai_assistant.ai.user_dna import UserDNA
+                        UserDNA().extract_facts_from_text(message)
+                    except Exception as e:
+                        pass
             
             # Check for context switch
             is_switch, switch_msg, new_ctx_id = self.handle_context_switch_request(message)
             if is_switch:
-                # Save to training data
                 if self.feedback_system and role == "user":
                     self.feedback_system.record_interaction(message, switch_msg, context={'type': 'context_switch'})
-                return switch_msg
-            
-            # Intercept compound media commands to maintain context before splitting
-            media_compound_patterns = [
-                r'open ([\w\s]+) and play (.+)',
-                r'([\w\s]+) khol aur (.+) baja',
-                r'([\w\s]+) khol aur play (.+)',
-                r'open ([\w\s]+) aur play (.+)',
-            ]
-            for pattern in media_compound_patterns:
-                match = re.search(pattern, message_lower)
-                if match:
-                    app_name = match.group(1).strip()
-                    song = match.group(2).strip()
-                    # Pass the context-rich string to _execute_play_command
-                    cmd_res = self._execute_play_command(message_lower, f"play {song} on {app_name}")
-                    if cmd_res:
-                        return cmd_res
-                        
-            # Chain of Action: Split by separators (and, then, aur, &)
-            # Use regex to split but keep delimiters to reconstruct if needed.
-            # Handles: "open chrome and search google", "youtube khol aur song baja"
-            # NOTE: Removed comma from chain_separators to prevent natural sentences from being split
-            chain_separators = r'\s+(?:and|then|aur|&)\s+'
-            
-            # Simple heuristic: If multiple parts found, process sequentially
-            parts = re.split(chain_separators, message_lower)
-            if len(parts) > 1:
-                results = []
-                for part in parts:
-                    part = part.strip()
-                    if not part: continue
+                return _save_and_return(switch_msg)
+                
+            # Handle Pending Actions (Context memory)
+            if self.active_context_id and self.active_context_id in self.contexts:
+                ctx = self.contexts[self.active_context_id]
+                if ctx.state == ConversationState.WAITING_FOR_INPUT and 'pending_action' in ctx.metadata:
+                    pending = ctx.metadata['pending_action']
+                    ctx.state = ConversationState.ACTIVE
+                    del ctx.metadata['pending_action']
                     
-                    # Try to execute each part as a command
-                    # We recurse to self.process_message but avoid infinite recursion by checking strictly for command execution
-                    # Actually, using _try_execute_command is safer to avoid looping conversationally
-                    
-                    cmd_res = self._try_execute_command(part, part)
-                    if cmd_res:
-                        results.append(cmd_res)
-                    else:
-                        # If a part is not a command. e.g. "open chrome and hello"
-                        # "hello" is not a command. We typically ignore or handle as chat.
-                        # For now, let's treat it as a secondary query if needed, or just skip?
-                        # User wants Action triggers. If "hello" is passed, we might get "Hello!" response.
-                        
-                        # Fallback for chat parts? 
-                        # Only if it looks like a question or greeting?
-                        # Let's try to generate response for non-command parts too.
-                        # But prevent "I can help you with..." generic responses for fragments.
-                        
-                        # Safe fallback:
-                        chat_res = self._generate_contextual_response(part, provider=provider, model=model)
-                        if chat_res:
-                             results.append(chat_res)
-
-                if results:
-                    return " \n".join(results)
-
-            # Process different types of queries
-            # message_lower is already defined above
-
+                    if pending == 'play_music':
+                        return _save_and_return(self._execute_play_command(f"play {message}", f"play {message_lower}"))
+                    elif pending == 'create_document':
+                        # Just a placeholder for other actions
+                        pass
             
-            # TRY TO EXECUTE COMMAND FIRST - This is the main change!
-            command_result = self._try_execute_command(message, message_lower)
-            if command_result:
-                # Save successful command execution to training data
+            # --- UNIFIED INTENT ROUTER (HYBRID TIERED SYSTEM) ---
+            from ai_assistant.ai.intent_router import IntentRouter
+            router = IntentRouter(llm_provider=self)
+            
+            intent_result = router.route(message)
+            
+            if intent_result:
+                intent_name = intent_result.intent_name
+                params = intent_result.parameters
+                query_lower = message.lower()
+                
+                # Execute mapped commands instantly
+                command_result = None
+                
+                if intent_name == "open_app":
+                    command_result = self._execute_open_command(message, query_lower)
+                elif intent_name == "close_app":
+                    command_result = self._execute_close_command(message, query_lower)
+                elif intent_name == "search_web":
+                    command_result = self._execute_search_command(message, query_lower)
+                elif intent_name == "play_media":
+                    command_result = self._execute_play_command(message, query_lower)
+                elif intent_name == "volume_control":
+                    command_result = self._execute_volume_command(message, query_lower)
+                elif intent_name == "system_control":
+                    command_result = self._execute_system_command(message, query_lower)
+                elif intent_name == "battery_status":
+                    command_result = self._execute_battery_command(message, query_lower)
+                elif intent_name == "list_running_apps":
+                    command_result = self._execute_open_apps_command(message, query_lower)
+                elif intent_name == "bluetooth_toggle":
+                    command_result = self._execute_bluetooth_toggle(message, query_lower)
+                elif intent_name == "wifi_toggle":
+                    command_result = self._execute_wifi_toggle(message, query_lower)
+                elif intent_name == "create_document":
+                    command_result = self._execute_create_document(message, query_lower)
+                elif intent_name == "create_folder":
+                    command_result = self._execute_create_folder_command(message, query_lower)
+                elif intent_name == "open_settings":
+                    command_result = self._execute_settings_command(message, query_lower)
+                elif intent_name == "analyze_screen":
+                    command_result = self._execute_vision_command(message, query_lower)
+                elif intent_name == "download_media":
+                    command_result = self._execute_download_command(message, query_lower)
+                
+                if command_result:
+                    if self.feedback_system and role == "user":
+                        self.feedback_system.record_interaction(message, command_result, context={'type': 'command', 'intent': intent_name})
+                    return _save_and_return(command_result)
+                
+                # If it's a command but we don't have a direct executor, route it to TaskPlanner (Universal Action Planner)
+                if intent_name in ["task_automation", "file_operation"]:
+                    try:
+                        from ai_assistant.automation.task_planner import TaskPlanner
+                        planner = TaskPlanner()
+                        # We will execute the complex task via the task planner
+                        actions = planner.create_plan(message, context={})
+                        return _save_and_return(f"Executing {len(actions)} steps...")
+                    except Exception as e:
+                        logger.warning(f"Universal Planner failed: {e}")
+            
+            # --- INFO QUERIES (Direct handlers) ---
+            if any(word in message_lower for word in ['time', 'date', 'day']) and ('what' in message_lower or 'tell' in message_lower):
+                info_result = self._process_info_query(message)
                 if self.feedback_system and role == "user":
-                    self.feedback_system.record_interaction(message, command_result, context={'type': 'command'})
-                return command_result
-            
-            # Math queries (if not a command)
-            # import re removed to prevent UnboundLocalError
+                    self.feedback_system.record_interaction(message, info_result, context={'type': 'info'})
+                return _save_and_return(info_result)
+                
             is_math = any(word in message_lower for word in ['calculate', 'times', 'plus', 'minus', 'divided', 'multiply']) and 'what is' in message_lower
             is_pi = bool(re.search(r'\b(pi|pie)\b', message_lower))
             if is_math or is_pi:
                 math_result = self._process_math_query(message)
-                # Save to training data
                 if self.feedback_system and role == "user":
                     self.feedback_system.record_interaction(message, math_result, context={'type': 'math'})
-                return math_result
+                return _save_and_return(math_result)
             
-            # Information queries (if not a command)
-            if any(word in message_lower for word in ['time', 'date', 'day']) and ('what' in message_lower or 'tell' in message_lower):
-                info_result = self._process_info_query(message)
-                # Save to training data
-                if self.feedback_system and role == "user":
-                    self.feedback_system.record_interaction(message, info_result, context={'type': 'info'})
-                return info_result
-            
-            # If nothing else matched, try as a general command with automation callback
-            if self.automation_callback:
-                # Last resort: check if it's asking to do something
-                action_words = ['open', 'close', 'start', 'stop', 'launch', 'run', 'play', 'search', 'find', 
-                               'create', 'make', 'set', 'change', 'show', 'get', 'check',
-                               'khol', 'band', 'chala', 'baja', 'sun', 'dikha', 'bhejo', 'dhund', 'khoj']
-                if any(re.search(rf'\b{word}\b', message_lower) for word in action_words):
-                    return "¤ I can sense you want me to do something! Could you be more specific? Here are some examples:\n\n📱 'open chrome' - Opens Google Chrome\nŽ 'play music' - Plays music on YouTube\n  'search for python' - Searches Google\n  'create a document' - Opens Word\n\nWhat exactly would you like me to do?"
-            
-            # Default: Generate contextual response with LLM
-            response = self._generate_contextual_response(message, provider, model)
+            # Default: Generate contextual response with LLM (Chat Mode)
+            response = self._generate_contextual_response(message, provider, model, on_token=on_token)
             
             # Save all conversational responses to training data
             if self.feedback_system and role == "user":
@@ -846,8 +888,8 @@ class AdvancedConversationalAI:
                     'context_id': self.active_context_id
                 })
             
-            return response
-            
+            return _save_and_return(response)
+
         except Exception as e:
             import traceback
             error_trace = traceback.format_exc()
@@ -1029,6 +1071,10 @@ class AdvancedConversationalAI:
             # PRIORITY 7: Volume control
             if 'volume' in clean_query or 'sound' in clean_query or 'mute' in clean_query:
                 return self._execute_volume_command(query, clean_query)
+            
+            # PRIORITY 7.5: Media control
+            if any(word in clean_query for word in ['pause', 'resume', 'next track', 'previous track', 'stop music']):
+                return self._execute_media_control(query, clean_query)
             
             # PRIORITY 8: System commands (shutdown, restart, etc.)
             if any(word in first_few_words for word in ['shutdown', 'restart', 'sleep', 'lock']):
@@ -1338,13 +1384,9 @@ class AdvancedConversationalAI:
         song = song + platform_suffix
         
         if not song or len(song) < 2 or song in ['music', 'something', 'anything']:
-            if self.automation_callback:
-                try:
-                    result = self.automation_callback('play_music', 'popular music')
-                    if result and 'error' not in str(result).lower():
-                        return f"🎵 {result}"
-                except Exception as e:
-                    print(f"Automation play error: {e}")
+            if self.active_context_id and self.active_context_id in self.contexts:
+                self.contexts[self.active_context_id].metadata['pending_action'] = 'play_music'
+                self.contexts[self.active_context_id].state = ConversationState.WAITING_FOR_INPUT
             return "🎵 I'd love to play music for you! Please tell me what song or artist you'd like to hear."
         
         if self.automation_callback:
@@ -1429,8 +1471,25 @@ class AdvancedConversationalAI:
                 subprocess.Popen('ms-settings:', shell=True)
                 return "⚠️  Opening Windows Settings"
         except Exception as e:
-            return f" Œ Could not open settings: {str(e)}"
+            return f" ⚠️ Could not open settings: {str(e)}"
     
+    def _execute_media_control(self, query: str, query_lower: str) -> str:
+        """Execute media play/pause commands."""
+        if self.automation_callback:
+            try:
+                result = self.automation_callback('media_pause', None)
+                return f"✅ {result}" if result else "✅ Media toggled"
+            except Exception as e:
+                return f"Error controlling media: {e}"
+        else:
+            try:
+                import ctypes
+                ctypes.windll.user32.keybd_event(0xB3, 0, 0, 0)
+                ctypes.windll.user32.keybd_event(0xB3, 0, 2, 0)
+                return "✅ Media toggled"
+            except Exception as e:
+                return f"Error controlling media: {e}"
+
     def _execute_system_command(self, query: str, query_lower: str) -> str:
         """Execute system commands like shutdown, restart, etc."""
         try:
@@ -1482,6 +1541,21 @@ class AdvancedConversationalAI:
                 return f"❌ Failed to turn {status} Bluetooth."
         except Exception as e:
             return f"❌ Error toggling bluetooth: {e}"
+
+    def _execute_wifi_toggle(self, query: str, query_lower: str) -> str:
+        """Execute wifi toggle."""
+        enable = not ('off' in query_lower or ' of ' in query_lower or 'of wifi' in query_lower or 'band' in query_lower or 'stop' in query_lower)
+        try:
+            from ai_assistant.automation.system_automation import SystemAutomation
+            sys_auto = SystemAutomation()
+            success = sys_auto.toggle_wifi(enable)
+            status = "On" if enable else "Off"
+            if success:
+                return f"✅ WiFi is now {status}"
+            else:
+                return f"⚠️ Failed to turn {status} WiFi."
+        except Exception as e:
+            return f"❌ Error toggling wifi: {e}"
 
     def _get_active_window_title(self) -> str:
         """Get the title of the currently active window."""
@@ -1563,7 +1637,7 @@ class AdvancedConversationalAI:
         
         return f"I can help execute that command. You asked: '{query}'"
     
-    def _generate_contextual_response(self, message: str, provider: str = None, model: str = None) -> str:
+    def _generate_contextual_response(self, message: str, provider: str = None, model: str = None, on_token=None) -> str:
         """Generate a contextual response using LLM or fallback to rule-based."""
         message_lower = message.lower().strip()
         
@@ -1594,146 +1668,146 @@ class AdvancedConversationalAI:
         # FIRST: Try to use the LLM provider for real-time AI responses
         if active_provider:
             try:
-                # Build conversation context for the LLM
-                conversation_context = ""
+                # ====== 1. BUILD CONVERSATION CONTEXT (BUG 1 FIX) ======
+                history_turns = []
                 if self.active_context_id and self.active_context_id in self.contexts:
                     context = self.contexts[self.active_context_id]
-                    # Include recent messages for context
-                    recent_msgs = context.messages[-5:] if context.messages else []
+                    now = datetime.now()
+                    recent_msgs = []
+                    # Exclude the current user message (last message) because it's passed as prompt
+                    msgs_to_check = context.messages[:-1] if len(context.messages) > 1 else []
+                    for msg in reversed(msgs_to_check):
+                        try:
+                            msg_time = datetime.fromisoformat(msg.get('timestamp', ''))
+                            if (now - msg_time).total_seconds() > 1800:  # 30 minutes
+                                break
+                        except (ValueError, TypeError):
+                            pass
+                        recent_msgs.insert(0, msg)
+                    
+                    # Safety cap: max 30 messages in working memory window
+                    recent_msgs = recent_msgs[-30:]
+                    
                     for msg in recent_msgs:
                         role = msg.get('role', 'user')
                         content = msg.get('content', '')
-                        if content:
-                            conversation_context += f"{role.capitalize()}: {content}\n"
+                        mtype = msg.get('metadata', {}).get('type')
+                        if mtype == 'summary':
+                            history_turns.append({"role": "system", "content": content})
+                        elif content:
+                            history_turns.append({"role": role, "content": content})
                 
-                # RAG: Search long-term memory if user is asking about the past
+                # ====== 2. MEMORY RETRIEVAL (Phase 3: Always-on Background RAG) ======
                 memory_context = ""
                 retrieved_ids = []
                 retrieval_source = "none"
                 if self.memory_retrieval:
-                    # Check gate
-                    gated = False
-                    if getattr(self.memory_retrieval, "RUN_AS_BACKGROUND_CONTEXT", False):
-                        gated = True
-                    else:
-                        # 1. LLM-Based Intent Classification
-                        try:
-                            router_prompt = f"""
-Analyze the user message and determine if they are asking to retrieve information from past conversations, past events, or memory.
-Reply with ONLY the word TRUE if they are asking about the past, or FALSE if they are not.
-
-User Message: "{message}"
-"""                     
-                            intent_response = active_provider.chat(router_prompt, stream=False)
-                            if intent_response and "TRUE" in str(intent_response).upper():
-                                gated = True
-                                print(f"🧠 LLM Intent Router: Detected memory request.")
-                        except Exception as e:
-                            logger.warning(f"⚠️ LLM intent classification failed: {e}")
-                            # 2. Fallback to smart regex
-                            gated = self.memory_retrieval.is_memory_query(message)
-
-                    if gated:
-                        try:
-                            # 1. Search recent/raw memory
-                            results = self.memory_retrieval.search_memory(message)
-                            if results:
-                                memory_context = self.memory_retrieval.format_for_llm(results)
-                                retrieved_ids = [r.get('conversation_id') for r in results if r.get('conversation_id') is not None]
-                                retrieval_source = results[0].get('source', 'memory_retrieval')
-                                print(f"🧠 Retrieved {len(results)} memories for context")
-                                
-                            # 2. Search highly-rated historical interactions
-                            if getattr(self, 'historical_rag', None):
-                                hist_results = self.historical_rag.retrieve_similar(message, top_k=3, min_success_score=0.7)
-                                if hist_results:
-                                    hist_context = "\n--- High-Quality Past Interactions ---\n"
-                                    for idx, hr in enumerate(hist_results, 1):
-                                        hist_context += f"Past Interaction {idx}:\nUser: {hr.get('query')}\nAssistant: {hr.get('response')}\n\n"
-                                    
-                                    memory_context += hist_context
-                                    retrieved_ids.extend([hr.get('id') for hr in hist_results])
-                                    if retrieval_source == "none":
-                                        retrieval_source = "historical_rag"
-                                    else:
-                                        retrieval_source = "hybrid"
-                                    print(f"🧠 Retrieved {len(hist_results)} highly-rated historical interactions")
-                                    
-                        except Exception as mem_err:
-                            logger.warning(f"⚠️ Memory retrieval failed: {mem_err}")
+                    try:
+                        results = self.memory_retrieval.search_memory(message, limit=3)
+                        if results:
+                            good_results = [r for r in results if r.get('relevance_score', 0) > 0.0]
+                            if good_results:
+                                memory_context = self.memory_retrieval.format_for_llm(good_results)
+                                retrieved_ids = [r.get('conversation_id') for r in good_results if r.get('conversation_id')]
+                                retrieval_source = "memory_retrieval"
+                                print(f"🧠 Background memory: {len(good_results)} results injected")
+                        
+                        if getattr(self, 'historical_rag', None):
+                            hist_results = self.historical_rag.retrieve_similar(message, top_k=2, min_success_score=0.6)
+                            if hist_results:
+                                hist_context = "\n--- Relevant Past Interactions ---\n"
+                                for idx, hr in enumerate(hist_results, 1):
+                                    hist_context += f"Past {idx}: User asked: {hr.get('query')} -> Assistant replied: {hr.get('response')}\n"
+                                memory_context += hist_context
+                                retrieved_ids.extend([hr.get('id') for hr in hist_results if hr.get('id')])
+                                if retrieval_source == "none":
+                                    retrieval_source = "historical_rag"
+                                else:
+                                    retrieval_source = "hybrid"
+                                print(f"🧠 Historical RAG: {len(hist_results)} interactions injected")
+                    except Exception as mem_err:
+                        logger.debug(f"Memory retrieval error: {mem_err}")
                 
-                # Inject memory context into the prompt if we found relevant memories
-                augmented_message = message
-                
-                # DNA, Personality, and Emotion Injection
+                # ====== 3. DNA & PERSONALITY ======
+                dna_context = ""
+                tone_context = ""
                 try:
                     from ai_assistant.ai.user_dna import UserDNA
                     dna_system = UserDNA()
                     dna = dna_system.get_full_profile()
-                    
                     if dna:
-                        dna_context = "\n\n[SYSTEM INSTRUCTION: Always remember the following facts about the user]\n" + "\n".join([f"- {k}: {v}" for k, v in dna.items()])
-                        augmented_message += dna_context
-                        
-                    # Inject Personality & Emotion
+                        dna_context = "[User Facts]\n" + "\n".join([f"- {k}: {v}" for k, v in dna.items()])
+                    
                     try:
                         from ai_assistant.ai.personality_engine import PersonalityEngine
                         from ai_assistant.ai.emotional_intelligence import EmotionalIntelligence
-                        
                         trust_score = dna_system.get_trait("trust_score") or 50
                         personality_modifier = PersonalityEngine().get_personality_modifier(trust_score)
-                        
                         emotion_profile = EmotionalIntelligence().analyze_sentiment(message)
                         emotion_modifier = EmotionalIntelligence().get_prompt_modifier(emotion_profile)
-                        
                         if personality_modifier or emotion_modifier:
-                            augmented_message += "\n\n[SYSTEM INSTRUCTION: Tone & Personality Guidelines]\n"
-                            if personality_modifier: augmented_message += f"- {personality_modifier}\n"
-                            if emotion_modifier: augmented_message += f"- {emotion_modifier}\n"
+                            tone_lines = []
+                            if personality_modifier: tone_lines.append(f"- {personality_modifier}")
+                            if emotion_modifier: tone_lines.append(f"- {emotion_modifier}")
+                            tone_context = "[Tone Guidelines]\n" + "\n".join(tone_lines)
                     except ImportError:
                         pass
-                except Exception as dna_err:
+                except Exception:
                     pass
 
-                if memory_context:
-                    augmented_message += f"\n\n{memory_context}"
-
-                # Trace: log retrieval context for downstream inspection.
-                # No-op on failure; never blocks the live path.
-                if 'gated' in locals():
-                    if not retrieved_ids:
-                        write_trace(
-                            query=message,
-                            retriever="memory_retrieval",
-                            retrieved_ids=[],
-                            injected_preview="",
-                            source="no_match",
-                            extra={"gated": gated}
-                        )
-                    else:
-                        write_trace(
-                            query=message,
-                            retriever="memory_retrieval",
-                            retrieved_ids=retrieved_ids,
-                            injected_preview=memory_context,
-                            source=retrieval_source,
-                            extra={"gated": gated}
-                        )
+                # ====== 4. BUILD CLEAN MESSAGE LIST (BUG 4 FIX) ======
+                clean_messages = []
                 
-                # Generate response using LLM
+                # 4a. Base system prompt
+                base_sys_prompt = "You are Pulsar, a smart, helpful, and concise AI assistant created by Diwakar. Keep your answers brief and directly address the user."
+                if active_provider.conversation_history and active_provider.conversation_history[0].get("role") == "system":
+                    base_sys_prompt = active_provider.conversation_history[0].get("content", base_sys_prompt)
+                
+                # 4b. Combine all system instructions & background knowledge
+                sys_parts = [base_sys_prompt]
+                if dna_context:
+                    sys_parts.append(dna_context)
+                if tone_context:
+                    sys_parts.append(tone_context)
+                if memory_context:
+                    sys_parts.append(f"[Retrieved Memories]\n{memory_context}")
+                
+                clean_messages.append({"role": "system", "content": "\n\n".join(sys_parts)})
+                
+                # 4c. Clean chat history turns (both user and assistant from working memory)
+                clean_messages.extend(history_turns)
+                
+                # 4d. Current user message
+                clean_messages.append({"role": "user", "content": message})
+                
+                # ====== 5. GENERATE RESPONSE ======
                 print(f"🤖 Generating AI response for: {message[:50]}...")
-                response = active_provider.chat(augmented_message, stream=False)
+                if on_token:
+                    response = ""
+                    for chunk in active_provider.provider.stream_response(clean_messages):
+                        if chunk:
+                            response += chunk
+                            on_token(chunk)
+                else:
+                    response = active_provider.provider.generate_response(clean_messages)
+                
+                # Sync clean history to active_provider (no prompt pollution)
+                active_provider.add_user_message(message)
+                if response and "Error" not in str(response):
+                    active_provider.add_assistant_message(response)
                 
                 logger.debug(f"DEBUG: LLM response type: {type(response)}, length: {len(str(response)) if response else 0}")
                 logger.debug(f"DEBUG: Response content: {str(response)[:100]}")
                 
-                if response and "Error" not in str(response) and len(str(response)) > 5:
+                if response and "Error" not in str(response) and len(str(response)) > 2:
                     print(f"✅ AI response generated successfully")
                     return response
                 else:
-                    print(f"⚠️  LLM returned empty or error response, using fallback")
+                    print(f"⚠️  LLM returned empty or error response, using fallback")
                     print(f"   Response was: {response}")
             except Exception as e:
+                import traceback
+                traceback.print_exc()
                 print(f"⚠️   LLM response generation failed: {e}, using rule-based fallback")
         
         # FALLBACK: Rule-based responses for common queries (when LLM unavailable)
@@ -2070,19 +2144,176 @@ User Message: "{message}"
         except Exception as e:
             logger.error(f"Error loading contexts: {e}")
     
+    def _maybe_summarize_context(self, context: ConversationContext):
+        """Summarize old messages to keep context manageable when message count >= 40."""
+        if not context or len(context.messages) < 40:
+            return
+        
+        # Split: Keep last 15 messages as-is, summarize the rest
+        messages_to_summarize = context.messages[:-15]
+        messages_to_keep = context.messages[-15:]
+        
+        text_to_summarize = ""
+        for msg in messages_to_summarize:
+            role = msg.get('role', 'user')
+            content = msg.get('content', '')
+            if msg.get('metadata', {}).get('type') == 'summary':
+                text_to_summarize += f"[Previous Summary]: {content}\n"
+            else:
+                text_to_summarize += f"{role.capitalize()}: {content}\n"
+        
+        summary_prompt = f"""Summarize the following conversation in 3-5 sentences.
+Focus on: topics discussed, decisions made, user requests, and any important facts mentioned.
+Keep names, numbers, and specific details intact.
+
+Conversation:
+{text_to_summarize}
+
+Summary:"""
+        
+        summary = ""
+        try:
+            if self.llm_provider and hasattr(self.llm_provider, 'provider'):
+                meta_msgs = [{"role": "user", "content": summary_prompt}]
+                summary = self.llm_provider.provider.generate_response(meta_msgs)
+        except Exception as e:
+            logger.warning(f"LLM Summarization failed: {e}")
+            
+        if not summary or "Error" in summary:
+            summary = text_to_summarize[-500:]
+        
+        summary_message = {
+            "role": "system",
+            "content": f"[Previous Conversation Summary]\n{summary.strip()}",
+            "timestamp": datetime.now().isoformat(),
+            "mood": None,
+            "metadata": {"type": "summary", "summarized_count": len(messages_to_summarize)}
+        }
+        
+        context.messages = [summary_message] + messages_to_keep
+        self._save_context(context)
+        print(f"📝 Summarized {len(messages_to_summarize)} messages into working memory summary")
+
+    def _background_extract_facts(self, context: ConversationContext):
+        """Extract personal facts from conversation using LLM (runs on inactivity)."""
+        try:
+            user_messages = [
+                msg['content'] for msg in context.messages 
+                if msg.get('role') == 'user' and msg.get('metadata', {}).get('type') != 'summary'
+            ]
+            
+            if not user_messages or len(user_messages) < 2:
+                return
+            
+            conversation_text = "\n".join(user_messages[-20:])
+            
+            extraction_prompt = f"""Extract personal facts about the user from this conversation.
+Return ONLY a valid JSON object with keys like: user_name, friends, location, workplace, job_title, preferences, favorite_color, favorite_food, likes, dislikes, hobbies, projects.
+Only include facts that the user directly stated. If no facts found, return empty JSON {{}}.
+Do NOT guess or infer.
+
+Conversation:
+{conversation_text}
+
+JSON:"""
+            
+            if self.llm_provider and hasattr(self.llm_provider, 'provider'):
+                meta_msgs = [{"role": "user", "content": extraction_prompt}]
+                result = self.llm_provider.provider.generate_response(meta_msgs)
+                
+                import json as _json
+                import re as _re
+                try:
+                    json_match = _re.search(r'\{.*\}', result, _re.DOTALL)
+                    if json_match:
+                        facts = _json.loads(json_match.group())
+                        from ai_assistant.ai.user_dna import UserDNA
+                        dna = UserDNA()
+                        saved = 0
+                        for key, value in facts.items():
+                            if value and str(value).strip():
+                                dna.update_trait(key, value, confidence=0.8)
+                                saved += 1
+                        if saved > 0:
+                            print(f"  ✅ Extracted {saved} personal facts from conversation")
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.warning(f"Background fact extraction failed: {e}")
+
+    def _background_embed_context(self, context: ConversationContext):
+        """Embed current context summary into Cold Memory vector store."""
+        try:
+            if not getattr(self, 'historical_rag', None):
+                return
+            
+            text_parts = []
+            for msg in context.messages[-30:]:
+                if msg.get('metadata', {}).get('type') == 'summary':
+                    text_parts.append(msg['content'])
+                else:
+                    text_parts.append(f"{msg.get('role', 'user')}: {msg.get('content', '')}")
+            
+            if not text_parts:
+                return
+            
+            full_text = "\n".join(text_parts)
+            self.historical_rag.add_interaction(
+                query=f"Session: {context.topic} ({context.started_at.strftime('%Y-%m-%d %H:%M')})",
+                response=full_text[:2000],
+                context={'session_id': context.id, 'topic': context.topic},
+                success_score=0.7
+            )
+            print(f"  ✅ Cold memory vector updated for session {context.id[:20]}")
+        except Exception as e:
+            logger.debug(f"Cold memory embed failed: {e}")
+
     def _start_proactive_monitoring(self):
-        """Start background thread for proactive suggestions."""
+        """Start background thread for proactive suggestions and inactivity memory sync."""
         def monitor():
+            last_indexed_msg_count = 0
             while self.running:
                 try:
+                    time.sleep(60)  # Check every 60 seconds
+                    
+                    # 1. Proactive suggestions
                     suggestions = self.get_proactive_suggestions()
                     if suggestions:
-                        # Here you would integrate with the main app to show suggestions
                         pass
-                    time.sleep(300)  # Check every 5 minutes
+                    
+                    # 2. Inactivity background sync (Warm & Cold Memory + Fact extraction)
+                    if not self.active_context_id or self.active_context_id not in self.contexts:
+                        continue
+                        
+                    context = self.contexts[self.active_context_id]
+                    idle_time = datetime.now() - context.last_activity
+                    idle_minutes = idle_time.total_seconds() / 60
+                    current_msg_count = len(context.messages)
+                    
+                    if idle_minutes >= 10 and current_msg_count > last_indexed_msg_count:
+                        print(f"💤 Inactivity detected ({int(idle_minutes)} min). Background memory sync...")
+                        last_indexed_msg_count = current_msg_count
+                        
+                        # Warm Memory (FTS index)
+                        if hasattr(self, 'memory_retrieval') and self.memory_retrieval:
+                            try:
+                                self.memory_retrieval.index_conversation(
+                                    context.id, context.topic, context.messages, context.last_activity
+                                )
+                                print(f"  ✅ Warm Memory (FTS) index updated ({current_msg_count} messages)")
+                            except Exception as e:
+                                print(f"  ❌ Warm Memory FTS index failed: {e}")
+                        
+                        # Fact Extraction to User DNA
+                        self._background_extract_facts(context)
+                        
+                        # Rolling Summary if message count is high
+                        self._maybe_summarize_context(context)
+                        
+                        # Cold Memory (Vector Embeddings)
+                        self._background_embed_context(context)
                 except Exception as e:
-                    print(f"Proactive monitoring error: {e}")
-                    time.sleep(60)
+                    logger.debug(f"Proactive monitoring error: {e}")
         
         self.proactive_thread = threading.Thread(target=monitor, daemon=True)
         self.proactive_thread.start()

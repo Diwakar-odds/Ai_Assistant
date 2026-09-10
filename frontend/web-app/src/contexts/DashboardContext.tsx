@@ -39,7 +39,12 @@ export interface SystemLog {
 export interface ConversationSession {
     id: string;
     startTime: string;
+    startTimestamp?: number;
     endTime?: string;
+    endTimestamp?: number;
+    date?: string;
+    day?: string;
+    formattedDate?: string;
     messageCount: number;
     userMessageCount: number;
     aiMessageCount: number;
@@ -48,6 +53,14 @@ export interface ConversationSession {
     preview?: string;
     messages: Message[];
     voiceCommands: VoiceCommand[];
+}
+
+export interface ActiveChain {
+    chain_id: string;
+    command: string;
+    progress: number;
+    status: 'executing' | 'completed' | 'failed' | 'cancelled' | string;
+    app_context?: string;
 }
 
 type ViewType = 'dashboard' | 'apps' | 'chat' | 'voice' | 'settings' | 'ai-learning' | 'database' | 'systems' | 'conversations' | 'integrations' | null;
@@ -84,6 +97,7 @@ interface DashboardContextType {
     conversationHistory: ConversationSession[];
     loadSession?: (sessionId: string) => void;
     deleteSession?: (sessionId: string) => void;
+    clearAllSessions?: () => void;
     startNewSession?: () => void;
     isConnected: boolean;
 
@@ -102,6 +116,9 @@ interface DashboardContextType {
     presenceData: any;
     analyzeCameraFrame: (base64Image: string, prompt?: string) => void;
     checkPresence: (base64Image: string) => void;
+
+    lastGesture: any;
+    checkGesture: (base64Image: string) => void;
 }
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
@@ -150,6 +167,15 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             socket.emit('analyze_presence', { image: base64Image });
         }
     };
+
+    const [lastGesture, setLastGesture] = useState<any>(null);
+
+    const checkGesture = (base64Image: string) => {
+        if (socket && isConnected) {
+            socket.emit('analyze_gesture', { image: base64Image });
+        }
+    };
+
     const setSidebarAutoState = (state: any) => {}; // Placeholder if needed
     const [chatMessages, setChatMessages] = useState<Message[]>([]);
     const [voiceCommands, setVoiceCommands] = useState<VoiceCommand[]>([]);
@@ -453,6 +479,45 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             setPresenceData(data);
         });
 
+        newSocket.on('gesture_detected', (data: any) => {
+            console.log('Gesture detected:', data.gesture);
+            setLastGesture(data);
+            
+            // Map gestures to actions
+            if (data.gesture === 'STOP') {
+                window.speechSynthesis.cancel();
+            } else if (data.gesture === 'MUTE_MIC') {
+                setIsVoiceActive(false);
+            } else if (data.gesture === 'SWIPE_LEFT' || data.gesture === 'SWIPE_RIGHT') {
+                setSelectedView((prev: ViewType) => {
+                    const views: ViewType[] = ['chat', 'systems', 'conversations', 'settings'];
+                    const safePrev = prev === 'dashboard' || prev === null ? 'chat' : prev;
+                    const currentIndex = views.indexOf(safePrev);
+                    if (currentIndex === -1) return 'chat';
+                    
+                    if (data.gesture === 'SWIPE_LEFT') {
+                        return views[(currentIndex + 1) % views.length];
+                    } else {
+                        return views[(currentIndex - 1 + views.length) % views.length];
+                    }
+                });
+            } else if (data.gesture === 'THUMBS_UP') {
+                setPendingDangerAction((prev: any) => {
+                    if (prev && newSocket) {
+                        newSocket.emit('authorize_action', { id: prev.id });
+                    }
+                    return null;
+                });
+            } else if (data.gesture === 'THUMBS_DOWN') {
+                setPendingDangerAction((prev: any) => {
+                    if (prev && newSocket) {
+                        newSocket.emit('cancel_action', { id: prev.id });
+                    }
+                    return null;
+                });
+            }
+        });
+
         // Handle voice command responses with talkback
          
         newSocket.on('voice_transcript', (data: any) => {
@@ -460,6 +525,12 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             if (data.text) {
                 setInterimTranscript(''); // Clear the 'Processing with Whisper...' text
                 addChatMessage(data.text, 'user');
+            }
+        });
+        newSocket.on('voice_audio_chunk', (data: any) => {
+            console.log('🔊 Received audio chunk for playback');
+            if (data.audio_base64) {
+                speak('', voiceLanguage, data.audio_base64);
             }
         });
 
@@ -1338,6 +1409,39 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         }
     };
 
+    const audioQueueRef = useRef<string[]>([]);
+    const isPlayingRef = useRef<boolean>(false);
+
+    const playNextAudio = () => {
+        if (audioQueueRef.current.length === 0) {
+            isPlayingRef.current = false;
+            console.log(' TTS ended, starting cooldown');
+            setTimeout(() => {
+                ttsSpeakingRef.current = false;
+                console.log(' TTS cooldown complete, mic unlocked');
+                if (alwaysActive && !userStoppedVoice) {
+                    toggleVoice(); // Restart listening automatically
+                }
+            }, 1200); // 1.2s cooldown to let room echo dissipate
+            return;
+        }
+
+        isPlayingRef.current = true;
+        ttsSpeakingRef.current = true;
+        const nextBase64 = audioQueueRef.current.shift();
+        
+        const audio = new Audio("data:audio/wav;base64," + nextBase64);
+        audio.onended = playNextAudio;
+        audio.onerror = (e) => {
+            console.error(' Audio playback error:', e);
+            playNextAudio();
+        };
+        audio.play().catch(e => {
+            console.error(' Audio play catch error:', e);
+            playNextAudio();
+        });
+    };
+
     // Text-to-Speech function
     const speak = (text: string, lang: string = 'en-US', audioBase64?: string) => {
         try {
@@ -1351,35 +1455,22 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             }
 
             if (audioBase64) {
-                console.log('🔊 Playing backend generated audio (KittenTTS)');
-                const audio = new Audio("data:audio/wav;base64," + audioBase64);
-
-                audio.onended = () => {
-                    console.log('🎧 TTS ended, starting cooldown');
-                    setTimeout(() => {
-                        ttsSpeakingRef.current = false;
-                        console.log('🔊 TTS cooldown complete, mic unlocked');
-                        if (alwaysActive && !userStoppedVoice) {
-                            toggleVoice(); // Restart listening automatically
-                        }
-                    }, 1200); // 1.2s cooldown to let room echo dissipate
-                };
-
-                audio.onerror = (e) => {
-                    console.error('❌ Audio playback error:', e);
-                    ttsSpeakingRef.current = false;
-                };
-
-                audio.play();
+                audioQueueRef.current.push(audioBase64);
+                if (!isPlayingRef.current) {
+                    playNextAudio();
+                }
                 return;
             }
 
-            // No audio to play — reset the TTS flag immediately since nothing will trigger onended
-            console.warn('⚠️ No audioBase64 provided to speak(). Browser TTS fallback disabled.');
-            ttsSpeakingRef.current = false;
+            // No audio to play
+            console.warn(' No audioBase64 provided to speak(). Browser TTS fallback disabled.');
+            if (audioQueueRef.current.length === 0 && !isPlayingRef.current) {
+                ttsSpeakingRef.current = false;
+            }
         } catch (error) {
-            console.error('❌ TTS error:', error);
+            console.error(' TTS error:', error);
             ttsSpeakingRef.current = false;
+            isPlayingRef.current = false;
         }
     };
 
@@ -1587,34 +1678,155 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         }
     };
 
+    // Format duration from start timestamp to end timestamp accurately
+    const formatSessionDuration = (startTimestamp: number, endTimestamp: number): string => {
+        const diff = Math.max(0, endTimestamp - startTimestamp);
+        const hours = Math.floor(diff / 3600000);
+        const minutes = Math.floor((diff % 3600000) / 60000);
+        const seconds = Math.floor((diff % 60000) / 1000);
+        if (hours > 0) {
+            return `${hours}h ${minutes}m ${seconds}s`;
+        }
+        return `${minutes}m ${seconds}s`;
+    };
+
+    // Extract a meaningful user preview instead of hardcoded bot greeting
+    const extractMeaningfulPreview = (msgs: Message[], cmds: VoiceCommand[]): string => {
+        // Priority 1: First user message
+        const firstUserMsg = msgs.find(m => m.type === 'user' && m.text && m.text.trim().length > 0);
+        if (firstUserMsg) return firstUserMsg.text.trim();
+
+        // Priority 2: First voice command
+        if (cmds && cmds.length > 0 && cmds[0].command) {
+            return cmds[0].command.trim();
+        }
+
+        // Priority 3: First meaningful AI message (skip greeting)
+        const meaningfulAi = msgs.find(m => m.type === 'ai' && m.text &&
+            !m.text.toLowerCase().includes('at your service') &&
+            !m.text.toLowerCase().includes('all systems online') &&
+            !m.text.toLowerCase().includes('ready for a new session')
+        );
+        if (meaningfulAi) return meaningfulAi.text.trim();
+
+        // Fallback
+        if (msgs.length > 0 && msgs[0].text) return msgs[0].text.trim();
+        return 'Interactive Session';
+    };
+
+    // Normalize, backfill date/day/preview, recalculate duration, and sort newest first
+    const normalizeAndSortSessions = (rawSessions: any[]): ConversationSession[] => {
+        if (!Array.isArray(rawSessions)) return [];
+        return rawSessions.map(session => {
+            let startTimestamp = session.startTimestamp;
+            if (!startTimestamp && session.id && session.id.startsWith('session_')) {
+                const parsed = parseInt(session.id.replace('session_', ''), 10);
+                if (!isNaN(parsed) && parsed > 1000000000000) {
+                    startTimestamp = parsed;
+                }
+            }
+            if (!startTimestamp) {
+                startTimestamp = Date.now();
+            }
+
+            const startDate = new Date(startTimestamp);
+            const day = session.day || startDate.toLocaleDateString(undefined, { weekday: 'long' });
+            const date = session.date || startDate.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+            const formattedDate = session.formattedDate || `${day}, ${date}`;
+
+            // Clean preview if it was the generic bot greeting
+            let preview = session.preview;
+            if (!preview || preview.includes('At your service, Sir') || preview.includes('Ready for a new session')) {
+                preview = extractMeaningfulPreview(session.messages || [], session.voiceCommands || []);
+            }
+
+            // Recalculate duration if we have end timestamp or valid start timestamp
+            let duration = session.duration;
+            let endTimestamp = session.endTimestamp;
+            if (session.endTimestamp && startTimestamp) {
+                duration = formatSessionDuration(startTimestamp, session.endTimestamp);
+            } else if (!duration || duration === 'Active' || duration === '0m 0s') {
+                if (session.endTime && startTimestamp) {
+                    try {
+                        const parsedEnd = new Date(`${startDate.toDateString()} ${session.endTime}`);
+                        if (!isNaN(parsedEnd.getTime()) && parsedEnd.getTime() >= startTimestamp) {
+                            endTimestamp = parsedEnd.getTime();
+                            duration = formatSessionDuration(startTimestamp, endTimestamp);
+                        }
+                    } catch (_) {}
+                }
+            }
+
+            return {
+                ...session,
+                startTimestamp,
+                endTimestamp: endTimestamp || session.endTimestamp,
+                day,
+                date,
+                formattedDate,
+                preview: preview || 'Interactive Session',
+                duration: duration || '1m 0s'
+            };
+        }).sort((a, b) => (b.startTimestamp || 0) - (a.startTimestamp || 0));
+    };
+
     const deleteSession = (sessionId: string) => {
         setConversationHistory(prev => prev.filter(s => s.id !== sessionId));
 
-        // Also remove from localStorage
         const stored = localStorage.getItem('conversationHistory');
         if (stored) {
-            const history = JSON.parse(stored);
-            const filtered = history.filter((s: ConversationSession) => s.id !== sessionId);
-            localStorage.setItem('conversationHistory', JSON.stringify(filtered));
+            try {
+                const history = JSON.parse(stored);
+                const filtered = history.filter((s: ConversationSession) => s.id !== sessionId);
+                localStorage.setItem('conversationHistory', JSON.stringify(filtered));
+            } catch (e) {
+                console.error('Failed to delete session from storage:', e);
+            }
         }
+    };
+
+    const clearAllSessions = () => {
+        setConversationHistory([]);
+        localStorage.removeItem('conversationHistory');
     };
 
     // Internal save function that can work with either passed state or latest state
     const saveInternal = (session: ConversationSession | null, msgs: Message[], cmds: VoiceCommand[]) => {
         if (!session) return;
-
-        // Don't save empty sessions
         if (msgs.length === 0 && cmds.length === 0) return;
 
         const endTime = new Date();
-        const duration = calculateDuration(sessionStartTimeRef.current, endTime);
-        const preview = msgs.length > 0 ? msgs[0].text : cmds.length > 0 ? cmds[0].command : '';
+        const endTimestamp = endTime.getTime();
+
+        let startTimestamp = session.startTimestamp;
+        if (!startTimestamp && session.id && session.id.startsWith('session_')) {
+            const parsed = parseInt(session.id.replace('session_', ''), 10);
+            if (!isNaN(parsed) && parsed > 1000000000000) {
+                startTimestamp = parsed;
+            }
+        }
+        if (!startTimestamp) {
+            startTimestamp = sessionStartTimeRef.current ? sessionStartTimeRef.current.getTime() : (endTimestamp - 60000);
+        }
+
+        const startDate = new Date(startTimestamp);
+        const day = session.day || startDate.toLocaleDateString(undefined, { weekday: 'long' });
+        const date = session.date || startDate.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+        const formattedDate = `${day}, ${date}`;
+        const duration = formatSessionDuration(startTimestamp, endTimestamp);
+        const preview = extractMeaningfulPreview(msgs, cmds);
 
         const sessionToSave: ConversationSession = {
             ...session,
-            endTime: endTime.toLocaleTimeString(),
+            startTimestamp,
+            endTimestamp,
+            startTime: session.startTime || startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            endTime: endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            date,
+            day,
+            formattedDate,
             duration,
-            preview: preview.substring(0, 100),
+            preview: preview.substring(0, 150),
             messages: [...msgs],
             voiceCommands: [...cmds],
             messageCount: msgs.length + cmds.length,
@@ -1624,48 +1836,41 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         };
 
         setConversationHistory(prev => {
-            // Check if this session ID already exists in history to update it instead of adding duplicate
-            const exists = prev.some(s => s.id === session.id);
-            let updated;
-
-            if (exists) {
-                updated = prev.map(s => s.id === session.id ? sessionToSave : s);
-            } else {
-                updated = [sessionToSave, ...prev];
-            }
-
-            // Save to localStorage
-            localStorage.setItem('conversationHistory', JSON.stringify(updated.slice(0, 50))); // Keep last 50
+            const filtered = prev.filter(s => s.id !== session.id);
+            const updated = [sessionToSave, ...filtered].sort((a, b) => (b.startTimestamp || 0) - (a.startTimestamp || 0));
+            localStorage.setItem('conversationHistory', JSON.stringify(updated.slice(0, 50)));
             return updated;
         });
     };
 
     const saveCurrentSessionToHistory = () => {
-        // Use refs if called from cleanup, otherwise use state (though refs are always safe here)
         saveInternal(currentSessionRef.current, chatMessagesRef.current, voiceCommandsRef.current);
     };
 
     const calculateDuration = (start: Date, end: Date): string => {
-        const diff = end.getTime() - start.getTime();
-        const minutes = Math.floor(diff / 60000);
-        const seconds = Math.floor((diff % 60000) / 1000);
-        return `${minutes}m ${seconds}s`;
+        return formatSessionDuration(start.getTime(), end.getTime());
     };
 
     const startNewSession = () => {
-        // Save status of current session before resetting
         if (currentSession && (chatMessages.length > 0 || voiceCommands.length > 0)) {
             saveCurrentSessionToHistory();
         }
 
-        // Create new session
-        const sessionId = `session_${Date.now()}`;
-        const startTime = new Date();
-        sessionStartTimeRef.current = startTime;
+        const now = new Date();
+        const startTimestamp = now.getTime();
+        const sessionId = `session_${startTimestamp}`;
+        sessionStartTimeRef.current = now;
 
-        const newSession = {
+        const day = now.toLocaleDateString(undefined, { weekday: 'long' });
+        const date = now.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+
+        const newSession: ConversationSession = {
             id: sessionId,
-            startTime: startTime.toLocaleTimeString(),
+            startTimestamp,
+            startTime: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            date,
+            day,
+            formattedDate: `${day}, ${date}`,
             messageCount: 0,
             userMessageCount: 0,
             aiMessageCount: 0,
@@ -1674,17 +1879,13 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             voiceCommands: [],
         };
 
-        // Reset state
         setChatMessages([]);
         setVoiceCommands([]);
         setCurrentSession(newSession);
-
-        // Update refs
         chatMessagesRef.current = [];
         voiceCommandsRef.current = [];
         currentSessionRef.current = newSession;
 
-        // Play greeting for new session
         const greeting = "Ready for a new session, Sir.";
         addChatMessage(greeting, 'ai');
         speak(greeting, 'en-US');
@@ -1692,13 +1893,21 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
     // Initialize current session on mount
     useEffect(() => {
-        const sessionId = `session_${Date.now()}`;
-        const startTime = new Date();
-        sessionStartTimeRef.current = startTime;
+        const now = new Date();
+        const startTimestamp = now.getTime();
+        const sessionId = `session_${startTimestamp}`;
+        sessionStartTimeRef.current = now;
 
-        const newSession = {
+        const day = now.toLocaleDateString(undefined, { weekday: 'long' });
+        const date = now.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+
+        const newSession: ConversationSession = {
             id: sessionId,
-            startTime: startTime.toLocaleTimeString(),
+            startTimestamp,
+            startTime: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            date,
+            day,
+            formattedDate: `${day}, ${date}`,
             messageCount: 0,
             userMessageCount: 0,
             aiMessageCount: 0,
@@ -1708,53 +1917,60 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         };
 
         setCurrentSession(newSession);
-        // Initialize ref immediately for cleanup safety
         currentSessionRef.current = newSession;
 
-        // Load history from localStorage
+        // Load history from localStorage with migration/normalization
         const stored = localStorage.getItem('conversationHistory');
         if (stored) {
             try {
-                setConversationHistory(JSON.parse(stored));
+                const parsed = JSON.parse(stored);
+                const normalized = normalizeAndSortSessions(parsed);
+                setConversationHistory(normalized);
+                localStorage.setItem('conversationHistory', JSON.stringify(normalized));
             } catch (e) {
                 console.error('Failed to load conversation history:', e);
             }
         }
 
         // JARVIS PROTOCOL: Initial Greeting
-        // Delay slightly to ensure UI is ready
         if (!hasGreetedRef.current) {
             hasGreetedRef.current = true;
             setTimeout(() => {
                 const greeting = "At your service, Sir. All systems online.";
                 addChatMessage(greeting, 'ai');
-                // speak(greeting, 'en-US'); // Removed to prevent robotic fallback voice
             }, 1500);
         }
 
         // Save current session before unload
         return () => {
-            // USE REFS here to get the LATEST data at unmount time
             const session = currentSessionRef.current;
             const msgs = chatMessagesRef.current;
             const cmds = voiceCommandsRef.current;
 
-            console.log('≡ƒÆ╛ Auto-saving session on unmount:', {
-                id: session?.id,
-                msgCount: msgs.length
-            });
-
             if (session && (msgs.length > 0 || cmds.length > 0)) {
-                // Determine duration, preview etc.
                 const endTime = new Date();
-                const duration = `${Math.floor((endTime.getTime() - startTime.getTime()) / 60000)}m ${Math.floor(((endTime.getTime() - startTime.getTime()) % 60000) / 1000)}s`;
-                const preview = msgs.length > 0 ? msgs[0].text : cmds.length > 0 ? cmds[0].command : '';
+                const endTimestamp = endTime.getTime();
+                const startTimestamp = session.startTimestamp || (
+                    session.id.startsWith('session_') ? parseInt(session.id.replace('session_', ''), 10) : (endTimestamp - 60000)
+                );
+                const duration = formatSessionDuration(startTimestamp, endTimestamp);
+                const preview = extractMeaningfulPreview(msgs, cmds);
+
+                const startDate = new Date(startTimestamp);
+                const day = session.day || startDate.toLocaleDateString(undefined, { weekday: 'long' });
+                const date = session.date || startDate.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
                 const sessionToSave: ConversationSession = {
                     ...session,
-                    endTime: endTime.toLocaleTimeString(),
+                    startTimestamp,
+                    endTimestamp,
+                    startTime: session.startTime || startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                    endTime: endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                    date,
+                    day,
+                    formattedDate: `${day}, ${date}`,
                     duration,
-                    preview: preview.substring(0, 100),
+                    preview: preview.substring(0, 150),
                     messages: [...msgs],
                     voiceCommands: [...cmds],
                     messageCount: msgs.length + cmds.length,
@@ -1763,15 +1979,12 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     voiceCount: cmds.length,
                 };
 
-                // Directly update localStorage since state updates won't trigger re-render on unmount
                 const storedHistory = localStorage.getItem('conversationHistory');
                 let history = storedHistory ? JSON.parse(storedHistory) : [];
-
-                // Add to history
-                history = [sessionToSave, ...history].slice(0, 50);
+                const filtered = history.filter((s: any) => s.id !== session.id);
+                history = [sessionToSave, ...filtered].sort((a: any, b: any) => (b.startTimestamp || 0) - (a.startTimestamp || 0)).slice(0, 50);
                 localStorage.setItem('conversationHistory', JSON.stringify(history));
-
-                console.log('Γ£à Session saved to localStorage');
+                console.log('Session saved to localStorage');
             }
         };
     }, []);
@@ -1824,6 +2037,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         conversationHistory,
         loadSession,
         deleteSession,
+        clearAllSessions,
         startNewSession,
         
         // Arc Reactor HUD
@@ -1856,7 +2070,9 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         lastVisionAnalysis,
         presenceData,
         analyzeCameraFrame,
-        checkPresence
+        checkPresence,
+        lastGesture,
+        checkGesture
     };
 
     return <DashboardContext.Provider value={value}>{children}</DashboardContext.Provider>;

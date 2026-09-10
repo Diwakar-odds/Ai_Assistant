@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 """
 Model-Agnostic Meta-Learning (MAML)
 Quick adaptation to new tasks with few examples
@@ -87,7 +88,7 @@ class MAMLLearner:
                  meta_lr: float = 0.001,
                  inner_lr: float = 0.01,
                  num_inner_steps: int = 5,
-                 db_path: str = "data/meta_learning.db"):
+                 db_path: str = get_db_path_str("meta_learning")):
         
         self.input_dim = input_dim
         self.output_dim = output_dim
@@ -96,7 +97,7 @@ class MAMLLearner:
         self.num_inner_steps = num_inner_steps
         self.db_path = db_path
         
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         self._init_database()
         
         if TORCH_AVAILABLE:

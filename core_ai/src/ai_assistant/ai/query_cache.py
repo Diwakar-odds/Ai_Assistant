@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 # Setup centralized logging
 from utils.logging_config import get_logger
 logger = get_logger(__name__, log_category="app")
@@ -38,14 +39,14 @@ class QuerySimilarityCache:
     Smart query caching using TF-IDF similarity
     """
     
-    def __init__(self, db_path: str = "data/caches/query_cache.db", 
+    def __init__(self, db_path: str = None, 
                  similarity_threshold: float = 0.85,
                  cache_ttl_hours: int = 24):
-        self.db_path = db_path
+        self.db_path = db_path or get_db_path_str("query_cache")
         self.similarity_threshold = similarity_threshold
         self.cache_ttl = timedelta(hours=cache_ttl_hours)
         
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         
         if SKLEARN_AVAILABLE:
             self.vectorizer = TfidfVectorizer(

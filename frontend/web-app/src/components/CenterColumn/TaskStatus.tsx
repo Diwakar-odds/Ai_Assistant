@@ -101,7 +101,7 @@ const TaskStatus = () => {
       </div>
 
       <div className="flex flex-row overflow-x-auto max-w-[200px] hide-scrollbar pb-1">
-        {brainStatus.active_chains.map(chain => (
+        {brainStatus.active_chains.map((chain: ActiveChain) => (
           <SingleChainStatus key={chain.chain_id} chain={chain} />
         ))}
       </div>

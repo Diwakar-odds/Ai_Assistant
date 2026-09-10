@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 # Setup centralized logging
 from utils.logging_config import get_logger
 logger = get_logger(__name__, log_category="app")
@@ -38,14 +39,14 @@ class ConversationClusterer:
     Clusters conversations by topics
     """
     
-    def __init__(self, db_path: str = "data/analytics/conversation_clustering.db",
+    def __init__(self, db_path: str = None,
                  n_clusters: int = 10,
                  n_topics: int = 10):
-        self.db_path = db_path
+        self.db_path = db_path or get_db_path_str("conversation_clustering")
         self.n_clusters = n_clusters
         self.n_topics = n_topics
         
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         
         if SKLEARN_AVAILABLE:
             self.vectorizer = TfidfVectorizer(

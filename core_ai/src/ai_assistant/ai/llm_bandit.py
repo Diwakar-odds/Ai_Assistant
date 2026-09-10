@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 # Setup centralized logging
 from utils.logging_config import get_logger
 logger = get_logger(__name__, log_category="app")
@@ -35,12 +36,12 @@ class LLMBandit:
     Multi-armed bandit for optimal LLM selection
     """
     
-    def __init__(self, db_path: str = "data/llm_bandit.db",
+    def __init__(self, db_path: str = None,
                  exploration_rate: float = 0.1):
-        self.db_path = db_path
+        self.db_path = db_path or get_db_path_str("llm_bandit")
         self.exploration_rate = exploration_rate
         
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         
         # Available LLMs with costs (per 1k tokens)
         self.llms = {

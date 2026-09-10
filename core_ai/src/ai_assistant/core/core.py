@@ -286,13 +286,10 @@ def mute_volume() -> str:
     """Mutes system volume."""
     print("--- 'Hands' (mute_volume) activated ---")
     try:
-        devices = AudioUtilities.GetSpeakers()
-        interface = devices.Activate(
-            IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-        volume = cast(interface, POINTER(IAudioEndpointVolume))
-        
-        volume.SetMute(1, None)
-        return "🔇 Volume muted"
+        import ctypes
+        ctypes.windll.user32.keybd_event(0xAD, 0, 0, 0)
+        ctypes.windll.user32.keybd_event(0xAD, 0, 2, 0)
+        return "✅ Volume muted"
     except Exception as e:
         return f"Error muting volume: {e}"
 
@@ -301,12 +298,9 @@ def unmute_volume() -> str:
     """Unmutes system volume."""
     print("--- 'Hands' (unmute_volume) activated ---")
     try:
-        devices = AudioUtilities.GetSpeakers()
-        interface = devices.Activate(
-            IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-        volume = cast(interface, POINTER(IAudioEndpointVolume))
-        
-        volume.SetMute(0, None)
+        import ctypes
+        ctypes.windll.user32.keybd_event(0xAD, 0, 0, 0)
+        ctypes.windll.user32.keybd_event(0xAD, 0, 2, 0)
         return "🔊 Volume unmuted"
     except Exception as e:
         return f"Error unmuting volume: {e}"

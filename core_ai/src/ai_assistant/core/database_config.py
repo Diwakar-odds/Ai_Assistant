@@ -1,5 +1,5 @@
 # Setup centralized logging
-from utils.logging_config import get_logger
+from ai_assistant.utils.logging_config import get_logger
 logger = get_logger(__name__, log_category="app")
 
 """
@@ -10,24 +10,83 @@ All database files are stored in the data/ directory.
 """
 
 import os
+import sys
 from pathlib import Path
 
-# Get the project root directory
-PROJECT_ROOT = Path(__file__).parent.parent
-DATA_DIR = PROJECT_ROOT / "data"
+# Smart Data Root Detection
+def get_data_root() -> Path:
+    if getattr(sys, 'frozen', False):
+        # PyInstaller/packaged app -> user's AppData
+        # Fallback to local APPDATA if not on Windows, though this is a Windows app
+        appdata = os.environ.get('LOCALAPPDATA', os.path.expanduser('~/.pulsar_ai'))
+        data_root = Path(appdata) / 'PulsarAI' / 'data'
+    else:
+        # Development -> project folder (4 levels up from this file)
+        # __file__ is core_ai/src/ai_assistant/core/database_config.py
+        data_root = Path(__file__).resolve().parents[4] / "data"
+    
+    return data_root
 
-# Ensure data directory exists
-DATA_DIR.mkdir(exist_ok=True)
+DATA_DIR = get_data_root()
+PROJECT_ROOT = DATA_DIR.parent
+
+# Ensure essential data subdirectories exist
+(DATA_DIR / "core").mkdir(parents=True, exist_ok=True)
+(DATA_DIR / "analytics").mkdir(parents=True, exist_ok=True)
+(DATA_DIR / "automation").mkdir(parents=True, exist_ok=True)
+(DATA_DIR / "caches").mkdir(parents=True, exist_ok=True)
 
 # Database file paths
 DATABASES = {
-    'app_usage': DATA_DIR / 'app_usage.db',
-    'chat_history': DATA_DIR / 'chat_history.db',
-    'conversation_ai': DATA_DIR / 'data/core/conversation_ai.db',
-    'enhanced_learning': DATA_DIR / 'enhanced_learning.db',
-    'language_data': DATA_DIR / 'data/core/language_data.db',
-    'memory': DATA_DIR / 'memory.db',
-    'personal_knowledge': DATA_DIR / 'personal_knowledge.db',
+    'app_usage': DATA_DIR / 'analytics' / 'app_usage.db',
+    'chat_history': DATA_DIR / 'core' / 'chat_history.db',
+    'conversation_ai': DATA_DIR / 'core' / 'conversation_ai.db',
+    'enhanced_learning': DATA_DIR / 'analytics' / 'enhanced_learning.db',
+    'language_data': DATA_DIR / 'core' / 'language_data.db',
+    'memory': DATA_DIR / 'core' / 'memory.db',
+    'personal_knowledge': DATA_DIR / 'core' / 'personal_knowledge.db',
+    'commitments': DATA_DIR / 'automation' / 'commitments.db',
+    'historical_rag': DATA_DIR / 'core' / 'historical_rag.db',
+    'intent_classifier': DATA_DIR / 'core' / 'intent_classifier.db',
+    'advanced_integration': DATA_DIR / 'automation' / 'advanced_integration.db',
+    'active_learning': DATA_DIR / 'analytics' / 'active_learning.db',
+    'adaptive_voice': DATA_DIR / 'core' / 'adaptive_voice.db',
+    'behavior_clustering': DATA_DIR / 'analytics' / 'behavior_clustering.db',
+    'conversation_clustering': DATA_DIR / 'analytics' / 'conversation_clustering.db',
+    'feedback_learning': DATA_DIR / 'analytics' / 'feedback_learning.db',
+    'anomaly_detection': DATA_DIR / 'analytics' / 'anomaly_detection.db',
+    'automation_engine': DATA_DIR / 'automation' / 'automation_engine.db',
+    'command_sequences': DATA_DIR / 'automation' / 'command_sequences.db',
+    'command_success': DATA_DIR / 'automation' / 'command_success.db',
+    'smart_commands': DATA_DIR / 'automation' / 'smart_commands.db',
+    'task_scheduler': DATA_DIR / 'automation' / 'task_scheduler.db',
+    'query_cache': DATA_DIR / 'caches' / 'query_cache.db',
+    'causal_inference': DATA_DIR / 'analytics' / 'causal_inference.db',
+    'context_aware_responses': DATA_DIR / 'context' / 'context_aware_responses.db',
+    'contrastive_learning': DATA_DIR / 'models' / 'contrastive_learning.db',
+    'domain_embeddings': DATA_DIR / 'models' / 'domain_embeddings.db',
+    'explainability': DATA_DIR / 'analytics' / 'explainability.db',
+    'federated_learning': DATA_DIR / 'models' / 'federated_learning.db',
+    'gnn': DATA_DIR / 'models' / 'gnn.db',
+    'knowledge_graph': DATA_DIR / 'core' / 'knowledge_graph.db',
+    'llm_bandit': DATA_DIR / 'models' / 'llm_bandit.db',
+    'meta_learning': DATA_DIR / 'models' / 'meta_learning.db',
+    'model_compression': DATA_DIR / 'models' / 'model_compression.db',
+    'multimodal_learning': DATA_DIR / 'models' / 'multimodal_learning.db',
+    'ner': DATA_DIR / 'models' / 'ner.db',
+    'prompt_optimizer': DATA_DIR / 'models' / 'prompt_optimizer.db',
+    'rl_ppo': DATA_DIR / 'models' / 'rl_ppo.db',
+    'self_supervised': DATA_DIR / 'models' / 'self_supervised.db',
+    'workflow_recommender': DATA_DIR / 'automation' / 'workflow_recommender.db',
+    'workflow_scheduler': DATA_DIR / 'automation' / 'workflow_scheduler.db',
+    'semantic_history': DATA_DIR / 'core' / 'semantic_history.db',
+    'system_hooks': DATA_DIR / 'automation' / 'system_hooks.db',
+    'test_encrypted': DATA_DIR / 'caches' / 'test_encrypted.db',
+    'automation_analytics': DATA_DIR / 'user_data' / 'automation_analytics.db',
+    'automation_rules': DATA_DIR / 'user_data' / 'automation_rules.db',
+    'automation_security': DATA_DIR / 'user_data' / 'automation_security.db',
+    'context_automation': DATA_DIR / 'user_data' / 'context_automation.db',
+    'security_audit': DATA_DIR / 'user_data' / 'security_audit.db'
 }
 
 def get_db_path(db_name: str) -> Path:

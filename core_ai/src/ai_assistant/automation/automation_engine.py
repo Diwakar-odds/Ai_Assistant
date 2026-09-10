@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 # Setup centralized logging
 from utils.logging_config import get_logger
 logger = get_logger(__name__, log_category="app")
@@ -167,9 +168,9 @@ class WorkflowExecution:
 class SmartAutomationEngine:
     """Advanced automation and workflow management system."""
     
-    def __init__(self, db_path: str = "data/automation/automation_engine.db"):
+    def __init__(self, db_path: str = None):
         """Initialize the automation engine."""
-        self.db_path = db_path
+        self.db_path = db_path or get_db_path_str("automation_engine")
         self.workflows: Dict[str, WorkflowDefinition] = {}
         self.executions: Dict[str, WorkflowExecution] = {}
         self.running_workflows: Dict[str, threading.Thread] = {}
@@ -1183,8 +1184,8 @@ class PlatformAdapter:
 class SystemHookManager:
     """Manages system-wide hooks and events"""
     
-    def __init__(self, db_path: str = "system_hooks.db"):
-        self.db_path = db_path
+    def __init__(self, db_path: str = None):
+        self.db_path = db_path or get_db_path_str("system_hooks")
         self.adapter = PlatformAdapter()
         self.hooks = {}
         self.event_handlers = {}
@@ -1657,8 +1658,8 @@ class WindowsRegistryManager:
 class AdvancedIntegrationManager:
     """Main manager for advanced system integration"""
     
-    def __init__(self, db_path: str = "advanced_integration.db"):
-        self.db_path = db_path
+    def __init__(self, db_path: str = None):
+        self.db_path = db_path or get_db_path_str("advanced_integration")
         self.platform_adapter = PlatformAdapter()
         self.hook_manager = SystemHookManager(f"{db_path}_hooks.db")
         self.hardware_monitor = HardwareMonitor()

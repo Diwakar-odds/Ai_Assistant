@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 # Setup centralized logging
 from utils.logging_config import get_logger
 logger = get_logger(__name__, log_category="app")
@@ -36,12 +37,12 @@ class ActiveLearner:
     Active learning for sample-efficient model training
     """
     
-    def __init__(self, db_path: str = "data/active_learning.db",
+    def __init__(self, db_path: str = None,
                  uncertainty_threshold: float = 0.3):
-        self.db_path = db_path
+        self.db_path = db_path or get_db_path_str("active_learning")
         self.uncertainty_threshold = uncertainty_threshold
         
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         
         if SKLEARN_AVAILABLE:
             # Committee of diverse models

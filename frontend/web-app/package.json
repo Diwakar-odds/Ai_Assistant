@@ -16,6 +16,7 @@
     "copy:sw": "cp public/service-worker.js dist/service-worker.js && cp public/manifest.json dist/manifest.json"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "^1.0.1",
     "@supabase/supabase-js": "^2.57.4",
     "@tauri-apps/api": "^2.11.1",
     "driver.js": "^1.6.0",

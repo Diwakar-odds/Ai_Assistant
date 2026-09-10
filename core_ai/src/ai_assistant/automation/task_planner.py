@@ -317,20 +317,36 @@ If failed to "Type into search" because "Search bar not active", fix might be:
         prompt = self._create_planning_prompt(command, context)
         
         # Get response from LLM
-        try:
-            # Construct message for generate_response
-            messages = [{"role": "user", "content": prompt}]
-            response = self.llm.generate_response(messages)
-            logger.debug(f"LLM Response: {response}")
-            
-            # Parse response into actions
-            actions = self._parse_llm_response(response, command)
-            return actions
-            
-        except Exception as e:
-            logger.error(f"Error generating plan: {e}")
-            # Fallback to simple planning
-            return self._fallback_planning(command)
+        max_retries = 3
+        last_error = None
+        
+        for attempt in range(max_retries):
+            try:
+                # Construct message for generate_response
+                messages = [{"role": "user", "content": prompt}]
+                response = self.llm.generate_response(
+                    messages, 
+                    temperature=0.1, 
+                    response_format={"type": "json_object"}
+                )
+                logger.debug(f"LLM Response (Attempt {attempt+1}): {response}")
+                
+                # Parse response into actions
+                actions = self._parse_llm_response(response, command)
+                return actions
+                
+            except ValueError as e:
+                logger.warning(f"Plan generation failed on attempt {attempt+1}: {e}")
+                last_error = e
+                # Amend the prompt to ask the model to fix its JSON
+                prompt += f"\n\nERROR IN PREVIOUS OUTPUT: You output invalid JSON. Please fix it and try again. Error: {e}"
+            except Exception as e:
+                logger.error(f"Error generating plan: {e}")
+                last_error = e
+                break
+
+        logger.error(f"Failed to generate valid plan after {max_retries} attempts: {last_error}")
+        return self._fallback_planning(command)
     
     def _create_planning_prompt(self, command: str, context: Optional[Dict[str, Any]]) -> str:
         """Create prompt for LLM to generate task plan"""
@@ -459,7 +475,7 @@ Command: "Open youtube and clear my one week history"
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse JSON: {e}")
             logger.debug(f"JSON string: {json_str}")
-            return self._fallback_planning(original_command)
+            raise ValueError(f"Invalid JSON: {e}")
     
     def _extract_json(self, text: str) -> str:
         """Extract JSON from LLM response (handles markdown code blocks)"""

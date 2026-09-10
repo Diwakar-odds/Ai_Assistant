@@ -45,6 +45,15 @@ class AppDiscovery:
         
         # Load cache first for fast startup
         self.load_cache()
+        
+        # Hardcode common UWP aliases
+        self.apps_database['settings'] = 'ms-settings:'
+        self.apps_database['windows settings'] = 'ms-settings:'
+        self.apps_database['microsoft edge'] = 'microsoft-edge:'
+        self.apps_database['calculator'] = 'calculator:'
+        self.apps_database['clock'] = 'ms-clock:'
+        self.apps_database['calendar'] = 'outlookcal:'
+        
         self._init_usage_database()
         
         # DON'T start background refresh at startup - defer until first use
@@ -588,6 +597,11 @@ class AppDiscovery:
         # Check if all query words exist in app name (important for multi-word searches)
         if query_words and query_words.issubset(app_words):
             score += 80  # High score for containing all words
+            
+        # Penalize if the found app name is much longer than the query (e.g. "WSL Settings" for "Settings")
+        length_diff = len(app_name) - len(query)
+        if length_diff > 0:
+            score -= (length_diff * 2)
         
         # Some query words present (partial match)
         common_words = query_words & app_words
@@ -776,16 +790,13 @@ def smart_open_application(app_name: str, action_type: str = 'open_app') -> str:
     if len(app_name) > 200:
         return "❌ Application name is too long"
     
-    # Normalize app name using Intent Recognizer
+    # Normalize app name
     original_app_name = app_name
     try:
-        from ai_assistant.ai.intent_recognizer import IntentRecognizer
-        recognizer = IntentRecognizer()
-        app_name = recognizer.normalize_app_name(app_name)
-        if app_name != original_app_name:
-            print(f"[Intent Recognizer] Normalized '{original_app_name}' -> '{app_name}'")
+        import re
+        app_name = re.sub(r'[^a-zA-Z0-9\s-]', '', app_name.lower().strip())
     except Exception as e:
-        print(f"[Intent Recognizer] Not available in smart_open_application: {e}")
+        logger.warning(f"Failed to normalize app name: {e}")
     
     # Check preferences (learned behavior)
     pref = app_discovery.get_preferred_app_for_action(action_type)
@@ -823,7 +834,10 @@ def smart_open_application(app_name: str, action_type: str = 'open_app') -> str:
             # Fallback for Windows App protocols/commands (like Calculator UWP)
             else:
                 import subprocess
-                subprocess.Popen(app_path, shell=True)
+                if app_path.endswith(':'):
+                    subprocess.Popen(f'start {app_path}', shell=True)
+                else:
+                    subprocess.Popen(app_path, shell=True)
                 app_discovery.track_app_launch(app_name, app_path, success=True)
                 app_discovery.record_action_preference(action_type, app_name, 'native')
                 return f"✅ Opened Web/Windows App using Shell: {app_name}"

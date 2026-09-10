@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 """
 Automation Security System
 
@@ -822,8 +823,8 @@ class AuditLogger:
     Security audit logging system
     """
     
-    def __init__(self, db_path: str = "user_data/security_audit.db"):
-        self.db_path = db_path
+    def __init__(self, db_path: str = None):
+        self.db_path = db_path or get_db_path_str("security_audit")
         self.logger = logging.getLogger(__name__)
         self.audit_events = deque(maxlen=10000)
         self._lock = threading.RLock()
@@ -1183,8 +1184,8 @@ class AutomationSecurity:
     Main automation security system
     """
     
-    def __init__(self, db_path: str = "user_data/automation_security.db", master_key: str = None):
-        self.db_path = db_path
+    def __init__(self, db_path: str = None, master_key: str = None):
+        self.db_path = db_path or get_db_path_str("automation_security")
         self.logger = logging.getLogger(__name__)
         
         # Core security components

@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 """
 Graph Neural Networks for Knowledge Graph Reasoning
 GCN/GAT for graph-based learning and reasoning
@@ -143,14 +144,14 @@ class GraphNeuralNetwork:
                  hidden_dim: int = 128,
                  output_dim: int = 32,
                  use_attention: bool = True,
-                 db_path: str = "data/gnn.db"):
+                 db_path: str = get_db_path_str("gnn")):
         
         self.node_feature_dim = node_feature_dim
         self.hidden_dim = hidden_dim
         self.output_dim = output_dim
         self.db_path = db_path
         
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         self._init_database()
         
         # Initialize node embeddings for all cases

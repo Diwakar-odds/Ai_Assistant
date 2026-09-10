@@ -141,6 +141,30 @@ def handle_analyze_image(data):
     except Exception as e:
         emit('image_analysis_error', {'error': f'Image analysis failed: {str(e)}'})
 
+@socketio.on('analyze_gesture')
+def handle_analyze_gesture(data):
+    """Handle high-frequency gesture analysis request"""
+    try:
+        image_data = data.get('image')
+        if not image_data:
+            return
+            
+        try:
+            from ai_assistant.vision.gesture_recognition import gesture_recognition_sys
+            gesture = gesture_recognition_sys.detect_gesture(image_data)
+            
+            if gesture:
+                emit('gesture_detected', {
+                    'gesture': gesture,
+                    'timestamp': datetime.now().isoformat()
+                })
+        except Exception as e:
+            logger.error(f"Gesture recognition error: {e}")
+            
+    except Exception as e:
+        logger.error(f"Analyze gesture failed: {e}")
+        emit('image_analysis_error', {'error': f'Image analysis failed: {str(e)}'})
+
 @socketio.on('analyze_presence')
 def handle_analyze_presence(data):
     """Handle periodic presence/mood analysis request from camera"""

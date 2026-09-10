@@ -1,7 +1,10 @@
-import { motion } from 'framer-motion';
-import { Video, VideoOff, Camera, UserCheck } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Video, VideoOff, Camera, UserCheck, Hand } from 'lucide-react';
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useDashboard } from '../../contexts/DashboardContext';
+import { useSpatialGestures } from '../../hooks/useSpatialGestures';
+import { SpatialCursor } from '../SpatialCursor';
 
 const CameraFeed = () => {
   const [isRecording, setIsRecording] = useState(false);
@@ -9,11 +12,38 @@ const CameraFeed = () => {
   const [error, setError] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   
-  const { analyzeCameraFrame, checkPresence, presenceData } = useDashboard();
+  const { analyzeCameraFrame, checkPresence, presenceData, checkGesture, lastGesture, setSelectedView } = useDashboard();
+  
+  // Local state for gesture UI badge (shows momentarily)
+  const [activeGesture, setActiveGesture] = useState<string | null>(null);
+  const [videoEl, setVideoEl] = useState<HTMLVideoElement | null>(null);
+  const spatialGestures = useSpatialGestures(videoEl, isRecording && hasPermission);
+
+  // Handle Mission Control gesture from local spatial tracker
+  useEffect(() => {
+      if (spatialGestures.activeGesture === 'MissionControl') {
+          // Trigger Mission Control view
+          setSelectedView('dashboard'); // Assuming dashboard is the overview
+          setActiveGesture('MISSION_CONTROL');
+          setTimeout(() => setActiveGesture(null), 2000);
+      }
+      
+      // Orb Manipulation
+      const orb = document.getElementById('ai-orb');
+      if (orb) {
+          if (spatialGestures.isPinching) {
+              // Scale orb relative to pinch distance (closer = smaller)
+              const scale = 0.5 + (spatialGestures.pinchDistance / 0.05) * 0.5;
+              orb.style.transform = `scale(${Math.max(0.5, Math.min(1.2, scale))})`;
+          } else {
+              orb.style.transform = `scale(1)`;
+          }
+      }
+  }, [spatialGestures.activeGesture, setSelectedView, spatialGestures.isPinching, spatialGestures.pinchDistance]);
 
   // Clean up on unmount
   useEffect(() => {
@@ -62,16 +92,51 @@ const CameraFeed = () => {
     };
   }, [isRecording, hasPermission, captureFrame, checkPresence]);
 
-  const handleShowAndAsk = () => {
+  // Gesture detection loop
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+    if (isRecording && hasPermission) {
+      // Check gesture every 250ms (4 FPS) to support Swipe tracking
+      intervalId = setInterval(() => {
+        const frame = captureFrame();
+        if (frame) {
+          checkGesture(frame);
+        }
+      }, 250);
+    }
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isRecording, hasPermission, captureFrame, checkGesture]);
+
+  const handleShowAndAsk = useCallback(() => {
+    if (isAnalyzing) return; // Prevent double trigger
+    
     const frame = captureFrame();
     if (frame) {
       setIsAnalyzing(true);
       analyzeCameraFrame(frame, "What is the main object or text visible in this image? Be concise.");
       
-      // Reset analyzing state after a delay (or based on response if we tracked specific request IDs)
+      // Reset analyzing state after a delay
       setTimeout(() => setIsAnalyzing(false), 3000);
     }
-  };
+  }, [captureFrame, isAnalyzing, analyzeCameraFrame]);
+
+  // Handle specific local gesture actions
+  useEffect(() => {
+    if (lastGesture && lastGesture.gesture) {
+      // Show badge UI
+      setActiveGesture(lastGesture.gesture);
+      const timer = setTimeout(() => setActiveGesture(null), 2000);
+      
+      // Trigger actions
+      if (lastGesture.gesture === 'PEACE' && !isAnalyzing) {
+        handleShowAndAsk();
+      }
+      
+      return () => clearTimeout(timer);
+    }
+  }, [lastGesture, handleShowAndAsk, isAnalyzing]);
 
   const startCamera = async () => {
     try {
@@ -163,7 +228,10 @@ const CameraFeed = () => {
         {hasPermission && isRecording ? (
           <div className="relative w-full h-full">
             <video
-              ref={videoRef}
+              ref={(el) => {
+                  videoRef.current = el;
+                  if (el !== videoEl) setVideoEl(el);
+              }}
               autoPlay
               playsInline
               muted
@@ -200,7 +268,7 @@ const CameraFeed = () => {
                   <span className="text-xs font-medium text-white">REC</span>
                 </motion.div>
 
-                {presenceData && presenceData.analysis && (
+                 {presenceData && presenceData.analysis && (
                    <motion.div
                      className="absolute top-3 right-3 flex items-center gap-2 bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded-full z-10"
                      initial={{ opacity: 0, scale: 0.8 }}
@@ -210,6 +278,20 @@ const CameraFeed = () => {
                      <span className="text-xs font-medium text-white capitalize">{presenceData.analysis.mood || (presenceData.analysis.present ? 'Present' : 'Away')}</span>
                    </motion.div>
                 )}
+
+                <AnimatePresence>
+                  {activeGesture && (
+                     <motion.div
+                       className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center gap-1 bg-black/60 backdrop-blur-md px-4 py-3 rounded-2xl z-20 pointer-events-none"
+                       initial={{ opacity: 0, scale: 0.5, y: '-40%' }}
+                       animate={{ opacity: 1, scale: 1, y: '-50%' }}
+                       exit={{ opacity: 0, scale: 0.8 }}
+                     >
+                       <Hand className="w-8 h-8 text-blue-400" />
+                       <span className="text-sm font-bold text-white tracking-widest">{activeGesture.replace('_', ' ')}</span>
+                     </motion.div>
+                  )}
+                </AnimatePresence>
 
                 <div className="absolute bottom-3 left-0 right-0 flex justify-center z-10">
                   <motion.button
@@ -273,6 +355,15 @@ const CameraFeed = () => {
       
       {/* Hidden canvas for frame extraction */}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
+      
+      {spatialGestures.cursorPosition && createPortal(
+          <SpatialCursor 
+              x={spatialGestures.cursorPosition.x} 
+              y={spatialGestures.cursorPosition.y} 
+              isPinching={spatialGestures.isPinching} 
+          />,
+          document.body
+      )}
     </motion.div>
   );
 };

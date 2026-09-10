@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 """
 Learning Systems Integration Module
 Integrates all 27 learning systems into the main assistant workflow
@@ -66,7 +67,7 @@ class LearningAssistant:
             self.explainability = ExplainabilityEngine()
             self.llm_bandit = LLMBandit()
             self.causal_inference = CausalInference()
-            self.knowledge_graph = PersonalKnowledgeGraph(db_path="data/knowledge_graph.db")
+            self.knowledge_graph = PersonalKnowledgeGraph(db_path=get_db_path_str("knowledge_graph"))
             
             # Session tracking
             self.command_history = []

@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 # Setup centralized logging
 from utils.logging_config import get_logger
 logger = get_logger(__name__, log_category="app")
@@ -70,9 +71,9 @@ class IntentClassifier:
     Learns from user corrections and adaptsto personal vocabulary
     """
     
-    def __init__(self, db_path: str = "data/intent_classifier.db"):
-        self.db_path = db_path
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+    def __init__(self, db_path: str = None):
+        self.db_path = db_path or get_db_path_str("intent_classifier")
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         
         # Load or initialize sentence transformer
         if SENTENCE_TRANSFORMERS_AVAILABLE:
@@ -385,9 +386,9 @@ class NamedEntityRecognizer:
     Learns user-specific entities (custom app names, contact nicknames, etc.)
     """
     
-    def __init__(self, db_path: str = "data/ner.db"):
-        self.db_path = db_path
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+    def __init__(self, db_path: str = None):
+        self.db_path = db_path or get_db_path_str("ner")
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         
         # Entity patterns
         self.entity_patterns = self._init_patterns()

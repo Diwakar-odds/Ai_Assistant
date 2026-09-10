@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 # Setup centralized logging
 from utils.logging_config import get_logger
 logger = get_logger(__name__, log_category="app")
@@ -170,9 +171,9 @@ class ConversationCompressor:
 class SemanticHistoryRetrieval:
     """Retrieves relevant messages from compressed history."""
     
-    def __init__(self, db_path: str = "semantic_history.db"):
+    def __init__(self, db_path: str = None):
         """Initialize retrieval system."""
-        self.db_path = db_path
+        self.db_path = db_path or get_db_path_str("semantic_history")
         self._init_db()
     
     def _init_db(self):

@@ -5,10 +5,19 @@ import warnings
 # Enforce UTF-8 globally to prevent emoji encoding crashes on Windows
 os.environ["PYTHONUTF8"] = "1"
 os.environ["PYTHONIOENCODING"] = "utf-8"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 
 warnings.simplefilter("ignore", category=FutureWarning)
 
 # Force UTF-8 encoding for stdout/stderr only if available (prevents NoneType crash in GUI mode)
+if sys.platform == 'win32':
+    import asyncio
+    try:
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    except Exception:
+        pass
+
 if sys.stdout is not None and hasattr(sys.stdout, 'reconfigure'):
     try:
         sys.stdout.reconfigure(encoding='utf-8')
@@ -70,10 +79,9 @@ try:
     SECRETS_MANAGER_AVAILABLE = True
 except ImportError:
     SECRETS_MANAGER_AVAILABLE = False
-# Fix Windows console encoding for emojis
+# Fix Windows console encoding for emojis (already handled by root wrapper)
 if sys.platform == 'win32':
-    sys.stdout.reconfigure(encoding='utf-8') if hasattr(sys.stdout, 'reconfigure') else None
-    sys.stderr.reconfigure(encoding='utf-8') if hasattr(sys.stderr, 'reconfigure') else None
+    pass
 
 # Load environment variables from absolute path
 _env_path = Path(__file__).parent.parent.parent.parent / '.env'
@@ -97,6 +105,15 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 ai_assistant_dir = os.path.dirname(current_dir)
 if ai_assistant_dir not in sys.path:
     sys.path.append(ai_assistant_dir)
+
+# Ensure legacy databases are migrated early
+try:
+    sys.path.insert(0, os.path.join(ai_assistant_dir, 'core_ai', 'src'))
+    from ai_assistant.core.database_config import migrate_legacy_databases
+    migrate_legacy_databases()
+    sys.path.pop(0)
+except Exception as e:
+    logger.error(f"Error migrating databases: {e}")
 
 # Import Multi-Agent System
 try:
@@ -634,9 +651,13 @@ set_socketio(socketio)
 
 # Global assistant instance - protected initialization
 try:
-    print("[INFO] Initializing Pulsar Assistant...")
-    assistant = ModernAssistant()
-    print("[OK] Assistant initialized successfully")
+    if hasattr(sys, '_pulsar_assistant_instance'):
+        assistant = sys._pulsar_assistant_instance
+    else:
+        print("[INFO] Initializing Pulsar Assistant...")
+        assistant = ModernAssistant()
+        sys._pulsar_assistant_instance = assistant
+        print("[OK] Assistant initialized successfully")
 except Exception as e:
     print(f"[ERROR] CRITICAL: Assistant initialization failed: {e}")
     print("[OK]  Server will start in limited mode without some features")
@@ -677,17 +698,19 @@ except Exception as e:
 # =============================================================================
 # REGISTER BLUEPRINTS - Modular Route Organization
 # =============================================================================
-print("📋 Registering blueprints...")
-try:
-    from backend.routes import register_all_routes
-    # Need to pass socketio and learning_router if they are available
-    _socketio = socketio if 'socketio' in globals() else None
-    _learning_router = learning_router if 'learning_router' in globals() else None
-    
-    register_all_routes(app, assistant, _socketio, _learning_router, limiter)
-    logger.info("✅ All blueprints/routes registered")
-except Exception as e:
-    print(f"⚠️ Blueprint registration failed: {e}")
+if not hasattr(sys, '_pulsar_blueprints_registered'):
+    print("📋 Registering blueprints...")
+    try:
+        from backend.routes import register_all_routes
+        # Need to pass socketio and learning_router if they are available
+        _socketio = socketio if 'socketio' in globals() else None
+        _learning_router = learning_router if 'learning_router' in globals() else None
+        
+        register_all_routes(app, assistant, _socketio, _learning_router, limiter)
+        logger.info("✅ All blueprints/routes registered")
+        sys._pulsar_blueprints_registered = True
+    except Exception as e:
+        print(f"⚠️ Blueprint registration failed: {e}")
 
 
 # ============================================================
@@ -981,11 +1004,9 @@ if not AUTOMATION_AVAILABLE:
                 if ai_assistant_dir not in sys.path:
                     sys.path.insert(0, ai_assistant_dir)
                 
-                from ai_assistant.ai.intent_recognizer import IntentRecognizer
-                recognizer = IntentRecognizer()
-                
                 # Normalize the app name to handle variations like "whats app" -> "whatsapp"
-                normalized_app = recognizer.normalize_app_name(app_name)
+                import re
+                normalized_app = re.sub(r'[^a-zA-Z0-9]', '', app_name.lower())
                 print(f"[Intent Recognizer] Normalized '{app_name}' -> '{normalized_app}'")
                 app_name = normalized_app
             except Exception as intent_error:
@@ -1452,17 +1473,16 @@ if __name__ == '__main__':
                 register_google_speech_handlers(socketio)
                 logger.info("✅ Google Speech Recognition WebSocket handlers registered")
             except Exception as e:
-                print(f"  Could not register Google Speech handlers: {e}")
+                print(f"   Could not register Google Speech handlers: {e}")
         
         # Register improved command handlers with proper routing
         try:
-            print(f" DEBUG: socketio type = {type(socketio)}, value = {socketio}")
             import voice_service as chat_handlers
             chat_handlers.set_socketio(socketio)
             chat_handlers.set_learning_router(learning_router if 'learning_router' in globals() else None)
             logger.info("✅ Command handlers registered with local-first routing")
         except Exception as e:
-            print(f"  Could not register command handlers: {e}")
+            print(f"   Could not register command handlers: {e}")
             import traceback
             traceback.print_exc()
 
@@ -1473,9 +1493,11 @@ if __name__ == '__main__':
         except Exception as e:
             logger.warning(f"⚠️ Could not start AI background thread: {e}")
 
-        socketio.run(app, host=host, port=port, debug=False, allow_unsafe_werkzeug=True)
+        socketio.run(app, host=host, port=port, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)
     except Exception as e:
+        import traceback
         print(f"[ERROR] Server failed to start: {e}")
+        traceback.print_exc()
         sys.exit(1)
 
 

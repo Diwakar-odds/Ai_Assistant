@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 # Setup centralized logging
 from utils.logging_config import get_logger
 logger = get_logger(__name__, log_category="app")
@@ -35,9 +36,9 @@ class CommandSuccessPredictor:
     Predicts command success probability using ML
     """
     
-    def __init__(self, db_path: str = "data/automation/command_success.db"):
-        self.db_path = db_path
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+    def __init__(self, db_path: str = None):
+        self.db_path = db_path or get_db_path_str("command_success")
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         
         if SKLEARN_AVAILABLE:
             self.model = RandomForestClassifier(n_estimators=100, random_state=42)

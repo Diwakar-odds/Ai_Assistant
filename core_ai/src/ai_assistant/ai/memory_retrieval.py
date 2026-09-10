@@ -25,8 +25,8 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 
 # Locate this file and resolve relative DB path to be CWD-independent.
-_MODULE_DIR = Path(__file__).resolve().parent
-_DEFAULT_DB = _MODULE_DIR.parent.parent.parent / "data" / "core" / "conversation_ai.db"
+from ai_assistant.core.database_config import get_db_path_str
+_DEFAULT_DB = get_db_path_str('conversation_ai')
 
 
 class MemoryRetrieval:
@@ -52,7 +52,7 @@ class MemoryRetrieval:
         'yesterday', 'last week', 'ago', 'before', 'previously', 'earlier',
         'history', 'kab', 'pehle', 'yaad', 'what was', 'have i', 'was i',
         'did we', 'what were', 'which app', 'which song', 'what song',
-        'what music', 'what job', 'today earlier', 'this morning',
+        'what music', 'what job', 'today earlier', 'this morning'
     ]
 
     # Audit fix A1: when True, retrieval runs on every LLM call (background context).
@@ -68,7 +68,7 @@ class MemoryRetrieval:
             db_path: Path to the conversation_ai.db SQLite database.
                      Defaults to a path anchored to this file's location.
         """
-        self.db_path = str(db_path) if db_path else str(_DEFAULT_DB)
+        self.db_path = str(db_path) if db_path else _DEFAULT_DB
         # Audit fix A5: ensure parent directory exists.
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         # Audit fix A6: thread-safe connections.

@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 """
 Federated Learning System
 Privacy-preserving distributed learning across devices
@@ -185,14 +186,14 @@ class FederatedServer:
                  input_dim: int,
                  output_dim: int,
                  aggregation_strategy: str = 'fedavg',
-                 db_path: str = "data/federated_learning.db"):
+                 db_path: str = get_db_path_str("federated_learning")):
         
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.aggregation_strategy = aggregation_strategy
         self.db_path = db_path
         
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         self._init_database()
         
         if TORCH_AVAILABLE:

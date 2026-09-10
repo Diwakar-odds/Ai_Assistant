@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 # Setup centralized logging
 from utils.logging_config import get_logger
 logger = get_logger(__name__, log_category="app")
@@ -188,7 +189,7 @@ class AdvancedChatSystem:
     
     def _init_database(self):
         """Initialize SQLite database for chat persistence."""
-        self.db_path = "chat_history.db"
+        self.db_path = get_db_path_str("chat_history")
         try:
             with sqlite3.connect(self.db_path) as conn:
                 conn.execute("""

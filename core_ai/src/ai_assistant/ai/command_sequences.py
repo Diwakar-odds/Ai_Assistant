@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 # Setup centralized logging
 from utils.logging_config import get_logger
 logger = get_logger(__name__, log_category="app")
@@ -27,14 +28,14 @@ class CommandMarkovChain:
     Predicts next command using Markov chain models
     """
     
-    def __init__(self, db_path: str = "data/automation/command_sequences.db",
+    def __init__(self, db_path: str = None,
                  order: int = 2,
                  context_aware: bool = True):
-        self.db_path = db_path
+        self.db_path = db_path or get_db_path_str("command_sequences")
         self.order = order  # N-gram order (2 = bigram, 3 = trigram)
         self.context_aware = context_aware
         
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         
         # Transition matrices
         self.transitions = defaultdict(Counter)  # state -> {next_command: count}

@@ -179,61 +179,52 @@ class ExecutiveBrain:
     
     def _classify_command(self, command: str) -> CommandClassification:
         """
-        Classify a command into one of the CommandClassification types.
-        Uses keyword matching + heuristics.
+        Classify a command using the unified IntentRouter.
         """
+        from ai_assistant.ai.intent_router import IntentRouter
+        router = IntentRouter() # Singleton
+        
+        # We need to map our semantic IntentResult to CommandClassification
+        intent_result = router.route(command)
+        
+        # 1. Check for specific Modification/Sequential keywords first since they apply to active chains
         cmd_lower = command.lower().strip()
-        
-        # Executive: Stop/Cancel
-        for keyword in EXECUTIVE_STOP_KEYWORDS:
-            if keyword in cmd_lower and len(cmd_lower.split()) <= 4:
-                # Short stop commands only (not "don't stop the music")
-                return CommandClassification.EXECUTIVE_STOP
-        
-        # Executive: Pause
-        for keyword in EXECUTIVE_PAUSE_KEYWORDS:
-            if keyword in cmd_lower and len(cmd_lower.split()) <= 4:
-                return CommandClassification.EXECUTIVE_PAUSE
-        
-        # Executive: Resume
-        for keyword in EXECUTIVE_RESUME_KEYWORDS:
-            if keyword in cmd_lower and len(cmd_lower.split()) <= 4:
-                return CommandClassification.EXECUTIVE_RESUME
-        
-        # Modification: "no wait, use Firefox instead"
         for keyword in MODIFICATION_KEYWORDS:
             if cmd_lower.startswith(keyword) or keyword in cmd_lower[:30]:
                 return CommandClassification.TASK_MODIFY
-        
-        # Sequential: "then search weather", "aur phir YouTube kholo"
+                
         for keyword in SEQUENTIAL_KEYWORDS:
             if cmd_lower.startswith(keyword) or f' {keyword} ' in f' {cmd_lower} ':
                 return CommandClassification.TASK_RELATED
-        
-        # Check if it's conversational (questions, greetings, status)
-        if self._is_conversational(cmd_lower):
-            return CommandClassification.CONVERSATIONAL
-        
-        # Default: It's a new task
-        return CommandClassification.TASK_NEW
-    
-    def _is_conversational(self, cmd_lower: str) -> bool:
-        """Check if command is conversational (not an action)"""
-        conversational_patterns = [
-            r'^(what|how|who|when|where|why|which)\b',  # Questions
-            r'^(tell me|explain|describe)\b',
-            r'^(hi|hello|hey|good morning|good night|thanks|thank you)',
-            r'^(kya|kaun|kab|kahan|kaise|kyun)\b',  # Hindi questions
-            r'^(batao|samjhao)\b',
-            r'(time|weather|date|day)\s*(kya|hai|batao|bata)?$',
-            r'^(tum kaun ho|who are you)',
-        ]
-        
-        for pattern in conversational_patterns:
-            if re.search(pattern, cmd_lower):
-                return True
-        
-        return False
+
+        # 2. Map IntentRouter outputs
+        if intent_result:
+            intent_name = intent_result.intent_name
+            # Executive intents might be mapped directly if we passed 'action' in parameters
+            if intent_result.tier == 1 and intent_result.parameters.get("action") == "stop":
+                return CommandClassification.EXECUTIVE_STOP
+            elif intent_result.tier == 1 and intent_result.parameters.get("action") == "pause":
+                return CommandClassification.EXECUTIVE_PAUSE
+            elif intent_result.tier == 1 and intent_result.parameters.get("action") == "resume":
+                return CommandClassification.EXECUTIVE_RESUME
+            
+            # Info queries and conversational fall back to CONVERSATIONAL in the command brain
+            if intent_name == "info_query" or intent_name == "conversational":
+                return CommandClassification.CONVERSATIONAL
+                
+            # If it's a known system intent, treat it as a new task
+            system_intents = [
+                'open_app', 'close_app', 'search_web', 'play_media', 'volume_control',
+                'system_control', 'battery_status', 'list_running_apps', 'bluetooth_toggle',
+                'create_document', 'create_folder', 'open_settings', 'analyze_screen',
+                'download_media', 'task_automation', 'file_operation'
+            ]
+            if intent_name in system_intents:
+                return CommandClassification.TASK_NEW
+                
+        # 3. Default fallback
+        # If router returned None, it means it's pure conversation
+        return CommandClassification.CONVERSATIONAL
     
     # ===== EXECUTIVE HANDLERS =====
     
@@ -450,7 +441,6 @@ class ExecutiveBrain:
                 
                 # Add actions to the active chain
                 chain.actions.extend(new_actions)
-                chain.total_actions = len(chain.actions)
                 
                 # Clean up temp
                 manager.active_chains.pop(temp_chain.id, None)

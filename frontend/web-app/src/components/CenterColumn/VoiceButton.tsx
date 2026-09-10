@@ -148,7 +148,7 @@ const VoiceButton = () => {
       transition={{ duration: 0.6, ease: 'easeOut' }}
     >
       {/* Main circular visualizer */}
-      <div className="relative w-[75%] max-w-[260px] aspect-square overflow-visible">
+      <div id="ai-orb" className="relative w-[75%] max-w-[260px] aspect-square overflow-visible transition-transform duration-100 ease-out">
         {/* Outer glowing circle */}
         <motion.div
           className="absolute inset-0 rounded-full border-2 border-[#00f3ff]"

@@ -967,6 +967,41 @@ def set_learning_router(router):
     learning_router = router
 
 # ==============================================
+# Persistent Conversational AI Singleton
+# ==============================================
+_conv_ai_instance = None
+_conv_ai_lock = threading.Lock()
+
+def _default_automation_callback(action, param):
+    """Execute automation actions"""
+    try:
+        if action == 'open_application':
+            from ai_assistant.core.core import open_application
+            return open_application(param)
+        elif action == 'close_application':
+            from ai_assistant.core.core import close_application
+            return close_application(param)
+        elif action == 'get_running_apps':
+            from ai_assistant.core.core import get_running_processes
+            return get_running_processes()
+    except Exception as e:
+        return f"Action error: {str(e)}"
+    return None
+
+def get_conv_ai(automation_callback=None):
+    """Get or create the singleton AdvancedConversationalAI instance."""
+    global _conv_ai_instance
+    if _conv_ai_instance is None:
+        with _conv_ai_lock:
+            if _conv_ai_instance is None:
+                from ai_assistant.ai.conversational_ai import AdvancedConversationalAI
+                cb = automation_callback or _default_automation_callback
+                _conv_ai_instance = AdvancedConversationalAI(automation_callback=cb)
+    if automation_callback and _conv_ai_instance:
+        _conv_ai_instance.automation_callback = automation_callback
+    return _conv_ai_instance
+
+# ==============================================
 # Echo Prevention: Server-side TTS-active flag
 # ==============================================
 # Uses a time-based approach: when TTS audio is generated, we set
@@ -1210,16 +1245,15 @@ def handle_command(data):
         
         print(f'💬 Command received ({source}): {command_text}')
         
-        # Define safe emit helper to catch Errno 22
         def safe_emit(event, payload):
             try:
-                if event == 'command_response' and payload.get('success') and payload.get('response'):
+                if event == 'command_response' and payload.get('success') and payload.get('response') and not payload.get('skip_tts'):
                     try:
                         import sys
                         assistant = None
                         if hasattr(sys.modules.get('__main__'), 'assistant'):
                             assistant = sys.modules['__main__'].assistant
-                        
+
                         if assistant:
                             b64 = assistant.speak_text(payload['response'])
                             if b64:
@@ -1264,6 +1298,8 @@ def handle_command(data):
         except ImportError:
             logger.debug("Executive Brain not available, using legacy handler")
         except Exception as brain_err:
+            import traceback
+            traceback.print_exc()
             logger.warning(f"Brain routing failed for chat: {brain_err}")
 
         # ============================================
@@ -1294,12 +1330,57 @@ def handle_command(data):
                         return f"Action error: {str(e)}"
                     return None
                 
-                conv_ai = AdvancedConversationalAI(automation_callback=automation_callback)
+                conv_ai = get_conv_ai(automation_callback=automation_callback)
                 
                 provider = data.get('provider')
                 model = data.get('model')
-                # Process through conversational AI (has intent detection built-in)
-                response_text = conv_ai.process_message(command_text, provider=provider, model=model)
+                # Process through conversational AI with Pipeline Parallelism (Streaming TTS)
+                sentence_buffer = ""
+                any_audio_sent = False
+                
+                def on_token(chunk):
+                    nonlocal sentence_buffer, any_audio_sent
+                    sentence_buffer += chunk
+                    if any(punct in sentence_buffer for punct in ['. ', '! ', '? ', '.\n', '!\n', '?\n']):
+                        sentence_to_speak = sentence_buffer.strip()
+                        if sentence_to_speak:
+                            try:
+                                import sys
+                                assistant = sys.modules.get('__main__').assistant if hasattr(sys.modules.get('__main__'), 'assistant') else None
+                                if assistant:
+                                    b64 = assistant.speak_text(sentence_to_speak)
+                                    if b64:
+                                        payload = {'audio_base64': b64}
+                                        if _socketio:
+                                            _socketio.emit('voice_audio_chunk', payload)
+                                        else:
+                                            emit('voice_audio_chunk', payload)
+                                        set_tts_active(True)
+                                        any_audio_sent = True
+                            except Exception as e:
+                                pass
+                        sentence_buffer = ""
+
+                response_text = conv_ai.process_message(command_text, provider=provider, model=model, on_token=on_token)
+                
+                if sentence_buffer.strip():
+                    try:
+                        import sys
+                        assistant = sys.modules.get('__main__').assistant if hasattr(sys.modules.get('__main__'), 'assistant') else None
+                        if assistant:
+                            b64 = assistant.speak_text(sentence_buffer.strip())
+                            if b64:
+                                payload = {'audio_base64': b64}
+                                if _socketio:
+                                    _socketio.emit('voice_audio_chunk', payload)
+                                else:
+                                    emit('voice_audio_chunk', payload)
+                                set_tts_active(True)
+                                any_audio_sent = True
+                    except Exception:
+                        pass
+                skip_tts_flag = any_audio_sent
+
                 
                 # Check if it actually executed something or just returned generic response
                 if response_text and not any(phrase in response_text.lower() for phrase in [
@@ -1317,18 +1398,18 @@ def handle_command(data):
                         'response': response_text,
                         'command': command_text,
                         'source': 'local_tools',
-                        'timestamp': datetime.now().isoformat()
+                        'timestamp': datetime.now().isoformat(),
+                        'skip_tts': skip_tts_flag
                     })
                     
                     # Log learning
                     try:
-                        from modern_web_backend import _get_learning_router_lazy
-                        lr = _get_learning_router_lazy()
+                        lr = learning_router
                         if lr:
                             lr.route_conversation(speaker='user', content=command_text, input_mode=source)
                             lr.route_conversation(speaker='assistant', content=response_text, input_mode=source)
                     except Exception as e:
-                        print(f"š  Could not log learning: {e}")
+                        print(f"š   Could not log learning: {e}")
                     
                     return  # Successfully handled
                     
@@ -1406,15 +1487,60 @@ def handle_command(data):
                 
                 chat.add_system_message(system_msg)
                 
-                # Get response from external AI
-                response_text = chat.chat(command_text)
+                # Get streaming response from external AI with Pipeline Parallelism
+                response_text = ""
+                sentence_buffer = ""
+                any_audio_sent = False
+                
+                for chunk in chat.chat(command_text, stream=True):
+                    if chunk:
+                        response_text += chunk
+                        sentence_buffer += chunk
+                        if any(punct in sentence_buffer for punct in ['. ', '! ', '? ', '.\n', '!\n', '?\n']):
+                            sentence_to_speak = sentence_buffer.strip()
+                            if sentence_to_speak:
+                                try:
+                                    import sys
+                                    assistant = sys.modules.get('__main__').assistant if hasattr(sys.modules.get('__main__'), 'assistant') else None
+                                    if assistant:
+                                        b64 = assistant.speak_text(sentence_to_speak)
+                                        if b64:
+                                            payload = {'audio_base64': b64}
+                                            if _socketio:
+                                                _socketio.emit('voice_audio_chunk', payload)
+                                            else:
+                                                emit('voice_audio_chunk', payload)
+                                            set_tts_active(True)
+                                            any_audio_sent = True
+                                except Exception:
+                                    pass
+                            sentence_buffer = ""
+                            
+                if sentence_buffer.strip():
+                    try:
+                        import sys
+                        assistant = sys.modules.get('__main__').assistant if hasattr(sys.modules.get('__main__'), 'assistant') else None
+                        if assistant:
+                            b64 = assistant.speak_text(sentence_buffer.strip())
+                            if b64:
+                                payload = {'audio_base64': b64}
+                                if _socketio:
+                                    _socketio.emit('voice_audio_chunk', payload)
+                                else:
+                                    emit('voice_audio_chunk', payload)
+                                set_tts_active(True)
+                                any_audio_sent = True
+                    except Exception:
+                        pass
+                
+                skip_tts_flag = any_audio_sent
+
                 
                 print(f'… [EXTERNAL AI - {provider_name.upper()}] {response_text[:100]}...')
                 
                 # Log learning
                 try:
-                    from modern_web_backend import _get_learning_router_lazy
-                    lr = _get_learning_router_lazy()
+                    lr = learning_router
                     if lr:
                         lr.route_conversation(speaker='user', content=command_text, input_mode=source)
                         lr.route_conversation(speaker='assistant', content=response_text, input_mode=source)
@@ -1429,7 +1555,8 @@ def handle_command(data):
                     'source': f'external_ai_{provider_name}',
                     'provider': provider_name,
                     'model': model_name,
-                    'timestamp': datetime.now().isoformat()
+                    'timestamp': datetime.now().isoformat(),
+                    'skip_tts': skip_tts_flag
                 })
                 
                 return  # Successfully handled

@@ -25,12 +25,7 @@ class CommitmentTracker:
     def __init__(self, db_path: Optional[str] = None):
         self.db_path = db_path or str(DATA_DIR / "commitments.db")
         self._setup_db()
-        self.llm = UnifiedChatInterface()
-        self.llm.add_system_message(
-            "Extract any commitments, promises, or deadlines from the user's text. "
-            "Return a JSON list of objects with keys: 'text', 'action', 'deadline', 'party'. "
-            "If none are found, return an empty list []."
-        )
+        self.llm = None
         
     def _setup_db(self):
         conn = sqlite3.connect(self.db_path)
@@ -87,6 +82,14 @@ class CommitmentTracker:
         return [Commitment(id=r[0], text=r[1], action=r[2], deadline=r[3], party=r[4], status=r[5], created_at=r[6]) for r in rows]
 
     def extract_and_store(self, user_text: str):
+        if self.llm is None:
+            self.llm = UnifiedChatInterface()
+            self.llm.add_system_message(
+                "Extract any commitments, promises, or deadlines from the user's text. "
+                "Return a JSON list of objects with keys: 'text', 'action', 'deadline', 'party'. "
+                "If none are found, return an empty list []."
+            )
+        
         prompt = f"Extract commitments from: {user_text}"
         try:
             response = self.llm.chat(prompt, stream=False).strip()

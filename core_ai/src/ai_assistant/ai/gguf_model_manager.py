@@ -80,14 +80,26 @@ class GGUFModelManager:
                 logger.info(f"Loading offline command model into memory: {self.model_filename}")
                 print(f"Loading offline command model into memory: {self.model_filename}")
                 
+                # OS-Level Optimization for Intel Core Ultra
+                import multiprocessing
+                
+                # Intel Core Ultra 7 has 6 P-Cores. Llama.cpp runs fastest when restricted to physical P-Cores.
+                # Avoid Hyperthreads and E-Cores which cause L3 cache thrashing.
+                optimal_threads = 6
+                
                 # Load the model!
                 self.llm = Llama(
                     model_path=str(self.model_path),
-                    n_gpu_layers=0,  # CPU only
-                    n_ctx=2048,      # Context window large enough for chat
-                    verbose=False    # Keep logs clean
+                    n_gpu_layers=0,       # CPU only
+                    n_ctx=2048,           # Context window large enough for chat
+                    n_threads=optimal_threads, # Force strict thread limit (prevents E-Core slowdown)
+                    n_batch=512,          # Optimize prompt processing batch size
+                    use_mlock=True,       # Force Windows to keep model in RAM (prevent pagefile swapping)
+                    use_mmap=True,        # Use memory mapping for fast loading
+                    verbose=False         # Keep logs clean
                 )
-                logger.info("Local GGUF model successfully loaded into RAM.")
+                logger.info(f"Local GGUF model loaded into RAM with {optimal_threads} physical threads & mlock.")
+
                 
         return self.llm
 

@@ -189,8 +189,8 @@ class StartupSequence:
         # Check for learning databases
         db_files = [
             "enhanced_learning.db",
-            "data/core/conversation_ai.db",
-            "data/core/language_data.db"
+            get_db_path_str("conversation_ai"),
+            get_db_path_str("language_data")
         ]
         
         active_dbs = 0

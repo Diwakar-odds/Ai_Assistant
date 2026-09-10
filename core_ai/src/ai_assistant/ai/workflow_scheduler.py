@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 # Setup centralized logging
 from utils.logging_config import get_logger
 logger = get_logger(__name__, log_category="app")
@@ -33,14 +34,14 @@ class WorkflowScheduler:
     RL-powered workflow scheduler
     """
     
-    def __init__(self, db_path: str = "data/workflow_scheduler.db",
+    def __init__(self, db_path: str = None,
                  learning_rate: float = 0.1,
                  discount_factor: float = 0.9):
-        self.db_path = db_path
+        self.db_path = db_path or get_db_path_str("workflow_scheduler")
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
         
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         
         # Q-learning table: state-action values
         self.q_table = defaultdict(lambda: defaultdict(float))

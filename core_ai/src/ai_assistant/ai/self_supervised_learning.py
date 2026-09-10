@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 # Setup centralized logging
 from utils.logging_config import get_logger
 logger = get_logger(__name__, log_category="app")
@@ -40,14 +41,14 @@ class SelfSupervisedLearner:
     Self-supervised learning for data-efficient training
     """
     
-    def __init__(self, db_path: str = "data/self_supervised.db",
+    def __init__(self, db_path: str = None,
                  hidden_dim: int = 256,
                  mask_probability: float = 0.15):
-        self.db_path = db_path
+        self.db_path = db_path or get_db_path_str("self_supervised")
         self.hidden_dim = hidden_dim
         self.mask_probability = mask_probability
         
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         
         if TORCH_AVAILABLE:
             # Encoder

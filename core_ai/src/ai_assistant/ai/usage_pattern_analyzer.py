@@ -38,11 +38,11 @@ except ImportError:
 class UsagePatternAnalyzer:
     """Analyzes usage patterns for personalized fine-tuning"""
     
-    def __init__(self, data_dir: str = "data"):
+    def __init__(self, data_dir: str = None):
         """Initialize analyzer"""
-        self.data_dir = Path(data_dir)
-        self.db_path = self.data_dir / "conversation_history.db"
-        self.feedback_db_path = self.data_dir / "feedback.db"
+        from ai_assistant.core.database_config import get_db_path
+        self.db_path = get_db_path('conversation_ai')
+        self.feedback_db_path = get_db_path('feedback_learning')
         
         # Analysis results
         self.patterns = {
@@ -87,35 +87,39 @@ class UsagePatternAnalyzer:
             logger.warning(f"Database not found: {self.db_path}")
             return []
         
+        conversations = []
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
-            # Get conversations from last N days
             cutoff = datetime.now() - timedelta(days=days_back)
             
-            cursor.execute("""
-                SELECT timestamp, user_input, assistant_response, success
-                FROM conversations
-                WHERE datetime(timestamp) >= datetime(?)
-                ORDER BY timestamp ASC
-            """, (cutoff.isoformat(),))
-            
-            conversations = []
-            for row in cursor.fetchall():
-                conversations.append({
-                    'timestamp': row[0],
-                    'user_input': row[1],
-                    'response': row[2],
-                    'success': bool(row[3])
-                })
+            try:
+                cursor.execute("""
+                    SELECT timestamp, user_input, assistant_response, success
+                    FROM conversations
+                    WHERE datetime(timestamp) >= datetime(?)
+                    ORDER BY timestamp ASC
+                """, (cutoff.isoformat(),))
+                
+                for row in cursor.fetchall():
+                    conversations.append({
+                        'timestamp': row[0],
+                        'user_input': row[1],
+                        'response': row[2],
+                        'success': bool(row[3])
+                    })
+            except sqlite3.OperationalError as e:
+                logger.error(f"Error reading conversations: {e}")
+                # Table might not exist or schema mismatch
+                pass
             
             conn.close()
             logger.info(f"Found {len(conversations)} conversations")
             return conversations
         
         except Exception as e:
-            logger.error(f"Error reading conversations: {e}")
+            logger.error(f"Error connecting to database: {e}")
             return []
     
     def _analyze_common_commands(self, days_back: int) -> List[Dict]:
@@ -292,20 +296,24 @@ class UsagePatternAnalyzer:
             conn = sqlite3.connect(self.feedback_db_path)
             cursor = conn.cursor()
             
-            cursor.execute("""
-                SELECT rating, feedback_text
-                FROM feedback
-                WHERE datetime(timestamp) >= datetime(?)
-            """, ((datetime.now() - timedelta(days=days_back)).isoformat(),))
-            
             ratings = []
             feedback_texts = []
             
-            for row in cursor.fetchall():
-                if row[0]:
-                    ratings.append(row[0])
-                if row[1]:
-                    feedback_texts.append(row[1])
+            try:
+                cursor.execute("""
+                    SELECT rating, feedback_text
+                    FROM feedback
+                    WHERE datetime(timestamp) >= datetime(?)
+                """, ((datetime.now() - timedelta(days=days_back)).isoformat(),))
+                
+                for row in cursor.fetchall():
+                    if row[0]:
+                        ratings.append(row[0])
+                    if row[1]:
+                        feedback_texts.append(row[1])
+            except sqlite3.OperationalError as e:
+                logger.error(f"Error analyzing preferences: {e}")
+                pass
             
             conn.close()
             

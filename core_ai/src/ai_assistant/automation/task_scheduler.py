@@ -1,3 +1,4 @@
+from ai_assistant.core.database_config import get_db_path_str
 """
 Advanced Task Scheduler
 
@@ -561,8 +562,8 @@ class AdvancedTaskScheduler:
     Advanced task scheduler with intelligent scheduling and load management
     """
     
-    def __init__(self, db_path: str = "data/automation/task_scheduler.db"):
-        self.db_path = db_path
+    def __init__(self, db_path: str = None):
+        self.db_path = db_path or get_db_path_str("task_scheduler")
         self.logger = logging.getLogger(__name__)
         
         # Core components
