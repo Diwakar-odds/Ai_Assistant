@@ -92,6 +92,15 @@ class VoiceManager:
         if not text:
             return False
             
+        try:
+            from ai_assistant.voice.text_cleaner import clean_text_for_tts
+            text = clean_text_for_tts(text)
+        except Exception:
+            pass
+
+        if not text or not text.strip():
+            return False
+
         self.stop_speaking()
         
         try:

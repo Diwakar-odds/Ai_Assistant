@@ -1,6 +1,6 @@
 # Setup centralized logging
 try:
-    from utils.logging_config import get_logger
+    from ai_assistant.utils.logging_config import get_logger
     logger = get_logger(__name__, log_category="app")
 except ImportError:
     import logging
@@ -52,29 +52,46 @@ class IntentResult:
 # INTENT ROUTER
 # =============================================================================
 
+_intent_router_instance = None
+
 class IntentRouter:
     """
-    Intelligent intent routing using a two-tier system:
+    Intelligent intent routing using a multi-tier system:
     
     Tier 1: Fast regex/keyword matching for unambiguous commands
-    Tier 2: LLM function calling (Gemini) for ambiguous or Hinglish queries
+    Tier 2: Local ML Semantic matching (SentenceTransformers)
+    Tier 3: LLM function calling (Gemini) for complex queries
     """
+
+    def __new__(cls, *args, **kwargs):
+        global _intent_router_instance
+        if _intent_router_instance is None:
+            _intent_router_instance = super().__new__(cls)
+            _intent_router_instance._initialized = False
+        return _intent_router_instance
 
     def __init__(self, llm_provider=None):
         """
         Args:
-            llm_provider: UnifiedChatInterface instance for Tier 2 routing.
-                          If None, only Tier 1 will be available.
+            llm_provider: UnifiedChatInterface instance for Tier 3 routing.
+                          If None, only Tier 1 & 2 will be available.
         """
+        if getattr(self, '_initialized', False):
+            if llm_provider is not None:
+                self.llm_provider = llm_provider
+            return
+
         self.llm_provider = llm_provider
         self.intents: Dict[str, IntentDefinition] = {}
         
         # Dedicated LLM for routing (separate from conversation history)
         self._router_llm = None
+        self._local_classifier = None
         self._init_router_llm()
         
         # Register all default intents
         self._register_all_intents()
+        self._initialized = True
         
         logger.info(f"✅ IntentRouter initialized with {len(self.intents)} intents "
                      f"(Tier 2 {'enabled' if self._router_llm else 'disabled'})")
@@ -90,7 +107,17 @@ class IntentRouter:
             if api_key:
                 import google.generativeai as genai
                 genai.configure(api_key=api_key)
-                self._router_llm = genai.GenerativeModel("gemini-2.5-flash")
+                try:
+                    import sys
+                    from pathlib import Path
+                    sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
+                    from settings_manager import get_model
+                    _sm_model = get_model()
+                    if 'gemini' not in _sm_model.lower():
+                        _sm_model = "gemini-2.5-flash"
+                except ImportError:
+                    _sm_model = "gemini-2.5-flash"
+                self._router_llm = genai.GenerativeModel(_sm_model)
                 logger.info("✅ IntentRouter Tier 3: Gemini function calling available")
         except Exception as e:
             logger.warning(f"⚠️ IntentRouter Gemini init failed: {e}")
@@ -316,6 +343,23 @@ class IntentRouter:
             examples=["download audio believer", "download this song", "download video from youtube"]
         ))
 
+        # 15. Send Message
+        self.register_intent(IntentDefinition(
+            name="send_message",
+            description="Send a message to a contact via WhatsApp, SMS, or other messaging platform",
+            parameters={
+                "contact": {"type": "string", "description": "Name of the contact to send message to", "required": True},
+                "message": {"type": "string", "description": "Content of the message to send", "required": True}
+            },
+            tier1_patterns=[
+                r'^\s*(?:send\s+message\s+to\s+(.+?)\s+(?:saying|:)\s*(.+))',
+                r'^\s*(?:msg\s+(.+?)\s+(?:saying|:)\s*(.+))',
+                r'^\s*(.+?)\s+ko\s+(?:message\s+|bat\s+)\s*(.+?)\s*(?:karo|kar|do)',
+                r'^\s*(.+?)\s+message\s+karo\s+(?:saying|:)\s*(.+)',
+            ],
+            examples=["send message to John saying hello", "msg Jane: how are you", "John ko message karo namaste", "Alice message karo hi"]
+        ))
+
     # =========================================================================
     # TIER 1: FAST LOCAL MATCHING
     # =========================================================================
@@ -438,12 +482,23 @@ class IntentRouter:
             intent_name = result.intent_name
             confidence = result.confidence
             
+            # Map legacy intent names to registered intent names
+            name_map = {
+                'open_application': 'open_app',
+                'close_application': 'close_app',
+                'information_query': 'info_query',
+            }
+            intent_name = name_map.get(intent_name, intent_name)
+
             # system_intents matches our registered intents
             if intent_name in self.intents and confidence > 0.40:
                 logger.info(f"Tier 2 matched: {intent_name} (conf: {confidence:.2f}) ({elapsed:.2f}s)")
+                params = result.entities if hasattr(result, 'entities') else {}
+                if 'application' in params and 'target' not in params and params['application']:
+                    params['target'] = params['application'][0]
                 return IntentResult(
                     intent_name=intent_name,
-                    parameters=result.entities if hasattr(result, 'entities') else {},
+                    parameters=params,
                     confidence=confidence,
                     tier=2,
                     raw_query=message
@@ -484,9 +539,20 @@ class IntentRouter:
                 "'kaun se apps chal rahe hain', 'volume kam karo', 'bluetooth on karo'."
             )
             
+            try:
+                import sys
+                from pathlib import Path
+                sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
+                from settings_manager import get_model
+                _sm_model = get_model()
+                if 'gemini' not in _sm_model.lower():
+                    _sm_model = "gemini-2.5-flash"
+            except ImportError:
+                _sm_model = "gemini-2.5-flash"
+
             # Use a fresh model instance with tools for routing
             router_model = genai.GenerativeModel(
-                model_name="gemini-2.5-flash",
+                model_name=_sm_model,
                 tools=tools,
                 system_instruction=router_instruction,
             )
@@ -550,6 +616,20 @@ class IntentRouter:
         if result:
             logger.info(f"🎯 Intent routed (Tier 1): {result.intent_name} → {result.parameters}")
             return result
+
+        # Fast Conversational Bypass: Skip heavy SentenceTransformer embeddings for obvious chat / questions
+        msg_clean = message.strip().lower()
+        conversational_patterns = [
+            r'^(?:hi|hello|hey|namaste|aur|bhai|dost|bro|yaar|suno)\b',
+            r'^(?:kaisa|kaise|kya|kyun|kab|kahan|kaun)\b',
+            r'^(?:how|what|who|why|when|where|which|can you|tell me|explain)\b',
+            r'^(?:thanks|thank you|shukriya|dhanyawad)\b',
+            r'^(?:ok|okay|theek|achha|haan|nahi|no|yes)\b',
+            r'(?:kaise ho|kya haal|how are you|who are you|what is your name)',
+        ]
+        if any(re.search(pat, msg_clean, re.IGNORECASE) for pat in conversational_patterns):
+            logger.debug(f"💬 Conversational fast-path matched: '{message}' (bypassing Tier 2 ML)")
+            return None
 
         # Tier 2: Local ML Semantic matching (SentenceTransformers)
         result = self._semantic_route(message)

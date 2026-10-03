@@ -189,6 +189,9 @@ anyio==4.11.0
 # MODEL CONTEXT PROTOCOL (MCP)
 # =========================================
 mcp>=1.1.0
+# Required by MCP's HTTP transport; keep this explicit so dependency resolvers
+# cannot select an unsupported older release.
+python-multipart>=0.0.9
 
 # =========================================
 # ADVANCED FEATURES & PERFORMANCE

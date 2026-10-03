@@ -346,6 +346,12 @@ class PermissionSystem:
         # For testing purposes, return False (deny by default)
         return False
 
+    def require_confirmation(self, command: str) -> bool:
+        """Check if a natural language command implies a dangerous operation"""
+        command_lower = command.lower()
+        danger_keywords = ['delete', 'remove', 'uninstall', 'format', 'reset', 'wipe']
+        return any(k in command_lower for k in danger_keywords)
+
 
 # Global permission system instance
 _permission_system_instance: Optional[PermissionSystem] = None

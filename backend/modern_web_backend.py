@@ -319,19 +319,36 @@ else:
     load_dotenv()
 
 # Create Flask app
-# Point to new web assets location
-if getattr(sys, 'frozen', False):
-    # If we are running in a PyInstaller bundle
-    bundle_dir = sys._MEIPASS
-    web_assets_dir = os.path.join(bundle_dir, 'web_assets')
-else:
-    # If we are running in normal Python environment
-    web_assets_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend', 'web-app', 'dist'))
+# Point to web assets location (supports PyInstaller frozen bundle, standalone Python, and dev modes)
+candidate_dirs = [
+    getattr(sys, '_MEIPASS', None) and os.path.join(sys._MEIPASS, 'frontend', 'web-app', 'dist'),
+    getattr(sys, '_MEIPASS', None) and os.path.join(sys._MEIPASS, 'web_assets'),
+    os.path.join(os.path.dirname(sys.executable), '_internal', 'frontend', 'web-app', 'dist'),
+    os.path.join(os.path.dirname(sys.executable), 'frontend', 'web-app', 'dist'),
+    os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend', 'web-app', 'dist')),
+    os.path.abspath(os.path.join(os.getcwd(), 'frontend', 'web-app', 'dist')),
+]
+web_assets_dir = next((d for d in candidate_dirs if d and os.path.exists(d)), os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend', 'web-app', 'dist')))
 
 template_dir = web_assets_dir
 static_dir = web_assets_dir
 
 app = Flask(__name__, template_folder=template_dir, static_folder=static_dir, static_url_path='/')
+
+# Serve Frontend SPA
+@app.route('/')
+def serve_root():
+    """Serve the React app index.html for root path"""
+    return send_from_directory(static_dir, 'index.html')
+
+@app.route('/<path:path>')
+def serve_static_or_spa(path):
+    """Serve static asset if it exists, otherwise fall back to index.html for client routing"""
+    file_path = os.path.join(static_dir, path)
+    if os.path.exists(file_path) and os.path.isfile(file_path):
+        return send_from_directory(static_dir, path)
+    return send_from_directory(static_dir, 'index.html')
+
 
 # Security Configuration - Use secrets manager for secure key handling
 # Helper to dynamically ensure secret keys are persisted in .env
@@ -1270,10 +1287,10 @@ try:
                 else:
                     # Not loaded yet, look at what it prefers
                     # From gguf_model_manager.py logic: it looks for iq3 first
-                    if os.path.exists(os.path.join("models", "pulsar-final-iq3_xxs.gguf")):
-                        m_name = "pulsar-final-iq3_xxs.gguf"
+                    if os.path.exists(os.path.join("models", "pulsar-final-q4_k_m.gguf")):
+                        m_name = "pulsar-final-q4_k_m.gguf"
                     else:
-                        m_name = getattr(manager, 'model_filename', 'pulsar-final-q4_k_m.gguf')
+                        m_name = getattr(manager, 'model_filename', 'pulsar-final-q3_k_m.gguf')
                         
                 # Just show the exact model name being used locally
                 hud['active_model'] = f"{m_name}"
@@ -1411,30 +1428,20 @@ try:
 except Exception as e:
     logger.debug(f'Websockets module note: {e}')
 
-if __name__ == '__main__':
+def start_server(host=None, port=None):
+    """Cleanly initialize services and start SocketIO server"""
     print("=" * 60)
     print("🚀 Pulsar Assistant - Modern Web Backend")
     print("=" * 60)
-    print(" Server starting on: http://localhost:5000")
-    print("º  Bolt.ai React UI (Monochrome Steel Design)")
-    print("⚡ Real-time features enabled via WebSockets")
-    print(" API endpoints available at /api/*")
-    print("🛑 Press Ctrl+C to stop the server")
-    print("=" * 60)
     
     try:
-        # Bind to localhost only for security
-        host = os.getenv('HOST', '127.0.0.1')
-        port = int(os.getenv('PORT', 5000))
+        host = host or os.getenv('HOST', '127.0.0.1')
+        port = port or int(os.getenv('PORT', 5000))
         
-        print(f"[OK] Security: JWT authentication enabled")
-        print(f"[OK] Security: Rate limiting enabled")
-        print(f"[OK] Security: CORS restricted to: {', '.join(ALLOWED_ORIGINS)}")
-        print(f"[OK] Security: Host binding: {host}")
-        print("")
-        print("[OK]  Security: Admin credentials configured")
-        print("[OK]  SECURITY: Ensure ADMIN_PASSWORD is set in .env file for production!")
-        print("")
+        print(f"  Server starting on: http://{host}:{port}")
+        print("  Real-time features enabled via WebSockets")
+        print("  API endpoints available at /api/*")
+        print("=" * 60)
         
         # Initialize secure keys from OS Credential Store into environment
         try:
@@ -1448,16 +1455,14 @@ if __name__ == '__main__':
                 val = get_secure_key(key_name)
                 if val:
                     os.environ[env_name] = val
-                    logger.info(f"˜ Stored Key '{key_name}' loaded into environment at startup.")
+                    logger.info(f"Stored Key '{key_name}' loaded into environment at startup.")
         except Exception as e:
-            logger.warning(f"  Failed to load secure keys at startup: {e}")
+            logger.warning(f"Failed to load secure keys at startup: {e}")
             
         # Start app discovery schedulers (non-blocking)
         if AUTOMATION_AVAILABLE:
-            # Start delayed refresh 5 minutes after server starts (to not slow down startup)
-            start_auto_refresh_after_startup(delay_seconds=300)  # 5 minutes
-            # Start weekly periodic refresh
-            start_periodic_refresh(interval_hours=168)  # 168 hours = 1 week
+            start_auto_refresh_after_startup(delay_seconds=300)
+            start_periodic_refresh(interval_hours=168)
         
         # Start robust system monitoring
         try:
@@ -1465,7 +1470,7 @@ if __name__ == '__main__':
             start_system_monitor(socketio)
             logger.info("✅ System monitoring started")
         except ImportError as e:
-            print(f"  Could not start system monitoring: {e}")
+            print(f"Could not start system monitoring: {e}")
         
         # Register Google Speech Recognition WebSocket handlers
         if GOOGLE_SPEECH_WS_AVAILABLE:
@@ -1473,7 +1478,7 @@ if __name__ == '__main__':
                 register_google_speech_handlers(socketio)
                 logger.info("✅ Google Speech Recognition WebSocket handlers registered")
             except Exception as e:
-                print(f"   Could not register Google Speech handlers: {e}")
+                print(f"Could not register Google Speech handlers: {e}")
         
         # Register improved command handlers with proper routing
         try:
@@ -1482,7 +1487,7 @@ if __name__ == '__main__':
             chat_handlers.set_learning_router(learning_router if 'learning_router' in globals() else None)
             logger.info("✅ Command handlers registered with local-first routing")
         except Exception as e:
-            print(f"   Could not register command handlers: {e}")
+            print(f"Could not register command handlers: {e}")
             import traceback
             traceback.print_exc()
 
@@ -1493,6 +1498,15 @@ if __name__ == '__main__':
         except Exception as e:
             logger.warning(f"⚠️ Could not start AI background thread: {e}")
 
+        # Disable console banners that might crash when sys.stdout is None
+        try:
+            import click._winconsole
+            click._winconsole._get_windows_console_stream = lambda *args, **kwargs: None
+            import flask.cli
+            flask.cli.show_server_banner = lambda *args, **kwargs: None
+        except Exception:
+            pass
+
         socketio.run(app, host=host, port=port, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)
     except Exception as e:
         import traceback
@@ -1500,10 +1514,8 @@ if __name__ == '__main__':
         traceback.print_exc()
         sys.exit(1)
 
-
-
-
-
+if __name__ == '__main__':
+    start_server()
 
 
 

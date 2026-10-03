@@ -66,9 +66,9 @@ try:
     import vosk
     import pyaudio
     VOSK_AVAILABLE = True
-except ImportError:
+except Exception as e:
     VOSK_AVAILABLE = False
-    logger.warning("WARNING: Vosk not available. Install with: pip install vosk pyaudio")
+    logger.warning("WARNING: Vosk not available or failed to load. Falling back to alternative engines.")
     Model = None
     KaldiRecognizer = None
     pyaudio = None

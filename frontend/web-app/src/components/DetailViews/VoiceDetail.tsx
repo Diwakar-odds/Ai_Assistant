@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { Mic, Volume2, Clock, Loader2, Play, Check } from 'lucide-react';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useState, useEffect } from 'react';
+import { apiUrl } from '../../lib/api';
 
 interface VoiceOption {
   id: string;
@@ -13,7 +14,15 @@ interface VoiceOption {
 }
 
 const VoiceDetail = () => {
-  const { voiceCommands, isVoiceActive, toggleVoice, alwaysActive, toggleAlwaysActive } = useDashboard();
+  const {
+    voiceCommands,
+    isVoiceActive,
+    toggleVoice,
+    alwaysActive,
+    toggleAlwaysActive,
+    requireWakeWord,
+    toggleWakeWord,
+  } = useDashboard();
 
    
   const [settings, setSettings] = useState<any>(null);
@@ -31,7 +40,7 @@ const VoiceDetail = () => {
 
   const loadSettings = async () => {
     try {
-      const response = await fetch('/api/voice/settings');
+      const response = await fetch(apiUrl('/api/voice/settings'));
       const data = await response.json();
       if (data.success) {
         setSettings(data.settings);
@@ -46,7 +55,7 @@ const VoiceDetail = () => {
 
   const loadVoices = async () => {
     try {
-      const response = await fetch('/api/voice/list');
+      const response = await fetch(apiUrl('/api/voice/list'));
       const data = await response.json();
       if (data.success) {
         setVoices(data.voices);
@@ -61,7 +70,7 @@ const VoiceDetail = () => {
 
     setSaving(true);
     try {
-      const response = await fetch('/api/voice/settings', {
+      const response = await fetch(apiUrl('/api/voice/settings'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings)
@@ -98,7 +107,7 @@ const VoiceDetail = () => {
   const playVoicePreview = async () => {
     setPreviewPlaying(true);
     try {
-      const response = await fetch('/api/voice/preview', {
+      const response = await fetch(apiUrl('/api/voice/preview'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -158,16 +167,36 @@ const VoiceDetail = () => {
           <h3 className="text-2xl font-bold text-white mb-2">Voice Control</h3>
           <p className="text-[#9CA3AF]">Manage voice commands and settings</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap items-center">
           <button
             onClick={toggleVoice}
-            className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 ${isVoiceActive
+            className={`px-3 py-2 rounded-lg transition-all flex items-center gap-2 text-sm ${isVoiceActive
               ? 'bg-[#EF4444]/20 text-[#EF4444] hover:bg-[#EF4444]/30'
               : 'bg-[#10B981]/20 text-[#10B981] hover:bg-[#10B981]/30'
               }`}
           >
             <Mic className="w-4 h-4" />
-            {isVoiceActive ? 'Stop Listening' : 'Start Listening'}
+            {isVoiceActive ? 'Stop Mic' : 'Start Mic'}
+          </button>
+
+          <button
+            onClick={toggleAlwaysActive}
+            className={`px-3 py-2 rounded-lg transition-all flex items-center gap-2 text-sm font-medium ${alwaysActive
+              ? 'bg-[#00f3ff]/20 text-[#00f3ff] border border-[#00f3ff]/40'
+              : 'bg-[#2A2D35] text-white/60 border border-[#3A3D45] hover:border-[#00f3ff]/30'
+              }`}
+          >
+            Always Active: {alwaysActive ? 'ON' : 'OFF'}
+          </button>
+
+          <button
+            onClick={toggleWakeWord}
+            className={`px-3 py-2 rounded-lg transition-all flex items-center gap-2 text-sm font-medium ${requireWakeWord
+              ? 'bg-amber-500/20 text-amber-400 border border-amber-400/40'
+              : 'bg-[#2A2D35] text-white/60 border border-[#3A3D45] hover:border-amber-400/30'
+              }`}
+          >
+            Wake Word: {requireWakeWord ? 'ON' : 'OFF'}
           </button>
         </div>
       </div>

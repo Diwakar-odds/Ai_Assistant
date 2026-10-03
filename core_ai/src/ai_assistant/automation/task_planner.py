@@ -220,16 +220,27 @@ class TaskPlanner:
     Uses LLM to decompose natural language into executable actions
     """
     
-    def __init__(self, llm_provider: str = "gemini"):
+    def __init__(self, llm_provider: Optional[str] = None):
         """
         Initialize task planner
         
         Args:
-            llm_provider: "gemini" or "openai"
+            llm_provider: Optional provider ("gguf", "gemini", "openai", or None for auto-detect)
         """
-        self.llm = LLMFactory.create(llm_provider)
+        try:
+            if not llm_provider:
+                try:
+                    provider_name, _ = LLMFactory.detect_provider()
+                except Exception:
+                    provider_name = "gemini" if os.getenv("GEMINI_API_KEY") else ("openai" if os.getenv("OPENAI_API_KEY") else "offline")
+            else:
+                provider_name = llm_provider
+            self.llm = LLMFactory.create_with_fallback(provider_name)
+        except Exception as e:
+            logger.warning(f"TaskPlanner could not initialize {llm_provider}: {e}. Falling back to offline provider.")
+            self.llm = LLMFactory.create("offline")
         self.validator = PlanValidator()
-        logger.info(f"… TaskPlanner initialized with {llm_provider}")
+        logger.info("… TaskPlanner initialized successfully")
     
     def create_plan(self, command: str, context: Optional[Dict[str, Any]] = None) -> TaskPlan:
         """

@@ -53,8 +53,10 @@ class AppDiscovery:
         self.apps_database['calculator'] = 'calculator:'
         self.apps_database['clock'] = 'ms-clock:'
         self.apps_database['calendar'] = 'outlookcal:'
-        
-        self._init_usage_database()
+        self.apps_database['notebook'] = 'notepad'
+        self.apps_database['whats'] = 'whatsapp'
+        self.apps_database['whatsapp'] = 'whatsapp'
+        self.apps_database['whatsapp web'] = 'whatsapp'
         
         # DON'T start background refresh at startup - defer until first use
         # This saves 10-20 seconds at server startup
@@ -171,9 +173,18 @@ class AppDiscovery:
         apps = {}
         try:
             # PowerShell command to get AppX packages (same as Settings uses)
-            cmd = 'powershell -NoProfile -NonInteractive -Command "Get-AppxPackage | Where-Object {$_.Name -notlike \"*DeletedAllUserPackages*\" -and $_.SignatureKind -eq \"Store\"} | Select-Object Name,PackageFamilyName | ConvertTo-Json"'
-            
-            result = subprocess.run(cmd, capture_output=True, text=True, shell=True, timeout=10)
+            command = (
+                'Get-AppxPackage | Where-Object {$_.Name -notlike '
+                '"*DeletedAllUserPackages*" -and $_.SignatureKind -eq "Store"} '
+                '| Select-Object Name,PackageFamilyName | ConvertTo-Json'
+            )
+            result = subprocess.run(
+                ['powershell.exe', '-NoProfile', '-NonInteractive', '-Command', command],
+                capture_output=True,
+                text=True,
+                shell=False,
+                timeout=10,
+            )
             
             if result.returncode == 0 and result.stdout.strip():
                 try:
@@ -825,19 +836,26 @@ def smart_open_application(app_name: str, action_type: str = 'open_app') -> str:
             # This is reliable for Desktop apps and PWAs found in Start Menu
             if os.path.exists(app_path):
                 print(f"  🚀 Launching Native Windows App directly: {app_path}")
-                # Use subprocess shell start to robustly handle .lnk files and PWAs (like Brave)
-                import subprocess
-                subprocess.Popen(f'start "" "{app_path}"', shell=True)
+                # Do not interpolate a discovered path into a shell command.
+                # A malicious shortcut filename containing quotes or metacharacters
+                # would otherwise become command injection.
+                if hasattr(os, 'startfile'):
+                    os.startfile(app_path)
+                else:
+                    import subprocess
+                    subprocess.Popen([app_path], shell=False)
                 app_discovery.track_app_launch(app_name, app_path, success=True)
                 app_discovery.record_action_preference(action_type, app_name, 'native')
                 return f"✅ Opened Native App: {app_name}"
             # Fallback for Windows App protocols/commands (like Calculator UWP)
             else:
-                import subprocess
-                if app_path.endswith(':'):
-                    subprocess.Popen(f'start {app_path}', shell=True)
+                if app_path.endswith(':') and re.fullmatch(r'[A-Za-z][A-Za-z0-9+.-]*:', app_path):
+                    if hasattr(os, 'startfile'):
+                        os.startfile(app_path)
+                    else:
+                        return f"❌ Windows app protocols are not supported on this platform: {app_name}"
                 else:
-                    subprocess.Popen(app_path, shell=True)
+                    return f"❌ Refusing to launch an untrusted application target: {app_name}"
                 app_discovery.track_app_launch(app_name, app_path, success=True)
                 app_discovery.record_action_preference(action_type, app_name, 'native')
                 return f"✅ Opened Web/Windows App using Shell: {app_name}"

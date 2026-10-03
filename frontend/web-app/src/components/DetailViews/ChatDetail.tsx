@@ -3,7 +3,7 @@ import { MessageSquare, User, Bot, Search, Download } from 'lucide-react';
 import { useDashboard } from '../../contexts/DashboardContext';
 
 const ChatDetail = () => {
-  const { chatMessages } = useDashboard();
+  const { chatMessages, isAITyping } = useDashboard();
 
   return (
     <div className="space-y-6">
@@ -60,6 +60,25 @@ const ChatDetail = () => {
                 </div>
               </motion.div>
             ))
+          )}
+          
+          {isAITyping && (
+            <motion.div
+              className="flex gap-4 flex-row"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <div className="p-3 rounded-full bg-[#10B981]/20">
+                <Bot className="w-5 h-5 text-[#10B981]" />
+              </div>
+              <div className="flex-1 max-w-[70%] items-start flex flex-col">
+                <div className="px-4 py-3 rounded-lg bg-[#2A2D35] border border-[#3A3D45] flex items-center gap-1.5 h-12">
+                  <div className="w-2 h-2 bg-[#10B981] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-2 h-2 bg-[#10B981] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-2 h-2 bg-[#10B981] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            </motion.div>
           )}
         </div>
       </div>

@@ -108,10 +108,10 @@ interface AppSettings {
 }
 
 const AI_PROVIDERS = [
-  { value: 'gemini', label: '🔷 Google Gemini' },
-  { value: 'openai', label: '🟢 OpenAI (GPT)' },
+  { value: 'gguf', label: '🧠 Pulsar 4.6GB (Local GGUF)' },
   { value: 'ollama', label: '🤖 Ollama (Local)' },
-  { value: 'gguf', label: '🧠 Pulsar 4.6GB (Local GGUF)' }
+  { value: 'openai', label: '🟢 OpenAI (GPT)' },
+  { value: 'gemini', label: '🔷 Google Gemini' }
 ];
 
 const AI_MODELS: Record<string, string[]> = {
@@ -672,7 +672,7 @@ const RecursiveFormRenderer = ({ data, onChange, path, rootData, depth = 0 }: { 
         // Special Handling: AI Model Dropdown (Top Level)
         if (key === 'defaultModel') {
           // Look up 'defaultProvider' in the CURRENT data object (siblings) OR rootData
-          const currentProvider = data['defaultProvider'] || (rootData && rootData['defaultProvider']) || 'google';
+          const currentProvider = data['defaultProvider'] || (rootData && rootData['defaultProvider']) || 'gemini';
           const availableModels = AI_MODELS[currentProvider] || [];
 
           return (

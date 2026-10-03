@@ -95,7 +95,10 @@ class HistoricalRAG:
 
         if SBERT_AVAILABLE:
             try:
-                self.embedder = SentenceTransformer(model_name)
+                try:
+                    self.embedder = SentenceTransformer(model_name, local_files_only=True)
+                except Exception:
+                    self.embedder = SentenceTransformer(model_name)
                 self.embedding_dim = self.embedder.get_sentence_embedding_dimension()
             except Exception as e:
                 logger.warning(f"[RAG] Embedder init failed: {e}")

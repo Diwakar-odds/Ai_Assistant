@@ -208,7 +208,15 @@ class ModernAssistant:
                 from ai_assistant.core.context_optimizer import ContextOptimizer
                 
                 if self._llm_chat is None:
-                    self._llm_chat = UnifiedChatInterface(use_fallback=True)
+                    try:
+                        import sys
+                        from pathlib import Path
+                        sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
+                        from settings_manager import get_provider, get_model
+                        _sm_provider, _sm_model = get_provider(), get_model()
+                    except ImportError:
+                        _sm_provider, _sm_model = None, None
+                    self._llm_chat = UnifiedChatInterface(provider=_sm_provider, model=_sm_model, use_fallback=True)
                     self._onboarding_mgr = OnboardingManager()
                     self._context_opt = ContextOptimizer()
                     
@@ -373,13 +381,16 @@ class ModernAssistant:
     
     @property
     def whisper_model(self):
-        """Lazy-load whisper model"""
+        """Lazy-load whisper model (uses 'small' for accurate Hindi/Hinglish, fallback to 'base')"""
         if not hasattr(self, '_whisper_model') or self._whisper_model is None:
             try:
                 import os
                 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
                 from faster_whisper import WhisperModel
-                self._whisper_model = WhisperModel('base', device='cpu', compute_type='int8')
+                try:
+                    self._whisper_model = WhisperModel('small', device='cpu', compute_type='int8')
+                except Exception:
+                    self._whisper_model = WhisperModel('base', device='cpu', compute_type='int8')
             except Exception:
                 self._whisper_model = None
         return self._whisper_model
@@ -1520,9 +1531,16 @@ Just speak naturally - I understand context! """
             elif mood_lower in ['frustrated', 'angry']:
                 speed = 1.1
                 # Could change voice here if more voices are added
-            elif mood_lower in ['neutral']:
-                speed = 1.0
-        
+        # Sanitize text for TTS (remove Markdown, LaTeX, emojis, formatting symbols)
+        try:
+            from ai_assistant.voice.text_cleaner import clean_text_for_tts
+            text = clean_text_for_tts(text)
+        except Exception as e:
+            logger.debug(f"Could not sanitize text for TTS: {e}")
+
+        if not text or not text.strip():
+            return None
+
         try:
             # Generate audio using KittenTTS with mood-aware parameters
             audio_array = self.tts_engine.generate(text, voice=voice, speed=speed)
@@ -1540,7 +1558,7 @@ Just speak naturally - I understand context! """
             print(f"KittenTTS error: {e}")
             return None
     
-    def process_voice_audio(self, audio_data, on_transcription_complete=None):
+    def process_voice_audio(self, audio_data, on_transcription_complete=None, language=None):
         """Process raw audio data for speech recognition using Faster-Whisper"""
         whisper = getattr(self, 'whisper_model', None)
         recognizer = getattr(self, 'speech_recognizer', None)
@@ -1568,12 +1586,59 @@ Just speak naturally - I understand context! """
             
             logger.debug("DEBUG: Audio buffered in memory. Starting Whisper transcribe...")
 
+            # Configure language & vocabulary bias for accurate Hindi/Hinglish
+            whisper_lang = None
+            if language:
+                lang_str = str(language).lower()
+                if 'hi' in lang_str:
+                    whisper_lang = 'hi'
+                elif 'en' in lang_str:
+                    whisper_lang = 'en'
+            
+            # Default to Hindi when 'auto' or unset — user primarily speaks Hindi/Hinglish
+            if whisper_lang is None:
+                try:
+                    import sys
+                    from pathlib import Path
+                    sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
+                    from settings_manager import get_stt_language_short
+                    whisper_lang = get_stt_language_short()
+                    logger.info(f"[WHISPER] Language from settings: '{whisper_lang}'")
+                except ImportError:
+                    whisper_lang = 'hi'
+                    logger.info(f"[WHISPER] Language auto/unset → defaulting to Hindi ('hi')")
+            
+            # Use language-specific initial_prompt to avoid script confusion
+            if whisper_lang == 'hi':
+                initial_prompt = "नमस्ते, कैसे हो? क्या हाल है? सब ठीक है? बताओ क्या करना है? गाना चलाओ, वॉल्यूम बढ़ाओ, स्क्रीनशॉट लो।"
+            else:
+                initial_prompt = "Hello, how are you? Open the application, take a screenshot, play music, increase volume."
+
             try:
-                # Transcribe using Faster-Whisper (beam_size=1 for 5x speed)
-                segments, info = self.whisper_model.transcribe(audio_stream, beam_size=1)
+                # Transcribe using Faster-Whisper
+                # Note: We use vad_filter=False because frontend already gates on speech/silence.
+                # Double VAD filtering drops short or quiet Hindi utterances.
+                segments, info = self.whisper_model.transcribe(
+                    audio_stream,
+                    beam_size=3,
+                    language=whisper_lang,
+                    initial_prompt=initial_prompt,
+                    vad_filter=False
+                )
                 logger.debug("DEBUG: Generator returned. Evaluating segments...")
                 text = " ".join([segment.text for segment in segments]).strip()
                 logger.debug(f"DEBUG: Segments evaluated. Text: {text}")
+
+                # If specific language yielded no speech, try auto-detection fallback
+                if not text:
+                    audio_stream.seek(0)
+                    segments, info = self.whisper_model.transcribe(
+                        audio_stream,
+                        beam_size=2,
+                        initial_prompt=initial_prompt,
+                        vad_filter=False
+                    )
+                    text = " ".join([segment.text for segment in segments]).strip()
             finally:
                 pass
             

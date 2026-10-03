@@ -20,7 +20,15 @@ class ChainOptimizer:
         
         try:
             from ai_assistant.ai.llm_provider import UnifiedChatInterface
-            self.llm = UnifiedChatInterface()
+            try:
+                import sys
+                from pathlib import Path
+                sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
+                from settings_manager import get_provider, get_model
+                _sm_provider, _sm_model = get_provider(), get_model()
+            except ImportError:
+                _sm_provider, _sm_model = None, None
+            self.llm = UnifiedChatInterface(provider=_sm_provider, model=_sm_model)
             self.llm.add_system_message("You are an AI planner optimization engine. "
                                         "Given a plan, generate 2 alternative plans that achieve the same goal, "
                                         "but with different trade-offs (e.g. faster but riskier, safer but slower). "

@@ -1,6 +1,7 @@
 import  { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, ArrowRight, Shield, Mic, Wand2 } from 'lucide-react';
+import { apiUrl } from '../lib/api';
 
 
 export default function OnboardingModal({ onComplete }: { onComplete: () => void }) {
@@ -14,7 +15,7 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
   const handleFinish = async () => {
     setLoading(true);
     try {
-      await fetch('/api/settings/complete_onboarding', {
+      await fetch(apiUrl('/api/settings/complete_onboarding'), {
         method: 'POST',
       });
       onComplete();

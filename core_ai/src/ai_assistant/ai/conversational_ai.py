@@ -259,10 +259,19 @@ class AdvancedConversationalAI:
             
             from ai_assistant.ai.llm_provider import UnifiedChatInterface, LLMFactory
             
+            try:
+                import sys
+                from pathlib import Path
+                sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
+                from settings_manager import get_provider, get_model
+                _sm_provider, _sm_model = get_provider(), get_model()
+            except ImportError:
+                _sm_provider, _sm_model = None, None
+
             # Try to create a unified chat interface with automatic provider detection
             self.llm_provider = UnifiedChatInterface(
-                provider=None,
-                model=None,
+                provider=_sm_provider,
+                model=_sm_model,
                 use_fallback=True
             )
             

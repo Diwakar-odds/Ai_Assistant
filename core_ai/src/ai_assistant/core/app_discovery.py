@@ -27,6 +27,7 @@ except ImportError:
     import json
     import subprocess
     import logging
+    import re
     from typing import Dict, List, Optional
     
     logger = logging.getLogger(__name__)
@@ -114,8 +115,10 @@ except ImportError:
                 return f"Found {app_name} but failed to open: {e}"
         
         try:
-            subprocess.Popen(f"start {app_name}", shell=True)
-            return f"Attempting to open {app_name} via system command..."
+            if not re.fullmatch(r"[A-Za-z0-9 ._-]{1,100}", app_name):
+                return "Could not find or open the requested application."
+            os.startfile(app_name)
+            return f"Attempting to open {app_name} via the system launcher..."
         except Exception as e:
             return f"Could not find or open {app_name}. Error: {e}"
     

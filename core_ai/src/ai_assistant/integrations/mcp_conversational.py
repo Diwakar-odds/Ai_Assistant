@@ -272,7 +272,7 @@ async def enhance_with_mcp(conversational_ai):
     # Patch the process_message method to check MCP tools first
     original_process_message = conversational_ai.process_message
     
-    def enhanced_process_message(message: str, role: str = "user") -> str:
+    def enhanced_process_message(message: str, role: str = "user", *args, **kwargs) -> str:
         """Enhanced process_message that checks MCP tools first"""
         # Try MCP tools first
         try:
@@ -296,7 +296,7 @@ async def enhance_with_mcp(conversational_ai):
             logging.error(f"MCP tool check error: {e}")
         
         # Fall back to original processing
-        return original_process_message(message, role)
+        return original_process_message(message, role, *args, **kwargs)
     
     # Replace the method
     conversational_ai.process_message = enhanced_process_message

@@ -125,8 +125,7 @@ def open_settings_page(page_name: str) -> str:
         if not re.match(r'^[a-zA-Z0-9\-_]+$', page_name):
             return f"Error: Invalid settings page name. Only alphanumeric characters, hyphens, and underscores are allowed."
         
-        # Use subprocess with list arguments (no shell) for security
-        subprocess.Popen(['start', '', f'ms-settings:{page_name}'], shell=True)
+        os.startfile(f'ms-settings:{page_name}')
         return f"Opened settings page: {page_name}"
     except Exception as e:
         return f"Error opening settings page {page_name}: {e}"
@@ -175,18 +174,23 @@ def search_youtube(query: str) -> str:
 
 def close_application(app_name: str) -> str:
     """Closes an open application by its window name."""
+    executable_name = app_name.removesuffix('.exe')
+    if not re.fullmatch(r'[A-Za-z0-9_. -]{1,100}', executable_name):
+        return "Error: Invalid application name."
+
     if not PYWINAUTO_AVAILABLE:
         # Fallback to taskkill if pywinauto is not available
         try:
-            subprocess.run(f"taskkill /IM {app_name}.exe /F", shell=True)
+            subprocess.run(['taskkill', '/IM', f'{executable_name}.exe', '/F'], check=False)
             return f"Attempted to close {app_name} using taskkill."
         except Exception as e:
             return f"❌ App closing requires 'pywinauto' package or failed with taskkill: {e}"
 
     print(f"--- 'Hands' (close_application) activated. App: {app_name} ---")
     try:
-        app = Application(backend="uia").connect(title_re=f".*{app_name}.*", timeout=5)
-        app.window(title_re=f".*{app_name}.*").close()
+        title_pattern = f".*{re.escape(executable_name)}.*"
+        app = Application(backend="uia").connect(title_re=title_pattern, timeout=5)
+        app.window(title_re=title_pattern).close()
         return f"Successfully closed {app_name}."
     except Exception as e:
         return f"Error closing {app_name}: {e}. (Is it already closed?)"

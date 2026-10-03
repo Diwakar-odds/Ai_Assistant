@@ -1,11 +1,21 @@
 from flask import Blueprint, jsonify, request, send_from_directory, render_template, Response, stream_with_context
-import os, json, sys, time, datetime
+import os, json, sys, time
+from datetime import datetime, date
 from pathlib import Path
+from settings_manager import DEFAULTS, invalidate_cache, AVAILABLE_PROVIDERS
 from .common import (
     logger, api_logger, limiter, assistant, validate_input, sanitize_command,
     get_current_context, jwt_required, create_access_token, get_jwt_identity, verify_jwt_in_request,
-    ENABLE_VOICE, ENABLE_MULTIMODAL, ENABLE_CONVERSATIONAL_AI
+    ENABLE_VOICE, ENABLE_MULTIMODAL, ENABLE_CONVERSATIONAL_AI, get_socketio
 )
+
+try:
+    from backend.voice_service import AVAILABLE_VOICES
+except ImportError:
+    try:
+        from voice_service import AVAILABLE_VOICES
+    except ImportError:
+        AVAILABLE_VOICES = []
 
 settings_bp = Blueprint('settings', __name__)
 @settings_bp.route('/api/language/detect', methods=['POST'])
@@ -229,92 +239,8 @@ def api_get_all_settings():
             save_secure_key('elevenLabs', eleven_labs_key)
             
         # Default settings matching SettingsDetail.tsx interfaces exactly
-        defaults = {
-            "general": {
-                "language": "en-US",
-                "secondaryLanguage": "hi-IN",
-                "enableHinglish": True,
-                "theme": "dark",
-                "animations": True,
-                "startOnBoot": False
-            },
-            "security": {
-                "apiKeys": {
-                    "googleGemini": "********" if google_gemini_key else "",
-                    "openAI": "********" if open_ai_key else "",
-                    "elevenLabs": "********" if eleven_labs_key else ""
-                },
-                "permissions": {
-                    "allowFileDeletion": os.getenv('ENABLE_FILE_DELETION', 'false').lower() == 'true',
-                    "allowAppExecution": os.getenv('ENABLE_APP_EXECUTION', 'true').lower() == 'true',
-                    "allowWebBrowsing": True,
-                    "allowSystemControl": True
-                },
-                "encryption": {
-                    "encryptDatabase": True,
-                    "enablePinParams": False
-                }
-            },
-            "ai": {
-                "defaultProvider": "gemini",
-                "defaultModel": "gemini-2.5-flash",
-                "temperature": 0.7,
-                "maxTokens": 2048,
-                "contextWindow": 10,
-                "safetySettings": {
-                    "harassment": "BLOCK_MEDIUM_AND_ABOVE",
-                    "hateSpeech": "BLOCK_MEDIUM_AND_ABOVE",
-                    "sexuallyExplicit": "BLOCK_MEDIUM_AND_ABOVE",
-                    "dangerousContent": "BLOCK_MEDIUM_AND_ABOVE"
-                },
-                "localLlm": {
-                    "enabled": False,
-                    "modelPath": "",
-                    "useGpu": False
-                }
-            },
-            "voice": {
-                "tts": {
-                    "engine": "edge_tts",
-                    "voice_id": "en-US-AriaNeural",
-                    "voice_name": "Aria",
-                    "rate": 1.0,
-                    "volume": 0.9,
-                    "useCache": True,
-                    "available_voices": AVAILABLE_VOICES
-                },
-                "stt": {
-                    "engine": "whisper",
-                    "model": "whisper-medium",
-                    "sensitivity": 0.5,
-                    "language": "en-US",
-                    "continuous": True
-                },
-                "wakeWord": {
-                    "enabled": False,
-                    "phrases": ["hey assistant", "hey daddy"],
-                    "sensitivity": 0.5
-                }
-            },
-            "automation": {
-                "autoUpdate": True,
-                "autoBackup": "daily",
-                "maxHistorySize": 1000,
-                "smartHome": {
-                    "enabled": False,
-                    "provider": "none"
-                }
-            },
-            "system": {
-                "logLevel": "INFO",
-                "maxLogSizeMb": 100,
-                "minimizeToTray": True,
-                "notifications": {
-                    "desktop": True,
-                    "sound": True
-                }
-            }
-        }
+        import copy
+        defaults = copy.deepcopy(DEFAULTS)
         
         if settings_file.exists():
             with open(settings_file, 'r', encoding='utf-8') as f:
@@ -345,7 +271,8 @@ def api_get_all_settings():
             # ALWAYS override dynamically populated lists with system constants
             if "voice" in defaults and "tts" in defaults["voice"]:
                 defaults["voice"]["tts"]["available_voices"] = AVAILABLE_VOICES
-                print(f"[DEBUG api_get_all_settings] Merged available_voices length: {len(AVAILABLE_VOICES)}, first item: {AVAILABLE_VOICES[0]['name']}")
+                first_name = AVAILABLE_VOICES[0]['name'] if AVAILABLE_VOICES else 'None'
+                print(f"[DEBUG api_get_all_settings] Merged available_voices length: {len(AVAILABLE_VOICES)}, first item: {first_name}")
                 
             settings = defaults
         else:
@@ -425,6 +352,12 @@ def api_update_settings():
         with open(settings_file, 'w', encoding='utf-8') as f:
             json.dump(all_settings, f, indent=2)
         
+        # Always invalidate settings cache on update
+        try:
+            invalidate_cache()
+        except Exception as e:
+            logger.warning(f"Could not invalidate settings cache: {e}")
+            
         if category == 'ai':
             provider = settings_data.get('defaultProvider')
             model = settings_data.get('defaultModel')
@@ -432,12 +365,6 @@ def api_update_settings():
                 logger.info(f"🤖 AI provider updated: {provider}, model: {model}")
                 if provider == 'openai' and model:
                     os.environ["OPENAI_MODEL"] = model
-                # Invalidate cached AI settings in chat handlers
-                try:
-                    import voice_service as chat_handlers
-                    chat_handlers._ai_settings_mtime = 0  # Force cache invalidation
-                except Exception:
-                    pass
         
         # Hot-reload global LLM config if AI or Security settings change
         if category in ['ai', 'security']:
@@ -450,10 +377,12 @@ def api_update_settings():
         
         # Broadcast change to all connected clients via socket
         try:
-            socketio.emit('settings_updated', {
-                'category': category,
-                'timestamp': datetime.now().isoformat()
-            })
+            sio = get_socketio()
+            if sio:
+                sio.emit('settings_updated', {
+                    'category': category,
+                    'timestamp': datetime.now().isoformat()
+                })
         except Exception as e:
             logger.warning(f"Could not broadcast settings_updated: {e}")
         
@@ -798,30 +727,12 @@ def api_compare_models():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @settings_bp.route('/api/models/providers', methods=['GET'])
+@settings_bp.route('/api/providers', methods=['GET'])
 @limiter.limit("30 per minute")
 def api_get_providers():
     """Get list of all available LLM providers"""
     try:
-        providers = [
-            {
-                'id': 'google',
-                'name': 'Google',
-                'description': 'Google Gemini models',
-                'models': ['gemini-2.0-flash-exp', 'gemini-2.0-pro', 'gemini-1.5-pro'],
-                'features': ['multimodal', 'fast', 'cost-effective'],
-                'api_key_required': True,
-                'status': 'active'
-            },
-            {
-                'id': 'openai',
-                'name': 'OpenAI',
-                'description': 'GPT models from OpenAI',
-                'models': ['gpt-3.5-turbo', 'gpt-4-turbo', 'gpt-4o'],
-                'features': ['versatile', 'powerful', 'coding'],
-                'api_key_required': True,
-                'status': 'active'
-            }
-        ]
+        providers = AVAILABLE_PROVIDERS
         
         return jsonify({
             'success': True,
@@ -832,3 +743,4 @@ def api_get_providers():
     
     except Exception as e:
         logger.error(f"Get providers error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500

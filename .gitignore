@@ -45,6 +45,7 @@ token.pickle
 
 # App Integration Security
 config/secure/
+core_ai/src/config/secure/
 config/app_integration.env
 config/backend.env
 config/*_credentials.json

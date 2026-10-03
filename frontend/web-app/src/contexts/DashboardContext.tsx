@@ -77,6 +77,7 @@ interface DashboardContextType {
     interimTranscript: string;
     audioLevel: number; // 0-100, real-time microphone audio level
     sendCommand: (command: string) => void;
+    isAITyping: boolean;
     toggleVoice: () => void;
     setVoiceLanguage?: (lang: string) => void;
     alwaysActive: boolean;
@@ -178,6 +179,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
     const setSidebarAutoState = (state: any) => {}; // Placeholder if needed
     const [chatMessages, setChatMessages] = useState<Message[]>([]);
+    const [isAITyping, setIsAITyping] = useState(false);
     const [voiceCommands, setVoiceCommands] = useState<VoiceCommand[]>([]);
     const [systemStats, setSystemStats] = useState<SystemStats>({
         cpu: 0,
@@ -196,7 +198,9 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     const [interimTranscript, setInterimTranscript] = useState('');
     const interimTranscriptRef = useRef(''); // Ref to access current transcript in simulation
     const [recognition, setRecognition] = useState<unknown>(null);
-    const [voiceLanguage, setVoiceLanguageState] = useState('auto'); // Auto-detect language
+    const [voiceLanguage, setVoiceLanguageState] = useState(() => {
+        return localStorage.getItem('voice_language') || 'hi-IN';
+    });
     const [_isRecognitionStarted, _setIsRecognitionStarted] = useState(false);
     const accumulatedFinalTranscriptRef = useRef('');
     const transcriptTimeoutRef = useRef<any>(null);
@@ -206,9 +210,9 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     const [userStoppedVoice, setUserStoppedVoice] = useState(false); // Track if user manually stopped
     const userStoppedRef = useRef(false); // Ref to track stop state without causing re-renders
 
-    const [aiMode, setAIMode] = useState<'online' | 'offline'>('online'); // Default to online (Gemini)
-    const [aiProvider, setAIProviderState] = useState<'gemini' | 'openai' | 'ollama' | 'gguf'>('openai'); // Added aiProvider state
-    const [aiModel, setAIModel] = useState<string>(''); // Current AI model
+    const [aiMode, setAIMode] = useState<'online' | 'offline'>('online'); // Switch to online for Gemini
+    const [aiProvider, setAIProviderState] = useState<'gemini' | 'openai' | 'ollama' | 'gguf'>('gemini'); // Added aiProvider state
+    const [aiModel, setAIModel] = useState<string>('gemini-2.5-flash'); // Current AI model
     
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
@@ -236,7 +240,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                         }
 
                         // Sync AI Mode
-                        if (aiSettings.defaultProvider === 'ollama') {
+                        if (aiSettings.defaultProvider === 'ollama' || aiSettings.defaultProvider === 'gguf') {
                             setAIMode('offline');
                         } else {
                             setAIMode('online');
@@ -255,6 +259,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     const sendCommand = (command: string) => {
         // Add user message to chat
         addChatMessage(command, 'user');
+        setIsAITyping(true);
         addSystemLog('info', `Processing: ${command}`);
 
         const useOfflineMode = aiMode === 'offline';
@@ -283,6 +288,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             })
                 .then((res) => res.json())
                 .then((data) => {
+                    setIsAITyping(false);
                     const response = data.response || data.message;
                     addChatMessage(response, 'ai');
 
@@ -292,6 +298,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     }
                 })
                 .catch((error) => {
+                    setIsAITyping(false);
                     console.error('API call error:', error);
                     const errorMsg = 'Error processing command. Please try again.';
                     addChatMessage(errorMsg, 'ai');
@@ -311,7 +318,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         if (provider === 'gguf') setAIModel('pulsar-final-q4_k_m');
         else if (provider === 'gemini') setAIModel('gemini-2.5-flash');
         else if (provider === 'openai') setAIModel('gpt-4o-mini');
-        else if (provider === 'ollama') setAIModel('llama3.1:8b');
+        else if (provider === 'ollama') setAIModel('llama3.2');
         else setAIModel('');
 
         // Update aiMode based on provider
@@ -363,10 +370,12 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
     // Initialize Socket.IO connection
     useEffect(() => {
+        const savedToken = localStorage.getItem('authToken') || localStorage.getItem('token');
         const newSocket = io(SOCKET_URL, {
             path: '/socket.io',
             transports: ['polling', 'websocket'],
             withCredentials: true,
+            auth: savedToken ? { token: savedToken } : {},
             autoConnect: true,
             reconnection: true,
             reconnectionAttempts: Infinity,
@@ -379,6 +388,10 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             console.log('Connected to backend');
             setIsConnected(true);
             addSystemLog('success', 'Connected to backend server');
+        });
+
+        newSocket.on('connect_error', (err) => {
+            console.warn('Socket.IO connection error:', err?.message || err);
         });
 
         newSocket.on('disconnect', () => {
@@ -407,6 +420,12 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                                 setAIMode(newMode);
                                 console.log(`≡ƒöä AI Mode hot-switched to ${newMode}`);
                             }
+                            if (result.settings?.ai?.defaultProvider) {
+                                setAIProviderState(result.settings.ai.defaultProvider);
+                            }
+                            if (result.settings?.ai?.defaultModel) {
+                                setAIModel(result.settings.ai.defaultModel);
+                            }
                         }
                     }
                 }
@@ -417,12 +436,36 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
          
         newSocket.on('command_response', (data: any) => {
-            console.log('≡ƒôó command_response received:', data);
+            console.log('🔄 command_response received:', data);
+            setIsAITyping(false);
+            setInterimTranscript('');
             if (data.success) {
                 const message = data.response || data.message;
-                addChatMessage(message, 'ai');
+                
+                // If it came from local_gguf, it was already streamed, so we replace the last message
+                if (data.source === 'local_gguf' || data.provider === 'gguf' || data.source === 'external_ai_gguf') {
+                    setChatMessages(prev => {
+                        if (prev.length === 0) return prev;
+                        const updated = [...prev];
+                        if (updated[updated.length - 1].type === 'ai') {
+                            updated[updated.length - 1].text = message;
+                        } else {
+                            // fallback just in case
+                            updated.push({
+                                id: Date.now() + Math.random(),
+                                type: 'ai',
+                                text: message,
+                                time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+                            });
+                        }
+                        return updated;
+                    });
+                } else {
+                    addChatMessage(message, 'ai');
+                }
+                
                 // Add speak here too for command_response
-                console.log('≡ƒöè Speaking from command_response:', message?.substring(0, 50));
+                console.log('🔊 Speaking from command_response:', message?.substring(0, 50));
                 speak(message, voiceLanguage, data.audio_base64);
             } else {
                 const errorMsg = 'Error: ' + (data.error || 'Unknown error');
@@ -539,6 +582,8 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             console.log('≡ƒöè voiceLanguage:', voiceLanguage);
             console.log('≡ƒöè data.success:', data.success);
             console.log('≡ƒöè data.response:', data.response?.substring(0, 100));
+            setIsAITyping(false);
+            setInterimTranscript('');
 
             if (data.success && data.response) {
                 addChatMessage(data.response, 'ai');
@@ -557,6 +602,37 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             }
         });
 
+        newSocket.on('chat_stream_chunk', (data: any) => {
+            // If we receive a stream chunk, the AI has started responding
+            if (data.is_start) {
+                setIsAITyping(false);
+                // Create the initial message
+                const now = new Date();
+                const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+                setChatMessages(prev => [...prev, {
+                    id: Date.now() + Math.random(),
+                    type: 'ai',
+                    text: data.token || '',
+                    time: time
+                }]);
+            } else {
+                // Append token to the last AI message
+                setChatMessages(prev => {
+                    if (prev.length === 0) return prev;
+                    const lastMsg = prev[prev.length - 1];
+                    if (lastMsg.type === 'ai') {
+                        const updated = [...prev];
+                        updated[updated.length - 1] = {
+                            ...lastMsg,
+                            text: lastMsg.text + (data.token || '')
+                        };
+                        return updated;
+                    }
+                    return prev;
+                });
+            }
+        });
+
 
         // Google Speech Recognition handlers
          
@@ -571,7 +647,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             if (data.isFinal) {
                 setInterimTranscript('');
                 // Process as voice command
-                newSocket.emit('voice_command', { text: data.text, language: voiceLanguage });
+                newSocket.emit('voice_command', { text: data.text, language: voiceLanguage, provider: aiProvider, model: aiModel });
             } else {
                 setInterimTranscript(data.text);
                 interimTranscriptRef.current = data.text;
@@ -804,6 +880,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                         if (shouldProcess) {
                             console.log('≡ƒÄ» Processing voice command:', final);
                             addVoiceCommand(final);
+                            setIsAITyping(true);
 
                             // Send via socket for voice command processing, using REFs to avoid stale closures
                             const currentSocket = socketRef.current;
@@ -840,12 +917,14 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                                 })
                                     .then((res) => res.json())
                                     .then((data) => {
+                                        setIsAITyping(false);
                                         const response = data.response || data.message;
                                         addChatMessage(response, 'ai');
                                         // Speak response always for voice interactions
                                         speak(response, voiceLanguage);
                                     })
                                     .catch((error) => {
+                                        setIsAITyping(false);
                                         console.error('API call error:', error);
                                         const errorMsg = 'Error processing command. Please try again.';
                                         addChatMessage(errorMsg, 'ai');
@@ -1301,10 +1380,12 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 try { activeRecognitionRef.current.stop(); } catch (e) { /* empty */ }
             }
         } else {
-            // Don't start recording while TTS is playing or in cooldown (prevent echo/self-listening)
-            if (ttsSpeakingRef.current) {
-                console.log('🔇 Skipping mic start — TTS still speaking/cooling down');
-                return;
+            // User explicitly requested recording — unlock mic and cancel any playing speech
+            ttsSpeakingRef.current = false;
+            isPlayingRef.current = false;
+            audioQueueRef.current = [];
+            if ('speechSynthesis' in window) {
+                try { window.speechSynthesis.cancel(); } catch (e) { /* empty */ }
             }
 
             setUserStoppedVoice(false);
@@ -1343,7 +1424,11 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                         reader.onloadend = () => {
                             if (socket) {
                                 console.log('📡 Sending audio to Faster-Whisper backend');
-                                socket.emit('voice_audio_data', { audio_data: reader.result });
+                                socket.emit('voice_audio_data', {
+                                    audio_data: reader.result,
+                                    language: voiceLanguage,
+                                    require_wake_word: requireWakeWord,
+                                });
                             }
                         };
                         stream.getTracks().forEach(track => track.stop());
@@ -1356,6 +1441,8 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     setInterimTranscript('Listening (Auto-stops on silence)...');
 
                     const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                    let hasSpoken = false;
+
                     const checkSilence = () => {
                         if (!mediaRecorderRef.current || mediaRecorderRef.current.state !== 'recording') return;
 
@@ -1363,24 +1450,26 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                         const sum = dataArray.reduce((a, b) => a + b, 0);
                         const average = sum / dataArray.length;
 
-                        if (average > 10) { // Voice detected
+                        if (average > 12) { // Voice detected
+                            hasSpoken = true;
                             if (silenceTimerRef.current) {
                                 clearTimeout(silenceTimerRef.current);
                                 silenceTimerRef.current = null;
-                                setInterimTranscript('Hearing you...');
                             }
+                            setInterimTranscript('Hearing you...');
                         } else { // Silence
+                            const timeoutMs = hasSpoken ? 1800 : 7000;
                             if (!silenceTimerRef.current) {
                                 silenceTimerRef.current = setTimeout(() => {
                                     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-                                        console.log('⏳ Silence detected, processing...');
+                                        console.log(hasSpoken ? '⏳ Speech pause detected, processing...' : '⏳ Max wait time reached with no speech, stopping...');
                                         mediaRecorderRef.current.stop();
                                         setIsVoiceActive(false);
                                         isVoiceActiveRef.current = false;
                                         _setIsRecognitionStarted(false);
-                                        setInterimTranscript('Processing with Whisper...');
+                                        setInterimTranscript(hasSpoken ? 'Processing with Whisper...' : '');
                                     }
-                                }, 700); // 0.7 seconds silence
+                                }, timeoutMs);
                             }
                         }
                         requestAnimationFrame(checkSilence);
@@ -1420,7 +1509,9 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 ttsSpeakingRef.current = false;
                 console.log(' TTS cooldown complete, mic unlocked');
                 if (alwaysActive && !userStoppedVoice) {
-                    toggleVoice(); // Restart listening automatically
+                    toggleVoice().catch((err) => {
+                        console.error('❌ Error resuming always-active listening after TTS:', err);
+                    });
                 }
             }, 1200); // 1.2s cooldown to let room echo dissipate
             return;
@@ -1443,7 +1534,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     };
 
     // Text-to-Speech function
-    const speak = (text: string, lang: string = 'en-US', audioBase64?: string) => {
+    const speak = (text: string, lang: string = voiceLanguage, audioBase64?: string) => {
         try {
             // IMMEDIATELY stop all recording to prevent echo/self-listening
             ttsSpeakingRef.current = true;
@@ -1462,8 +1553,23 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 return;
             }
 
-            // No audio to play
-            console.warn(' No audioBase64 provided to speak(). Browser TTS fallback disabled.');
+            // Fallback to Browser SpeechSynthesis if no audioBase64 provided
+            if (text && text.trim() && 'speechSynthesis' in window) {
+                console.log('🗣️ Using browser SpeechSynthesis fallback for text:', text.substring(0, 50));
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text.trim());
+                utterance.lang = lang || 'hi-IN';
+                utterance.rate = 1.0;
+                utterance.onend = () => {
+                    ttsSpeakingRef.current = false;
+                };
+                utterance.onerror = () => {
+                    ttsSpeakingRef.current = false;
+                };
+                window.speechSynthesis.speak(utterance);
+                return;
+            }
+
             if (audioQueueRef.current.length === 0 && !isPlayingRef.current) {
                 ttsSpeakingRef.current = false;
             }
@@ -1475,37 +1581,39 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     };
 
     // Toggle always-active mode
-    const toggleAlwaysActive = () => {
+    const toggleAlwaysActive = async () => {
         const newState = !alwaysActive;
         setAlwaysActive(newState);
 
-        console.log('≡ƒöä Always-active mode:', newState ? 'ON' : 'OFF');
+        console.log('🔄 Always-active mode:', newState ? 'ON' : 'OFF');
         console.log('   Wake word required:', requireWakeWord);
 
         if (newState) {
             // Start listening when always-active enabled (sync both state and ref)
             setUserStoppedVoice(false);
             userStoppedRef.current = false;
-            if (!isVoiceActive && recognition) {
+            if (!isVoiceActive) {
                 try {
-                    (recognition as any).start();
+                    await toggleVoice();
                     const message = requireWakeWord
                         ? 'Always active mode enabled. Waiting for wake word.'
                         : 'Always active mode enabled. Just speak your command.';
                     speak(message, voiceLanguage);
                 } catch (error) {
-                    console.error('Error starting always-active:', error);
+                    console.error('❌ Error starting always-active mode:', error);
+                    setInterimTranscript('Failed to activate voice. Please check microphone permissions.');
+                    setAlwaysActive(false); // Revert state so UI doesn't mislead user
                 }
             }
         } else {
             // Stop listening when always-active disabled (sync both state and refs)
-            if (isVoiceActive && recognition) {
-                setUserStoppedVoice(true);
-                userStoppedRef.current = true;
-                setIsVoiceActive(false);
-                isVoiceActiveRef.current = false; // Sync ref
-                (recognition as any).stop();
-                speak('Always active mode disabled.', voiceLanguage);
+            if (isVoiceActive) {
+                try {
+                    await toggleVoice();
+                    speak('Always active mode disabled.', voiceLanguage);
+                } catch (error) {
+                    console.error('❌ Error stopping always-active mode:', error);
+                }
             }
             setWakeWordDetected(false);
             setIsProcessingCommand(false);
@@ -1529,7 +1637,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     // Toggle AI Mode: Online (GPT/Gemini) <-> Offline (Ollama)
     const toggleAIMode = async () => {
         const newMode: 'online' | 'offline' = aiMode === 'online' ? 'offline' : 'online';
-        const provider = newMode === 'online' ? 'google' : 'local';
+        const provider = newMode === 'online' ? 'gemini' : 'gguf';
 
         console.log(`≡ƒñû Switching AI mode to: ${newMode} (provider: ${provider})`);
         addSystemLog('info', `Switching to ${newMode} AI...`);
@@ -1927,12 +2035,26 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 const normalized = normalizeAndSortSessions(parsed);
                 setConversationHistory(normalized);
                 localStorage.setItem('conversationHistory', JSON.stringify(normalized));
+
+                // Restore active chat messages if latest session is from today
+                if (normalized.length > 0 && normalized[0].messages && normalized[0].messages.length > 0) {
+                    const latestSession = normalized[0];
+                    const sessionDate = new Date(latestSession.startTimestamp || Date.now());
+                    const isToday = sessionDate.toDateString() === now.toDateString();
+                    if (isToday) {
+                        setCurrentSession(latestSession);
+                        currentSessionRef.current = latestSession;
+                        setChatMessages(latestSession.messages);
+                        chatMessagesRef.current = latestSession.messages;
+                        hasGreetedRef.current = true; // Skip greeting if active session already exists
+                    }
+                }
             } catch (e) {
                 console.error('Failed to load conversation history:', e);
             }
         }
 
-        // JARVIS PROTOCOL: Initial Greeting
+        // JARVIS PROTOCOL: Initial Greeting (only if no existing messages)
         if (!hasGreetedRef.current) {
             hasGreetedRef.current = true;
             setTimeout(() => {
@@ -1989,7 +2111,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         };
     }, []);
 
-    // Update current session when messages change
+    // Update current session and save to localStorage when messages change
     useEffect(() => {
         if (currentSession) {
             setCurrentSession(prev => prev ? {
@@ -2002,12 +2124,16 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 voiceCommands: voiceCommands,
             } : null);
         }
+        if (chatMessages.length > 0 || voiceCommands.length > 0) {
+            saveInternal(currentSessionRef.current, chatMessages, voiceCommands);
+        }
     }, [chatMessages, voiceCommands]);
 
     const value: DashboardContextType = {
         socket,
         isConnected,
         chatMessages,
+        isAITyping,
         voiceCommands,
         systemStats,
         learningStats,

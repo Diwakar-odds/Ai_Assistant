@@ -77,11 +77,22 @@ class OpenAIProvider(LLMProvider):
     def generate_response(self, messages: List[Dict[str, str]], **kwargs) -> str:
         """Generate a complete response from OpenAI."""
         try:
+            import sys
+            from pathlib import Path
+            try:
+                sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
+                from settings_manager import get_temperature, get_max_tokens
+                default_temp = get_temperature()
+                default_max = get_max_tokens()
+            except ImportError:
+                default_temp = 0.7
+                default_max = 2000
+
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
-                temperature=kwargs.get("temperature", 0.7),
-                max_tokens=kwargs.get("max_tokens", 2000),
+                temperature=kwargs.get("temperature", default_temp),
+                max_tokens=kwargs.get("max_tokens", default_max),
                 top_p=kwargs.get("top_p", 1.0),
                 presence_penalty=kwargs.get("presence_penalty", 0),
                 frequency_penalty=kwargs.get("frequency_penalty", 0),
@@ -181,11 +192,22 @@ class GeminiProvider(LLMProvider):
             last_message = non_system[-1]["content"]
             
             # Create generation config
+            import sys
+            from pathlib import Path
+            try:
+                sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
+                from settings_manager import get_temperature, get_max_tokens
+                default_temp = get_temperature()
+                default_max = get_max_tokens()
+            except ImportError:
+                default_temp = 0.7
+                default_max = 2048
+
             generation_config = {
-                'temperature': kwargs.get("temperature", 0.7),
+                'temperature': kwargs.get("temperature", default_temp),
                 'top_p': kwargs.get("top_p", 0.95),
                 'top_k': kwargs.get("top_k", 40),
-                'max_output_tokens': kwargs.get("max_tokens", 2048)
+                'max_output_tokens': kwargs.get("max_tokens", default_max)
             }
             
             response = chat.send_message(
@@ -272,14 +294,26 @@ class LocalLLMProvider(LLMProvider):
         try:
             prompt = self._format_messages(messages)
             
+            import sys
+            from pathlib import Path
+            try:
+                sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
+                from settings_manager import get_temperature, get_max_tokens
+                default_temp = get_temperature()
+                default_max = get_max_tokens()
+            except ImportError:
+                default_temp = 0.7
+                default_max = 2048
+
             response = self.requests.post(
                 f"{self.api_url}/api/generate",
                 json={
                     "model": self.model,
                     "prompt": prompt,
                     "stream": False,
-                    "temperature": kwargs.get("temperature", 0.7),
+                    "temperature": kwargs.get("temperature", default_temp),
                     "top_p": kwargs.get("top_p", 0.95),
+                    "max_tokens": kwargs.get("max_tokens", default_max),
                 },
                 timeout=120
             )
@@ -409,20 +443,29 @@ class GGUFProvider(LLMProvider):
         """Generate full response using local GGUF model."""
         try:
             print("🧠 [GGUF] Generating response using local model...")
-            prompt = self._format_messages(messages)
-            
+            import sys
+            from pathlib import Path
+            try:
+                sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
+                from settings_manager import get_temperature, get_max_tokens
+                default_temp = get_temperature()
+                default_max = get_max_tokens()
+            except ImportError:
+                default_temp = 0.3
+                default_max = 512
+
             completion_kwargs = {
-                "prompt": prompt,
-                "max_tokens": kwargs.get("max_tokens", 1024),
-                "temperature": kwargs.get("temperature", 0.7),
-                "top_p": kwargs.get("top_p", 0.95),
-                "stop": ["<|eot_id|>", "<|end_of_text|>"]
+                "messages": messages,
+                "max_tokens": kwargs.get("max_tokens", default_max),
+                "temperature": kwargs.get("temperature", default_temp),
+                "top_p": kwargs.get("top_p", 0.9),
+                "repeat_penalty": 1.1,
             }
             if "response_format" in kwargs:
                 completion_kwargs["response_format"] = kwargs["response_format"]
                 
-            response = self.llm.create_completion(**completion_kwargs)
-            return response['choices'][0]['text'].strip()
+            response = self.llm.create_chat_completion(**completion_kwargs)
+            return response['choices'][0]['message']['content'].strip()
         except Exception as e:
             logger.error(f"GGUF generation failed: {e}")
             return f"Error: {str(e)}"
@@ -431,18 +474,17 @@ class GGUFProvider(LLMProvider):
         """Stream response using local GGUF model."""
         try:
             print("🧠 [GGUF] Streaming response using local model...")
-            prompt = self._format_messages(messages)
-            
-            stream = self.llm.create_completion(
-                prompt=prompt,
-                max_tokens=kwargs.get("max_tokens", 1024),
-                temperature=kwargs.get("temperature", 0.7),
-                top_p=kwargs.get("top_p", 0.95),
-                stop=["<|eot_id|>", "<|end_of_text|>"],
+            stream = self.llm.create_chat_completion(
+                messages=messages,
+                max_tokens=kwargs.get("max_tokens", 512),
+                temperature=kwargs.get("temperature", 0.3),
+                top_p=kwargs.get("top_p", 0.9),
+                repeat_penalty=1.1,
                 stream=True
             )
             for chunk in stream:
-                text = chunk['choices'][0]['text']
+                delta = chunk['choices'][0].get('delta', {})
+                text = delta.get('content', '')
                 if text:
                     yield text
         except Exception as e:
@@ -483,40 +525,23 @@ class LLMFactory:
     
     @classmethod
     def detect_provider(cls) -> tuple[str, str]:
-        """Detect available provider using smart network-aware configuration."""
+        """Detect provider from user settings (single source of truth)."""
         try:
-            # 1. First priority: The 4.6GB Local GGUF Model (100% Offline & Private)
+            from settings_manager import get_provider, get_model
+            return (get_provider(), get_model())
+        except ImportError:
+            import sys
+            from pathlib import Path
             try:
-                try:
-                    from src.ai_assistant.ai.gguf_model_manager import gguf_manager
-                except ImportError:
-                    from ai_assistant.ai.gguf_model_manager import gguf_manager
-                # Just importing it ensures we prefer it if it's available in the system
+                sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
+                from settings_manager import get_provider, get_model
+                return (get_provider(), get_model())
+            except ImportError:
+                # Fallback if settings_manager not available
+                import os
+                if os.getenv("GEMINI_API_KEY"):
+                    return ("gemini", "gemini-2.5-flash")
                 return ("gguf", "pulsar-final-q4_k_m")
-            except ImportError:
-                pass
-                
-            # 2. Fallback to Cloud models via network config
-            try:
-                from ai_assistant.ai.network_aware_llm import get_optimal_llm_config
-            except ImportError:
-                from src.ai_assistant.ai.network_aware_llm import get_optimal_llm_config
-                
-            config = get_optimal_llm_config()
-            provider = config["provider"]
-            model = config["model"]
-            
-            logger.info(f"Smart provider fallback selection: {provider} ({model})")
-            return (provider, model)
-        except Exception as e:
-            logger.error(f"Smart provider detection failed: {e}")
-            # Fallback to online providers only
-            if os.getenv("OPENAI_API_KEY"):
-                return ("openai", "gpt-3.5-turbo")
-            elif os.getenv("GEMINI_API_KEY"):
-                return ("gemini", "gemini-pro")
-            else:
-                raise ValueError("No LLM providers available (OpenAI, Gemini, or GGUF).")
     
     @classmethod
     def create_with_fallback(cls, preferred_provider: Optional[str] = None, **kwargs) -> LLMProvider:
@@ -541,8 +566,12 @@ class LLMFactory:
             return cls.create(provider, **kwargs)
         except Exception as e:
             logger.warning(f"Failed to create {provider} provider: {e}")
-            
-            # We could ping a global self healing engine instance here if we had a singleton
+            if provider != "gguf":
+                logger.info("Attempting automatic fallback to local GGUF model...")
+                try:
+                    return cls.create("gguf", model="pulsar-final-q4_k_m")
+                except Exception as fallback_err:
+                    logger.error(f"Fallback to GGUF failed: {fallback_err}")
             raise e
 
 
@@ -568,12 +597,29 @@ class UnifiedChatInterface:
         
         # Try to create provider with fallback support
         if use_fallback:
-            self.provider = LLMFactory.create_with_fallback(provider, model=model)
+            try:
+                self.provider = LLMFactory.create(provider, model=model)
+                self.provider_name = provider
+                self.model = model
+            except Exception as e:
+                logger.warning(f"Failed to create preferred provider {provider}: {e}")
+                fallback_provider, fallback_model = LLMFactory.detect_provider()
+                if provider != fallback_provider:
+                    print(f"⚠️ [{provider}] unavailable ({e}). Falling back to detected {fallback_provider} model...")
+                    try:
+                        self.provider = LLMFactory.create(fallback_provider, model=fallback_model)
+                        self.provider_name = fallback_provider
+                        self.model = fallback_model
+                    except Exception as fallback_err:
+                        logger.error(f"Fallback to {fallback_provider} failed: {fallback_err}")
+                        raise e
+                else:
+                    raise e
         else:
             self.provider = LLMFactory.create(provider, model=model)
-        
-        self.provider_name = provider
-        self.model = model
+            self.provider_name = provider
+            self.model = model
+
         self.use_fallback = use_fallback
         self.conversation_history: List[Dict[str, str]] = []
         
@@ -582,7 +628,8 @@ class UnifiedChatInterface:
             "You are Pulsar, a smart, helpful, and concise AI assistant created by Diwakar. "
             "You MUST NEVER identify as a large language model trained by Google or any other company. "
             "You MUST NEVER mention Gemma, OpenAI, Google, or any base models. "
-            "Keep your answers brief and directly address the user."
+            "Keep your answers brief and directly address the user. "
+            "CRITICAL: Always reply in the exact same language the user speaks. If the user speaks in Hindi or Hinglish, you MUST reply naturally in Hindi or Hinglish."
         )
         self.conversation_history.append({"role": "system", "content": default_system_prompt})
         

@@ -19,7 +19,15 @@ class FactExtractor:
     def __init__(self, user_dna: Optional[UserDNA] = None, pkg: Optional[PersonalKnowledgeGraph] = None):
         self.user_dna = user_dna or UserDNA()
         self.pkg = pkg or PersonalKnowledgeGraph(get_db_path_str('personal_knowledge'))
-        self.llm = UnifiedChatInterface()
+        try:
+            import sys
+            from pathlib import Path
+            sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
+            from settings_manager import get_provider, get_model
+            _sm_provider, _sm_model = get_provider(), get_model()
+        except ImportError:
+            _sm_provider, _sm_model = None, None
+        self.llm = UnifiedChatInterface(provider=_sm_provider, model=_sm_model)
         
         # Override the system prompt for extraction
         self.llm.reset()

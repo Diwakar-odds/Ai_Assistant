@@ -44,8 +44,8 @@ class GGUFModelManager:
         self.model_path = None
         self.base_dir = Path(__file__).resolve().parents[4]
         
-        # Hardcoded to the preferred model file
-        self.model_filename = "pulsar-final-q4_k_m.gguf"
+        # Hardcoded default or auto-detect in models folder
+        self.model_filename = "pulsar-final-q3_k_m.gguf"
         self._initialized = True
 
     def get_model(self) -> 'Llama':
@@ -58,27 +58,41 @@ class GGUFModelManager:
             
         with self._lock:
             if self.llm is None:
-                possible_paths = [
-                    self.base_dir / "models" / self.model_filename,
-                    Path(os.getcwd()) / "models" / self.model_filename,
-                    Path(sys.executable).parent / "models" / self.model_filename,
-                    Path(__file__).resolve().parent.parent.parent.parent.parent / "models" / self.model_filename
+                # Check models directory candidates for any downloaded .gguf file
+                candidate_model_dirs = [
+                    self.base_dir / "models",
+                    Path(os.getcwd()) / "models",
+                    Path(sys.executable).parent / "models",
+                    Path(sys.executable).parent / "_internal" / "models",
+                    Path(getattr(sys, '_MEIPASS', '')) / "models" if getattr(sys, '_MEIPASS', None) else None,
+                    Path(__file__).resolve().parent.parent.parent.parent.parent / "models"
                 ]
                 
                 found_path = None
-                for p in possible_paths:
-                    if p.exists():
-                        found_path = p
-                        break
-                        
+                preferred_names = ["pulsar-final-q4_k_m.gguf", "pulsar-final-q3_k_m.gguf", "pulsar-final-q4_k_m.gguf", self.model_filename]
+                
+                for mdir in candidate_model_dirs:
+                    if mdir and mdir.exists():
+                        for pref in preferred_names:
+                            candidate = mdir / pref
+                            if candidate.exists():
+                                found_path = candidate
+                                break
+                        if found_path:
+                            break
+                        gguf_files = list(mdir.glob("*.gguf"))
+                        if gguf_files:
+                            found_path = gguf_files[0]
+                            break
+
                 if not found_path:
                     logger.error(f"Offline model not found in any standard path for {self.model_filename}")
-                    raise FileNotFoundError(f"Offline model {self.model_filename} not found.")
+                    raise FileNotFoundError(f"Offline model not found. Please place your .gguf file in the models/ folder.")
                 
                 self.model_path = found_path
                     
-                logger.info(f"Loading offline command model into memory: {self.model_filename}")
-                print(f"Loading offline command model into memory: {self.model_filename}")
+                logger.info(f"Loading offline command model into memory: {self.model_path.name}")
+                print(f"Loading offline command model into memory: {self.model_path.name}")
                 
                 # OS-Level Optimization for Intel Core Ultra
                 import multiprocessing

@@ -155,10 +155,21 @@ class AdvancedWakeWordDetector:
     """Enhanced wake word detection with fuzzy matching and learning"""
     
     def __init__(self, wake_words: List[str] = None):
-        self.wake_words = wake_words or [
-            "hey assistant", "your daddy", "daddy", "assistant",
-            "help me", "listen", "computer", "ai assistant"
-        ]
+        if not wake_words:
+            try:
+                import sys
+                from pathlib import Path
+                sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
+                from settings_manager import get_wake_word
+                ww = get_wake_word().lower()
+                self.wake_words = [ww] if ww else ["hey pulsar", "ok pulsar", "pulsar"]
+            except ImportError:
+                self.wake_words = [
+                    "hey assistant", "your daddy", "daddy", "assistant",
+                    "help me", "listen", "computer", "ai assistant"
+                ]
+        else:
+            self.wake_words = wake_words
         
         # Fuzzy matching parameters
         self.similarity_threshold = 0.6

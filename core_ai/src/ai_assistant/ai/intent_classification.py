@@ -1,6 +1,6 @@
 from ai_assistant.core.database_config import get_db_path_str
 # Setup centralized logging
-from utils.logging_config import get_logger
+from ai_assistant.utils.logging_config import get_logger
 logger = get_logger(__name__, log_category="app")
 
 """
@@ -101,14 +101,14 @@ class IntentClassifier:
     def _initialize_intents(self) -> Dict[str, List[str]]:
         """Initialize intent categories with examples"""
         return {
-            'open_application': [
+            'open_app': [
                 "open chrome",
                 "launch spotify",
                 "start notepad",
                 "run visual studio code",
                 "open calculator",
             ],
-            'close_application': [
+            'close_app': [
                 "close browser",
                 "quit chrome",
                 "exit notepad",
@@ -136,7 +136,7 @@ class IntentClassifier:
                 "restart system",
                 "sleep mode",
             ],
-            'information_query': [
+            'info_query': [
                 "what's the weather",
                 "what time is it",
                 "how's my schedule",
@@ -204,7 +204,7 @@ class IntentClassifier:
         for intent, examples in self.intent_examples.items():
             # Add user patterns
             all_examples = examples + self.user_patterns.get(intent, [])
-            embeddings = self.model.encode(all_examples, convert_to_tensor=True)
+            embeddings = self.model.encode(all_examples, convert_to_tensor=True, show_progress_bar=False)
             self.intent_embeddings[intent] = embeddings
     
     def classify(self, user_input: str) -> Intent:
@@ -222,7 +222,7 @@ class IntentClassifier:
     def _classify_with_transformers(self, user_input: str) -> Intent:
         """Classify using sentence transformers"""
         # Encode user input
-        input_embedding = self.model.encode(user_input, convert_to_tensor=True)
+        input_embedding = self.model.encode(user_input, convert_to_tensor=True, show_progress_bar=False)
         
         # Find most similar intent
         best_intent = None
@@ -253,12 +253,12 @@ class IntentClassifier:
         
         # Keyword patterns for each intent
         patterns = {
-            'open_application': ['open', 'launch', 'start', 'run'],
-            'close_application': ['close', 'quit', 'exit', 'kill', 'shutdown'],
+            'open_app': ['open', 'launch', 'start', 'run'],
+            'close_app': ['close', 'quit', 'exit', 'kill', 'shutdown'],
             'search_web': ['search', 'google', 'look up', 'find'],
             'file_operation': ['create', 'delete', 'move', 'rename', 'copy', 'organize'],
             'system_control': ['volume', 'lock', 'shut down', 'restart', 'sleep'],
-            'information_query': ['what', 'when', 'where', 'how', 'show me'],
+            'info_query': ['what', 'when', 'where', 'how', 'show me'],
             'task_automation': ['remind', 'schedule', 'set timer', 'send email'],
         }
         
@@ -285,7 +285,7 @@ class IntentClassifier:
         entities = defaultdict(list)
         
         # Application names (capitalized words or quoted)
-        if intent in ['open_application', 'close_application']:
+        if intent in ['open_app', 'close_app', 'open_application', 'close_application']:
             # Find capitalized words
             caps_words = re.findall(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b', text)
             entities['application'].extend(caps_words)

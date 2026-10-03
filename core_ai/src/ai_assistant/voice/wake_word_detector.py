@@ -18,7 +18,7 @@ try:
     import json
     SetLogLevel(-1) # Hide verbose C++ logs that confuse the user
     VOSK_AVAILABLE = True
-except ImportError:
+except Exception as e:
     VOSK_AVAILABLE = False
 
 try:
@@ -68,7 +68,19 @@ class SmartWakeWordDetector:
             sample_rate: Audio sample rate
             chunk_size: Audio chunk size
         """
-        self.wake_words = wake_words or ["hey assistant", "ok assistant", "assistant"]
+        if not wake_words:
+            try:
+                import sys
+                from pathlib import Path
+                sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
+                from settings_manager import get_wake_word
+                ww = get_wake_word().lower()
+                # If they just said "pulsar", maybe allow "hey pulsar" too. We just take whatever they set.
+                self.wake_words = [ww] if ww else ["hey pulsar", "ok pulsar", "pulsar"]
+            except ImportError:
+                self.wake_words = ["hey assistant", "ok assistant", "assistant"]
+        else:
+            self.wake_words = wake_words
         self.threshold = threshold
         self.mode = mode
         self.audio_device = audio_device

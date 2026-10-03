@@ -99,6 +99,8 @@ const VoiceButton = () => {
     setVoiceLanguage,
     alwaysActive,
     toggleAlwaysActive,
+    requireWakeWord,
+    toggleWakeWord,
     aiProvider,
     setAIProvider,
     hudData,
@@ -109,7 +111,10 @@ const VoiceButton = () => {
 
   const [showLangSelector, setShowLangSelector] = useState(false);
   const [showProviderSelector, setShowProviderSelector] = useState(false);
-  const [selectedLang, setSelectedLang] = useState('en-US');
+  const [selectedLang, setSelectedLang] = useState(() => {
+    // Persist language selection across reloads — default to Hindi
+    return localStorage.getItem('voice_language') || 'hi-IN';
+  });
 
   const languages = [
     { code: 'en-US', name: 'English (US)', flag: '🇺🇸' },
@@ -119,16 +124,17 @@ const VoiceButton = () => {
   ];
 
   const aiProviders = [
-    { id: 'gemini' as const, name: 'Gemini', icon: '🔷', color: 'blue' },
-    { id: 'openai' as const, name: 'OpenAI', icon: '🟢', color: 'green' },
+    { id: 'gguf' as const, name: 'GGUF (Local)', icon: '🧠', color: 'yellow' },
     { id: 'ollama' as const, name: 'Ollama', icon: '🤖', color: 'purple' },
-    { id: 'gguf' as const, name: 'GGUF', icon: '🧠', color: 'yellow' },
+    { id: 'openai' as const, name: 'OpenAI', icon: '🟢', color: 'green' },
+    { id: 'gemini' as const, name: 'Gemini', icon: '🔷', color: 'blue' },
   ];
 
   const currentProvider = aiProviders.find(p => p.id === aiProvider) || aiProviders[0];
 
   const handleLanguageChange = (langCode: string) => {
     setSelectedLang(langCode);
+    localStorage.setItem('voice_language', langCode);
     setVoiceLanguage?.(langCode);
     setShowLangSelector(false);
   };
@@ -290,9 +296,24 @@ const VoiceButton = () => {
             }`}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
+          title={alwaysActive ? 'Always listening enabled' : 'Click to enable continuous listening'}
         >
           <Zap className="w-2.5 h-2.5 sm:w-3 sm:h-3 inline mr-1" />
-          Always On
+          Always On: {alwaysActive ? 'ON' : 'OFF'}
+        </motion.button>
+
+        <motion.button
+          onClick={toggleWakeWord}
+          className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-medium transition-all ${requireWakeWord
+            ? 'bg-amber-500/20 text-amber-400 border border-amber-400/40'
+            : 'bg-[#1a1f2e] text-amber-400/50 border border-amber-400/20 hover:border-amber-400/40'
+            }`}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          title={requireWakeWord ? 'Wake word active ("Hey Assistant", "Pulsar")' : 'Wake word off (executes directly)'}
+        >
+          <Mic className="w-2.5 h-2.5 sm:w-3 sm:h-3 inline mr-1" />
+          Wake Word: {requireWakeWord ? 'ON' : 'OFF'}
         </motion.button>
 
         {/* AI Provider Selector */}

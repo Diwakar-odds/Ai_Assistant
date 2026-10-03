@@ -130,12 +130,14 @@ class ExecutiveBrain:
         
         # Background memory extraction (Commitments & Graph)
         def _background_extraction(cmd_text):
-            try:
-                from ai_assistant.core.commitment_tracker import CommitmentTracker
-                tracker = CommitmentTracker()
-                tracker.extract_and_store(cmd_text)
-            except Exception as e:
-                logger.error(f"Background extraction failed: {e}")
+            commitment_keywords = ["remind", "promise", "deadline", "by tomorrow", "schedule", "task", "meeting", "submit", "deliver", "kal", "parso", "yaad", "bhul mat"]
+            if any(kw in cmd_text.lower() for kw in commitment_keywords):
+                try:
+                    from ai_assistant.core.commitment_tracker import CommitmentTracker
+                    tracker = CommitmentTracker()
+                    tracker.extract_and_store(cmd_text)
+                except Exception as e:
+                    logger.error(f"Background extraction failed: {e}")
         
         # Only extract from chat/voice, not API calls unless they are explicit commands
         if source_enum in [CommandSource.VOICE, CommandSource.CHAT]:
@@ -461,92 +463,68 @@ class ExecutiveBrain:
         
         return self._start_new_chain(command, ts_cmd)
     
-    def _start_new_chain(self, command: str, 
-                         ts_cmd: TimestampedCommand) -> BrainResponse:
-        """Start a new independent chain"""
+    def _get_agent_coordinator(self):
+        if not hasattr(self, '_coordinator'):
+            from ai_assistant.core.multi_agent_coordinator import MultiAgentCoordinator
+            from ai_assistant.agents.registry import AgentRegistry
+            from ai_assistant.agents.loader import AgentLoader
+            
+            registry = AgentRegistry()
+            AgentLoader.register_agent_definitions(registry)
+            self._coordinator = MultiAgentCoordinator(registry)
+        return self._coordinator
+
+    def _start_new_chain(self, command: str, ts_cmd: TimestampedCommand) -> BrainResponse:
         import asyncio
-        
+        import threading
         self._state = BrainState.EXECUTING
         
-        manager = self._get_chain_manager()
-        if not manager:
-            return BrainResponse(
-                action_taken='error',
-                message='Chain manager not available',
-                success=False
-            )
+        coordinator = self._get_agent_coordinator()
         
-        try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            chain = loop.run_until_complete(manager.create_chain(command))
-            loop.close()
-        except Exception as e:
-            logger.error(f"Failed to create chain: {e}")
-            return BrainResponse(
-                action_taken='error',
-                message=f'Failed to create chain: {e}',
-                success=False
-            )
-        
-        # Extract app context for relatedness tracking
-        app_context = self._extract_app_name(command.lower())
-        
-        # Create managed chain with cancellation support
-        cancel_event = threading.Event()
-        managed = ManagedChain(
-            chain_id=chain.id,
-            command=command,
-            cancel_event=cancel_event,
-            source=ts_cmd.source,
-            created_at=time.time(),
-            app_context=app_context
-        )
-        
-        # Start execution in background thread
-        def run_chain_bg():
+# We need a background task so it doesn't block the API
+        def run_coordinator():
             try:
-                import asyncio as _asyncio
-                new_loop = _asyncio.new_event_loop()
-                _asyncio.set_event_loop(new_loop)
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                result = loop.run_until_complete(coordinator.process_command(command))
+                loop.close()
                 
-                async def _execute():
-                    await manager.decompose_command(chain)
-                    await manager.identify_executors(chain)
-                    report = await manager.execute_chain(chain.id)
-                    await manager.notify_completion(report)
-                    return report
-                
-                new_loop.run_until_complete(_execute())
-                new_loop.close()
-                
+                # Emit result back to UI
+                try:
+                    import sys
+                    from datetime import datetime
+                    
+                    if 'backend.voice_service' in sys.modules:
+                        from backend.voice_service import safe_emit
+                        
+                        msg = result.get('message', '')
+                        if result.get('status') == 'success':
+                            msg = f"Task Completed: {msg}"
+                        
+                        safe_emit('command_response', {
+                            'success': result.get('status') != 'error',
+                            'response': msg,
+                            'command': command,
+                            'source': 'local_gguf_agent',
+                            'timestamp': datetime.now().isoformat(),
+                            'skip_tts': False
+                        })
+                except Exception as emit_e:
+                    import logging
+                    logging.getLogger(__name__).error(f"Failed to emit coordinator result: {emit_e}")
+                    
             except Exception as e:
-                logger.error(f"Chain execution error: {e}")
-            finally:
-                # Move from active to completed
-                with self._lock:
-                    self._completed_chains[chain.id] = self._active_chains.pop(chain.id, managed)
-                    if not self._active_chains:
-                        self._state = BrainState.IDLE
-        
-        thread = threading.Thread(target=run_chain_bg, name=f"brain-chain-{chain.id}", daemon=True)
-        managed.thread = thread
-        
-        with self._lock:
-            self._active_chains[chain.id] = managed
-        
-        thread.start()
-        
-        action = 'parallel' if len(self._active_chains) > 1 else 'executing'
-        logger.info(f"🚀 Started chain {chain.id} ({action}): {command}")
+                import logging
+                logging.getLogger(__name__).error(f"Coordinator failed: {e}")
+                
+        threading.Thread(target=run_coordinator, daemon=True).start()
         
         return BrainResponse(
-            action_taken=action,
-            message=f"Started: {command}",
-            chain_id=chain.id,
-            active_chains=list(self._active_chains.keys())
+            action_taken='executing',
+            message=f"Agent orchestration started for: {command}",
+            success=True
         )
-    
+
     def _handle_modification(self, command: str, 
                              ts_cmd: TimestampedCommand) -> BrainResponse:
         """Handle command modifications ("no wait, use Firefox instead")"""

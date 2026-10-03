@@ -62,7 +62,15 @@ def summarize_text(text: str) -> str:
     Summarizes the given text using the LLM.
     """
     print("  Summarizing content...")
-    llm = UnifiedChatInterface()
+    try:
+        import sys
+        from pathlib import Path
+        sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
+        from settings_manager import get_provider, get_model
+        _sm_provider, _sm_model = get_provider(), get_model()
+    except ImportError:
+        _sm_provider, _sm_model = None, None
+    llm = UnifiedChatInterface(provider=_sm_provider, model=_sm_model)
     prompt = (
         "Please provide a concise summary of the following text. "
         "Focus on the key points and main ideas.\n\n"

@@ -66,7 +66,7 @@ class Config:
         # Load all configuration values
         self._config = {
             # AI API Keys
-            'GOOGLE_GEMINI_API_KEY': os.getenv('GOOGLE_GEMINI_API_KEY', ''),
+            'GOOGLE_GEMINI_API_KEY': os.getenv('GOOGLE_GEMINI_API_KEY', os.getenv('GEMINI_API_KEY', '')),
             'OPENAI_API_KEY': os.getenv('OPENAI_API_KEY', ''),
             'GOOGLE_CLOUD_PROJECT_ID': os.getenv('GOOGLE_CLOUD_PROJECT_ID', ''),
             

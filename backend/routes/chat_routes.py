@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request, send_from_directory, render_template, Response, stream_with_context
 import os, json, sys, time, datetime
+from settings_manager import get_provider, get_model
 from .common import (
     logger, api_logger, limiter, validate_input, sanitize_command,
     assistant, socketio, learning_router, get_current_context,
@@ -106,8 +107,8 @@ def api_chat():
                 "message": message,
                 "response": f"I'm sorry, I encountered an internal error. Please check the logs.",
                 "features_used": ["safe_fallback"],
-                "provider": "offline",
-                "model": "error",
+                "provider": get_provider(),
+                "model": get_model(),
                 "suggestions": [],
                 "user": current_user,
                 "timestamp": datetime.now().isoformat()
@@ -482,7 +483,7 @@ def api_chat_stream():
                 with chat_session_lock:
                     if session_id not in chat_sessions:
                         if LLM_PROVIDER_AVAILABLE:
-                            chat_sessions[session_id] = UnifiedChatInterface()
+                            chat_sessions[session_id] = UnifiedChatInterface(provider=get_provider(), model=get_model())
                             chat_sessions[session_id].add_system_message(
                                 "You are a helpful AI assistant. Respond concisely and accurately."
                             )

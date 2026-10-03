@@ -14,6 +14,12 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 
+# Suppress noisy Chromium / WebView2 background network spam (GCM, updater)
+os.environ['WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS'] = (
+    '--disable-features=OptimizationGuideModelDownloading,OptimizationHintsFetching,OptimizationTargetPrediction '
+    '--disable-sync --disable-background-networking --disable-component-update --log-level=3'
+)
+
 # Setup correct project paths (Handles both standalone Python and PyInstaller frozen .exe)
 if getattr(sys, 'frozen', False):
     # PyInstaller bundle
@@ -69,7 +75,9 @@ class WindowsDesktopApp:
         try:
             logger.info("🚀 Launching AI Assistant Backend...")
             import modern_web_backend
-            if hasattr(modern_web_backend, 'socketio') and hasattr(modern_web_backend, 'app'):
+            if hasattr(modern_web_backend, 'start_server'):
+                modern_web_backend.start_server(host='127.0.0.1', port=self.port)
+            elif hasattr(modern_web_backend, 'socketio') and hasattr(modern_web_backend, 'app'):
                 modern_web_backend.socketio.run(
                     modern_web_backend.app,
                     host='127.0.0.1',
@@ -95,6 +103,11 @@ class WindowsDesktopApp:
                         logger.info("✅ Backend server is live!")
                         self.server_running = True
                         return True
+            except urllib.error.HTTPError as he:
+                # Even a 404 or 500 means server is listening!
+                logger.info(f"✅ Backend server responded with HTTP {he.code}!")
+                self.server_running = True
+                return True
             except (urllib.error.URLError, ConnectionRefusedError, OSError):
                 time.sleep(0.5)
         

@@ -57,8 +57,16 @@ class MultiModalAI:
         
         # Initialize models
         try:
-            self.vision_model = genai.GenerativeModel('gemini-2.5-flash')
-            self.text_model = genai.GenerativeModel('gemini-2.5-flash')
+            try:
+                import sys
+                from pathlib import Path
+                sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
+                from settings_manager import get_model
+                _sm_model = get_model()
+            except ImportError:
+                _sm_model = 'gemini-2.5-flash'
+            self.vision_model = genai.GenerativeModel(_sm_model)
+            self.text_model = genai.GenerativeModel(_sm_model)
         except Exception as e:
             raise ValueError(f"Failed to initialize Gemini models: {e}")
         

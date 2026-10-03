@@ -30,8 +30,8 @@
     "defaultModel": "gemini-2.5-flash",
     "defaultProvider": "gemini",
     "localLlm": {
-      "enabled": false,
-      "modelPath": "",
+      "enabled": true,
+      "modelPath": "models/pulsar-final-q4_k_m.gguf",
       "useGpu": false
     },
     "maxTokens": 2048,

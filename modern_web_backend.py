@@ -47,6 +47,10 @@ def main():
     try:
         # Launch the actual backend script with forced UTF-8 encoding
         env = os.environ.copy()
+        env['PYTHONIOENCODING'] = 'utf-8'
+        env['PYTHONUNBUFFERED'] = '1'
+        env['HF_HUB_OFFLINE'] = '1'
+        env['TRANSFORMERS_OFFLINE'] = '1'
         backend_dir = os.path.dirname(backend_script)
         result = subprocess.run([sys.executable, backend_script] + sys.argv[1:], env=env, cwd=backend_dir)
         sys.exit(result.returncode)

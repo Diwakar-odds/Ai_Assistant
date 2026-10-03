@@ -71,6 +71,22 @@ export const useSpatialGestures = (videoElement: HTMLVideoElement | null, isActi
             return;
         }
 
+        // Guard: Ensure video has valid dimensions and active data before passing to MediaPipe
+        if (
+            videoElement.readyState < 2 ||
+            !videoElement.videoWidth ||
+            !videoElement.videoHeight ||
+            videoElement.videoWidth <= 0 ||
+            videoElement.videoHeight <= 0 ||
+            videoElement.paused ||
+            videoElement.ended
+        ) {
+            if (isActive) {
+                requestRef.current = requestAnimationFrame(predictWebcam);
+            }
+            return;
+        }
+
         const nowInMs = Date.now();
         
         // Only process if video has new frame
@@ -100,14 +116,11 @@ export const useSpatialGestures = (videoElement: HTMLVideoElement | null, isActi
                     const isPinching = distance < 0.05;
                     
                     // 3. Three-finger swipe up (Mission Control)
-                    // Simple heuristic: If index, middle, ring are extended and moving up quickly.
-                    // For now, let's use the built-in gestures if possible, or build a custom check.
-                    // We'll rely on pinch for now, and add Mission Control check later.
                     let activeGesture = null;
                     if (results.gestures && results.gestures.length > 0) {
                         const recognizedCategory = results.gestures[0][0].categoryName;
                         if (recognizedCategory === 'Open_Palm') {
-                            activeGesture = 'MissionControl'; // Hack: mapping Open Palm to Mission Control for simplicity initially
+                            activeGesture = 'MissionControl'; // Mapping Open Palm to Mission Control
                         }
                     }
 
@@ -122,7 +135,7 @@ export const useSpatialGestures = (videoElement: HTMLVideoElement | null, isActi
                     setState(prev => prev.cursorPosition ? { cursorPosition: null, isPinching: false, pinchDistance: 0, activeGesture: null } : prev);
                 }
             } catch (err) {
-                console.error("Gesture recognition error:", err);
+                console.warn("Gesture recognition frame error:", err);
             }
         }
         

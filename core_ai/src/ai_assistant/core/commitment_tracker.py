@@ -83,7 +83,15 @@ class CommitmentTracker:
 
     def extract_and_store(self, user_text: str):
         if self.llm is None:
-            self.llm = UnifiedChatInterface()
+            try:
+                import sys
+                from pathlib import Path
+                sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
+                from settings_manager import get_provider, get_model
+                _sm_provider, _sm_model = get_provider(), get_model()
+            except ImportError:
+                _sm_provider, _sm_model = None, None
+            self.llm = UnifiedChatInterface(provider=_sm_provider, model=_sm_model)
             self.llm.add_system_message(
                 "Extract any commitments, promises, or deadlines from the user's text. "
                 "Return a JSON list of objects with keys: 'text', 'action', 'deadline', 'party'. "

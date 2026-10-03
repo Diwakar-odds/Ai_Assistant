@@ -22,6 +22,7 @@ import OnboardingModal from './components/OnboardingModal';
 import { useState, useEffect } from 'react';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
+import { apiUrl } from './lib/api';
 
 function AppContent() {
   const { selectedView, closeDetailView, isLeftSidebarOpen, isRightSidebarOpen } = useDashboard();
@@ -29,7 +30,7 @@ function AppContent() {
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
-    fetch('/api/settings/all')
+    fetch(apiUrl('/api/settings/all'))
       .then(res => res.json())
       .then(data => {
         if (data.success && data.settings && data.settings.onboarded === false) {

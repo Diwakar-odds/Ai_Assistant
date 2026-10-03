@@ -127,7 +127,7 @@ class LoggingConfig(metaclass=LoggingConfigMeta):
     
     # Logging levels
     DEFAULT_LEVEL = logging.INFO
-    CONSOLE_LEVEL = logging.WARNING
+    CONSOLE_LEVEL = logging.INFO
     FILE_LEVEL = logging.DEBUG
     ERROR_LEVEL = logging.ERROR
     
@@ -281,6 +281,9 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         else:
             log_file = log_dir / f"{module_name}.log"
         
+        # Ensure the directory exists (fixes Errno 2 across date boundaries)
+        log_dir.mkdir(parents=True, exist_ok=True)
+        
         # Use RotatingFileHandler for session files too
         handler = RotatingFileHandler(
             log_file,
@@ -298,7 +301,9 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         cls.initialize()
         
         session_id = SessionManager.get_current_session()
-        log_file = cls.LOG_DIRS['errors'] / f"{module_name}_errors_{session_id}.log"
+        log_dir = cls.LOG_DIRS['errors']
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_file = log_dir / f"{module_name}_errors_{session_id}.log"
         
         handler = RotatingFileHandler(
             log_file,

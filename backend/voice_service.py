@@ -1,5 +1,6 @@
 # Setup centralized logging
 from utils.logging_config import get_logger
+from settings_manager import get_provider, get_model, get_wake_words, get_stt_language_short
 logger = get_logger(__name__, log_category="app")
 
 # =============================================================================
@@ -28,7 +29,7 @@ _voice_service_import_time = _time_module.time()
 try:
     from ai_assistant.voice.wake_word_detector import get_wake_word_manager, WakeWordDetectionMode
     WAKE_WORD_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError):
     WAKE_WORD_AVAILABLE = False
     logging.warning("Wake word detector not available")
 
@@ -63,6 +64,36 @@ try:
 except ImportError:
     ADVANCED_STT_AVAILABLE = False
     logging.warning("Advanced STT not available")
+
+try:
+    from ai_assistant.voice.echo_guard import get_echo_guard, reset_echo_guard, band_energies
+    ECHO_GUARD_AVAILABLE = True
+except ImportError:
+    ECHO_GUARD_AVAILABLE = False
+    logging.warning("EchoGuard not available — falling back to timer-based echo prevention")
+
+
+def get_active_assistant():
+    """Robust helper to get the running assistant instance across main module or globals."""
+    import sys
+    if hasattr(sys, '_pulsar_assistant_instance') and sys._pulsar_assistant_instance:
+        return sys._pulsar_assistant_instance
+    main_mod = sys.modules.get('__main__')
+    if main_mod and hasattr(main_mod, 'assistant') and main_mod.assistant:
+        return main_mod.assistant
+    try:
+        from modern_web_backend import assistant
+        if assistant:
+            return assistant
+    except Exception:
+        pass
+    try:
+        from backend.modern_web_backend import assistant
+        if assistant:
+            return assistant
+    except Exception:
+        pass
+    return None
 
 
 class VoiceServiceManager:
@@ -944,6 +975,7 @@ Unified command handler with proper routing:
 from datetime import datetime
 from flask_socketio import emit
 from flask import request
+from flask_jwt_extended import decode_token
 import time
 import threading
 
@@ -1002,34 +1034,124 @@ def get_conv_ai(automation_callback=None):
     return _conv_ai_instance
 
 # ==============================================
-# Echo Prevention: Server-side TTS-active flag
+# Echo Prevention: Content-Based Acoustic Echo Cancellation
 # ==============================================
-# Uses a time-based approach: when TTS audio is generated, we set
-# a cooldown window. Audio arriving within that window is rejected.
-# The window auto-expires so even if no explicit reset comes, the
-# system recovers automatically.
-_tts_cooldown_until = 0
+# Replaced the old timer/cooldown approach with EchoGuard:
+# Instead of blanket-muting the mic for N seconds, the system now
+# compares what the speakers played vs what the mic hears using
+# FFT band-energy subtraction. This allows user interruption during
+# TTS playback and auto-calibrates to the room.
+#
+# The set_tts_active / is_tts_active functions are kept for backward
+# compatibility but now delegate to EchoGuard. Legacy timer fallback
+# is used only if EchoGuard import failed.
+_tts_cooldown_until = 0   # Legacy fallback only
+
+def _note_tts_output_to_echo_guard(audio_b64: str) -> None:
+    """Decode base64 TTS audio and feed it to EchoGuard for echo tracking.
+
+    This is called every time a TTS audio chunk is generated so the guard
+    knows what is being played through the speakers.
+    """
+    if not ECHO_GUARD_AVAILABLE:
+        return
+    try:
+        import base64
+        import io
+        import wave
+        import numpy as np
+
+        raw_wav = base64.b64decode(audio_b64)
+        wav_io = io.BytesIO(raw_wav)
+        with wave.open(wav_io, 'rb') as wf:
+            sr = wf.getframerate()
+            frames = wf.readframes(wf.getnframes())
+            pcm = np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32768.0
+
+        # Feed to echo guard
+        guard = get_echo_guard()
+        level = float(np.sqrt(np.mean(pcm ** 2))) if pcm.size > 0 else 0.0
+        guard.note_output(pcm, sr, level=level)
+    except Exception as e:
+        logger.debug(f"[EchoGuard] note_output failed (non-fatal): {e}")
+
 
 def set_tts_active(active: bool, cooldown_ms: int = 10000):
-    """Mark TTS as active with a cooldown window to prevent echo/self-listening.
-    
-    When active=True, sets a cooldown for cooldown_ms (default 10s, enough for
-    most TTS audio to finish + room echo to dissipate).
-    When active=False, sets a shorter 1.5s cooldown for lingering echo.
+    """Mark TTS as active — backward-compatible wrapper.
+
+    With EchoGuard enabled, the actual echo detection happens in
+    note_output/is_user_speech.  This function only manages the legacy
+    timer as a fallback when EchoGuard is unavailable.
     """
     global _tts_cooldown_until
-    if active:
-        # TTS is about to play — block audio for up to cooldown_ms
-        _tts_cooldown_until = _time_module.time() + (cooldown_ms / 1000)
-        logger.info(f"[ECHO] TTS active flag set — blocking audio for {cooldown_ms}ms")
+    if ECHO_GUARD_AVAILABLE:
+        # EchoGuard handles echo via content analysis, not timers.
+        # We still update the timer as a last-resort fallback.
+        if active:
+            _tts_cooldown_until = _time_module.time() + (cooldown_ms / 1000)
+            logger.debug("[ECHO] EchoGuard active — legacy timer set as fallback")
+        else:
+            _tts_cooldown_until = _time_module.time() + 0.5  # Shorter tail with EchoGuard
+            get_echo_guard().reset()
+            logger.debug("[ECHO] TTS done — EchoGuard reset, short tail cooldown")
     else:
-        # Explicit reset with short tail cooldown
-        _tts_cooldown_until = _time_module.time() + 1.5
-        logger.info("[ECHO] TTS active flag reset with 1.5s tail cooldown")
+        # Legacy timer-only path
+        if active:
+            _tts_cooldown_until = _time_module.time() + (cooldown_ms / 1000)
+            logger.info(f"[ECHO] TTS active flag set — blocking audio for {cooldown_ms}ms")
+        else:
+            _tts_cooldown_until = _time_module.time() + 1.5
+            logger.info("[ECHO] TTS active flag reset with 1.5s tail cooldown")
+
 
 def is_tts_active():
-    """Check if TTS is active or still in cooldown period"""
+    """Check if TTS is active or still in cooldown period.
+
+    With EchoGuard: returns True only as a fallback indicator.  The real
+    echo decision happens inside is_echo_not_user().
+    Without EchoGuard: behaves like the original timer-based check.
+    """
     return _time_module.time() < _tts_cooldown_until
+
+
+def is_echo_not_user(pcm_bytes: bytes, sample_rate: int = 16000) -> bool:
+    """Content-based echo check: returns True if the audio is OUR echo (reject it).
+
+    This replaces the old ``is_tts_active()`` blanket-mute.  If EchoGuard is
+    available, it uses band-energy subtraction.  Otherwise, falls back to the
+    legacy timer.
+
+    Parameters
+    ----------
+    pcm_bytes : bytes
+        Raw 16-bit PCM audio from the microphone.
+    sample_rate : int
+        Sample rate (default 16000).
+
+    Returns
+    -------
+    bool
+        True → this is echo, ignore it.
+        False → this is a real user voice, process it.
+    """
+    if not ECHO_GUARD_AVAILABLE:
+        return is_tts_active()  # Legacy fallback
+
+    try:
+        import numpy as np
+        guard = get_echo_guard()
+
+        if not guard.is_playing and not is_tts_active():
+            return False  # Nothing playing, mic is free
+
+        pcm = np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32) / 32768.0
+        level = float(np.sqrt(np.mean(pcm ** 2))) if pcm.size > 0 else 0.0
+
+        user_speaking = guard.is_user_speech(pcm, sample_rate, level=level)
+        return not user_speaking  # True = echo (reject), False = real voice (accept)
+    except Exception as e:
+        logger.debug(f"[EchoGuard] is_echo_not_user error, falling back to timer: {e}")
+        return is_tts_active()
 
 # SocketIO will be injected
 _socketio = None
@@ -1124,11 +1246,7 @@ def handle_stream_end(data):
 
 def process_live_stream_buffer(pcm_buffer, config):
     """Sends the raw PCM buffer directly to Whisper"""
-    import sys
-    assistant = None
-    if hasattr(sys.modules.get('__main__'), 'assistant'):
-        assistant = sys.modules['__main__'].assistant
-    
+    assistant = get_active_assistant()
     if not assistant:
         return
         
@@ -1151,8 +1269,13 @@ def process_live_stream_buffer(pcm_buffer, config):
     # Process
     import concurrent.futures
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-        # We need a new assistant method or adapt the existing one for raw BytesIO
-        future = executor.submit(assistant.whisper_model.transcribe, wav_io, beam_size=1)
+        # Use Hindi by default for streaming too, with proper beam_size
+        future = executor.submit(
+            assistant.whisper_model.transcribe, wav_io,
+            beam_size=5,
+            language=get_stt_language_short(),
+            initial_prompt="नमस्ते, कैसे हो? बताओ क्या करना है?"
+        )
         segments, _ = future.result()
         text = " ".join([s.text for s in segments]).strip()
         
@@ -1192,38 +1315,88 @@ def set_socketio(sio):
 # ==============================================
 
 # Fast in-memory cache for AI Settings
-_ai_settings_cache = {}
-_ai_settings_mtime = 0
+_authenticated_socket_sids = set()
+_socket_auth_lock = threading.Lock()
 
-def get_cached_ai_settings():
-    """Retrieve AI settings from file only if modified, else from memory cache."""
-    global _ai_settings_cache, _ai_settings_mtime
-    try:
-        import os, json
-        settings_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'user_preferences', 'settings.json')
-        if os.path.exists(settings_path):
-            current_mtime = os.path.getmtime(settings_path)
-            if current_mtime > _ai_settings_mtime:
-                with open(settings_path, 'r', encoding='utf-8') as f:
-                    settings = json.load(f)
-                    _ai_settings_cache = settings.get('ai', {})
-                    _ai_settings_mtime = current_mtime
-    except Exception as e:
-        print(f"š  Cache read error for app_settings.json: {e}")
-    return _ai_settings_cache
+def _extract_socket_access_token(auth: Any) -> Optional[str]:
+    """Read a JWT from the Socket.IO auth payload or handshake header."""
+    if isinstance(auth, dict):
+        token = auth.get('token') or auth.get('access_token')
+        if isinstance(token, str) and token.strip():
+            return token.strip()
 
-def handle_connect():
-    """Handle client connection"""
-    print(f'… Client connected: {request.sid}')
+    authorization = request.headers.get('Authorization', '')
+    scheme, _, token = authorization.partition(' ')
+    return token.strip() if scheme.lower() == 'bearer' and token.strip() else None
+
+
+def handle_connect(auth=None):
+    """Handle Socket.IO client connection with optional JWT authentication."""
+    token = _extract_socket_access_token(auth)
+    user = None
+    if token:
+        try:
+            decoded_token = decode_token(token)
+            if decoded_token.get('type') == 'access' and decoded_token.get('sub'):
+                user = decoded_token.get('sub')
+        except Exception:
+            logger.debug("Socket.IO client token invalid/expired, continuing as guest")
+
+    with _socket_auth_lock:
+        _authenticated_socket_sids.add(request.sid)
+    logger.info(f"✅ Socket.IO client connected: {request.sid} (user: {user or 'local_guest'})")
     emit('connection_established', {
         'status': 'connected',
         'sid': request.sid,
+        'authenticated': user is not None,
         'timestamp': datetime.now().isoformat()
     })
 
+_persistent_chat_session = None
+
+def get_persistent_chat_session(provider: str, model: str):
+    global _persistent_chat_session
+    if _persistent_chat_session is None or _persistent_chat_session.provider_name != provider or _persistent_chat_session.model != model:
+        from ai_assistant.ai.llm_provider import UnifiedChatInterface
+        _persistent_chat_session = UnifiedChatInterface(
+            provider=provider,
+            model=model,
+            use_fallback=True
+        )
+    return _persistent_chat_session
+
 def handle_disconnect():
     """Handle client disconnection"""
-    print(f'Œ Client disconnected: {request.sid}')
+    with _socket_auth_lock:
+        _authenticated_socket_sids.discard(request.sid)
+    print(f' Œ Client disconnected: {request.sid}')
+
+def safe_emit(event, payload):
+    """Safely emit socket events, optionally generating TTS for command responses."""
+    try:
+        if event == 'command_response' and payload.get('success') and payload.get('response') and not payload.get('skip_tts'):
+            try:
+                assistant = get_active_assistant()
+                if assistant:
+                    print(f"[TTS] Generating KittenTTS speech for response: '{payload['response'][:60]}...'")
+                    b64 = assistant.speak_text(payload['response'])
+                    if b64:
+                        payload['audio_base64'] = b64
+                        _note_tts_output_to_echo_guard(b64)  # Feed to EchoGuard
+                        set_tts_active(True)  # Legacy fallback timer
+                else:
+                    logger.warning("[TTS] No active assistant found for TTS generation")
+            except Exception as e:
+                logger.error(f"Failed to generate TTS: {e}")
+        
+        if _socketio:
+            _socketio.emit(event, payload)
+        else:
+            emit(event, payload)
+    except OSError as e:
+        logger.warning(f"⚠️ Socket emit error (ignored): {e}")
+    except Exception as e:
+        logger.warning(f"⚠️ General emit error: {e}")
 
 def handle_command(data):
     """
@@ -1236,7 +1409,7 @@ def handle_command(data):
         source = data.get('source', 'chat')
         
         if not command_text:
-            emit('command_response', {
+            safe_emit('command_response', {
                 'success': False,
                 'error': 'No command provided',
                 'timestamp': datetime.now().isoformat()
@@ -1244,33 +1417,6 @@ def handle_command(data):
             return
         
         print(f'💬 Command received ({source}): {command_text}')
-        
-        def safe_emit(event, payload):
-            try:
-                if event == 'command_response' and payload.get('success') and payload.get('response') and not payload.get('skip_tts'):
-                    try:
-                        import sys
-                        assistant = None
-                        if hasattr(sys.modules.get('__main__'), 'assistant'):
-                            assistant = sys.modules['__main__'].assistant
-
-                        if assistant:
-                            b64 = assistant.speak_text(payload['response'])
-                            if b64:
-                                payload['audio_base64'] = b64
-                                set_tts_active(True)  # Echo prevention: mark TTS as active
-                    except Exception as e:
-                        logger.error(f"Failed to generate TTS: {e}")
-                
-                if _socketio:
-                    _socketio.emit(event, payload)
-                else:
-                    emit(event, payload)
-            except OSError as e:
-                # Errno 22 often happens with socketio emit on windows if payload is too large or socket closed
-                logger.warning(f"⚠️ Socket emit error (ignored): {e}")
-            except Exception as e:
-                logger.warning(f"⚠️ General emit error: {e}")
         
         # NOTE: ai_models_ready check removed - models load in ~3 seconds
         # and the cross-module check was broken. Commands proceed directly.
@@ -1297,172 +1443,53 @@ def handle_command(data):
                 return
         except ImportError:
             logger.debug("Executive Brain not available, using legacy handler")
-        except Exception as brain_err:
-            import traceback
-            traceback.print_exc()
-            logger.warning(f"Brain routing failed for chat: {brain_err}")
 
-        # ============================================
-        # PRIORITY 1: Local Command Processing
-        # ============================================
-        # Try AdvancedConversationalAI first (has built-in intent detection & tool execution)
-        response_text = None
-        used_local_tools = False
-        
-        if CONVERSATIONAL_AI_AVAILABLE:
-            try:
-                from ai_assistant.ai.conversational_ai import AdvancedConversationalAI
+        # Fast conversational greeting / pleasantry handler
+        cmd_clean = command_text.strip().lower()
+        import re
+        greeting_patterns = [
+            r'^(?:hi|hello|hey|suno|namaste|pranam|helo|hii|hiii|yo)\b',
+            r'^(?:kaise ho|kaisa hai|kya haal|kya haal hai|aur bhai|aur dost)\b',
+            r'^(?:good morning|good evening|good afternoon|good night)\b',
+            r'^(?:who are you|tum kaun ho|aap kaun ho)\b',
+        ]
+        if any(re.search(pat, cmd_clean) for pat in greeting_patterns) and len(cmd_clean.split()) <= 4:
+            if any(h in cmd_clean for h in ['namaste', 'pranam', 'kaise', 'kaisa', 'haal', 'bhai', 'dost', 'suno', 'kaun']):
+                greeting_reply = "नमस्ते! मैं पल्सर असिस्टेंट हूँ। मैं आपकी क्या मदद कर सकता हूँ?"
+            else:
+                greeting_reply = "Hello! I am Pulsar Assistant. How can I assist you today?"
                 
-                # Create instance with automation callback
-                def automation_callback(action, param):
-                    """Execute automation actions"""
-                    try:
-                        if action == 'open_application':
-                            from ai_assistant.core.core import open_application
-                            return open_application(param)
-                        elif action == 'close_application':
-                            from ai_assistant.core.core import close_application
-                            return close_application(param)
-                        elif action == 'get_running_apps':
-                            from ai_assistant.core.core import get_running_processes
-                            return get_running_processes()
-                    except Exception as e:
-                        return f"Action error: {str(e)}"
-                    return None
-                
-                conv_ai = get_conv_ai(automation_callback=automation_callback)
-                
-                provider = data.get('provider')
-                model = data.get('model')
-                # Process through conversational AI with Pipeline Parallelism (Streaming TTS)
-                sentence_buffer = ""
-                any_audio_sent = False
-                
-                def on_token(chunk):
-                    nonlocal sentence_buffer, any_audio_sent
-                    sentence_buffer += chunk
-                    if any(punct in sentence_buffer for punct in ['. ', '! ', '? ', '.\n', '!\n', '?\n']):
-                        sentence_to_speak = sentence_buffer.strip()
-                        if sentence_to_speak:
-                            try:
-                                import sys
-                                assistant = sys.modules.get('__main__').assistant if hasattr(sys.modules.get('__main__'), 'assistant') else None
-                                if assistant:
-                                    b64 = assistant.speak_text(sentence_to_speak)
-                                    if b64:
-                                        payload = {'audio_base64': b64}
-                                        if _socketio:
-                                            _socketio.emit('voice_audio_chunk', payload)
-                                        else:
-                                            emit('voice_audio_chunk', payload)
-                                        set_tts_active(True)
-                                        any_audio_sent = True
-                            except Exception as e:
-                                pass
-                        sentence_buffer = ""
+            logger.info(f"💬 Conversational fast-greeting: {greeting_reply}")
+            safe_emit('command_response', {
+                'success': True,
+                'response': greeting_reply,
+                'source': 'conversational_fast_path',
+                'provider': get_provider(),
+                'timestamp': datetime.now().isoformat()
+            })
+            return
 
-                response_text = conv_ai.process_message(command_text, provider=provider, model=model, on_token=on_token)
-                
-                if sentence_buffer.strip():
-                    try:
-                        import sys
-                        assistant = sys.modules.get('__main__').assistant if hasattr(sys.modules.get('__main__'), 'assistant') else None
-                        if assistant:
-                            b64 = assistant.speak_text(sentence_buffer.strip())
-                            if b64:
-                                payload = {'audio_base64': b64}
-                                if _socketio:
-                                    _socketio.emit('voice_audio_chunk', payload)
-                                else:
-                                    emit('voice_audio_chunk', payload)
-                                set_tts_active(True)
-                                any_audio_sent = True
-                    except Exception:
-                        pass
-                skip_tts_flag = any_audio_sent
-
-                
-                # Check if it actually executed something or just returned generic response
-                if response_text and not any(phrase in response_text.lower() for phrase in [
-                    "i don't understand", 
-                    "i'm not sure",
-                    "could you rephrase",
-                    "what would you like"
-                ]):
-                    used_local_tools = True
-                    print(f'… [LOCAL TOOLS] {response_text[:100]}...')
-                    
-                    # Emit response
-                    safe_emit('command_response', {
-                        'success': True,
-                        'response': response_text,
-                        'command': command_text,
-                        'source': 'local_tools',
-                        'timestamp': datetime.now().isoformat(),
-                        'skip_tts': skip_tts_flag
-                    })
-                    
-                    # Log learning
-                    try:
-                        lr = learning_router
-                        if lr:
-                            lr.route_conversation(speaker='user', content=command_text, input_mode=source)
-                            lr.route_conversation(speaker='assistant', content=response_text, input_mode=source)
-                    except Exception as e:
-                        print(f"š   Could not log learning: {e}")
-                    
-                    return  # Successfully handled
-                    
-            except ImportError:
-                print('š  AdvancedConversationalAI import failed')
-            except Exception as e:
-                print(f'š  Local processing attempt failed: {e}')
-                import traceback
-                traceback.print_exc()
-        
         # ============================================
         # PRIORITY 2: External AI Fallback (for general queries)
         # ============================================
+        used_local_tools = False
+        response_text = ""
         if LLM_PROVIDER_AVAILABLE and not used_local_tools:
             try:
-                from ai_assistant.ai.llm_provider import UnifiedChatInterface
-                
-                # Extract provider/model preference from request
-                preferred_provider = data.get('provider')
-                preferred_model = data.get('model')
-                
-                # If provider or model is not sent by frontend, check cached app_settings
-                if not preferred_provider or not preferred_model:
-                    ai_settings = get_cached_ai_settings()
-                    if not preferred_provider:
-                        preferred_provider = ai_settings.get('defaultProvider', 'openai')
-                    if not preferred_model:
-                        preferred_model = ai_settings.get('defaultModel', 'gpt-3.5-turbo')
-                
-                # Sanitize invalid provider-model combinations (e.g. if frontend forgets to update model)
-                if preferred_provider:
-                    prov_lower = preferred_provider.lower()
-                    mod_lower = preferred_model.lower() if preferred_model else ""
-                    if "gemini" in prov_lower and "gpt" in mod_lower:
-                        preferred_model = "gemini-2.5-flash"
-                    elif "openai" in prov_lower and "gemini" in mod_lower:
-                        preferred_model = "gpt-4o-mini"
-                
+                # Extract provider/model preference from request (frontend takes priority)
+                preferred_provider = data.get('provider') or get_provider()
+                preferred_model = data.get('model') or get_model()
                 
                 print(f" Initializing Chat with Provider: {preferred_provider}, Model: {preferred_model}")
 
-                # Initialize Chat with user preference
-                chat = UnifiedChatInterface(
-                    provider=preferred_provider,
-                    model=preferred_model,
-                    use_fallback=True
-                )
+                # Get or initialize persistent chat session with user preference
+                chat = get_persistent_chat_session(preferred_provider, preferred_model)
                 
                 # Set provider-specific system message
                 provider_name = chat.provider_name.lower()
                 model_name = chat.model
                 
-                print(f"„¹ Actual Provider: {provider_name}, Actual Model: {model_name}")
+                print(f"„¹  Actual Provider: {provider_name}, Actual Model: {model_name}")
 
                 if 'openai' in provider_name or 'gpt' in model_name:
                     system_msg = (
@@ -1478,6 +1505,11 @@ def handle_command(data):
                         "You can answer general knowledge questions, help with information, "
                         "and provide assistance."
                     )
+                elif 'gguf' in provider_name or 'pulsar' in model_name.lower():
+                    system_msg = (
+                        "You are Pulsar, a helpful AI assistant. "
+                        "Keep your answers concise, clear, and direct."
+                    )
                 else:
                     system_msg = (
                         "You are Pulsar, a helpful AI assistant. "
@@ -1487,21 +1519,35 @@ def handle_command(data):
                 
                 chat.add_system_message(system_msg)
                 
-                # Get streaming response from external AI with Pipeline Parallelism
+                # Get streaming response from external AI with Pipeline Parallelism (Streaming TTS + Live Text)
                 response_text = ""
                 sentence_buffer = ""
                 any_audio_sent = False
+                is_first_token = True
                 
                 for chunk in chat.chat(command_text, stream=True):
                     if chunk:
                         response_text += chunk
                         sentence_buffer += chunk
-                        if any(punct in sentence_buffer for punct in ['. ', '! ', '? ', '.\n', '!\n', '?\n']):
+                        
+                        # Emit live text token to frontend chat UI immediately!
+                        try:
+                            stream_payload = {'token': chunk, 'is_start': is_first_token}
+                            if _socketio:
+                                _socketio.emit('chat_stream_chunk', stream_payload)
+                            else:
+                                emit('chat_stream_chunk', stream_payload)
+                        except Exception:
+                            pass
+                        is_first_token = False
+
+                        hindi_split = any(punct in sentence_buffer for punct in ['. ', '! ', '? ', '। ', '.\n', '!\n', '?\n', '।\n', '।'])
+                        clause_split = ', ' in sentence_buffer and (len(sentence_buffer.split()) >= 4 or len(sentence_buffer) >= 25)
+                        if hindi_split or clause_split:
                             sentence_to_speak = sentence_buffer.strip()
                             if sentence_to_speak:
                                 try:
-                                    import sys
-                                    assistant = sys.modules.get('__main__').assistant if hasattr(sys.modules.get('__main__'), 'assistant') else None
+                                    assistant = get_active_assistant()
                                     if assistant:
                                         b64 = assistant.speak_text(sentence_to_speak)
                                         if b64:
@@ -1510,6 +1556,7 @@ def handle_command(data):
                                                 _socketio.emit('voice_audio_chunk', payload)
                                             else:
                                                 emit('voice_audio_chunk', payload)
+                                            _note_tts_output_to_echo_guard(b64)  # Feed to EchoGuard
                                             set_tts_active(True)
                                             any_audio_sent = True
                                 except Exception:
@@ -1518,8 +1565,7 @@ def handle_command(data):
                             
                 if sentence_buffer.strip():
                     try:
-                        import sys
-                        assistant = sys.modules.get('__main__').assistant if hasattr(sys.modules.get('__main__'), 'assistant') else None
+                        assistant = get_active_assistant()
                         if assistant:
                             b64 = assistant.speak_text(sentence_buffer.strip())
                             if b64:
@@ -1528,6 +1574,7 @@ def handle_command(data):
                                     _socketio.emit('voice_audio_chunk', payload)
                                 else:
                                     emit('voice_audio_chunk', payload)
+                                _note_tts_output_to_echo_guard(b64)  # Feed to EchoGuard
                                 set_tts_active(True)
                                 any_audio_sent = True
                     except Exception:
@@ -1562,7 +1609,7 @@ def handle_command(data):
                 return  # Successfully handled
                 
             except Exception as llm_error:
-                print(f'Œ External AI error: {llm_error}')
+                print(f' Œ External AI error: {llm_error}')
                 # Don't return here, let it fall through to fallback if needed, or emit error silently
                 # But typically if AI fails we want to know, just not crash socket
         
@@ -1570,7 +1617,7 @@ def handle_command(data):
         # FALLBACK: Simple acknowledgment
         # ============================================
         if not response_text:
-            response_text = f'I received your command: "{command_text}". Processing...'
+            response_text = f'Sorry, I could not generate a response for "{command_text}". Please check your AI model settings and API keys.'
             
         safe_emit('command_response', {
             'success': True,
@@ -1581,7 +1628,7 @@ def handle_command(data):
         })
             
     except OSError as e:
-         print(f"š  Critical Socket/OS Error caught in handle_command: {e}")
+         print(f"š   Critical Socket/OS Error caught in handle_command: {e}")
          # DO NOT EMIT TO USER, just log it. This prevents the "Error: [Errno 22]" chat message
     except Exception as e:
         print(f'Œ Command handling error: {e}')
@@ -1635,31 +1682,53 @@ def handle_voice_command(data):
 
 def handle_voice_audio(data):
     """Handle raw audio data from Faster-Whisper frontend (Note: now generates KittenTTS audio_base64)"""
-    # Echo prevention: ignore audio while TTS is playing or in cooldown
-    if is_tts_active():
-        logger.info("[VOICE] Ignoring voice_audio_data — TTS active or in cooldown (echo prevention)")
-        return
-
     audio_data = data.get('audio_data', '')
+    language = data.get('language')
     if not audio_data:
         return
 
-    logger.info(f"[VOICE] Received voice_audio_data! Length: {len(audio_data)}")
+    # ── Content-based Echo Prevention (EchoGuard) ──
+    # Instead of blanket-muting the mic, we check if this audio chunk is our
+    # own TTS echo or a real user voice using band-energy subtraction.
+    if ECHO_GUARD_AVAILABLE:
+        try:
+            import base64 as _b64
+            raw_pcm = _b64.b64decode(audio_data)
+            if is_echo_not_user(raw_pcm, sample_rate=16000):
+                logger.debug("[VOICE] EchoGuard: audio is our echo — ignoring")
+                return
+        except Exception as e:
+            logger.debug(f"[VOICE] EchoGuard check failed, using timer fallback: {e}")
+            if is_tts_active():
+                logger.info("[VOICE] Ignoring voice_audio_data — TTS active (timer fallback)")
+                return
+    else:
+        # Legacy timer-based echo prevention
+        if is_tts_active():
+            logger.info("[VOICE] Ignoring voice_audio_data — TTS active or in cooldown (echo prevention)")
+            return
+
+    logger.info(f"[VOICE] Received voice_audio_data! Length: {len(audio_data)}, Language: {language}")
+    print(f"[VOICE] Received voice audio data (length: {len(audio_data)}, lang: {language})")
     
     def process_and_emit():
         try:
-            import sys
-            assistant = None
-            if hasattr(sys.modules.get('__main__'), 'assistant'):
-                assistant = sys.modules['__main__'].assistant
-                
+            assistant = get_active_assistant()
             if not assistant:
-                logger.debug("DEBUG: No assistant found!")
+                logger.error("[VOICE] No active assistant instance found!")
+                print("[VOICE] Error: No active assistant instance found!")
+                if _socketio:
+                    _socketio.emit('voice_response', {
+                        'success': False,
+                        'error': True,
+                        'response': "Assistant is initializing. Please try again in a moment."
+                    })
                 return
                 
             # Emit transcript as soon as Whisper finishes (before LLM processing)
             def on_transcript(text):
                 logger.info(f"[VOICE] Whisper finished transcribing: {text}")
+                print(f"[VOICE] Faster-Whisper transcribed: '{text}'")
                 if _socketio:
                     _socketio.emit('voice_transcript', {
                         'text': text,
@@ -1669,14 +1738,90 @@ def handle_voice_audio(data):
             # Run in a thread to prevent blocking the socketio loop
             import concurrent.futures
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-                future = executor.submit(assistant.process_voice_audio, audio_data, on_transcript)
+                future = executor.submit(assistant.process_voice_audio, audio_data, on_transcript, language=language)
                 result = future.result()
             
             if result.get('success') and result.get('transcript'):
-                logger.info(f"[VOICE] Processed audio. Transcript: {result.get('transcript')}")
+                transcript = result.get('transcript', '').strip()
+                logger.info(f"[VOICE] Processed audio. Transcript: '{transcript}'")
+                
+                require_wake_word = data.get('require_wake_word', False)
+                import re
+                wake_words = get_wake_words() + [
+                    # Devanagari wake words (Whisper transcribes Hindi in Devanagari script)
+                    'असिस्टेंट', 'हे असिस्टेंट', 'ओके असिस्टेंट', 'सुनो असिस्टेंट',
+                    'पल्सर', 'हे पल्सर', 'ओके पल्सर', 'सुनो पल्सर',
+                    'जार्विस', 'हे जार्विस', 'ओके जार्विस',
+                    'डैडी', 'हे डैडी', 'ओके डैडी',
+                ]
+                text_lower = transcript.lower()
+                # Keep Unicode word characters (including Devanagari) — only strip ASCII punctuation
+                text_norm = re.sub(r'[^\w\s]', ' ', text_lower, flags=re.UNICODE)
+                text_norm = re.sub(r'\s+', ' ', text_norm).strip()
+
+                matched_wake = None
+                for w in wake_words:
+                    # \b doesn't work with Devanagari Unicode, use lookaround for word boundaries
+                    pattern = r'(?:^|\s)' + re.escape(w) + r'(?:\s|$)'
+                    if re.search(pattern, text_norm):
+                        matched_wake = w
+                        break
+
+                if require_wake_word:
+                    if not matched_wake:
+                        logger.info(f"[WAKE-WORD] Speech ignored: '{transcript}' (Wake word required)")
+                        if _socketio:
+                            _socketio.emit('wake_word_status', {
+                                'detected': False,
+                                'transcript': transcript,
+                                'message': 'Say "Hey Assistant" or "Pulsar" to activate'
+                            })
+                        return
+
+                    logger.info(f"[WAKE-WORD] Detected wake word '{matched_wake}' in '{transcript}'")
+                    if _socketio:
+                        _socketio.emit('wake_word_status', {'detected': True, 'wake_word': matched_wake})
+                elif matched_wake and _socketio:
+                    _socketio.emit('wake_word_status', {'detected': True, 'wake_word': matched_wake})
+
+                # Strip wake word and punctuation from start of command
+                wake_patterns = '|'.join([re.escape(w) for w in sorted(wake_words, key=len, reverse=True)])
+                clean_command = re.sub(
+                    rf'^(?:{wake_patterns})\b[^\w\s]*\s*',
+                    '',
+                    transcript,
+                    flags=re.IGNORECASE
+                ).strip()
+
+                if matched_wake and not clean_command:
+                    # User only spoke the wake word
+                    logger.info("[WAKE-WORD] User only called wake word with no query")
+                    import random
+                    greetings = [
+                        "Yes Sir, I am listening.",
+                        "At your service, Sir.",
+                        "Systems online. How can I help you?",
+                        "Online and ready, Sir."
+                    ]
+                    reply = random.choice(greetings)
+                    b64 = assistant.speak_text(reply) if assistant else None
+                    if b64 and _socketio:
+                        _socketio.emit('voice_audio_chunk', {'audio_base64': b64})
+                        _note_tts_output_to_echo_guard(b64)  # Feed to EchoGuard
+                        set_tts_active(True)
+                    safe_emit('command_response', {
+                        'success': True,
+                        'response': reply,
+                        'skip_tts': True
+                    })
+                    return
+
+                if clean_command:
+                    transcript = clean_command
+
                 # Pass to unified command handler
                 handle_command({
-                    'command': result.get('transcript'),
+                    'command': transcript,
                     'source': 'voice',
                     'provider': data.get('provider'),
                     'model': data.get('model'),

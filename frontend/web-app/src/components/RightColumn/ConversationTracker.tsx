@@ -15,7 +15,7 @@ interface ConversationMessage {
 const ConversationTracker = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showHistory, setShowHistory] = useState(false);
-  const { chatMessages, voiceCommands, currentSession, startNewSession } = useDashboard();
+  const { chatMessages, voiceCommands, currentSession, startNewSession, isAITyping } = useDashboard();
 
   // Merge chat and voice into a unified conversation
   const [conversation, setConversation] = useState<ConversationMessage[]>([]);
@@ -158,6 +158,22 @@ const ConversationTracker = () => {
                 </motion.div>
               );
             })
+          )}
+          
+          {/* AI Typing Indicator */}
+          {isAITyping && (
+            <motion.div
+              className="flex justify-start"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="relative max-w-[88%] px-4 py-3 bg-[#141722] border border-[#1E2330] rounded-2xl rounded-tl-xs flex items-center gap-1.5 h-9">
+                <div className="w-1.5 h-1.5 bg-[#3B82F6]/70 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-1.5 h-1.5 bg-[#3B82F6]/70 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-1.5 h-1.5 bg-[#3B82F6]/70 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+            </motion.div>
           )}
         </div>
 

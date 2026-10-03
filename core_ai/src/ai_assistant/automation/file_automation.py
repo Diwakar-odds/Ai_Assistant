@@ -62,7 +62,7 @@ class FileAutomation:
         try:
             if not path:
                 # Open This PC
-                subprocess.Popen('explorer /e,', shell=True)
+                subprocess.Popen(['explorer.exe', '/e,'], shell=False)
                 logger.info("📂 Opened File Explorer (This PC)")
                 return True
                 
@@ -77,7 +77,7 @@ class FileAutomation:
             
             # Convert to Windows path style
             path = os.path.normpath(path)
-            subprocess.Popen(f'explorer "{path}"', shell=True)
+            subprocess.Popen(['explorer.exe', path], shell=False)
             logger.info(f"📂 Opened File Explorer at: {path}")
             return True
             

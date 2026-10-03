@@ -6,6 +6,7 @@ Maintains conversation state across multiple turns and task executions.
 import json
 import logging
 import time
+import uuid
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, asdict
 from pathlib import Path
@@ -30,7 +31,7 @@ class ExecutionState(Enum):
 class ConversationContext:
     """
     Container for conversation context.
-    
+
     Tracks:
     - Current task chain being executed
     - Current step in the chain
@@ -38,22 +39,26 @@ class ConversationContext:
     - Context variables (current_app, contact, etc.)
     - Command history
     """
-    
+
     # Task execution
     current_task_chain: List[Dict[str, Any]] = None
     current_step: int = 0
     execution_state: str = "idle"
-    
+
     # Context variables
     context_vars: Dict[str, Any] = None
-    
+
     # History
     command_history: List[Dict[str, Any]] = None
-    
+
     # Timestamps
     created_at: float = None
     updated_at: float = None
-    
+
+    # CONTEXT SNAPSHOTTING FOR ISOLATION
+    _context_snapshots: Dict[str, Dict] = None  # transition_id -> context
+    _pre_chain_snapshot: Optional[Dict] = None  # Snapshot before chain starts
+
     def __post_init__(self):
         if self.current_task_chain is None:
             self.current_task_chain = []
@@ -65,21 +70,73 @@ class ConversationContext:
             self.created_at = time.time()
         if self.updated_at is None:
             self.updated_at = time.time()
-    
+        if self._context_snapshots is None:
+            self._context_snapshots = {}
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
-        return asdict(self)
-    
+        # Exclude private snapshot fields from serialization to avoid complexity
+        data = asdict(self)
+        data.pop('_context_snapshots', None)
+        data.pop('_pre_chain_snapshot', None)
+        return data
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ConversationContext':
         """Create from dictionary."""
+        # Initialize snapshot fields
+        data['_context_snapshots'] = {}
+        data['_pre_chain_snapshot'] = None
         return cls(**data)
 
+    # ===== CONTEXT SNAPSHOTTING METHODS =====
+
+    def _get_context_snapshot(self) -> Dict[str, Any]:
+        """Capture current context variables for isolation"""
+        return dict(self.context_vars)
+
+    def _save_context_snapshot(self, transition_id: str, context: Dict[str, Any]):
+        """Save context snapshot for potential rollback"""
+        self._context_snapshots[transition_id] = context
+        # Optional: Limit snapshot count to prevent memory growth
+        if len(self._context_snapshots) > 1000:
+            # Remove oldest snapshots (simple approach)
+            keys = list(self._context_snapshots.keys())
+            if len(keys) > 1000:
+                for key in keys[:-1000]:  # Keep newest 1000
+                    del self._context_snapshots[key]
+
+    def _restore_context_snapshot(self, context: Dict[str, Any]):
+        """Restore context variables from snapshot"""
+        self.context_vars.clear()
+        self.context_vars.update(context)
+        self.updated_at = time.time()
+        self.save_context()
+
+    def _get_pre_chain_snapshot(self) -> Optional[Dict[str, Any]]:
+        """Get snapshot taken before chain execution started"""
+        return self._pre_chain_snapshot
+
+    def _set_pre_chain_snapshot(self, snapshot: Dict[str, Any]):
+        """Set snapshot taken before chain execution started"""
+        self._pre_chain_snapshot = snapshot
+
+    def clear_snapshots_older_than(self, hours: int = 24):
+        """Cleanup old snapshots to prevent memory leak"""
+        cutoff = time.time() - (hours * 3600)
+        # In a more complete implementation, we'd store timestamps with snapshots
+        # For now, we'll just clear all if over limit to prevent memory issues
+        if len(self._context_snapshots) > 500:
+            self._context_snapshots.clear()
+            logger.info("Cleared context snapshots to prevent memory leak")
+
+
+# ===== CONTEXT MANAGER CLASS =====
 
 class ContextManager:
     """
     Manages conversation context with persistence.
-    
+
     Features:
     - Context variable management (current_app, selected_contact, etc.)
     - Command history tracking
@@ -87,76 +144,78 @@ class ContextManager:
     - Override detection
     - Context-aware intent resolution
     """
-    
+
     def __init__(self, storage_path: str = None):
         """
         Initialize context manager.
-        
+
         Args:
             storage_path: Path to store context data
         """
         if storage_path is None:
-            storage_path = "data/conversation_context.json"
-        
+            # ISOLATE STORAGE PER INSTANCE TO PREVENT CONFLICTS
+            instance_id = str(uuid.uuid4())[:8]
+            storage_path = f"data/conversation_context_{instance_id}.json"
+
         self.storage_path = Path(storage_path)
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # Current context
         self.context = ConversationContext()
-        
+
         # Load from disk if exists
         self.load_context()
-        
+
         logger.info(f"Context manager initialized with storage: {self.storage_path}")
-    
+
     # ===== CONTEXT VARIABLE MANAGEMENT =====
-    
+
     def set_var(self, key: str, value: Any):
         """Set a context variable."""
         self.context.context_vars[key] = value
         self.context.updated_at = time.time()
         self.save_context()
         logger.debug(f"Set context var: {key} = {value}")
-    
+
     def get_var(self, key: str, default: Any = None) -> Any:
         """Get a context variable."""
         return self.context.context_vars.get(key, default)
-    
+
     def has_var(self, key: str) -> bool:
         """Check if context variable exists."""
         return key in self.context.context_vars
-    
+
     def delete_var(self, key: str):
         """Delete a context variable."""
         if key in self.context.context_vars:
             del self.context.context_vars[key]
             self.context.updated_at = time.time()
             self.save_context()
-    
+
     def clear_vars(self):
         """Clear all context variables."""
         self.context.context_vars = {}
         self.context.updated_at = time.time()
         self.save_context()
-    
+
     # ===== STATE MANAGEMENT =====
-    
+
     def set_state(self, state: ExecutionState):
         """Set execution state."""
         self.context.execution_state = state.value
         self.context.updated_at = time.time()
         self.save_context()
         logger.info(f"State changed to: {state.value}")
-    
+
     def get_state(self) -> ExecutionState:
         """Get current execution state."""
         try:
             return ExecutionState(self.context.execution_state)
         except ValueError:
             return ExecutionState.IDLE
-    
+
     # ===== TASK CHAIN MANAGEMENT =====
-    
+
     def set_task_chain(self, task_chain: List[Dict[str, Any]]):
         """Set current task chain."""
         self.context.current_task_chain = task_chain
@@ -164,29 +223,29 @@ class ContextManager:
         self.context.updated_at = time.time()
         self.save_context()
         logger.info(f"Task chain set with {len(task_chain)} steps")
-    
+
     def get_task_chain(self) -> List[Dict[str, Any]]:
         """Get current task chain."""
         return self.context.current_task_chain
-    
+
     def advance_step(self):
         """Move to next step in task chain."""
         self.context.current_step += 1
         self.context.updated_at = time.time()
         self.save_context()
-    
+
     def get_current_step(self) -> int:
         """Get current step number."""
         return self.context.current_step
-    
+
     def clear_task_chain(self):
         """Clear task chain."""
         self.context.current_task_chain = []
         self.context.current_step = 0
         self.set_state(ExecutionState.IDLE)
-    
+
     # ===== COMMAND HISTORY =====
-    
+
     def add_command(self, command: str, intent: str = None, completed: bool = False):
         """Add command to history."""
         entry = {
@@ -196,65 +255,65 @@ class ContextManager:
             'completed': completed,
             'context_snapshot': dict(self.context.context_vars)
         }
-        
+
         self.context.command_history.append(entry)
         self.context.updated_at = time.time()
-        
+
         # Keep only last 50 commands
         if len(self.context.command_history) > 50:
             self.context.command_history = self.context.command_history[-50:]
-        
+
         self.save_context()
-    
+
     def get_last_command(self) -> Optional[Dict[str, Any]]:
         """Get last command from history."""
         if self.context.command_history:
             return self.context.command_history[-1]
         return None
-    
+
     def get_command_history(self, limit: int = 10) -> List[Dict[str, Any]]:
         """Get recent command history."""
         return self.context.command_history[-limit:]
-    
+
     # ===== OVERRIDE DETECTION =====
-    
+
     def is_override(self, new_command: str) -> bool:
         """
         Detect if new command is an override of current task.
-        
+
         Override keywords: नहीं, no, wait, stop, cancel, change
         """
         override_keywords = ['नहीं', 'nahi', 'no', 'wait', 'stop', 'cancel', 'change', 'instead']
-        
+
         new_command_lower = new_command.lower()
         for keyword in override_keywords:
             if keyword in new_command_lower:
                 return True
-        
+
         # Check if currently executing
         state = self.get_state()
         if state in [ExecutionState.EXECUTING, ExecutionState.WAITING_FOR_INPUT]:
             # New command while executing = potential override
             return True
-        
+
         return False
-    
+
     def handle_override(self, new_command: str):
         """
         Handle command override.
-        
+
         Pauses current execution and prepares for new command.
         Now also signals the Executive Brain to cancel active chains.
         """
         logger.warning(f"Override detected: {new_command}")
-        
+
         # Save current state
         self.set_var('paused_task_chain', self.context.current_task_chain)
         self.set_var('paused_step', self.context.current_step)
-        
+
         # Clear current task
         self.clear_task_chain()
-        
+
         # Signal Executive Brain to cancel active chains
         try:
             from ai_assistant.core.command_brain import get_executive_brain
@@ -264,11 +323,11 @@ class ContextManager:
             pass
         except Exception as e:
             logger.warning(f"Brain cancel failed during override: {e}")
-        
+
         # Mark as override
         self.set_var('last_action', 'override')
         self.add_command(new_command, intent='override')
-    
+
     def is_busy(self) -> bool:
         """Check if any chains are currently active via the Executive Brain"""
         try:
@@ -276,7 +335,7 @@ class ContextManager:
             return get_executive_brain().is_busy()
         except Exception:
             return self.get_state() == ExecutionState.EXECUTING
-    
+
     def get_active_chain_ids(self):
         """Get IDs of all active chains from the Executive Brain"""
         try:
@@ -284,37 +343,37 @@ class ContextManager:
             return get_executive_brain().get_active_chain_ids()
         except Exception:
             return []
-    
+
     # ===== CONTEXT-AWARE HELPERS =====
-    
+
     def infer_missing_params(self, intent: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """
         Infer missing parameters from context.
-        
+
         For example:
         - "message करो" → infer app from current_app
         - "send" → infer contact from last used contact
         """
         result = dict(params)
-        
+
         # Infer app for message/type intents
         if intent in ['send_message', 'type_text'] and 'app_name' not in result:
             current_app = self.get_var('current_app')
             if current_app:
                 result['app_name'] = current_app
                 logger.debug(f"Inferred app_name from context: {current_app}")
-        
+
         # Infer contact for send_message
         if intent == 'send_message' and 'contact' not in result:
             last_contact = self.get_var('selected_contact')
             if last_contact:
                 result['contact'] = last_contact
                 logger.debug(f"Inferred contact from context: {last_contact}")
-        
+
         return result
-    
+
     # ===== PERSISTENCE =====
-    
+
     def save_context(self):
         """Save context to disk."""
         try:
@@ -322,7 +381,7 @@ class ContextManager:
                 json.dump(self.context.to_dict(), f, indent=2, ensure_ascii=False)
         except Exception as e:
             logger.error(f"Failed to save context: {e}")
-    
+
     def load_context(self):
         """Load context from disk."""
         try:
@@ -330,19 +389,21 @@ class ContextManager:
                 with open(self.storage_path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                     self.context = ConversationContext.from_dict(data)
-                    logger.info("Context loaded from disk")
+                    logger.info(f"Context loaded from disk for storage {self.storage_path}")
+            else:
+                self.context = ConversationContext()
         except Exception as e:
             logger.error(f"Failed to load context: {e}")
             self.context = ConversationContext()
-    
+
     def reset(self):
         """Reset context to initial state."""
         self.context = ConversationContext()
         self.save_context()
         logger.info("Context reset")
-    
+
     # ===== UTILITY =====
-    
+
     def get_summary(self) -> Dict[str, Any]:
         """Get context summary."""
         return {
@@ -360,6 +421,7 @@ class ContextManager:
 
 # Singleton instance
 _context_manager = None
+
 
 def get_context_manager() -> ContextManager:
     """Get singleton context manager."""

@@ -15,15 +15,44 @@ Web scraping and online services integration:
 - Search engine results aggregation
 """
 
+import ipaddress
 import requests
+import socket
 import json
 import datetime
 import re
 from typing import Dict, List, Optional, Tuple, Any
 from bs4 import BeautifulSoup
 import time
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin, urlparse, urlsplit
 import os
+
+MAX_SCRAPE_RESPONSE_BYTES = 1_000_000
+
+
+def _validate_public_http_url(url: str) -> str:
+    """Reject URLs that could make the assistant access local network services."""
+    if not isinstance(url, str) or len(url) > 2_048:
+        raise ValueError("URL must be a non-empty HTTP(S) URL up to 2048 characters")
+
+    parsed = urlsplit(url.strip())
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        raise ValueError("Only absolute HTTP(S) URLs are allowed")
+    if parsed.username or parsed.password:
+        raise ValueError("URLs with embedded credentials are not allowed")
+
+    try:
+        addresses = {
+            item[4][0]
+            for item in socket.getaddrinfo(parsed.hostname.rstrip("."), None, type=socket.SOCK_STREAM)
+        }
+    except socket.gaierror as exc:
+        raise ValueError("URL host could not be resolved") from exc
+
+    if not addresses or any(not ipaddress.ip_address(address).is_global for address in addresses):
+        raise ValueError("URLs resolving to private or local addresses are not allowed")
+    return parsed.geturl()
+
 
 try:
     import feedparser
@@ -378,14 +407,27 @@ def scrape_website_content(url: str, extract_text: bool = True, max_length: int 
         max_length: Maximum length of extracted text
     """
     try:
+        safe_url = _validate_public_http_url(url)
+        max_length = max(1, min(int(max_length), 50_000))
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
         
-        response = requests.get(url, headers=headers, timeout=15)
+        # A public URL must not be allowed to redirect this request to a local
+        # service after validation. Bound the body before parsing it as HTML.
+        response = requests.get(
+            safe_url, headers=headers, timeout=(3.05, 10),
+            allow_redirects=False, stream=True
+        )
         
         if response.status_code == 200:
-            soup = BeautifulSoup(response.text, 'html.parser')
+            content_length = response.headers.get('Content-Length')
+            if content_length and int(content_length) > MAX_SCRAPE_RESPONSE_BYTES:
+                return "response is too large to process"
+            content = response.raw.read(MAX_SCRAPE_RESPONSE_BYTES + 1, decode_content=True)
+            if len(content) > MAX_SCRAPE_RESPONSE_BYTES:
+                return "response is too large to process"
+            soup = BeautifulSoup(content, 'html.parser')
             
             # Extract title
             title = soup.find('title')

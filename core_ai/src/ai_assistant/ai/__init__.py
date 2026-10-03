@@ -1,5 +1,5 @@
 # Setup centralized logging
-from utils.logging_config import get_logger
+from ai_assistant.utils.logging_config import get_logger
 logger = get_logger(__name__, log_category="app")
 
 """
@@ -71,7 +71,7 @@ def get_multimodal_engine():
 # Export learning functions
 __all__ = [
     'get_feedback_engine',
-    'get_intent_classifier', 
+    'get_intent_classifier',
     'get_prompt_optimizer',
     'get_multimodal_engine'
 ]

@@ -18,7 +18,15 @@ class ResearchManager:
     """
     
     def __init__(self):
-        self.llm = UnifiedChatInterface()
+        try:
+            import sys
+            from pathlib import Path
+            sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
+            from settings_manager import get_provider, get_model
+            _sm_provider, _sm_model = get_provider(), get_model()
+        except ImportError:
+            _sm_provider, _sm_model = None, None
+        self.llm = UnifiedChatInterface(provider=_sm_provider, model=_sm_model)
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'

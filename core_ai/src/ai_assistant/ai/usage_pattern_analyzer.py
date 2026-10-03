@@ -84,7 +84,7 @@ class UsagePatternAnalyzer:
     def _get_conversations(self, days_back: int) -> List[Dict]:
         """Get conversations from database"""
         if not self.db_path.exists():
-            logger.warning(f"Database not found: {self.db_path}")
+            logger.debug(f"Database not found: {self.db_path}")
             return []
         
         conversations = []
@@ -95,31 +95,68 @@ class UsagePatternAnalyzer:
             cutoff = datetime.now() - timedelta(days=days_back)
             
             try:
-                cursor.execute("""
-                    SELECT timestamp, user_input, assistant_response, success
-                    FROM conversations
-                    WHERE datetime(timestamp) >= datetime(?)
-                    ORDER BY timestamp ASC
-                """, (cutoff.isoformat(),))
+                cursor.execute("PRAGMA table_info(conversations)")
+                cols = {row[1] for row in cursor.fetchall()}
                 
-                for row in cursor.fetchall():
-                    conversations.append({
-                        'timestamp': row[0],
-                        'user_input': row[1],
-                        'response': row[2],
-                        'success': bool(row[3])
-                    })
+                if 'user_input' in cols and 'timestamp' in cols:
+                    cursor.execute("""
+                        SELECT timestamp, user_input, assistant_response, success
+                        FROM conversations
+                        WHERE datetime(timestamp) >= datetime(?)
+                        ORDER BY timestamp ASC
+                    """, (cutoff.isoformat(),))
+                    
+                    for row in cursor.fetchall():
+                        conversations.append({
+                            'timestamp': row[0],
+                            'user_input': row[1],
+                            'response': row[2],
+                            'success': bool(row[3])
+                        })
+                elif 'messages' in cols:
+                    date_col = 'last_activity' if 'last_activity' in cols else 'started_at'
+                    cursor.execute(f"""
+                        SELECT {date_col}, messages
+                        FROM conversations
+                        WHERE datetime({date_col}) >= datetime(?)
+                        ORDER BY {date_col} ASC
+                    """, (cutoff.isoformat(),))
+                    
+                    for row in cursor.fetchall():
+                        ts, msgs_raw = row[0], row[1]
+                        try:
+                            msgs = json.loads(msgs_raw) if isinstance(msgs_raw, str) else msgs_raw
+                            user_msg = ""
+                            for m in msgs:
+                                if m.get('role') == 'user':
+                                    user_msg = m.get('content', '')
+                                elif m.get('role') == 'assistant' and user_msg:
+                                    conversations.append({
+                                        'timestamp': m.get('timestamp', ts),
+                                        'user_input': user_msg,
+                                        'response': m.get('content', ''),
+                                        'success': True
+                                    })
+                                    user_msg = ""
+                            if user_msg:
+                                conversations.append({
+                                    'timestamp': ts,
+                                    'user_input': user_msg,
+                                    'response': '',
+                                    'success': True
+                                })
+                        except Exception:
+                            pass
             except sqlite3.OperationalError as e:
-                logger.error(f"Error reading conversations: {e}")
-                # Table might not exist or schema mismatch
-                pass
-            
-            conn.close()
+                logger.debug(f"Error reading conversations: {e}")
+            finally:
+                conn.close()
+                
             logger.info(f"Found {len(conversations)} conversations")
             return conversations
         
         except Exception as e:
-            logger.error(f"Error connecting to database: {e}")
+            logger.debug(f"Error connecting to database: {e}")
             return []
     
     def _analyze_common_commands(self, days_back: int) -> List[Dict]:
@@ -300,22 +337,39 @@ class UsagePatternAnalyzer:
             feedback_texts = []
             
             try:
-                cursor.execute("""
-                    SELECT rating, feedback_text
-                    FROM feedback
-                    WHERE datetime(timestamp) >= datetime(?)
-                """, ((datetime.now() - timedelta(days=days_back)).isoformat(),))
-                
-                for row in cursor.fetchall():
-                    if row[0]:
-                        ratings.append(row[0])
-                    if row[1]:
-                        feedback_texts.append(row[1])
+                cursor.execute("PRAGMA table_info(feedback)")
+                cols = {row[1] for row in cursor.fetchall()}
+                cutoff_iso = (datetime.now() - timedelta(days=days_back)).isoformat()
+
+                if 'rating' in cols and 'feedback_text' in cols:
+                    cursor.execute("""
+                        SELECT rating, feedback_text
+                        FROM feedback
+                        WHERE datetime(timestamp) >= datetime(?)
+                    """, (cutoff_iso,))
+                    
+                    for row in cursor.fetchall():
+                        if row[0]:
+                            ratings.append(row[0])
+                        if row[1]:
+                            feedback_texts.append(row[1])
+                elif 'feedback_value' in cols:
+                    cursor.execute("""
+                        SELECT feedback_value, prompt
+                        FROM feedback
+                        WHERE datetime(timestamp) >= datetime(?)
+                    """, (cutoff_iso,))
+                    for row in cursor.fetchall():
+                        val = row[0]
+                        if val is not None:
+                            try:
+                                ratings.append(float(val))
+                            except ValueError:
+                                feedback_texts.append(str(val))
             except sqlite3.OperationalError as e:
-                logger.error(f"Error analyzing preferences: {e}")
-                pass
-            
-            conn.close()
+                logger.debug(f"Error reading feedback table: {e}")
+            finally:
+                conn.close()
             
             avg_rating = sum(ratings) / len(ratings) if ratings else 0
             
@@ -328,7 +382,7 @@ class UsagePatternAnalyzer:
             }
         
         except Exception as e:
-            logger.error(f"Error analyzing preferences: {e}")
+            logger.debug(f"Error analyzing preferences: {e}")
             return {}
     
     def _generate_training_data(self, days_back: int) -> List[Dict]:

@@ -1,6 +1,7 @@
 from flask import request
 from flask_socketio import emit
 import json, logging, traceback
+from settings_manager import get_provider, get_model
 try:
     from backend.modern_web_backend import logger, socketio
 except ImportError:
@@ -68,7 +69,7 @@ def handle_chat_stream(data):
         with chat_session_lock:
             if session_id not in chat_sessions:
                 if LLM_PROVIDER_AVAILABLE:
-                    chat_sessions[session_id] = UnifiedChatInterface()
+                    chat_sessions[session_id] = UnifiedChatInterface(provider=get_provider(), model=get_model())
                     chat_sessions[session_id].add_system_message(
                         "You are a helpful AI assistant. Respond concisely and accurately."
                     )
