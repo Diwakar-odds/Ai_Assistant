@@ -221,7 +221,7 @@ grpcio-status
 # TYPE CHECKING
 # =========================================
 typing_extensions==4.15.0
-annotated-types==0.7.0
+annotated-types==0.8.0
 
 # =========================================
 # NETWORK & VISUALIZATION
