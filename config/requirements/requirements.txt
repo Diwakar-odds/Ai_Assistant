@@ -115,7 +115,7 @@ pytesseract==0.3.13
 # WINDOWS AUTOMATION & GUI
 # =========================================
 pywinauto==0.6.9; platform_system=='Windows'
-pywin32==311; platform_system=='Windows'
+pywin32==312; platform_system=='Windows'
 pywin32-ctypes==0.2.3; platform_system=='Windows'
 pyautogui==0.9.54; platform_system=='Windows'
 comtypes==1.4.13; platform_system=='Windows'
