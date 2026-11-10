@@ -74,13 +74,13 @@ class MultiStepCommandParser:
             ],
         }
         
-        # Import existing intent recognizer
+        # Import unified intent router
         try:
-            from ai_assistant.ai.intent_recognizer import IntentRecognizer
-            self.intent_recognizer = IntentRecognizer()
-        except ImportError:
-            self.intent_recognizer = None
-            logger.warning("Intent recognizer not available")
+            from ai_assistant.ai.intent_router import IntentRouter
+            self.intent_router = IntentRouter()
+        except Exception as e:
+            self.intent_router = None
+            logger.warning(f"Intent router not available in multi_step_parser: {e}")
     
     def is_multi_step(self, command: str) -> bool:
         """Check if command contains multiple steps."""
@@ -100,26 +100,20 @@ class MultiStepCommandParser:
     def split_into_steps(self, command: str) -> List[str]:
         """
         Split command into individual step strings.
-        
-        Args:
-            command: Full command string
-        
-        Returns:
-            List of command strings, one per step
         """
         steps = []
         
-        # First try splitting by sequential keywords
-        remaining = command
-        for keyword in self.sequential_keywords:
-            if keyword in remaining.lower():
-                # Split by this keyword
-                parts = re.split(rf'\s+{re.escape(keyword)}\s+', remaining, flags=re.IGNORECASE)
+        # First try splitting by sequential keywords (longest first to avoid partial matches)
+        sorted_keywords = sorted(self.sequential_keywords, key=len, reverse=True)
+        for keyword in sorted_keywords:
+            pattern = rf'\s+\b{re.escape(keyword)}\b\s+'
+            if re.search(pattern, command, re.IGNORECASE):
+                parts = re.split(pattern, command, flags=re.IGNORECASE)
                 steps.extend([p.strip() for p in parts if p.strip()])
                 break
         
         # If no sequential keywords, try comma separation
-        if not steps:
+        if not steps and ',' in command:
             parts = command.split(',')
             steps = [p.strip() for p in parts if p.strip()]
         
@@ -128,45 +122,60 @@ class MultiStepCommandParser:
             steps = [command.strip()]
         
         return steps
+
+    def infer_dependencies(self, steps: List[TaskStep]) -> List[TaskStep]:
+        """Infer dependencies between sequential steps."""
+        for i in range(1, len(steps)):
+            steps[i].dependencies = [steps[i - 1].step]
+        return steps
     
     def parse_single_step(self, step_text: str, step_number: int) -> TaskStep:
         """
-        Parse a single command step.
-        
-        Args:
-            step_text: Text of this step
-            step_number: Step number (1-indexed)
-        
-        Returns:
-            TaskStep object
+        Parse a single command step using IntentRouter with regex fallback.
         """
-        # Use intent recognizer if available
-        if self.intent_recognizer:
-            result = self.intent_recognizer.parse_command(step_text)
-            
-            return TaskStep(
-                step=step_number,
-                intent=result.get('intent', 'unknown'),
-                params={
-                    'app_name': result.get('app_name'),
-                    'text': step_text,
-                    **result
-                },
-                original_text=step_text
-            )
+        step_text_clean = step_text.strip()
         
-        # Fallback: Simple pattern matching
+        # 1. Try unified IntentRouter first
+        if getattr(self, 'intent_router', None):
+            try:
+                res = self.intent_router.route(step_text_clean)
+                if res and res.intent_name and res.intent_name not in ['conversational', 'info_query']:
+                    params = dict(res.parameters or {})
+                    params['text'] = step_text_clean
+                    if 'target' in params and 'app_name' not in params:
+                        params['app_name'] = params['target']
+                    return TaskStep(
+                        step=step_number,
+                        intent=res.intent_name,
+                        params=params,
+                        original_text=step_text_clean
+                    )
+            except Exception as e:
+                logger.debug(f"Intent router in parse_single_step fallback: {e}")
+        
+        # 2. Fallback: Simple pattern matching
         intent = 'unknown'
-        params = {'text': step_text}
+        params = {'text': step_text_clean}
         
-        # Try to match known patterns
         for action, patterns in self.action_patterns.items():
             for pattern in patterns:
-                match = re.search(pattern, step_text, re.IGNORECASE)
+                match = re.search(pattern, step_text_clean, re.IGNORECASE)
                 if match:
                     intent = action
+                    groups = match.groups()
                     params['matched_pattern'] = pattern
-                    params['matches'] = match.groups()
+                    params['matches'] = groups
+                    if action == 'open_app':
+                        kw_words = {'kholo', 'khojo', 'open', 'start', 'launch', 'chalu', 'chalu karo'}
+                        cands = [g for g in groups if g and g.lower().strip() not in kw_words]
+                        if cands:
+                            params['app_name'] = cands[0].strip()
+                            params['target'] = cands[0].strip()
+                    elif action == 'send_message':
+                        kw_words = {'message', 'bhejo', 'send', 'bol do'}
+                        cands = [g for g in groups if g and g.lower().strip() not in kw_words]
+                        if cands:
+                            params['contact'] = cands[0].strip()
                     break
             if intent != 'unknown':
                 break
@@ -175,39 +184,10 @@ class MultiStepCommandParser:
             step=step_number,
             intent=intent,
             params=params,
-            original_text=step_text
+            original_text=step_text_clean
         )
-    
-    def infer_dependencies(self, steps: List[TaskStep]) -> List[TaskStep]:
-        """
-        Infer dependencies between steps.
-        
-        For example:
-        - "send_message" depends on app being open
-        - "skip_time" depends on video being played
-        """
-        for i, step in enumerate(steps):
-            dependencies = []
-            
-            # send_message depends on previous open_app
-            if step.intent in ['send_message', 'type_text']:
-                # Find last open_app step
-                for j in range(i - 1, -1, -1):
-                    if steps[j].intent == 'open_app':
-                        dependencies.append(steps[j].step)
-                        break
-            
-            # skip_time depends on play_video
-            if step.intent == 'skip_time':
-                for j in range(i - 1, -1, -1):
-                    if steps[j].intent == 'play_video':
-                        dependencies.append(steps[j].step)
-                        break
-            
-            step.dependencies = dependencies
-        
-        return steps
-    
+
+
     def parse_command(self, command: str) -> List[TaskStep]:
         """
         Parse a command into task steps.
@@ -240,8 +220,18 @@ class MultiStepCommandParser:
         steps = []
         for i, step_text in enumerate(step_texts, start=1):
             step = self.parse_single_step(step_text, i)
+            step = self.enhance_step_params(step, command)
             steps.append(step)
         
+        # Forward profile context from earlier open_app steps to dependent search/media steps
+        inherited_profile = None
+        for s in steps:
+            if s.intent == 'open_app' and s.params.get('profile'):
+                inherited_profile = s.params['profile']
+            elif inherited_profile and s.intent in ['youtube_search', 'search_web', 'play_media', 'play_video', 'youtube_history']:
+                if 'profile' not in s.params or not s.params['profile']:
+                    s.params['profile'] = inherited_profile
+
         # Infer dependencies
         steps = self.infer_dependencies(steps)
         
@@ -286,20 +276,31 @@ class MultiStepCommandParser:
     def enhance_step_params(self, step: TaskStep, full_command: str) -> TaskStep:
         """
         Enhance step parameters with extracted information.
-        
-        For example, extract message content and contact for send_message intent.
         """
         if step.intent == 'send_message':
-            # Extract contact
             contact = self.extract_contact_name(step.original_text)
             if contact:
                 step.params['contact'] = contact
-            
-            # Extract message content
             message = self.extract_message_content(full_command)
             if message:
                 step.params['message'] = message
-        
+
+        elif step.intent == 'open_app':
+            target = step.params.get('target') or step.params.get('app_name') or ''
+            for p in ['rancho', 'diwakar saurashtra', 'saurashtra', 'diwakar', 'rajat', 'kit']:
+                if p in target.lower():
+                    step.params['profile'] = p
+                    step.params['target'] = p.title()
+                    step.params['app_name'] = p.title()
+                    break
+
+        elif step.intent in ['youtube_search', 'search_web']:
+            q = step.params.get('query') or ''
+            if q:
+                cleaned = re.sub(r'^(?:for|of)\s+', '', q, flags=re.IGNORECASE)
+                cleaned = re.sub(r'\b(on\s+youtube|in\s+youtube|youtube\s+pe|youtube\s+par)\b', '', cleaned, flags=re.IGNORECASE).strip()
+                step.params['query'] = cleaned
+
         return step
 
 

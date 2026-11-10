@@ -227,26 +227,20 @@ class AppAutomation:
             except AttributeError:
                 webbrowser.open(url)
                 
-            time.sleep(5)  # Wait for page to fully load
+            time.sleep(1.5)  # Brief wait for browser launch
             
-            # 2. Play the first video by tabbing or pressing enter
-            # YouTube and YT Music usually allow tabbing into the first result.
-            if platform == "youtube music":
-                for _ in range(4):
+            # 2. Attempt to autofocus and play first video (tolerant of failsafe)
+            try:
+                prev_failsafe = getattr(pyautogui, 'FAILSAFE', True)
+                pyautogui.FAILSAFE = False
+                tabs = 4 if platform == "youtube music" else (3 if platform == "spotify" else 5)
+                for _ in range(tabs):
                     pyautogui.press('tab')
-                    time.sleep(0.1)
+                    time.sleep(0.05)
                 pyautogui.press('enter')
-            elif platform == "spotify":
-                # Spotify web UI usually selects the top result automatically or we can hit Tab.
-                for _ in range(3):
-                    pyautogui.press('tab')
-                    time.sleep(0.1)
-                pyautogui.press('enter')
-            else:
-                for _ in range(5):
-                    pyautogui.press('tab')
-                    time.sleep(0.1)
-                pyautogui.press('enter')
+                pyautogui.FAILSAFE = prev_failsafe
+            except Exception as key_err:
+                logger.warning(f"Key navigation skipped/failed: {key_err}")
             
             return True
         except Exception as e:
@@ -328,12 +322,20 @@ class AppAutomation:
             return False
     
     def close_app(self, app_name: str) -> bool:
-        """Close an application"""
+        """Close an application gracefully by process name or window title"""
         if not app_name:
-            logger.error("Œ close_app called without an app name")
+            logger.error("close_app called without an app name")
             return False
 
-        logger.info(f"›‘ Closing app: {app_name}")
+        logger.info(f"Closing app: {app_name}")
+
+        try:
+            from ai_assistant.automation.window_manager import close_window_gracefully
+            if close_window_gracefully(app_name):
+                logger.info(f"✅ Gracefully closed app: {app_name}")
+                return True
+        except Exception as e:
+            logger.warning(f"Graceful close failed, trying fallback: {e}")
 
         def _run_taskkill(args: List[str]) -> subprocess.CompletedProcess:
             try:

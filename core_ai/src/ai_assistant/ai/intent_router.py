@@ -161,6 +161,22 @@ class IntentRouter:
             examples=["close notepad", "quit chrome", "notepad band karo"]
         ))
 
+        # 3b. YouTube Search
+        self.register_intent(IntentDefinition(
+            name="youtube_search",
+            description="Search videos on YouTube",
+            parameters={
+                "query": {"type": "string", "description": "The search query on YouTube", "required": True}
+            },
+            tier1_patterns=[
+                r'^\s*(?:youtube\s+search|search\s+(?:on\s+)?youtube)\s+(?:for\s+)?(.+)',
+                r'^\s*search\s+for\s+(.+?)\s+on\s+youtube',
+                r'^\s*(?:youtube\s+pe|youtube\s+par)\s+(?:search\s+karo|dhundo)\s+(.+)',
+                r'^\s*(.+?)\s+(?:on\s+youtube|in\s+youtube|youtube\s+pe|youtube\s+par)$',
+            ],
+            examples=["youtube search lofi hip hop", "search on youtube relax music", "cat videos on youtube"]
+        ))
+
         # 3. Search Web
         self.register_intent(IntentDefinition(
             name="search_web",
@@ -175,6 +191,20 @@ class IntentRouter:
             examples=["search python tutorial", "google karo AI news", "dhund do machine learning"]
         ))
 
+
+
+        # 3c. YouTube History
+        self.register_intent(IntentDefinition(
+            name="youtube_history",
+            description="Open YouTube watch history or view history",
+            parameters={},
+            tier1_patterns=[
+                r'^\s*(?:show\s+|open\s+|view\s+)?(?:youtube\s+)?(?:watch\s+)?history\s*$',
+                r'^\s*youtube\s+(?:ki\s+)?history\b.*',
+            ],
+            examples=["show youtube history", "youtube history", "open watch history"]
+        ))
+
         # 4. Play Media
         self.register_intent(IntentDefinition(
             name="play_media",
@@ -185,6 +215,8 @@ class IntentRouter:
             },
             tier1_patterns=[
                 r'^\s*(?:play|baja|bajao|laga|lagao|sun|suno)\s+(.+)',
+                r'^\s*(?:play\s+(?:a\s+)?(?:song|track|music|video)|gaana\s+chalao)\s*(.*)',
+                r'^\s*(.+?)\s+(?:play\s+karo|chalao|bajao|lagao)',
             ],
             examples=["play believer", "baja do arijit singh", "play music on spotify", "gaana laga do"]
         ))
@@ -356,6 +388,9 @@ class IntentRouter:
                 r'^\s*(?:msg\s+(.+?)\s+(?:saying|:)\s*(.+))',
                 r'^\s*(.+?)\s+ko\s+(?:message\s+|bat\s+)\s*(.+?)\s*(?:karo|kar|do)',
                 r'^\s*(.+?)\s+message\s+karo\s+(?:saying|:)\s*(.+)',
+                r'^\s*(?:send\s+(?:a\s+)?message\s+to|text(?:\s+to)?|whatsapp(?:\s+to)?)\s+([a-zA-Z0-9_\s]+?)(?:\s+on\s+whatsapp|\s+via\s+whatsapp)?(?:\s+(?:saying|that|with|:)\s*(.*))?$',
+                r'^\s*(?:whatsapp\s+(?:pe|par|me|mein)\s+)?([a-zA-Z0-9_\s]+?)\s+ko\s+(?:message|msg|text)\s*(?:bhejo|karo|kar\s+do)?(?:\s+(?:ki|saying|:)\s*(.*))?$',
+                r'^\s*whatsapp\s+(?:kholo|open\s+karo|open|chalao)\s+aur\s+([a-zA-Z0-9_\s]+?)\s+ko\s+(?:message|text)\s*(?:karo|bhejo)(?:\s+(?:ki|saying|:)\s*(.*))?$',
             ],
             examples=["send message to John saying hello", "msg Jane: how are you", "John ko message karo namaste", "Alice message karo hi"]
         ))
@@ -389,6 +424,7 @@ class IntentRouter:
                             # Clean trailing filler words
                             for filler in ['please', 'karo', 'kar', 'do', 'de', 'karna', 'the', 'a', 'bro', 'bhai', 'yaar']:
                                 param_val = re.sub(rf'\s+{filler}\s*$', '', param_val).strip()
+                            param_val = re.sub(r'^(?:for|of)\s+', '', param_val, flags=re.IGNORECASE).strip()
                             params[param_names[i]] = param_val
                     
                     # Special handling for boolean params (bluetooth/wifi enable)

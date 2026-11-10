@@ -1,4 +1,38 @@
 {
-    "mom": "+1234567890",
-    "dad": "+0987654321"
+    "niky": {
+        "search_name": "Niky",
+        "aliases": [
+            "nicky",
+            "niki",
+            "nikki",
+            "nikky",
+            "niky"
+        ]
+    },
+    "mom": {
+        "search_name": "Mom",
+        "aliases": [
+            "maa",
+            "mother",
+            "mummy",
+            "ammi"
+        ]
+    },
+    "myself": {
+        "search_name": "Myself",
+        "aliases": [
+            "diwakar",
+            "me",
+            "self",
+            "myself"
+        ]
+    },
+    "dad": {
+        "search_name": "Dad",
+        "aliases": [
+            "papa",
+            "father",
+            "pitaji"
+        ]
+    }
 }

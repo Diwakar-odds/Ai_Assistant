@@ -74,6 +74,12 @@ class ExecutiveBrain:
         self._status_callbacks: List = []
         
         logger.info("🧠 Executive Brain initialized")
+        # Auto-start global emergency stop hotkey listener
+        try:
+            from ai_assistant.core.emergency_stop import start_emergency_stop_listener
+            start_emergency_stop_listener()
+        except Exception as _es_err:
+            logger.debug(f"Could not auto-start emergency stop listener: {_es_err}")
     
     @property
     def state(self) -> BrainState:
@@ -216,7 +222,8 @@ class ExecutiveBrain:
                 
             # If it's a known system intent, treat it as a new task
             system_intents = [
-                'open_app', 'close_app', 'search_web', 'play_media', 'volume_control',
+                'open_app', 'close_app', 'search_web', 'youtube_search', 'youtube_history',
+                'play_media', 'play_video', 'send_message', 'volume_control',
                 'system_control', 'battery_status', 'list_running_apps', 'bluetooth_toggle',
                 'create_document', 'create_folder', 'open_settings', 'analyze_screen',
                 'download_media', 'task_automation', 'file_operation'
@@ -229,7 +236,19 @@ class ExecutiveBrain:
         return CommandClassification.CONVERSATIONAL
     
     # ===== EXECUTIVE HANDLERS =====
-    
+
+    @classmethod
+    def handle_executive(cls, classification: CommandClassification = CommandClassification.EXECUTIVE_STOP,
+                         command: str = 'stop') -> BrainResponse:
+        """
+        Universal class and instance entry point for executive commands.
+        Can be invoked directly:
+            CommandBrain.handle_executive(CommandClassification.EXECUTIVE_STOP)
+            get_executive_brain().handle_executive(CommandClassification.EXECUTIVE_STOP)
+        """
+        brain = get_executive_brain()
+        return brain._handle_executive(classification, command)
+
     def _handle_executive(self, classification: CommandClassification, 
                           command: str) -> BrainResponse:
         """Handle executive commands (stop/pause/resume)"""
@@ -246,7 +265,7 @@ class ExecutiveBrain:
         return BrainResponse(action_taken='error', message='Unknown executive command', success=False)
     
     def _cancel_all_active(self, reason: str = '') -> BrainResponse:
-        """Cancel all active chains"""
+        """Cancel all active chains, halt TaskChainOrchestrator, and release inputs"""
         with self._lock:
             cancelled_ids = []
             for chain_id, managed in list(self._active_chains.items()):
@@ -259,7 +278,21 @@ class ExecutiveBrain:
             
             self._state = BrainState.IDLE
         
-        # Also cancel via context manager
+        # 1. Halt TaskChainOrchestrator immediately
+        try:
+            from ai_assistant.core.task_chain_orchestrator import get_orchestrator
+            get_orchestrator().emergency_stop(reason=reason or "Executive Stop triggered")
+        except Exception as orch_e:
+            logger.warning(f"Orchestrator emergency stop warning: {orch_e}")
+
+        # 2. Forcibly release OS inputs (mouse and modifier keys)
+        try:
+            from ai_assistant.core.emergency_stop import release_system_inputs
+            release_system_inputs()
+        except Exception:
+            pass
+
+        # 3. Clear context manager state
         ctx = self._get_context_manager()
         if ctx:
             try:
@@ -268,13 +301,34 @@ class ExecutiveBrain:
                 ctx.set_state(ExecutionState.IDLE)
             except Exception:
                 pass
+
+        # 4. Broadcast stop signal via Socket.IO
+        try:
+            import sys
+            from datetime import datetime
+            if 'voice_service' in sys.modules or 'backend.voice_service' in sys.modules:
+                try:
+                    from voice_service import safe_emit
+                except ImportError:
+                    from backend.voice_service import safe_emit
+                safe_emit('emergency_stop', {'reason': reason or 'Emergency Stop', 'timestamp': datetime.now().isoformat()})
+                safe_emit('command_response', {
+                    'success': False,
+                    'response': f"🛑 Stop command executed: Live tasks halted immediately. {reason}".strip(),
+                    'command': 'stop',
+                    'source': 'executive_stop',
+                    'timestamp': datetime.now().isoformat(),
+                    'skip_tts': False
+                })
+        except Exception as emit_e:
+            logger.debug(f"Emit stop notice: {emit_e}")
         
         count = len(cancelled_ids)
         logger.info(f"🛑 Cancelled {count} active chain(s): {cancelled_ids}")
         
         return BrainResponse(
             action_taken='cancelled',
-            message=f"Cancelled {count} active task(s)." if count else "Nothing was running.",
+            message=f"Cancelled {count} active task(s)." if count else "Emergency stop executed. All active tasks halted.",
             active_chains=[]
         )
     
@@ -475,53 +529,68 @@ class ExecutiveBrain:
         return self._coordinator
 
     def _start_new_chain(self, command: str, ts_cmd: TimestampedCommand) -> BrainResponse:
-        import asyncio
         import threading
         self._state = BrainState.EXECUTING
         
-        coordinator = self._get_agent_coordinator()
-        
-# We need a background task so it doesn't block the API
-        def run_coordinator():
+        def run_execution():
+            import sys
+            from datetime import datetime
+            
+            success = False
+            response_msg = ""
+            
             try:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                result = loop.run_until_complete(coordinator.process_command(command))
-                loop.close()
+                # 1. Primary execution engine: TaskChainOrchestrator
+                from ai_assistant.core.task_chain_orchestrator import get_orchestrator
+                orchestrator = get_orchestrator()
+                res = orchestrator.execute_command(command)
                 
-                # Emit result back to UI
-                try:
-                    import sys
-                    from datetime import datetime
-                    
-                    if 'backend.voice_service' in sys.modules:
+                success = res.success
+                if success:
+                    details = []
+                    for r in res.results:
+                        if isinstance(r, dict):
+                            res_val = r.get('result')
+                            if isinstance(res_val, dict) and res_val.get('message'):
+                                details.append(res_val['message'])
+                            elif isinstance(res_val, str):
+                                details.append(res_val)
+                    if details:
+                        response_msg = " | ".join(details)
+                    else:
+                        response_msg = res.message or "Command executed successfully"
+                else:
+                    response_msg = res.message or res.error or "Command execution failed"
+            except Exception as orch_e:
+                logger.error(f"TaskChainOrchestrator error: {orch_e}")
+                response_msg = f"Execution error: {orch_e}"
+                
+            # Emit result back to UI via SocketIO
+            try:
+                if 'voice_service' in sys.modules or 'backend.voice_service' in sys.modules:
+                    try:
+                        from voice_service import safe_emit
+                    except ImportError:
                         from backend.voice_service import safe_emit
-                        
-                        msg = result.get('message', '')
-                        if result.get('status') == 'success':
-                            msg = f"Task Completed: {msg}"
-                        
-                        safe_emit('command_response', {
-                            'success': result.get('status') != 'error',
-                            'response': msg,
-                            'command': command,
-                            'source': 'local_gguf_agent',
-                            'timestamp': datetime.now().isoformat(),
-                            'skip_tts': False
-                        })
-                except Exception as emit_e:
-                    import logging
-                    logging.getLogger(__name__).error(f"Failed to emit coordinator result: {emit_e}")
                     
-            except Exception as e:
-                import logging
-                logging.getLogger(__name__).error(f"Coordinator failed: {e}")
+                    safe_emit('command_response', {
+                        'success': success,
+                        'response': response_msg,
+                        'command': command,
+                        'source': 'task_chain_orchestrator',
+                        'timestamp': datetime.now().isoformat(),
+                        'skip_tts': False
+                    })
+            except Exception as emit_e:
+                logger.error(f"Failed to emit execution result: {emit_e}")
                 
-        threading.Thread(target=run_coordinator, daemon=True).start()
+            self._state = BrainState.IDLE
+            
+        threading.Thread(target=run_execution, daemon=True).start()
         
         return BrainResponse(
             action_taken='executing',
-            message=f"Agent orchestration started for: {command}",
+            message=f"Executing: {command}",
             success=True
         )
 
@@ -623,3 +692,7 @@ def get_executive_brain() -> ExecutiveBrain:
             if _brain is None:
                 _brain = ExecutiveBrain()
     return _brain
+
+
+# ===== Compatibility Alias =====
+CommandBrain = ExecutiveBrain

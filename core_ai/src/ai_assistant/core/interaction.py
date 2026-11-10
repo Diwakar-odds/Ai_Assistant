@@ -14,11 +14,7 @@ class InteractionManager:
         """
         Ask the user a question and get a text response.
         """
-        print(f"\n\n# Setup centralized logging
-from utils.logging_config import get_logger
-logger = get_logger(__name__, log_category="app")
-
-[SYSTEM] ❓ Question: {question}")
+        print(f"\n[SYSTEM] ❓ Question: {question}")
         # In a real async web app, this would push a socket event and wait.
         # For CLI, we use input (blocking, so run in thread if needed)
         

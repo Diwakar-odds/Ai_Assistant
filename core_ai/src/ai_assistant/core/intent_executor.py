@@ -111,6 +111,7 @@ class IntentExecutor:
         self._handlers = {
             'open_app': self._open_app,
             'launch_app': self._open_app,
+            'close_app': self._close_app,
             'send_message': self._send_message,
             'type_text': self._type_text,
             'find_file': self._find_file,
@@ -273,22 +274,149 @@ class IntentExecutor:
     # ===== Intent Handlers =====
     
     def _open_app(self, params: Dict, ctx=None) -> Dict:
-        """Open an application"""
-        app_name = params.get('app_name') or params.get('app') or params.get('name')
+        """Open an application dynamically with support for browser profiles, protocols, and discovery"""
+        import os, re, subprocess
+        from ai_assistant.automation.browser_profiles import (
+            launch_browser_profile,
+            resolve_chrome_profile,
+            extract_profile_from_text
+        )
+        from ai_assistant.automation.window_manager import bring_window_to_foreground
+        from ai_assistant.automation.app_discovery import app_discovery, smart_open_application
+
+        app_name = params.get('app_name') or params.get('target') or params.get('app') or params.get('name')
         if not app_name:
             return {'success': False, 'intent': 'open_app', 'error': 'No app name provided'}
         
+        app_lower = app_name.lower().strip()
+        
+        # 1. Check for browser profile launches (e.g. 'chrome rancho', 'Rancho', 'rancho profile', 'open rancho')
+        target_profile = params.get('profile') or params.get('browser_profile')
+        if not target_profile:
+            if app_lower not in ['chrome', 'google chrome', 'browser', 'web browser']:
+                extracted, _ = extract_profile_from_text(app_name)
+                target_profile = extracted or resolve_chrome_profile(app_name)
+            elif any(b in app_lower for b in ['chrome', 'browser', 'google chrome']):
+                extracted, _ = extract_profile_from_text(app_name)
+                target_profile = extracted
+
+        if target_profile:
+            resolved_dir = resolve_chrome_profile(target_profile)
+            if resolved_dir:
+                try:
+                    ok = launch_browser_profile('chrome', profile_query=resolved_dir)
+                    if ok:
+                        bring_window_to_foreground('chrome')
+                        profile_label = str(target_profile).title()
+                        msg = f"Opened Chrome with profile {profile_label}"
+                        if ctx:
+                            ctx.set_var('current_app', 'chrome')
+                            ctx.set_var('current_browser_profile', resolved_dir)
+                            ctx.set_var('last_action', 'opened_app')
+                        return {
+                            'success': True,
+                            'intent': 'open_app',
+                            'result': {'success': True, 'message': msg, 'profile': resolved_dir}
+                        }
+                except Exception as e:
+                    logger.error(f"Failed to launch Chrome profile: {e}")
+
+        # 2. Check protocol schemes directly (like 'whatsapp:', 'calculator:', 'spotify:', 'ms-settings:')
+        protocol_schemes = {
+            'whatsapp': 'whatsapp:',
+            'calculator': 'calculator:',
+            'calc': 'calculator:',
+            'spotify': 'spotify:',
+            'settings': 'ms-settings:',
+            'windows settings': 'ms-settings:',
+            'clock': 'ms-clock:',
+            'edge': 'microsoft-edge:'
+        }
+        target_proto = protocol_schemes.get(app_lower)
+        if not target_proto and (app_lower.endswith(':') and re.fullmatch(r'[A-Za-z][A-Za-z0-9+.-]*:', app_lower)):
+            target_proto = app_lower
+
+        if target_proto:
+            try:
+                if hasattr(os, 'startfile'):
+                    os.startfile(target_proto)
+                bring_window_to_foreground(app_name)
+                msg = f"Successfully opened {app_name.title()}"
+                if ctx:
+                    ctx.set_var('current_app', app_lower)
+                    ctx.set_var('last_action', 'opened_app')
+                return {'success': True, 'intent': 'open_app', 'result': {'success': True, 'message': msg}}
+            except Exception as e:
+                logger.warning(f"Protocol launch failed for {target_proto}: {e}")
+
+        # 3. Generic Chrome launch without a specific profile mentioned
+        if app_lower in ['chrome', 'google chrome', 'browser']:
+            try:
+                active_prof = ctx.get_var('current_browser_profile') if ctx else None
+                ok = launch_browser_profile('chrome', profile_query=active_prof)
+                if ok:
+                    bring_window_to_foreground('chrome')
+                    msg = "Successfully opened Chrome" + (f" with profile {active_prof}" if active_prof else "")
+                    if ctx:
+                        ctx.set_var('current_app', 'chrome')
+                        ctx.set_var('last_action', 'opened_app')
+                    return {'success': True, 'intent': 'open_app', 'result': {'success': True, 'message': msg}}
+            except Exception as e:
+                logger.warning(f"Generic Chrome launch failed: {e}")
+
+        # 4. Dynamic application launch via UniversalAppController & dynamic AppDiscovery
         controller = _get_app_controller()
-        if not controller:
-            return {'success': False, 'intent': 'open_app', 'error': 'App controller not available'}
-        
-        result = controller.open_app(app_name)
-        
-        if ctx and result.get('success'):
+        if controller:
+            result = controller.open_app(app_name)
+            if result.get('success'):
+                bring_window_to_foreground(result.get('hwnd') or app_name)
+                if ctx:
+                    ctx.set_var('current_app', app_name.lower())
+                    ctx.set_var('last_action', 'opened_app')
+                return {'success': True, 'intent': 'open_app', 'result': result}
+
+        # 5. Fallback directly to smart_open_application
+        launch_msg = smart_open_application(app_name)
+        bring_window_to_foreground(app_name)
+        success = "✅" in launch_msg or "Opened" in launch_msg
+        if ctx and success:
             ctx.set_var('current_app', app_name.lower())
             ctx.set_var('last_action', 'opened_app')
         
-        return {'success': result.get('success', False), 'intent': 'open_app', 'result': result}
+        return {
+            'success': success,
+            'intent': 'open_app',
+            'result': {'success': success, 'message': launch_msg}
+        }
+
+    def _close_app(self, params: Dict, ctx=None) -> Dict:
+        """Close an application gracefully by process name or window title"""
+        app_name = params.get('app_name') or params.get('target') or params.get('app') or params.get('name')
+        if not app_name:
+            return {'success': False, 'intent': 'close_app', 'error': 'No app name provided'}
+        try:
+            # 1. Try UniversalAppController to update active tracking and gracefully close
+            controller = _get_app_controller()
+            if controller:
+                res = controller.close_app(app_name)
+                if res.get('success'):
+                    if ctx:
+                        ctx.set_var('last_action', 'closed_app')
+                    return {'success': True, 'intent': 'close_app', 'result': f"Closed {app_name}"}
+
+            # 2. Try AppAutomation graceful close
+            from ai_assistant.automation.app_automation import AppAutomation
+            auto = AppAutomation()
+            success = auto.close_app(app_name)
+            if ctx and success:
+                ctx.set_var('last_action', 'closed_app')
+            return {
+                'success': success,
+                'intent': 'close_app',
+                'result': f"Closed {app_name}" if success else f"Could not close {app_name}"
+            }
+        except Exception as e:
+            return {'success': False, 'intent': 'close_app', 'error': str(e)}
     
     def _send_message(self, params: Dict, ctx=None) -> Dict:
         """Send a message via an app"""

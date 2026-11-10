@@ -1,10 +1,12 @@
 """
 Task Chain Orchestrator
 Executes multi-step task chains with state management, error handling, and context awareness.
+Includes Global Emergency Stop support to immediately halt active loops and release OS control.
 """
 
 import logging
 import time
+import threading
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 
@@ -34,15 +36,13 @@ class TaskChainOrchestrator:
     - State machine (IDLE → PARSING → EXECUTING → COMPLETE)
     - Dependency resolution
     - Context passing between steps
+    - Global emergency stop with immediate halt & input release
     - Error handling and rollback
     - Mid-task override support
     
     Usage:
         orchestrator = TaskChainOrchestrator()
-        
-        result = orchestrator.execute_command(
-            "WhatsApp खोलो, मॉम को message करो कि hello"
-        )
+        result = orchestrator.execute_command("WhatsApp खोलो, मॉम को message करो कि hello")
     """
     
     def __init__(self,
@@ -61,10 +61,41 @@ class TaskChainOrchestrator:
         self.app_controller = app_controller or get_universal_controller()
         self.parser = parser or MultiStepCommandParser()
         
-        # Initialization of automations is now handled by IntentExecutor
+        # Emergency stop event
+        self._stop_event = threading.Event()
         
-        logger.info("Job Chain Orchestrator initialized")
+        logger.info("Job Chain Orchestrator initialized (with Emergency Stop support)")
     
+    # ===== EMERGENCY STOP & CONTROL =====
+
+    def emergency_stop(self, reason: str = "Emergency stop requested"):
+        """
+        Immediately halts active chain execution, clears context, and releases OS inputs.
+        """
+        logger.warning(f"🛑 [ORCHESTRATOR EMERGENCY STOP]: {reason}")
+        self._stop_event.set()
+        
+        # Clear context and mark state as IDLE
+        self.context_manager.clear_task_chain()
+        self.context_manager.set_state(ExecutionState.IDLE)
+        
+        # Release physical mouse & keyboard inputs
+        try:
+            import pyautogui
+            pyautogui.FAILSAFE = True
+            pyautogui.mouseUp()
+            for key in ['ctrl', 'shift', 'alt', 'win', 'esc', 'tab', 'enter', 'space']:
+                try:
+                    pyautogui.keyUp(key)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    def is_stopped(self) -> bool:
+        """Check if emergency stop is currently active."""
+        return self._stop_event.is_set()
+
     # ===== MAIN EXECUTION METHODS =====
     
     def execute_command(self, command: str) -> ExecutionResult:
@@ -87,6 +118,9 @@ class TaskChainOrchestrator:
                 self.context_manager.handle_override(command)
                 logger.info("Override detected, handling...")
             
+            # Reset stop event for fresh execution
+            self._stop_event.clear()
+
             # Parse command
             self.context_manager.set_state(ExecutionState.PARSING)
             steps = self.parser.parse_command(command)
@@ -148,6 +182,18 @@ class TaskChainOrchestrator:
         
         try:
             for step in steps:
+                # Emergency Stop Check
+                if self._stop_event.is_set():
+                    logger.warning(f"🛑 [EMERGENCY STOP] Task chain halted before step {step.step}.")
+                    return ExecutionResult(
+                        success=steps_completed > 0,
+                        steps_completed=steps_completed,
+                        total_steps=len(steps),
+                        results=results,
+                        error="Emergency stop invoked. Chain execution halted.",
+                        message="Emergency stop: task execution was immediately halted."
+                    )
+
                 # Check for cancellation/pause between steps
                 current_state = self.context_manager.get_state()
                 if current_state in [ExecutionState.PAUSED, ExecutionState.IDLE]:
@@ -180,6 +226,10 @@ class TaskChainOrchestrator:
                 max_retries = 2
                 
                 for attempt in range(max_retries + 1):
+                    if self._stop_event.is_set():
+                        logger.warning(f"🛑 [EMERGENCY STOP] Aborting step execution.")
+                        break
+
                     try:
                         logger.info(f"▶️ Executing Step {step.step} (Attempt {attempt+1}/{max_retries+1})")
                         step_result = self.execute_step(step)
@@ -189,7 +239,7 @@ class TaskChainOrchestrator:
                             # PERFORM VERIFICATION
                             if self._verify_step(step, step_result):
                                 step_success = True
-                                break # Success!
+                                break  # Success!
                             else:
                                 logger.warning(f"⚠️ Verification failed for Step {step.step}")
                         else:
@@ -199,16 +249,29 @@ class TaskChainOrchestrator:
                         logger.error(f"❌ Exception in step {step.step}: {e}")
                         step_result = {'success': False, 'error': str(e)}
                     
-                    # If we are here, it failed. Wait before retry.
+                    # If we are here, it failed. Wait before retry (interruptible).
                     if not step_success and attempt < max_retries:
-                        logger.info(f"⏳ Waiting 2s before retry...")
-                        import time
-                        time.sleep(2)
+                        logger.info(f"⏳ Waiting 2s before retry (interruptible)...")
+                        for _ in range(20):
+                            if self._stop_event.is_set():
+                                break
+                            time.sleep(0.1)
                 
+                if self._stop_event.is_set():
+                    logger.warning("🛑 Chain execution aborted by Emergency Stop.")
+                    return ExecutionResult(
+                        success=False,
+                        steps_completed=steps_completed,
+                        total_steps=len(steps),
+                        results=results,
+                        error="Emergency stop invoked. Chain execution halted.",
+                        message="Emergency stop: task execution was immediately halted."
+                    )
+
                 if not step_success:
                     logger.error(f"❌ Step {step.step} failed after {max_retries+1} attempts")
                     # Try to rollback
-                    self._rollback_steps(results) # Rollback all completed steps
+                    self._rollback_steps(results)
                     return ExecutionResult(
                         success=False,
                         steps_completed=steps_completed,
@@ -258,10 +321,22 @@ class TaskChainOrchestrator:
         Returns:
             Dict with execution result
         """
+        if self._stop_event.is_set():
+            return {
+                'success': False,
+                'step': step.step,
+                'intent': step.intent,
+                'error': 'Emergency stop is active'
+            }
+
         try:
             from ai_assistant.core.intent_executor import get_intent_executor
             executor = get_intent_executor()
-            return executor.execute(step.intent, step.params, self.context_manager)
+            res = executor.execute(step.intent, step.params, self.context_manager)
+            if isinstance(res, dict):
+                res['step'] = step.step
+                res['intent'] = step.intent
+            return res
         except ImportError:
             logger.error("IntentExecutor not available")
             return {
@@ -286,7 +361,7 @@ class TaskChainOrchestrator:
             return executor.verify(step.intent, result, step.params)
         except ImportError:
             logger.error("IntentExecutor not available for verification")
-            return True # Fallback to trusting the method's return code
+            return True
 
     # ===== DEPENDENCY MANAGEMENT =====
     
@@ -305,7 +380,6 @@ class TaskChainOrchestrator:
             return True
         
         for dep_step_num in step.dependencies:
-            # Find result for this dependency
             dep_result = next((r for r in previous_results if r.get('step') == dep_step_num), None)
             
             if not dep_result or not dep_result.get('success'):
@@ -319,13 +393,8 @@ class TaskChainOrchestrator:
     def _rollback_steps(self, results: List[Dict]):
         """
         Attempt to rollback executed steps.
-        
-        Currently just logs - full rollback would require action-specific undo logic.
         """
         logger.info(f"Attempting rollback of {len(results)} steps")
-        
-        # For now, just clear context
-        # Full rollback would require each action to support undo
         self.context_manager.set_var('last_action', 'rolled_back')
     
     # ===== OVERRIDE HANDLING =====
@@ -341,9 +410,6 @@ class TaskChainOrchestrator:
             ExecutionResult for new command
         """
         logger.warning(f"Handling override: {new_command}")
-        
-        # Context manager already handled the override detection
-        # Just execute the new command
         return self.execute_command(new_command)
     
     # ===== STATUS & MONITORING =====
@@ -357,6 +423,7 @@ class TaskChainOrchestrator:
             'current_step': context_summary['current_step'],
             'active_apps': self.app_controller.get_active_apps(),
             'context_vars': context_summary['key_vars'],
+            'stopped': self._stop_event.is_set(),
         }
     
     def pause(self):
@@ -372,8 +439,7 @@ class TaskChainOrchestrator:
     
     def cancel(self):
         """Cancel current execution."""
-        self.context_manager.clear_task_chain()
-        self.context_manager.set_state(ExecutionState.IDLE)
+        self.emergency_stop("Execution cancelled")
         logger.info("Execution cancelled")
 
 

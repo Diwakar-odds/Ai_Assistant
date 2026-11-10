@@ -46,17 +46,42 @@ class AppDiscovery:
         # Load cache first for fast startup
         self.load_cache()
         
-        # Hardcode common UWP aliases
-        self.apps_database['settings'] = 'ms-settings:'
-        self.apps_database['windows settings'] = 'ms-settings:'
-        self.apps_database['microsoft edge'] = 'microsoft-edge:'
-        self.apps_database['calculator'] = 'calculator:'
-        self.apps_database['clock'] = 'ms-clock:'
-        self.apps_database['calendar'] = 'outlookcal:'
-        self.apps_database['notebook'] = 'notepad'
-        self.apps_database['whats'] = 'whatsapp'
-        self.apps_database['whatsapp'] = 'whatsapp'
-        self.apps_database['whatsapp web'] = 'whatsapp'
+        # Comprehensive app aliases and protocol schemes
+        self.aliases = {
+            'settings': 'ms-settings:',
+            'windows settings': 'ms-settings:',
+            'microsoft edge': 'microsoft-edge:',
+            'edge': 'microsoft-edge:',
+            'calculator': 'calculator:',
+            'calc': 'calculator:',
+            'clock': 'ms-clock:',
+            'alarms': 'ms-clock:',
+            'calendar': 'outlookcal:',
+            'notebook': 'notepad.exe',
+            'notepad': 'notepad.exe',
+            'note pad': 'notepad.exe',
+            'whats': 'whatsapp:',
+            'whatsapp': 'whatsapp:',
+            'whatsapp web': 'whatsapp:',
+            'spotify': 'spotify:',
+            'terminal': 'wt.exe',
+            'windows terminal': 'wt.exe',
+            'wt': 'wt.exe',
+            'cmd': 'cmd.exe',
+            'command prompt': 'cmd.exe',
+            'explorer': 'explorer.exe',
+            'file explorer': 'explorer.exe',
+            'paint': 'mspaint.exe',
+            'mspaint': 'mspaint.exe',
+            'vscode': 'visual studio code',
+            'vs code': 'visual studio code',
+            'code': 'visual studio code',
+            'chrome': 'google chrome',
+            'word': 'microsoft word',
+            'excel': 'microsoft excel',
+            'powerpoint': 'microsoft powerpoint'
+        }
+        self.apps_database.update(self.aliases)
         
         # DON'T start background refresh at startup - defer until first use
         # This saves 10-20 seconds at server startup
@@ -81,7 +106,7 @@ class AppDiscovery:
         apps = {}
         
         # Method 1: Registry Uninstall Keys (Desktop Apps)
-        print("  📋 Reading Registry Uninstall Keys (Desktop Apps)...")
+        logger.info("Reading Registry Uninstall Keys (Desktop Apps)...")
         apps.update(self._scan_apps_and_features_registry())
         
         # Method 2: AppX Packages (Microsoft Store Apps)
@@ -90,6 +115,10 @@ class AppDiscovery:
         
         # Method 3: Start Menu Shortcuts (PWAs and Utilities)
         apps.update(self._scan_start_menu_shortcuts())
+        
+        # Preserve essential aliases and protocols
+        if hasattr(self, 'aliases'):
+            apps.update(self.aliases)
         
         # Save to cache
         self.apps_database = apps
@@ -210,6 +239,10 @@ class AppDiscovery:
                                 app_key = friendly_name.lower()
                                 if app_key not in apps:
                                     apps[app_key] = friendly_name
+                                if app_key.startswith('windows') and len(app_key) > 7:
+                                    short_k = app_key[7:]
+                                    if short_k not in apps:
+                                        apps[short_k] = friendly_name
                                     
                 except json.JSONDecodeError:
                     pass
@@ -302,10 +335,10 @@ class AppDiscovery:
         import time
         
         def delayed_refresh():
-            print(f" Scheduled app refresh will start in {delay_seconds} seconds...")
+            # Scheduled app refresh
             time.sleep(delay_seconds)
             if not self._is_refreshing:
-                print("🔄 Starting scheduled background app refresh...")
+                logger.info("Starting scheduled background app refresh...")
                 self._background_refresh()
         
         thread = threading.Thread(target=delayed_refresh, daemon=True)
@@ -316,7 +349,7 @@ class AppDiscovery:
         """Background refresh of app database"""
         try:
             self._is_refreshing = True
-            print("🔄 Background app refresh started...")
+            logger.info("Background app refresh started...")
             
             # Scan for apps
             new_apps = self.scan_installed_applications()
@@ -535,24 +568,46 @@ class AppDiscovery:
     
     def find_app(self, app_name: str) -> str:
         """Find application by name using advanced fuzzy matching with usage-based ranking."""
+        if not app_name:
+            return ""
+
         app_name_lower = app_name.lower().strip()
+        
+        # 0. Check alias mappings first
+        if hasattr(self, 'aliases'):
+            if app_name_lower in self.aliases:
+                target = self.aliases[app_name_lower]
+                if target in self.apps_database:
+                    return self.apps_database[target]
+                if target.endswith(':') or target.endswith('.exe') or os.path.exists(target):
+                    return target
         
         # Normalize the search query (remove special chars, handle spaces)
         normalized_query = app_name_lower.replace('.', ' ').replace('_', ' ').replace('-', ' ')
         
-        # Get usage statistics for ranking boost
-        # Optimization: Don't fetch if no matches found yet
-        
-        # 0. DIRECT LOOKUP CHECK (Fastest)
+        if hasattr(self, 'aliases'):
+            if normalized_query in self.aliases:
+                target = self.aliases[normalized_query]
+                if target in self.apps_database:
+                    return self.apps_database[target]
+                if target.endswith(':') or target.endswith('.exe') or os.path.exists(target):
+                    return target
+
+        # 1. DIRECT LOOKUP CHECK (Fastest)
         if normalized_query in self.apps_database:
              return self.apps_database[normalized_query]
         
-        # 1. Direct Lookup (Legacy/Mapped names)
-        # Check standard app names that might not be normalized
+        # 2. Direct Lookup (Legacy/Mapped names)
         if app_name_lower in self.apps_database:
             return self.apps_database[app_name_lower]
         if app_name in self.apps_database:
             return self.apps_database[app_name]
+
+        # 3. Check system executables via PATH
+        import shutil
+        sys_which = shutil.which(app_name_lower) or shutil.which(f"{app_name_lower}.exe")
+        if sys_which:
+            return sys_which
 
         # Get usage statistics for ranking boost
         most_used = {name.lower(): count for name, count in self.get_most_used_apps(100)}
@@ -612,7 +667,7 @@ class AppDiscovery:
         # Penalize if the found app name is much longer than the query (e.g. "WSL Settings" for "Settings")
         length_diff = len(app_name) - len(query)
         if length_diff > 0:
-            score -= (length_diff * 2)
+            score -= min(15, length_diff)
         
         # Some query words present (partial match)
         common_words = query_words & app_words
@@ -816,8 +871,41 @@ def smart_open_application(app_name: str, action_type: str = 'open_app') -> str:
         app_name = pref[0]
         print(f"  💡 Using learned preference for {action_type}: {app_name}")
 
+    # Check direct protocol handlers first
+    clean_lower = original_app_name.lower().strip()
+    protocol_schemes = {
+        'whatsapp': 'whatsapp:',
+        'whatsapp:': 'whatsapp:',
+        'calculator': 'calculator:',
+        'calc': 'calculator:',
+        'calculator:': 'calculator:',
+        'spotify': 'spotify:',
+        'spotify:': 'spotify:',
+        'settings': 'ms-settings:',
+        'windows settings': 'ms-settings:',
+        'ms-settings:': 'ms-settings:',
+        'edge': 'microsoft-edge:',
+        'microsoft-edge:': 'microsoft-edge:',
+        'clock': 'ms-clock:',
+        'ms-clock:': 'ms-clock:'
+    }
+    if clean_lower in protocol_schemes or (clean_lower.endswith(':') and re.fullmatch(r'[A-Za-z][A-Za-z0-9+.-]*:', clean_lower)):
+        target_proto = protocol_schemes.get(clean_lower, clean_lower)
+        try:
+            from ai_assistant.automation.window_manager import bring_window_to_foreground
+            if hasattr(os, 'startfile'):
+                os.startfile(target_proto)
+            bring_window_to_foreground(clean_lower)
+            app_discovery.track_app_launch(original_app_name, target_proto, success=True)
+            app_discovery.record_action_preference(action_type, original_app_name, 'protocol')
+            return f"✅ Opened Windows App Protocol: {original_app_name}"
+        except Exception as proto_err:
+            logger.warning(f"Protocol launch failed for {target_proto}: {proto_err}")
+
     # First, try to find in discovered apps
     app_path = app_discovery.find_app(app_name)
+    if not app_path and app_name != original_app_name:
+        app_path = app_discovery.find_app(original_app_name)
     
     # If not found, and we are currently refreshing, wait a bit and try again
     if not app_path and getattr(app_discovery, '_is_refreshing', False):
@@ -832,38 +920,74 @@ def smart_open_application(app_name: str, action_type: str = 'open_app') -> str:
                 
     if app_path:
         try:
+            from ai_assistant.automation.window_manager import bring_window_to_foreground
             # METHOD 1: NATIVE WINDOWS APP OR SHORTCUT (.exe / .lnk)
             # This is reliable for Desktop apps and PWAs found in Start Menu
             if os.path.exists(app_path):
                 print(f"  🚀 Launching Native Windows App directly: {app_path}")
-                # Do not interpolate a discovered path into a shell command.
-                # A malicious shortcut filename containing quotes or metacharacters
-                # would otherwise become command injection.
                 if hasattr(os, 'startfile'):
                     os.startfile(app_path)
                 else:
                     import subprocess
                     subprocess.Popen([app_path], shell=False)
+                bring_window_to_foreground(original_app_name)
                 app_discovery.track_app_launch(app_name, app_path, success=True)
                 app_discovery.record_action_preference(action_type, app_name, 'native')
                 return f"✅ Opened Native App: {app_name}"
-            # Fallback for Windows App protocols/commands (like Calculator UWP)
+            # Windows App protocols/commands (like Calculator UWP)
+            elif app_path.endswith(':') and re.fullmatch(r'[A-Za-z][A-Za-z0-9+.-]*:', app_path):
+                if hasattr(os, 'startfile'):
+                    os.startfile(app_path)
+                else:
+                    return f"❌ Windows app protocols are not supported on this platform: {app_name}"
+                bring_window_to_foreground(original_app_name)
+                app_discovery.track_app_launch(app_name, app_path, success=True)
+                app_discovery.record_action_preference(action_type, app_name, 'protocol')
+                return f"✅ Opened Web/Windows App using Shell: {app_name}"
+            # System executable via PATH
             else:
-                if app_path.endswith(':') and re.fullmatch(r'[A-Za-z][A-Za-z0-9+.-]*:', app_path):
+                import shutil
+                sys_exec = shutil.which(app_path) or shutil.which(app_name) or shutil.which(f"{app_name}.exe") or shutil.which(original_app_name)
+                if sys_exec:
+                    if hasattr(os, 'startfile'):
+                        os.startfile(sys_exec)
+                    else:
+                        import subprocess
+                        subprocess.Popen([sys_exec], shell=False)
+                    bring_window_to_foreground(original_app_name)
+                    app_discovery.track_app_launch(app_name, sys_exec, success=True)
+                    app_discovery.record_action_preference(action_type, app_name, 'native')
+                    return f"✅ Opened System App: {app_name}"
+                elif app_path.startswith('shell:AppsFolder\\'):
                     if hasattr(os, 'startfile'):
                         os.startfile(app_path)
-                    else:
-                        return f"❌ Windows app protocols are not supported on this platform: {app_name}"
+                    bring_window_to_foreground(original_app_name)
+                    app_discovery.track_app_launch(app_name, app_path, success=True)
+                    return f"✅ Opened Store App: {app_name}"
                 else:
                     return f"❌ Refusing to launch an untrusted application target: {app_name}"
-                app_discovery.track_app_launch(app_name, app_path, success=True)
-                app_discovery.record_action_preference(action_type, app_name, 'native')
-                return f"✅ Opened Web/Windows App using Shell: {app_name}"
         except Exception as e:
             print(f"  ❌ Launch failed: {e}")
             app_discovery.track_app_launch(app_name, app_path, success=False)
             return f"❌ Failed to launch {app_name}: {e}"
     else:
+        # Fallback check for system executables before web fallbacks
+        import shutil
+        sys_exec = shutil.which(app_name) or shutil.which(f"{app_name}.exe") or shutil.which(clean_lower) or shutil.which(f"{clean_lower}.exe")
+        if sys_exec:
+            try:
+                from ai_assistant.automation.window_manager import bring_window_to_foreground
+                if hasattr(os, 'startfile'):
+                    os.startfile(sys_exec)
+                else:
+                    import subprocess
+                    subprocess.Popen([sys_exec], shell=False)
+                bring_window_to_foreground(original_app_name)
+                app_discovery.track_app_launch(original_app_name, sys_exec, success=True)
+                return f"✅ Opened System App: {original_app_name}"
+            except Exception as e:
+                return f"❌ Failed to launch {original_app_name}: {e}"
+
         # If not found natively, try web fallbacks
         web_fallbacks = {
             'youtube': 'https://www.youtube.com',
@@ -971,6 +1095,7 @@ def get_app_usage_stats() -> str:
 # EXPORT ALIASES for backend compatibility
 get_installed_apps = get_apps_for_web
 refresh_app_list = refresh_app_database
+from ai_assistant.automation.window_manager import bring_window_to_foreground, find_window_by_name, close_window_gracefully
 
 def start_periodic_refresh(interval_hours: int = 168):  # 168 hours = 1 week
     """Start periodic background refresh (runs in separate thread)"""
