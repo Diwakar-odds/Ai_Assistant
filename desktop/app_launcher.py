@@ -43,21 +43,121 @@ def wait_for_server():
             time.sleep(1)
     return False
 
+class AppLauncherBridge:
+    def __init__(self, main_win, comp_win):
+        self.main_win = main_win
+        self.comp_win = comp_win
+
+    def restore_dashboard(self):
+        try:
+            if self.comp_win:
+                self.comp_win.hide()
+            if self.main_win:
+                self.main_win.restore()
+                self.main_win.show()
+        except Exception:
+            pass
+
+    def minimize_to_companion(self):
+        try:
+            if self.main_win:
+                self.main_win.minimize()
+            if self.comp_win:
+                self.comp_win.restore()
+                self.comp_win.show()
+        except Exception:
+            pass
+
+    def dock_companion(self, docked: bool):
+        try:
+            if not self.comp_win or not webview.screens:
+                return
+            screen = webview.screens[0]
+            if docked:
+                self.comp_win.move(screen.width - 60, screen.height - 340 - 60)
+            else:
+                self.comp_win.move(screen.width - 280 - 30, screen.height - 340 - 60)
+        except Exception:
+            pass
+
+    def prepare_screenshot(self):
+        try:
+            if self.comp_win:
+                self.comp_win.hide()
+                def _restore():
+                    time.sleep(1.2)
+                    if self.comp_win:
+                        self.comp_win.show()
+                threading.Thread(target=_restore, daemon=True).start()
+        except Exception:
+            pass
+
 def open_dashboard():
     # Wait for the backend to bind to port 5000
     if wait_for_server():
-        # Server is up, create window
-        print("Launching Native Windows GUI...")
-        window = webview.create_window(
+        print("Launching Native Windows GUI with Floating Companion...")
+        bridge_holder = [None]
+        
+        main_window = webview.create_window(
             title="Pulsar AI Assistant",
             url="http://127.0.0.1:5000",
-            width=1280,
-            height=800,
-            min_size=(800, 600),
+            width=1440,
+            height=900,
+            min_size=(960, 640),
             text_select=True,
             frameless=False,
         )
-        # Use private_mode=True to avoid WebView2 cache locking issues when multiple instances crash
+
+        comp_w = 280
+        comp_h = 340
+        comp_x = None
+        comp_y = None
+        if webview.screens:
+            screen = webview.screens[0]
+            comp_x = screen.width - comp_w - 30
+            comp_y = screen.height - comp_h - 60
+
+        comp_window = webview.create_window(
+            title="Pulsar Companion Mascot",
+            url="http://127.0.0.1:5000/companion",
+            width=comp_w,
+            height=comp_h,
+            x=comp_x,
+            y=comp_y,
+            frameless=True,
+            on_top=True,
+            transparent=True,
+            hidden=True,
+            resizable=False,
+            easy_drag=True
+        )
+
+        bridge = AppLauncherBridge(main_window, comp_window)
+        bridge_holder[0] = bridge
+        sys._active_desktop_bridge = bridge
+        main_window.js_api = bridge
+        comp_window.js_api = bridge
+
+        def on_min():
+            if comp_window:
+                comp_window.restore()
+                comp_window.show()
+
+        def on_rest():
+            if comp_window:
+                comp_window.hide()
+
+        def on_close():
+            if comp_window:
+                try:
+                    comp_window.destroy()
+                except Exception:
+                    pass
+
+        main_window.events.minimized += on_min
+        main_window.events.restored += on_rest
+        main_window.events.closed += on_close
+
         webview.start(private_mode=True)
     else:
         print("Failed to connect to the backend server. It may have crashed.")

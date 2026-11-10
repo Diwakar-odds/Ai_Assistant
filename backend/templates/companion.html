@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pulsar Mascot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            background: transparent !important;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            justify-content: flex-end;
+        }
+
+        /* Draggable region for native pywebview window */
+        .pywebview-drag-region {
+            -webkit-app-region: drag;
+        }
+
+        .no-drag {
+            -webkit-app-region: no-drag;
+        }
+
+        /* Root Mascot Wrapper - STRICTLY ZERO BACKGROUND */
+        .mascot-wrapper {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            background: transparent !important;
+        }
+
+        /* Ultra-compact Speech Bubble (only visible during/after scan) */
+        .speech-pill {
+            display: none;
+            max-width: 230px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(0, 243, 255, 0.45);
+            border-radius: 12px;
+            padding: 8px 10px;
+            font-size: 11px;
+            line-height: 1.35;
+            color: #F1F5F9;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), 0 0 16px rgba(0, 243, 255, 0.35);
+            backdrop-filter: blur(12px);
+            margin-bottom: 8px;
+            margin-right: 6px;
+            animation: popIn 0.2s ease-out;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            pointer-events: auto;
+        }
+
+        @keyframes popIn {
+            from { opacity: 0; transform: translateY(4px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* The Tiny Robot Container (~64px) */
+        .robot-btn {
+            width: 66px;
+            height: 66px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            background: transparent !important;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+        }
+
+        .robot-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .robot-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Levitation floating animation */
+        .robot-avatar {
+            animation: levitate 2.8s ease-in-out infinite;
+            filter: drop-shadow(0 0 10px rgba(0, 243, 255, 0.65));
+        }
+
+        @keyframes levitate {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-4px); }
+        }
+
+        /* SVG Parts */
+        .robot-head {
+            fill: #141C2B;
+            stroke: #FFA500;
+            stroke-width: 3.5;
+            transition: stroke 0.3s;
+        }
+
+        .robot-visor {
+            fill: #0A0F1D;
+        }
+
+        .robot-eye {
+            fill: #FFA500;
+            filter: drop-shadow(0 0 5px #FFA500);
+            transition: all 0.3s;
+        }
+
+        .robot-antenna {
+            stroke: #00F3FF;
+            stroke-width: 3;
+            stroke-linecap: round;
+        }
+
+        .robot-antenna-tip {
+            fill: #00F3FF;
+            filter: drop-shadow(0 0 6px #00F3FF);
+        }
+
+        .robot-thruster {
+            fill: #00F3FF;
+            filter: drop-shadow(0 0 6px #00F3FF);
+            opacity: 0.85;
+        }
+
+        /* Blinking Animation */
+        .eye-blink {
+            animation: blink 4s infinite;
+            transform-origin: center;
+        }
+
+        @keyframes blink {
+            0%, 94%, 100% { transform: scaleY(1); }
+            97% { transform: scaleY(0.1); }
+        }
+
+        /* Scanning State Animation */
+        .scanning .robot-head {
+            stroke: #00F3FF;
+            filter: drop-shadow(0 0 12px #00F3FF);
+        }
+
+        .scanning .robot-eye {
+            fill: #00F3FF;
+            filter: drop-shadow(0 0 8px #00F3FF);
+            animation: scan-radar 0.7s ease-in-out infinite alternate;
+        }
+
+        @keyframes scan-radar {
+            0% { transform: translateX(-4px); }
+            100% { transform: translateX(4px); }
+        }
+
+        /* Context Menu on Right Click */
+        .context-menu {
+            display: none;
+            position: absolute;
+            bottom: 74px;
+            right: 10px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(0, 243, 255, 0.4);
+            border-radius: 10px;
+            padding: 5px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+            backdrop-filter: blur(10px);
+            z-index: 200;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        .menu-item {
+            padding: 6px 12px;
+            font-size: 11px;
+            color: #E2E8F0;
+            border-radius: 6px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.15s;
+        }
+
+        .menu-item:hover {
+            background: rgba(0, 243, 255, 0.2);
+            color: #00F3FF;
+        }
+    </style>
+</head>
+<body oncontextmenu="showContextMenu(event)">
+
+    <div class="mascot-wrapper">
+        <!-- Floating Speech Pill -->
+        <div class="speech-pill no-drag" id="speechPill">
+            <span id="speechText">Scanning screen...</span>
+        </div>
+
+        <!-- The Tiny Glowing Robot Button -->
+        <div class="robot-btn pywebview-drag-region" id="robotBtn" onclick="onRobotClick(event)" title="Pulsar AI - Click to analyze screen">
+            <div class="robot-avatar" id="robotAvatar">
+                <svg width="60" height="60" viewBox="0 0 100 100">
+                    <!-- Head Outline & Body -->
+                    <rect class="robot-head" x="20" y="24" width="60" height="52" rx="16" />
+                    <!-- Antenna -->
+                    <line class="robot-antenna" x1="50" y1="24" x2="50" y2="8" />
+                    <circle class="robot-antenna-tip" cx="50" cy="7" r="4.5" />
+                    <!-- Visor Screen -->
+                    <rect class="robot-visor" x="27" y="34" width="46" height="28" rx="8" />
+                    <!-- Glowing Eyes -->
+                    <g class="eye-blink">
+                        <ellipse class="robot-eye" cx="40" cy="48" rx="6.5" ry="8.5" />
+                        <ellipse class="robot-eye" cx="60" cy="48" rx="6.5" ry="8.5" />
+                    </g>
+                    <!-- Bottom Thruster Base -->
+                    <ellipse class="robot-thruster" cx="50" cy="82" rx="14" ry="4" />
+                </svg>
+            </div>
+        </div>
+
+        <!-- Right Click Context Menu -->
+        <div class="context-menu no-drag" id="contextMenu">
+            <div class="menu-item" onclick="triggerScan()">👁️ Scan Screen</div>
+            <div class="menu-item" onclick="toggleDock()">⮞ Dock to Edge</div>
+            <div class="menu-item" onclick="closeCompanion()">✕ Hide</div>
+        </div>
+    </div>
+
+    <script>
+        let isScanning = false;
+        let isDocked = false;
+        let hideTimer = null;
+        const robotAvatar = document.getElementById('robotAvatar');
+        const speechPill = document.getElementById('speechPill');
+        const speechText = document.getElementById('speechText');
+        const contextMenu = document.getElementById('contextMenu');
+
+        // Click on Robot: trigger screen scan!
+        function onRobotClick(e) {
+            if (contextMenu.style.display === 'block') {
+                contextMenu.style.display = 'none';
+                return;
+            }
+            triggerScan();
+        }
+
+        async function triggerScan() {
+            if (isScanning) return;
+            isScanning = true;
+            contextMenu.style.display = 'none';
+
+            robotAvatar.classList.add('scanning');
+            showSpeech('Looking at your screen right now...');
+
+            // Request Python to expand window slightly for the speech pill
+            if (window.pywebview && window.pywebview.api && window.pywebview.api.expand_window) {
+                await window.pywebview.api.expand_window(true);
+            }
+
+            try {
+                if (window.pywebview && window.pywebview.api && window.pywebview.api.scan_screen) {
+                    const result = await window.pywebview.api.scan_screen();
+                    robotAvatar.classList.remove('scanning');
+                    isScanning = false;
+
+                    if (result && result.analysis) {
+                        showSpeech(result.analysis);
+                        scheduleShrink(7000);
+                    } else {
+                        showSpeech(result && result.error ? result.error : 'Could not analyze screen.');
+                        scheduleShrink(4000);
+                    }
+                } else {
+                    robotAvatar.classList.remove('scanning');
+                    isScanning = false;
+                    showSpeech('Ready! (Python connecting...)');
+                    scheduleShrink(3000);
+                }
+            } catch (err) {
+                robotAvatar.classList.remove('scanning');
+                isScanning = false;
+                showSpeech('Error: ' + err);
+                scheduleShrink(4000);
+            }
+        }
+
+        function showSpeech(text) {
+            speechText.innerText = text;
+            speechPill.style.display = 'block';
+            if (hideTimer) clearTimeout(hideTimer);
+        }
+
+        function scheduleShrink(delay) {
+            if (hideTimer) clearTimeout(hideTimer);
+            hideTimer = setTimeout(async () => {
+                speechPill.style.display = 'none';
+                if (window.pywebview && window.pywebview.api && window.pywebview.api.expand_window) {
+                    await window.pywebview.api.expand_window(false);
+                }
+            }, delay);
+        }
+
+        function showContextMenu(e) {
+            e.preventDefault();
+            contextMenu.style.display = contextMenu.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function toggleDock() {
+            contextMenu.style.display = 'none';
+            isDocked = !isDocked;
+            if (window.pywebview && window.pywebview.api && window.pywebview.api.dock_companion) {
+                window.pywebview.api.dock_companion(isDocked);
+            }
+        }
+
+        function closeCompanion() {
+            contextMenu.style.display = 'none';
+            if (window.pywebview && window.pywebview.api && window.pywebview.api.close_companion) {
+                window.pywebview.api.close_companion();
+            }
+        }
+
+        // Hide context menu on outside click
+        document.addEventListener('click', (e) => {
+            if (!contextMenu.contains(e.target) && e.target.id !== 'robotBtn') {
+                contextMenu.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

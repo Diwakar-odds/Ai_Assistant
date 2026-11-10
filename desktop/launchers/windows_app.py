@@ -2,7 +2,8 @@
 """
 AI Assistant - Windows Desktop Application
 ===========================================
-Wraps the modern web backend in a lightweight native Windows desktop window.
+Wraps the modern web backend in a lightweight native Windows desktop window
+with an intelligent floating companion mascot overlay on minimize.
 """
 
 import sys
@@ -62,14 +63,79 @@ except ImportError:
     logger.warning("pywebview is not installed. Will fallback to default web browser.")
 
 
+class CompanionBridge:
+    """Native Python bridge for the Floating Companion mascot and Dashboard"""
+
+    def __init__(self, app):
+        self.app = app
+
+    def restore_dashboard(self):
+        """Restore full main dashboard and hide companion"""
+        logger.info("Restoring full dashboard window...")
+        try:
+            if self.app.companion_window:
+                self.app.companion_window.hide()
+            if self.app.main_window:
+                self.app.main_window.restore()
+                self.app.main_window.show()
+        except Exception as e:
+            logger.error(f"Error restoring dashboard: {e}")
+
+    def minimize_to_companion(self):
+        """Minimize main dashboard and show floating companion"""
+        logger.info("Minimizing dashboard -> Activating Floating Companion...")
+        try:
+            if self.app.main_window:
+                self.app.main_window.minimize()
+            if self.app.companion_window:
+                self.app.companion_window.restore()
+                self.app.companion_window.show()
+        except Exception as e:
+            logger.error(f"Error minimizing to companion: {e}")
+
+    def dock_companion(self, docked: bool):
+        """Move companion into docked / peeking position at screen edge"""
+        try:
+            if not self.app.companion_window or not webview.screens:
+                return
+            screen = webview.screens[0]
+            w = 280
+            h = 340
+            if docked:
+                # Dock to right edge (peeking)
+                self.app.companion_window.move(screen.width - 60, screen.height - h - 60)
+            else:
+                # Restore full float position
+                self.app.companion_window.move(screen.width - w - 30, screen.height - h - 60)
+        except Exception as e:
+            logger.error(f"Error docking companion: {e}")
+
+    def prepare_screenshot(self):
+        """Temporarily hide companion window so it doesn't obstruct screenshot"""
+        try:
+            if self.app.companion_window:
+                self.app.companion_window.hide()
+                def _restore():
+                    time.sleep(1.2)
+                    if self.app.companion_window:
+                        self.app.companion_window.show()
+                threading.Thread(target=_restore, daemon=True).start()
+        except Exception as e:
+            logger.error(f"Error in prepare_screenshot: {e}")
+
+
 class WindowsDesktopApp:
-    """Main Windows Desktop Application Controller"""
-    
+    """Main Windows Desktop Application Controller with Floating Companion Mascot"""
+
     def __init__(self, port: int = 5000):
         self.port = port
         self.backend_thread = None
         self.server_running = False
-        
+        self.main_window = None
+        self.companion_window = None
+        self.bridge = CompanionBridge(self)
+        sys._active_desktop_bridge = self.bridge
+
     def start_backend(self):
         """Start the backend in background thread"""
         try:
@@ -95,7 +161,7 @@ class WindowsDesktopApp:
         start_time = time.time()
         url = f'http://127.0.0.1:{self.port}'
         logger.info(f"⏳ Waiting for backend at {url}...")
-        
+
         while time.time() - start_time < timeout:
             try:
                 with urllib.request.urlopen(url, timeout=1) as response:
@@ -104,26 +170,25 @@ class WindowsDesktopApp:
                         self.server_running = True
                         return True
             except urllib.error.HTTPError as he:
-                # Even a 404 or 500 means server is listening!
                 logger.info(f"✅ Backend server responded with HTTP {he.code}!")
                 self.server_running = True
                 return True
             except (urllib.error.URLError, ConnectionRefusedError, OSError):
                 time.sleep(0.5)
-        
+
         logger.error("❌ Backend server failed to start within timeout.")
         return False
 
     def launch(self):
-        """Launch the desktop app window"""
+        """Launch the desktop app window and companion mascot"""
         logger.info("=" * 60)
         logger.info("🤖 Pulsar AI Assistant - Windows Desktop App")
         logger.info("=" * 60)
-        
+
         # 1. Start backend thread
         self.backend_thread = threading.Thread(target=self.start_backend, daemon=True)
         self.backend_thread.start()
-        
+
         # 2. Wait for backend to be ready
         if not self.wait_for_server():
             logger.error("Could not connect to backend. Please check logs.")
@@ -131,10 +196,11 @@ class WindowsDesktopApp:
 
         # 3. Open desktop window
         app_url = f'http://127.0.0.1:{self.port}'
-        
+        companion_url = f'{app_url}/companion'
+
         if WEBVIEW_AVAILABLE:
-            logger.info("🖥️ Opening Native Desktop Window...")
-            window = webview.create_window(
+            logger.info("🖥️ Opening Native Desktop Dashboard...")
+            self.main_window = webview.create_window(
                 title='Pulsar AI Assistant',
                 url=app_url,
                 width=1440,
@@ -143,8 +209,61 @@ class WindowsDesktopApp:
                 fullscreen=False,
                 min_size=(960, 640),
                 background_color='#0f172a',
-                text_select=True
+                text_select=True,
+                js_api=self.bridge
             )
+
+            # Determine initial companion coordinates (bottom-right above taskbar)
+            comp_w = 280
+            comp_h = 340
+            comp_x = None
+            comp_y = None
+            if webview.screens:
+                screen = webview.screens[0]
+                comp_x = screen.width - comp_w - 30
+                comp_y = screen.height - comp_h - 60
+
+            logger.info("🤖 Creating Floating Companion Mascot Window...")
+            self.companion_window = webview.create_window(
+                title='Pulsar Companion Mascot',
+                url=companion_url,
+                width=comp_w,
+                height=comp_h,
+                x=comp_x,
+                y=comp_y,
+                frameless=True,
+                on_top=True,
+                transparent=True,
+                hidden=True,
+                resizable=False,
+                easy_drag=True,
+                js_api=self.bridge
+            )
+
+            # Event hooks: When user minimizes main dashboard -> pop companion mascot!
+            def on_main_minimized():
+                logger.info("Main window minimized -> Showing floating companion mascot")
+                if self.companion_window:
+                    self.companion_window.restore()
+                    self.companion_window.show()
+
+            def on_main_restored():
+                logger.info("Main window restored -> Hiding floating companion mascot")
+                if self.companion_window:
+                    self.companion_window.hide()
+
+            def on_main_closed():
+                logger.info("Main dashboard closed -> Destroying companion")
+                if self.companion_window:
+                    try:
+                        self.companion_window.destroy()
+                    except Exception:
+                        pass
+
+            self.main_window.events.minimized += on_main_minimized
+            self.main_window.events.restored += on_main_restored
+            self.main_window.events.closed += on_main_closed
+
             webview.start(debug=False, http_server=False)
         else:
             import webbrowser
@@ -168,4 +287,3 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         logger.info("Shutdown requested.")
         sys.exit(0)
-
