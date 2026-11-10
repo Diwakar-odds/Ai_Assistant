@@ -11,6 +11,18 @@ from pathlib import Path
 
 # Import existing modules
 from ai_assistant.automation.app_discovery import smart_open_application, app_discovery
+from ai_assistant.automation.window_manager import (
+    find_window_by_name,
+    bring_window_to_foreground,
+    close_window_gracefully,
+    is_window_foreground
+)
+try:
+    import win32gui
+    import win32process
+    WIN32_AVAILABLE = True
+except ImportError:
+    WIN32_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -70,8 +82,12 @@ class UniversalAppController:
     def automation_engine(self):
         """Lazy load automation engine"""
         if self._automation_engine is None:
-            from ai_assistant.automation.automation_engine import AutomationEngine
-            self._automation_engine = AutomationEngine()
+            try:
+                from ai_assistant.automation.automation_engine import SmartAutomationEngine
+                self._automation_engine = SmartAutomationEngine()
+            except Exception as e:
+                logger.warning(f"Automation engine not available: {e}")
+                self._automation_engine = None
         return self._automation_engine
     
     @property
@@ -114,33 +130,75 @@ class UniversalAppController:
     
     def open_app(self, app_name: str) -> Dict[str, Any]:
         """
-        Open any application using existing AppDiscovery.
+        Open any application dynamically using AppDiscovery and track foreground window status.
         
         Args:
-            app_name: Name of the app to open (e.g., "WhatsApp", "Notepad")
+            app_name: Name of the app to open (e.g., "VS Code", "WhatsApp", "Notepad", "Chrome")
         
         Returns:
-            Dict with status and app info
+            Dict with status, hwnd, and app info
         """
         logger.info(f"Opening app: {app_name}")
         
         try:
-            # Use existing smart_open_application function
+            # Use dynamic smart_open_application function
             result = smart_open_application(app_name)
             
-            # Wait a moment for app to fully load
-            time.sleep(2)
+            # Verify if launch succeeded
+            if "❌" in result and "✅" not in result:
+                logger.warning(f"smart_open_application failed for {app_name}: {result}")
+                return {
+                    'success': False,
+                    'app_name': app_name,
+                    'error': result,
+                    'message': f"Failed to open {app_name}: {result}"
+                }
             
-            # Track as active app
+            # Poll for window handle up to 3 seconds
+            window = None
+            start_poll = time.time()
+            while time.time() - start_poll < 3.0:
+                window = find_window_by_name(app_name)
+                if window:
+                    break
+                time.sleep(0.3)
+            
+            # Enforce foreground visibility
+            is_fg = False
+            if window:
+                bring_window_to_foreground(window)
+                is_fg = is_window_foreground(window)
+            else:
+                bring_window_to_foreground(app_name)
+            
+            # Extract PID and window title if available
+            pid = 0
+            window_title = app_name
+            if window and WIN32_AVAILABLE:
+                try:
+                    _, pid = win32process.GetWindowThreadProcessId(window)
+                    window_title = win32gui.GetWindowText(window) or app_name
+                except Exception:
+                    pass
+            
+            # Track as active app with handle and foreground status
             self.active_apps[app_name.lower()] = {
+                'app_name': app_name,
                 'opened_at': time.time(),
                 'last_action': 'opened',
-                'window': None  # Will be populated when needed
+                'window': window,
+                'hwnd': window,
+                'window_title': window_title,
+                'pid': pid,
+                'is_foreground': is_fg
             }
             
             return {
                 'success': True,
                 'app_name': app_name,
+                'hwnd': window,
+                'pid': pid,
+                'is_foreground': is_fg,
                 'message': f"Successfully opened {app_name}"
             }
         
@@ -155,7 +213,7 @@ class UniversalAppController:
     
     def is_app_open(self, app_name: str) -> bool:
         """
-        Check if app is currently running.
+        Check if app is currently running and verify its window status.
         
         Args:
             app_name: Name of the app
@@ -163,69 +221,89 @@ class UniversalAppController:
         Returns:
             True if app is open, False otherwise
         """
-        # First check our cache
-        if app_name.lower() in self.active_apps:
-            # Verify it's actually still open
-            try:
-                window = self.automation_engine.find_window(app_name)
-                if window:
-                    return True
-                else:
-                    # App was closed, remove from cache
-                    del self.active_apps[app_name.lower()]
-                    return False
-            except:
-                return False
-        
-        # Not in cache, check if it's actually running
-        try:
-            window = self.automation_engine.find_window(app_name)
-            if window:
-                # Add to cache
-                self.active_apps[app_name.lower()] = {
-                    'opened_at': time.time(),
-                    'last_action': 'detected',
-                    'window': window
-                }
+        app_key = app_name.lower()
+        # Check cached window handle first
+        if app_key in self.active_apps:
+            cached_window = self.active_apps[app_key].get('window')
+            if cached_window and WIN32_AVAILABLE and win32gui.IsWindow(cached_window):
+                self.active_apps[app_key]['is_foreground'] = is_window_foreground(cached_window)
                 return True
-        except:
-            pass
         
-        return False
+        # Scan current running windows
+        window = find_window_by_name(app_name)
+        if window:
+            is_fg = is_window_foreground(window)
+            pid = 0
+            title = app_name
+            if WIN32_AVAILABLE:
+                try:
+                    _, pid = win32process.GetWindowThreadProcessId(window)
+                    title = win32gui.GetWindowText(window) or app_name
+                except Exception:
+                    pass
+            self.active_apps[app_key] = {
+                'app_name': app_name,
+                'opened_at': self.active_apps.get(app_key, {}).get('opened_at', time.time()),
+                'last_action': 'detected',
+                'window': window,
+                'hwnd': window,
+                'window_title': title,
+                'pid': pid,
+                'is_foreground': is_fg
+            }
+            return True
+        else:
+            if app_key in self.active_apps:
+                del self.active_apps[app_key]
+            return False
     
     def get_app_window(self, app_name: str):
         """
-        Get window handle for app.
+        Get window handle (HWND) for app.
         
         Args:
             app_name: Name of the app
         
         Returns:
-            Window handle or None
+            Window handle HWND or None
         """
+        app_key = app_name.lower()
         try:
             # Check cache first
-            if app_name.lower() in self.active_apps:
-                cached_window = self.active_apps[app_name.lower()].get('window')
-                if cached_window:
+            if app_key in self.active_apps:
+                cached_window = self.active_apps[app_key].get('window')
+                if cached_window and WIN32_AVAILABLE and win32gui.IsWindow(cached_window):
                     return cached_window
             
-            # Find window
-            window = self.automation_engine.find_window(app_name)
+            # Find window dynamically
+            window = find_window_by_name(app_name)
             
             # Update cache
-            if window and app_name.lower() in self.active_apps:
-                self.active_apps[app_name.lower()]['window'] = window
+            if window:
+                if app_key not in self.active_apps:
+                    self.active_apps[app_key] = {'app_name': app_name, 'opened_at': time.time()}
+                self.active_apps[app_key]['window'] = window
+                self.active_apps[app_key]['hwnd'] = window
+                self.active_apps[app_key]['is_foreground'] = is_window_foreground(window)
             
             return window
         
         except Exception as e:
             logger.error(f"Failed to get window for {app_name}: {e}")
             return None
+
+    def bring_to_foreground(self, app_name_or_hwnd: Any) -> bool:
+        """Bring application window to the foreground."""
+        success = bring_window_to_foreground(app_name_or_hwnd)
+        if isinstance(app_name_or_hwnd, str):
+            app_key = app_name_or_hwnd.lower()
+            if app_key in self.active_apps:
+                self.active_apps[app_key]['is_foreground'] = success
+        return success
     
     def close_app(self, app_name: str) -> Dict[str, Any]:
         """
-        Close an application.
+        Close an application gracefully.
         
         Args:
             app_name: Name of the app to close
@@ -234,16 +312,17 @@ class UniversalAppController:
             Dict with status
         """
         logger.info(f"Closing app: {app_name}")
+        app_key = app_name.lower()
         
         try:
             window = self.get_app_window(app_name)
-            if window:
-                self.automation_engine.close_window(window)
-                
-                # Remove from active apps
-                if app_name.lower() in self.active_apps:
-                    del self.active_apps[app_name.lower()]
-                
+            closed = close_window_gracefully(window or app_name)
+            
+            # Remove from active apps
+            if app_key in self.active_apps:
+                del self.active_apps[app_key]
+            
+            if closed:
                 return {
                     'success': True,
                     'app_name': app_name,
@@ -253,7 +332,7 @@ class UniversalAppController:
                 return {
                     'success': False,
                     'app_name': app_name,
-                    'message': f"{app_name} is not open"
+                    'message': f"Could not close {app_name} or it was already closed"
                 }
         
         except Exception as e:

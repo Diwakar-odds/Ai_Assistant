@@ -22,10 +22,14 @@ import pyautogui
 
 # Safe imports
 try:
-    from ..multimodal import MultiModalAI
+    from ..vision.multimodal import MultiModalAI
     MULTIMODAL_AVAILABLE = True
 except ImportError:
-    MULTIMODAL_AVAILABLE = False
+    try:
+        from ..multimodal import MultiModalAI
+        MULTIMODAL_AVAILABLE = True
+    except ImportError:
+        MULTIMODAL_AVAILABLE = False
 
 try:
     from ..vision.vlm_provider import VLMProvider
@@ -84,21 +88,31 @@ class VisualAutomationEngine:
         """
         logger.info(f"🔍 Looking for: {element_description}")
         
-        # Find element coordinates using VLM
-        coords_result = self.vlm.extract_coordinates(element_description)
+        # Find element coordinates using VLM (with graceful fallbacks)
+        if hasattr(self.vlm, "extract_coordinates"):
+            coords_result = self.vlm.extract_coordinates(element_description)
+        elif hasattr(self.vlm, "find_ui_element"):
+            coords_result = self.vlm.find_ui_element(element_description)
+        elif hasattr(self.vlm, "find_element_coordinates"):
+            screenshot = self.vlm.capture_screen() if hasattr(self.vlm, "capture_screen") else pyautogui.screenshot()
+            resp = self.vlm.find_element_coordinates(screenshot, element_description)
+            coords_result = resp.structured_data or {"found": False, "reason": resp.text}
+        else:
+            coords_result = {"found": False, "reason": "No element coordinate extraction method available"}
         
-        if not coords_result.get("found"):
+        is_found = bool(coords_result.get("found") or coords_result.get("element_found"))
+        if not is_found:
             return {
                 "success": False,
                 "error": "Element not found",
-                "details": coords_result.get("reason", "Unknown reason")
+                "details": coords_result.get("reason") or coords_result.get("details") or coords_result.get("description", "Unknown reason")
             }
         
         # Extract coordinates
-        coords = coords_result.get("coordinates", {})
+        coords = coords_result.get("coordinates") or {}
         x, y = coords.get("x"), coords.get("y")
         
-        if not (x and y):
+        if x is None or y is None:
             return {
                 "success": False,
                 "error": "Invalid coordinates",
@@ -345,7 +359,7 @@ class VisualAutomationEngine:
         before_screenshot: Optional[Image.Image] = None
     ) -> Dict[str, Any]:
         """
-        Verify that an action had the expected effect.
+        Verify that an action had the expected effect using visual diffing and VLM.
         
         Args:
             element_description: Element that was interacted with
@@ -356,28 +370,47 @@ class VisualAutomationEngine:
             Dict with verification results
         """
         after_screenshot = self.vlm.capture_screen()
-        
-        prompt = f"""Compare these two screenshots (before and after a {action} action on '{element_description}').
+        change_detected = False
+        change_percentage = 0.0
 
-Did the action succeed? What changed?
+        if before_screenshot and after_screenshot:
+            try:
+                from PIL import ImageChops
+                import numpy as np
+                if before_screenshot.size != after_screenshot.size:
+                    after_screenshot = after_screenshot.resize(before_screenshot.size)
+                diff = ImageChops.difference(before_screenshot.convert('RGB'), after_screenshot.convert('RGB'))
+                diff_arr = np.array(diff)
+                changed_pixels = int(np.count_nonzero(diff_arr))
+                total_pixels = int(diff_arr.size)
+                if total_pixels > 0:
+                    change_percentage = (changed_pixels / total_pixels) * 100.0
+                    change_detected = change_percentage > 0.05
+            except Exception as e:
+                logger.warning(f"Error computing visual difference: {e}")
 
-Return JSON:
-{{
-    "success": true/false,
-    "changes": "description of what changed",
-    "confidence": "high/medium/low"
-}}"""
-        
-        # For now, just do a simple analysis
-        # TODO: Implement proper before/after comparison
-        result = self.vlm.analyze_image(
-            after_screenshot,
-            f"Analyze if clicking '{element_description}' had an effect. What changed on screen?"
-        )
-        
+        # Query VLM for semantic analysis
+        vlm_details = ""
+        vlm_success = True
+        try:
+            result = self.vlm.analyze_image(
+                after_screenshot,
+                f"Analyze if {action} on '{element_description}' had an effect. What changed on screen?"
+            )
+            vlm_details = result.get("analysis", "")
+            lower_analysis = vlm_details.lower()
+            if any(err in lower_analysis for err in ["error", "failed", "crash", "not found"]):
+                vlm_success = False
+        except Exception as e:
+            vlm_details = f"Analysis error: {e}"
+
+        verified = change_detected if before_screenshot else vlm_success
+
         return {
-            "success": True,  # Assume success for now
-            "details": result.get("analysis", "")
+            "success": verified,
+            "change_detected": change_detected,
+            "change_percentage": change_percentage,
+            "details": vlm_details or f"Visual state change: {change_percentage:.2f}%"
         }
     
     def get_action_history(self, limit: int = 10) -> List[Dict[str, Any]]:

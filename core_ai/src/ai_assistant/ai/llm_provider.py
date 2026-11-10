@@ -593,7 +593,7 @@ class UnifiedChatInterface:
             model = model or detected_model
         
         logger.info(f"Initializing {provider} with model {model}")
-        print(f"\n🚀 [UnifiedChat] Initializing Session (Provider: {provider}, Model: {model})")
+        # LLM session provider initialized
         
         # Try to create provider with fallback support
         if use_fallback:

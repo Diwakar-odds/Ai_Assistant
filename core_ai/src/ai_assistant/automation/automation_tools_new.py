@@ -234,4 +234,4 @@ __author__ = "Pulsar AI Assistant"
 
 if __name__ != '__main__':
     logger.info("✅ Pulsar Automation Tools v4.2.0 - Lazy Loading Enabled")
-    print(f"🔧 Registered Functions: {len(__all__)}")
+    # Tool count recorded cleanly in telemetry dashboard

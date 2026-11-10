@@ -167,7 +167,7 @@ class ModernAssistant:
                 self._init_status['memory'] = 'ready'
                 print("… Memory system initialized")
             except Exception as e:
-                print(f"š  Memory initialization failed: {e}")
+                pass
                 self._init_status['memory'] = 'failed'
         
         # Background or lazy initialization based on config
@@ -175,12 +175,12 @@ class ModernAssistant:
             # Start background initialization thread
             self._bg_init_thread = threading.Thread(target=self._background_init, daemon=True)
             self._bg_init_thread.start()
-            print("š Background initialization started - features will be ready shortly")
+            pass
         elif not LAZY_INIT:
             # Eager initialization (old behavior, but respects feature flags)
             self._eager_init()
         else:
-            print("š Lazy initialization enabled - features load on first use")
+            pass
             
     def process_query(self, query: str) -> str:
         """Process user query and return response"""

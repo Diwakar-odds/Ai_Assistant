@@ -370,6 +370,13 @@ class ContextManager:
                 result['contact'] = last_contact
                 logger.debug(f"Inferred contact from context: {last_contact}")
 
+        # Infer browser profile for media / web search intents
+        if intent in ['youtube_search', 'youtube_history', 'play_media', 'play_video', 'search_web'] and 'profile' not in result:
+            profile = self.get_var('current_browser_profile') or self.get_var('browser_profile')
+            if profile:
+                result['profile'] = profile
+                logger.debug(f"Inferred browser profile from context: {profile}")
+
         return result
 
     # ===== PERSISTENCE =====

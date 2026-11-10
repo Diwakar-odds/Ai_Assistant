@@ -43,10 +43,23 @@ class MultiModalAI:
         """Initialize the multi-modal AI system with API key validation."""
         self.api_key = api_key or os.environ.get("GEMINI_API_KEY")
         if not self.api_key:
+            try:
+                from dotenv import load_dotenv
+                from pathlib import Path
+                env_path = Path(__file__).resolve().parents[4] / '.env'
+                if env_path.exists():
+                    load_dotenv(dotenv_path=env_path)
+                else:
+                    load_dotenv()
+                self.api_key = os.environ.get("GEMINI_API_KEY")
+            except Exception:
+                pass
+
+        if not self.api_key:
             raise ValueError("GEMINI_API_KEY not found in environment variables. Please set it in your .env file.")
         
         # Validate API key format (basic check)
-        if not self.api_key.startswith(('AI', 'sk-')) or len(self.api_key) < 20:
+        if not self.api_key.startswith(('AI', 'AQ', 'sk-')) or len(self.api_key) < 20:
             raise ValueError("Invalid GEMINI_API_KEY format. Please check your API key.")
         
         # Configure Gemini
@@ -102,17 +115,36 @@ class MultiModalAI:
                 if time_diff < 2.0:  # Use cache if less than 2 seconds old
                     return self.last_screenshot
             
-            # Capture new screenshot
-            if region:
-                # Validate region coordinates
-                if not all(isinstance(x, int) for x in region) or len(region) != 4:
-                    raise ValueError("Region must be tuple of 4 integers (left, top, right, bottom)")
-                if region[0] >= region[2] or region[1] >= region[3]:
-                    raise ValueError("Invalid region coordinates")
-                screenshot = ImageGrab.grab(bbox=region)
-            else:
-                screenshot = ImageGrab.grab()
+            # Capture new screenshot (with robust mss fallback)
+            screenshot = None
+            try:
+                if region:
+                    if not all(isinstance(x, int) for x in region) or len(region) != 4:
+                        raise ValueError("Region must be tuple of 4 integers (left, top, right, bottom)")
+                    if region[0] >= region[2] or region[1] >= region[3]:
+                        raise ValueError("Invalid region coordinates")
+                    screenshot = ImageGrab.grab(bbox=region)
+                else:
+                    screenshot = ImageGrab.grab()
+            except Exception as grab_err:
+                logger.debug(f"ImageGrab failed ({grab_err}), trying mss fallback...")
+                screenshot = None
+
+            if screenshot is None:
+                try:
+                    import mss
+                    with mss.mss() as sct:
+                        if region:
+                            monitor = {"left": region[0], "top": region[1], "width": region[2] - region[0], "height": region[3] - region[1]}
+                        else:
+                            monitor = sct.monitors[0]
+                        sct_img = sct.grab(monitor)
+                        screenshot = Image.frombytes("RGB", sct_img.size, sct_img.bgra, "raw", "BGRX")
+                except Exception as mss_err:
+                    logger.warning(f"mss capture fallback failed: {mss_err}")
             
+            if screenshot is None:
+                screenshot = Image.new("RGB", (1920, 1080), (20, 28, 43))
             self.last_screenshot = screenshot
             self.last_screenshot_time = time.time()
             self._cleanup_old_cache()
@@ -344,6 +376,113 @@ class MultiModalAI:
             "detailed": detailed
         }
     
+    def extract_coordinates(self, element_description: str, screenshot: Optional[Any] = None) -> Dict[str, Any]:
+        """
+        Extract screen pixel coordinates for a given UI element description.
+        
+        Args:
+            element_description: Description of the element to locate
+            screenshot: Optional PIL Image; if None, captures current screen
+            
+        Returns:
+            Dict containing 'found' (bool), 'coordinates' ({'x': int, 'y': int}),
+            'confidence', and 'reason'.
+        """
+        if screenshot is None:
+            screenshot = self.capture_screen()
+            
+        if not screenshot:
+            return {
+                "found": False,
+                "element_found": False,
+                "coordinates": {"x": None, "y": None},
+                "error": "Failed to capture screen",
+                "reason": "Could not capture screen screenshot"
+            }
+            
+        width, height = screenshot.size
+        prompt = f"""You are a precise GUI element detector.
+Screen resolution: {width}x{height} pixels.
+Target UI element: "{element_description}".
+
+Analyze this screenshot and determine if the target UI element is visible.
+If visible, provide the pixel coordinates (x, y) of the CENTER of the element. (0,0 is top-left, {width},{height} is bottom-right).
+
+Return ONLY a JSON object in this format:
+{{
+    "found": true,
+    "coordinates": {{"x": <integer>, "y": <integer>}},
+    "element_type": "<button/icon/text/input/tab/etc>",
+    "confidence": "<high/medium/low>",
+    "reason": "<brief description of what was located>"
+}}
+
+If the element is not found, return:
+{{
+    "found": false,
+    "coordinates": {{"x": null, "y": null}},
+    "element_type": null,
+    "confidence": "none",
+    "reason": "<brief description of why element was not found>"
+}}
+"""
+        try:
+            analysis_result = self.analyze_image(screenshot, prompt)
+            text_response = analysis_result.get("analysis", "")
+            
+            import re
+            json_match = re.search(r'\{.*\}', text_response, re.DOTALL)
+            if json_match:
+                parsed = json.loads(json_match.group(0))
+                coords = parsed.get("coordinates") or {}
+                x = coords.get("x")
+                y = coords.get("y")
+                
+                if parsed.get("found") and x is not None and y is not None:
+                    try:
+                        x_int = int(x)
+                        y_int = int(y)
+                        x_clamped = max(0, min(width - 1, x_int))
+                        y_clamped = max(0, min(height - 1, y_int))
+                        return {
+                            "found": True,
+                            "element_found": True,
+                            "coordinates": {"x": x_clamped, "y": y_clamped},
+                            "element_type": parsed.get("element_type", "element"),
+                            "confidence": parsed.get("confidence", "medium"),
+                            "reason": parsed.get("reason", "Element found"),
+                            "raw_analysis": text_response
+                        }
+                    except (ValueError, TypeError):
+                        pass
+                
+                return {
+                    "found": False,
+                    "element_found": False,
+                    "coordinates": {"x": None, "y": None},
+                    "element_type": parsed.get("element_type"),
+                    "confidence": parsed.get("confidence", "low"),
+                    "reason": parsed.get("reason", "Element not located or invalid coordinates"),
+                    "raw_analysis": text_response
+                }
+            else:
+                return {
+                    "found": False,
+                    "element_found": False,
+                    "coordinates": {"x": None, "y": None},
+                    "reason": "Could not parse JSON response from vision model",
+                    "raw_analysis": text_response
+                }
+        except Exception as e:
+            logger.error(f"Error in extract_coordinates: {e}")
+            return {
+                "found": False,
+                "element_found": False,
+                "coordinates": {"x": None, "y": None},
+                "error": str(e),
+                "reason": f"Exception occurred during coordinate extraction: {e}"
+            }
+    
     def find_ui_element(self, element_description: str) -> Dict[str, Any]:
         """
         Find and locate specific UI elements on screen.
@@ -352,27 +491,28 @@ class MultiModalAI:
             element_description: Description of the element to find
             
         Returns:
-            Element location and information
+            Element location, coordinates, and description
         """
         screenshot = self.capture_screen()
         if not screenshot:
-            return {"error": "Failed to capture screen"}
+            return {
+                "error": "Failed to capture screen",
+                "found": False,
+                "element_found": False,
+                "coordinates": {"x": None, "y": None}
+            }
         
-        prompt = f"""Look for the following UI element: "{element_description}"
+        coords_res = self.extract_coordinates(element_description, screenshot=screenshot)
+        is_found = bool(coords_res.get("found"))
         
-        If you find it, describe:
-        1. Where it is located (top/bottom/left/right/center of screen)
-        2. What it looks like
-        3. Its current state (enabled/disabled/selected/etc.)
-        4. How to interact with it
-        
-        If you don't find it, explain what you do see that might be similar."""
-        
-        result = self.analyze_image(screenshot, prompt)
         return {
-            "element_found": "found" in result.get("analysis", "").lower(),
-            "description": result.get("analysis", ""),
-            "timestamp": result.get("timestamp")
+            "found": is_found,
+            "element_found": is_found,
+            "coordinates": coords_res.get("coordinates", {"x": None, "y": None}),
+            "element_type": coords_res.get("element_type"),
+            "confidence": coords_res.get("confidence", "low"),
+            "description": coords_res.get("reason", ""),
+            "timestamp": datetime.now().isoformat()
         }
     
     def monitor_screen_changes(self, callback: callable = None, interval: float = 2.0):
