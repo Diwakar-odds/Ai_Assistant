@@ -22,7 +22,7 @@ try:
     LEARNING_SYSTEMS_AVAILABLE = True
 except ImportError as e:
     LEARNING_SYSTEMS_AVAILABLE = False
-    print(f"š  Learning systems not available: {e}")
+    # Diagnosed cleanly inside Developer Matrix
 
 
 def get_learning_stats():

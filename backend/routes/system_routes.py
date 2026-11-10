@@ -1,3 +1,4 @@
+from pathlib import Path
 import os
 import sys
 import time
@@ -335,3 +336,153 @@ def api_activity():
         {"time": "1 hour ago", "action": "Calendar sync completed", "status": "success"},
         {"time": "3 hours ago", "action": "System optimization", "status": "info"}
     ]
+
+# ============================================================
+# Desktop Floating Companion Mascot Routes
+# ============================================================
+COMPANION_PROCESS = None
+
+def spawn_companion_process(port=5000):
+    global COMPANION_PROCESS
+    if COMPANION_PROCESS is not None and COMPANION_PROCESS.poll() is None:
+        logger.info("[COMPANION] Companion process is already running (PID %s)", COMPANION_PROCESS.pid)
+        return True, "Companion already active"
+
+    project_root = Path(__file__).resolve().parent.parent.parent
+    venv_py = project_root / 'venv' / 'Scripts' / 'python.exe'
+    py_exe = str(venv_py) if venv_py.exists() else sys.executable
+
+    script_path = str(project_root / 'desktop' / 'companion_app.py')
+    if not os.path.exists(script_path):
+        logger.error("[COMPANION] Script not found at %s", script_path)
+        return False, f"Script not found at {script_path}"
+
+    try:
+        import subprocess
+        env = os.environ.copy()
+        env['PULSAR_DASHBOARD_URL'] = f'http://127.0.0.1:{port}'
+        
+        creationflags = 0
+        if sys.platform == 'win32':
+            creationflags = subprocess.CREATE_NO_WINDOW
+
+        COMPANION_PROCESS = subprocess.Popen(
+            [py_exe, script_path, str(port)],
+            cwd=str(project_root),
+            env=env,
+            creationflags=creationflags
+        )
+        logger.info("[COMPANION] Spawned floating companion process (PID %s)", COMPANION_PROCESS.pid)
+        return True, "Companion started"
+    except Exception as e:
+        logger.error("[COMPANION] Failed to spawn companion: %s", e)
+        return False, str(e)
+
+
+@system_bp.route('/api/desktop/companion/toggle', methods=['GET', 'POST', 'OPTIONS'])
+@system_bp.route('/api/desktop/companion/minimize', methods=['GET', 'POST', 'OPTIONS'])
+@system_bp.route('/api/desktop/companion/spawn', methods=['GET', 'POST', 'OPTIONS'])
+def api_desktop_companion_toggle():
+    if request.method == 'OPTIONS':
+        return ('', 204)
+        
+    bridge = getattr(sys, '_active_desktop_bridge', None)
+    if bridge:
+        try:
+            bridge.minimize_to_companion()
+            return jsonify({"success": True, "mode": "bridge"})
+        except Exception as e:
+            logger.warning(f"Bridge toggle failed: {e}")
+
+    # Check if native mascot window is already active on Windows desktop
+    if sys.platform == 'win32':
+        try:
+            import win32gui
+            hwnd = win32gui.FindWindow(None, 'Pulsar Ambient Mascot')
+            if hwnd:
+                win32gui.SetForegroundWindow(hwnd)
+                logger.info('[COMPANION] Mascot window found, brought to front.')
+                return jsonify({'success': True, 'message': 'Companion active on desktop', 'mode': 'focused'})
+        except Exception:
+            pass
+
+    port = int(os.environ.get('PORT', 5000))
+    success, msg = spawn_companion_process(port=port)
+    return jsonify({"success": success, "message": msg, "mode": "spawn"})
+
+
+@system_bp.route('/api/desktop/companion/restore', methods=['GET', 'POST', 'OPTIONS'])
+def api_desktop_companion_restore():
+    if request.method == 'OPTIONS':
+        return ('', 204)
+    bridge = getattr(sys, '_active_desktop_bridge', None)
+    if bridge:
+        try:
+            bridge.restore_dashboard()
+            return jsonify({"success": True, "mode": "bridge"})
+        except Exception as e:
+            logger.warning(f"Bridge restore failed: {e}")
+    return jsonify({"success": True, "message": "Dashboard restore signal processed"})
+
+
+@system_bp.route('/api/desktop/companion/status', methods=['GET', 'OPTIONS'])
+def api_desktop_companion_status():
+    if request.method == 'OPTIONS':
+        return ('', 204)
+    global COMPANION_PROCESS
+    is_active = False
+    if getattr(sys, '_active_desktop_bridge', None):
+        is_active = True
+    elif COMPANION_PROCESS is not None and COMPANION_PROCESS.poll() is None:
+        is_active = True
+    return jsonify({"active": is_active})
+
+
+# ============================================================
+# Agent Brain & Notification Endpoints (Companion Mascot API)
+# ============================================================
+@system_bp.route('/api/agent/command', methods=['POST', 'OPTIONS'])
+def api_agent_command():
+    if request.method == 'OPTIONS':
+        return ('', 204)
+    try:
+        from agent_brain import get_agent_brain
+        data = request.get_json(force=True, silent=True) or {}
+        command = data.get('command', '')
+        include_screen = data.get('include_screen', False)
+        source = data.get('source', 'COMPANION_MASCOT')
+        brain = get_agent_brain()
+        res = brain.process_command(command, include_screen=include_screen, source=source)
+        return jsonify(res)
+    except Exception as e:
+        logger.error(f'api_agent_command failed: {e}', exc_info=True)
+        return jsonify({'success': False, 'response': f'Error executing command: {str(e)}'}), 500
+
+
+@system_bp.route('/api/agent/notifications', methods=['GET', 'OPTIONS'])
+def api_agent_notifications():
+    if request.method == 'OPTIONS':
+        return ('', 204)
+    try:
+        from notification_monitor import get_notification_monitor
+        monitor = get_notification_monitor()
+        notifications = monitor.get_pending()
+        return jsonify({'notifications': notifications})
+    except Exception as e:
+        return jsonify({'notifications': []})
+
+
+@system_bp.route('/api/agent/confirm', methods=['POST', 'OPTIONS'])
+def api_agent_confirm():
+    if request.method == 'OPTIONS':
+        return ('', 204)
+    try:
+        from agent_brain import get_agent_brain
+        data = request.get_json(force=True, silent=True) or {}
+        action_id = data.get('action_id', '')
+        confirmed = data.get('confirmed', False)
+        brain = get_agent_brain()
+        res = brain.confirm_action_by_id(action_id, confirmed)
+        return jsonify(res)
+    except Exception as e:
+        return jsonify({'success': False, 'response': str(e)}), 500

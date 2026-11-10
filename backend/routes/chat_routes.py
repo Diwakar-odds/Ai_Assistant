@@ -31,6 +31,12 @@ def api_chat():
         
         if not message and not image_data:
             return jsonify({"error": "No message or image provided"}), 400
+
+        try:
+            from telemetry_tracer import telemetry
+            telemetry.log_inbound(f"WEB_APP ({request.remote_addr or '127.0.0.1'})", message)
+        except Exception:
+            pass
         
         # === NEW: Multi-step Task Chain Orchestration ===
         try:
@@ -88,6 +94,17 @@ def api_chat():
                 model_preference=model_preference,
                 provider_preference=provider_preference
             )
+
+            try:
+                from telemetry_tracer import telemetry
+                lat = (time.time() - start_time) * 1000
+                p = response.get("provider") or get_provider()
+                m = response.get("model") or get_model()
+                telemetry.log_router("CHAT_QUERY", f"{p} ({m})")
+                telemetry.log_compute(lat, status="200 OK")
+                telemetry.log_dispatch(["Web UI (HTTP)", "Frontend Sync"], response.get("response"))
+            except Exception:
+                pass
             
             return jsonify({
                 "message": message,
@@ -395,7 +412,7 @@ def api_usage_analysis():
 
 @chat_bp.route('/api/usage-analysis/export', methods=['POST'])
 @jwt_required()
-@limiter.limit("5 per minute")
+@limiter.limit("30 per minute")
 def api_export_training_data():
     """Export training data for fine-tuning"""
     try:
@@ -645,7 +662,7 @@ def api_multimodal_analyze():
 
 @chat_bp.route('/api/screen/analyze', methods=['POST'])
 @jwt_required(optional=True)
-@limiter.limit("5 per minute")
+@limiter.limit("30 per minute")
 def api_analyze_screen():
     """Analyze current screen using multimodal AI"""
     try:

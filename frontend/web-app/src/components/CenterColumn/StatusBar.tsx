@@ -1,13 +1,15 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Wifi, Bell, Battery, Mic, Terminal, PanelLeft, PanelRight } from 'lucide-react';
+import { Wifi, Bell, Battery, Mic, Terminal, PanelLeft, PanelRight, Bot } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
+import { apiUrl } from '../../lib/api';
 
 const StatusBar = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [batteryLevel, setBatteryLevel] = useState<number>(0);
   const [isCharging, setIsCharging] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [isFloatingActive, setIsFloatingActive] = useState(false);
   const { isVoiceActive, isConnected, setSelectedView, isLeftSidebarOpen, isRightSidebarOpen, toggleLeftSidebar, toggleRightSidebar, systemLogs } = useDashboard();
 
   useEffect(() => {
@@ -218,6 +220,29 @@ const StatusBar = () => {
             <div className="absolute -right-[3px] top-1/2 -translate-y-1/2 w-[2px] h-1.5 bg-[#9CA3AF] rounded-r-sm" />
           </div>
         </div>
+
+        {/* Floating Mini Robot Mascot Mode */}
+        <motion.div
+          className="relative cursor-pointer ml-1"
+          whileHover={{ scale: 1.15 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={async () => {
+            setIsFloatingActive(true);
+            setTimeout(() => setIsFloatingActive(false), 3000);
+            if ((window as any).pywebview?.api?.minimize_to_companion) {
+              (window as any).pywebview.api.minimize_to_companion();
+            } else {
+              try {
+                await fetch(apiUrl('/api/desktop/companion/toggle'), { method: 'POST' });
+              } catch (e) {
+                console.error("Failed to toggle floating companion:", e);
+              }
+            }
+          }}
+          title={isFloatingActive ? "Floating Robot Launched on Screen!" : "Float Mini Robot on Screen"}
+        >
+          <Bot className={`w-5 h-5 transition-all ${isFloatingActive ? 'text-[#00f3ff] drop-shadow-[0_0_8px_#00f3ff] animate-pulse' : 'text-[#9CA3AF] hover:text-[#00f3ff]'}`} strokeWidth={1.5} />
+        </motion.div>
 
         {/* Right Sidebar Toggle */}
         <motion.div

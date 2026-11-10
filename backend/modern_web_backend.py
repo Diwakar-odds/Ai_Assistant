@@ -5,6 +5,7 @@ import warnings
 # Enforce UTF-8 globally to prevent emoji encoding crashes on Windows
 os.environ["PYTHONUTF8"] = "1"
 os.environ["PYTHONIOENCODING"] = "utf-8"
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 
@@ -311,6 +312,7 @@ def start_ai_background_thread():
     import threading
     t = threading.Thread(target=initialize_heavy_ai_models, daemon=True)
     t.start()
+    return t
 
 # Load environment variables again if needed
 if _env_path.exists():
@@ -340,6 +342,16 @@ app = Flask(__name__, template_folder=template_dir, static_folder=static_dir, st
 def serve_root():
     """Serve the React app index.html for root path"""
     return send_from_directory(static_dir, 'index.html')
+
+# Serve Floating Desktop Companion
+@app.route('/companion')
+def serve_companion():
+    """Serve the lightweight floating desktop companion widget"""
+    companion_path = os.path.join(os.path.dirname(__file__), 'templates', 'companion.html')
+    if os.path.exists(companion_path):
+        with open(companion_path, 'r', encoding='utf-8') as f:
+            return f.read(), 200, {'Content-Type': 'text/html; charset=utf-8'}
+    return 'Companion UI not found', 404
 
 @app.route('/<path:path>')
 def serve_static_or_spa(path):
@@ -671,10 +683,10 @@ try:
     if hasattr(sys, '_pulsar_assistant_instance'):
         assistant = sys._pulsar_assistant_instance
     else:
-        print("[INFO] Initializing Pulsar Assistant...")
+        # Assistant initializing
         assistant = ModernAssistant()
         sys._pulsar_assistant_instance = assistant
-        print("[OK] Assistant initialized successfully")
+        # Assistant initialized
 except Exception as e:
     print(f"[ERROR] CRITICAL: Assistant initialization failed: {e}")
     print("[OK]  Server will start in limited mode without some features")
@@ -716,7 +728,7 @@ except Exception as e:
 # REGISTER BLUEPRINTS - Modular Route Organization
 # =============================================================================
 if not hasattr(sys, '_pulsar_blueprints_registered'):
-    print("📋 Registering blueprints...")
+    # Registering blueprints
     try:
         from backend.routes import register_all_routes
         # Need to pass socketio and learning_router if they are available
@@ -1422,26 +1434,13 @@ def _broadcast_chain_progress(progress):
 
 
 
-# SocketIO Handlers
-try:
-    import websockets
-except Exception as e:
-    logger.debug(f'Websockets module note: {e}')
+# SocketIO Handlers initialized cleanly
 
 def start_server(host=None, port=None):
     """Cleanly initialize services and start SocketIO server"""
-    print("=" * 60)
-    print("🚀 Pulsar Assistant - Modern Web Backend")
-    print("=" * 60)
-    
     try:
         host = host or os.getenv('HOST', '127.0.0.1')
         port = port or int(os.getenv('PORT', 5000))
-        
-        print(f"  Server starting on: http://{host}:{port}")
-        print("  Real-time features enabled via WebSockets")
-        print("  API endpoints available at /api/*")
-        print("=" * 60)
         
         # Initialize secure keys from OS Credential Store into environment
         try:
@@ -1493,10 +1492,28 @@ def start_server(host=None, port=None):
 
         # Start AI models background initialization
         try:
-            start_ai_background_thread()
+            ai_thread = start_ai_background_thread()
             logger.info("✅ AI background thread started")
+            if ai_thread:
+                ai_thread.join(timeout=3.0)
         except Exception as e:
             logger.warning(f"⚠️ Could not start AI background thread: {e}")
+
+        # Start Ambient Floating Mascot on Windows Desktop
+        try:
+            from routes.system_routes import spawn_companion_process
+            spawn_companion_process(port=port)
+            logger.info("✅ Ambient Mascot Robot active on desktop screen")
+        except Exception as e:
+            logger.warning(f"⚠️ Could not spawn companion: {e}")
+
+        # Start Autonomous Notification Monitor
+        try:
+            from notification_monitor import get_notification_monitor
+            get_notification_monitor().start()
+            logger.info("✅ Notification Monitor active")
+        except Exception as e:
+            logger.warning(f"⚠️ Could not start notification monitor: {e}")
 
         # Disable console banners that might crash when sys.stdout is None
         try:
@@ -1506,6 +1523,15 @@ def start_server(host=None, port=None):
             flask.cli.show_server_banner = lambda *args, **kwargs: None
         except Exception:
             pass
+
+        # Render Unified Developer Telemetry Matrix
+        try:
+            from telemetry_dashboard import render_developer_matrix, start_terminal_interactive_shell
+            from agent_brain import get_agent_brain
+            render_developer_matrix(port=port)
+            start_terminal_interactive_shell(agent_brain_getter=get_agent_brain, socketio_instance=socketio)
+        except Exception as e:
+            logger.debug(f"Telemetry dashboard note: {e}")
 
         socketio.run(app, host=host, port=port, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)
     except Exception as e:

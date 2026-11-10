@@ -1,3 +1,6 @@
+import os
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
 # Setup centralized logging
 from utils.logging_config import get_logger
 from settings_manager import get_provider, get_model, get_wake_words, get_stt_language_short
@@ -81,18 +84,9 @@ def get_active_assistant():
     main_mod = sys.modules.get('__main__')
     if main_mod and hasattr(main_mod, 'assistant') and main_mod.assistant:
         return main_mod.assistant
-    try:
-        from modern_web_backend import assistant
-        if assistant:
-            return assistant
-    except Exception:
-        pass
-    try:
-        from backend.modern_web_backend import assistant
-        if assistant:
-            return assistant
-    except Exception:
-        pass
+    b_mod = sys.modules.get('modern_web_backend') or sys.modules.get('backend.modern_web_backend')
+    if b_mod and hasattr(b_mod, 'assistant') and b_mod.assistant:
+        return b_mod.assistant
     return None
 
 
@@ -1308,7 +1302,7 @@ def set_socketio(sio):
     sio.on_event('stream_chunk', handle_stream_chunk)
     sio.on_event('stream_end', handle_stream_end)
     
-    print("… Command handlers registered with socketio")
+    # Command handlers registered
 
 # ==============================================
 # WebSocket Event Handlers (as regular functions)

@@ -53,14 +53,13 @@ if session_id:
         success=True
     )
 
-    # Print session start info to console
-    print(f"")
-    print(f"🚀 Pulsar Assistant - New Session Started")
-    print(f"📅 Session ID: {session_id}")
-    print(f"🕒 Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    logger.info(f"📁 Logs will be saved in: logs/*/[module_name]_{session_id}.log")
-    print(f"📊 Activity tracking: logs/activities/session_summary_{session_id}.json")
-    print(f"")
+    # Session info is recorded and presented in Developer Telemetry Matrix
+    if os.environ.get("PULSAR_VERBOSE_CONSOLE") == "1":
+        print(f"\n🚀 Pulsar Assistant - New Session Started")
+        print(f"📅 Session ID: {session_id}")
+        print(f"🕒 Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        logger.info(f"📁 Logs will be saved in: logs/*/[module_name]_{session_id}.log")
+        print(f"📊 Activity tracking: logs/activities/session_summary_{session_id}.json\n")
 
 # Export session information for other modules
 CURRENT_SESSION_ID = session_id

@@ -2,13 +2,11 @@ from flask import request
 from flask_socketio import emit
 import json, logging, traceback
 from settings_manager import get_provider, get_model
-try:
-    from backend.modern_web_backend import logger, socketio
-except ImportError:
-    pass
-
-# We can import modern_web_backend to get other globals if needed inside functions
-from backend.modern_web_backend import *
+import sys
+main_mod = sys.modules.get('__main__') or sys.modules.get('backend.modern_web_backend')
+logger = getattr(main_mod, 'logger', logging.getLogger('websockets'))
+socketio = getattr(main_mod, 'socketio', None)
+assistant = getattr(main_mod, 'assistant', None)
 
 def register_socket_events(socketio_app):
     # This wrapper isn't strictly necessary if we just import socketio, 
@@ -388,3 +386,16 @@ def broadcast_chain_progress(chain_id: str, event_type: str, data: dict):
     event_type can be: chain.started, chain.step_completed, chain.step_failed, chain.verification_completed, chain.completed
     """
     socketio.emit(event_type, data, room=f"chain_{chain_id}")
+
+@socketio.on('emergency_stop')
+@socketio.on('executive_stop')
+def handle_emergency_stop_socket(data=None):
+    """Handle emergency stop WebSocket event"""
+    try:
+        from ai_assistant.core.emergency_stop import trigger_emergency_stop
+        reason = (data or {}).get('reason', 'Triggered via WebSocket') if isinstance(data, dict) else 'Triggered via WebSocket'
+        res = trigger_emergency_stop(reason=reason)
+        emit('emergency_stop_confirmed', {'success': True, 'result': res})
+    except Exception as e:
+        logger.error(f"WebSocket emergency stop error: {e}")
+        emit('emergency_stop_error', {'error': str(e)})

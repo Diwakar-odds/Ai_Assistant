@@ -189,3 +189,19 @@ def get_chain_history():
     except Exception as e:
         logger.error(f"Error fetching history: {e}")
         return jsonify({"error": str(e)}), 500
+
+@chain_bp.route('/api/executive/stop', methods=['GET', 'POST', 'OPTIONS'])
+@chain_bp.route('/api/emergency/stop', methods=['GET', 'POST', 'OPTIONS'])
+def executive_emergency_stop():
+    """Global Emergency Stop endpoint for UI and frontend controls"""
+    if request.method == 'OPTIONS':
+        return ('', 204)
+    try:
+        from ai_assistant.core.emergency_stop import trigger_emergency_stop
+        data = request.get_json(silent=True) or {}
+        reason = data.get('reason', 'Triggered from Web UI / REST')
+        res = trigger_emergency_stop(reason=reason)
+        return jsonify({'success': True, 'message': 'Emergency stop executed', 'result': res})
+    except Exception as e:
+        logger.error(f"Executive stop endpoint error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500

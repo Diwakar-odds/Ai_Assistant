@@ -78,6 +78,69 @@ class SessionManager:
         return cls._session_start_time
 
 
+class TerminalConsoleFilter(logging.Filter):
+    """
+    Filters routine startup chatter from stdout console stream so the
+    unified Developer Telemetry Matrix can present all information cleanly.
+    All records remain 100% intact in rotating file logs on disk.
+    """
+    chatter_keywords = (
+        "Session started at", "SYS_CMD |", "NEW ASSISTANT SESSION INITIALIZED", "NEW SESSION STARTED",
+        "Log directories initialized", "Session ID:", "Start Time:", "Working Directory:", "Platform:", "Python Version:",
+        "Pulsar Assistant - Web Backend Starting", "Pulsar Automation Tools", "Automation tools loaded",
+        "SocketIO initialized with CORS", "Voice Service Manager available",
+        "Startup Configuration:", "Lazy Initialization:", "Background Initialization:", "Voice Features:",
+        "Multimodal AI:", "Conversational AI:", "System Monitoring:",
+        "Wake Word:", "Neural TTS:", "VAD:", "Speaker Recognition",
+        "Ollama will load on-demand",
+        "Voice API blueprint registered", "Initializing Professional Voice System",
+        "Wake word detector initialized", "KittenTTS available",
+        "Neural TTS engine initialized", "VAD initialized",
+        "Voice profile manager initialized", "Privacy Consent Manager initialized",
+        "Privacy consent manager enabled", "Noise reduction system initialized",
+        "Advanced Noise Reduction System initialized", "Loading Local Hinglish Whisper Model",
+        "Local Hinglish Whisper Model loaded", "Advanced speech recognizer initialized",
+        "Voice Service Manager initialized", "Wake word detection started",
+        "All voice services started", "Professional Voice System activated",
+        "PROFESSIONAL VOICE SYSTEM ACTIVATED", "SmartWakeWordDetector",
+        "NeuralVoiceEngine", "VoiceActivityDetector",
+        "Advanced STT", "Noise Reduction", "All 11 route blueprints registered",
+        "All blueprints/routes registered", "Voice API blueprint already registered",
+        "Chat & Voice Socket.IO handlers registered", "Executive Brain initialized",
+        "Global Emergency Stop Listener active", "Global Emergency Stop background listener",
+        "Delayed app refresh scheduled", "Periodic app refresh enabled",
+        "System monitoring started", "Google Speech Recognition WebSocket handlers",
+        "Command handlers registered with local-first", "Background AI Initialization started",
+        "AI background thread started", "Context-Aware Response Generator initialized",
+        "Smart Command Predictor initialized", "Learning systems initialized",
+        "Learning router initialized", "[RAG] Memory search index ready",
+        "Smart memory retrieval initialized", "Semantic cache initialized",
+        "Google Gemini streaming initialized", "Speech Emotion Detector initialized",
+        "Visual Automation Verifier initialized", "Enhanced AI initialized",
+        "Available features:", "Semantic Caching", "Model Routing", "Streaming",
+        "Emotion Detection", "Visual Verification", "Usage pattern analyzer initialized",
+        "Voice Activity Detector initialized in background",
+        "Noise Reduction initialized in background", "Background AI Initialization COMPLETE!",
+        "Initializing gguf with model", "Spawned floating companion process",
+        "Ambient Mascot Robot active on desktop screen", "Initializing Notification Monitor Service",
+        "Notification Monitor threads running", "Notification Monitor active",
+        "Scheduled app refresh will start", "Scanning from Windows Settings",
+        "Reading Registry Uninstall Keys", "Reading AppX Packages",
+        "Discovery complete! Found", "Background refresh complete! Found",
+        "Vosk not available", "PyAudio not available", "WebRTC VAD not available",
+        "Failed to create preferred provider gguf", "OpenAI streaming not available"
+    )
+
+    def filter(self, record):
+        msg = record.getMessage().strip()
+        # Filter divider lines like ========
+        if msg and set(msg) == {'='}:
+            return False
+        for kw in self.chatter_keywords:
+            if kw in msg:
+                return False
+        return True
+
 class LoggingConfigMeta(type):
     @property
     def LOG_DIRS(cls):
@@ -319,6 +382,7 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         """Create console handler"""
         handler = logging.StreamHandler(sys.stdout)
         handler.setLevel(cls.CONSOLE_LEVEL)
+        handler.addFilter(TerminalConsoleFilter())
         return handler
     
     @classmethod

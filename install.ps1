@@ -43,15 +43,18 @@ Write-Host "  Found: $nodeVersion"
 
 # --- Create virtual environment ---
 Write-Host "[3/5] Setting up Python virtual environment..." -ForegroundColor Yellow
-if (-not (Test-Path ".venv\Scripts\activate.bat")) {
-    Write-Host "  Creating .venv..."
-    & $pythonCmd -m venv .venv
-} else {
-    Write-Host "  Virtual environment already exists."
-}
+    $venvDir = "venv"
+    if (Test-Path ".venv\Scripts\activate.bat") {
+        $venvDir = ".venv"
+    } elseif (-not (Test-Path "venv\Scripts\activate.bat")) {
+        Write-Host "  Creating venv..."
+        & $pythonCmd -m venv venv
+    } else {
+        Write-Host "  Virtual environment already exists."
+    }
 
-# Activate the virtual environment
-& .\.venv\Scripts\Activate.ps1
+    # Activate the virtual environment
+    & ".\$venvDir\Scripts\Activate.ps1"
 
 # --- Install Python dependencies ---
 Write-Host "[4/5] Installing Python dependencies..." -ForegroundColor Yellow
