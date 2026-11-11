@@ -103,8 +103,21 @@ def probe_telemetry_matrix(port: int = 5000) -> Dict[str, Any]:
     gemini_key = os.environ.get('GEMINI_API_KEY') or os.environ.get('GOOGLE_GEMINI_API_KEY')
     data['cloud_llm'] = "[ACTIVE] Google Gemini 2.5 Flash (Streaming Active | Context: 1M)" if gemini_key else "[STANDBY] Gemini API Key not found in .env"
     
-    ollama_active = is_port_in_use(11434)
-    data['local_llm'] = "[ACTIVE] Ollama (qwen2.5:7b-instruct | Port: 11434 | On-Demand)" if ollama_active else "[STANDBY] GGUF / Ollama (qwen2.5:7b-instruct | Port: 11434 | On-Demand)"
+    try:
+        from ai_assistant.ai.gguf_model_manager import get_gguf_manager, llama_cpp_available
+        if llama_cpp_available():
+            mgr = get_gguf_manager()
+            st = mgr.get_status() if hasattr(mgr, 'get_status') else {}
+            loaded_m = st.get('loaded_model') or 'pulsar-final-q4_k_m'
+            data['local_llm'] = (
+                f"[ACTIVE] Local GGUF ({loaded_m} | In-Process llama.cpp)"
+                if st.get('loaded')
+                else f"[STANDBY] Local GGUF ({loaded_m} | Lazy On-Demand)"
+            )
+        else:
+            data['local_llm'] = "[UNAVAILABLE] Local GGUF (llama-cpp-python not installed)"
+    except Exception:
+        data['local_llm'] = "[STANDBY] Local GGUF (pulsar-final-q4_k_m | Lazy On-Demand)"
 
     # 4. Professional Voice Engine
     data['wake_word'] = "[OK] PocketSphinx Offline Detector (\"Hey Pulsar\" | Sensitivity: 0.75)"

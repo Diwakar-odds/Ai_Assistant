@@ -68,70 +68,36 @@ huggingface-cli download Qwen/Qwen2-0.5B-Instruct-GGUF qwen2-0_5b-instruct-q4_k_
 
 ### Quick Test
 ```bash
-python ai_assistant/local_ai_manager.py
-```
-
-Expected output:
-```
-🚀 Local AI Manager - Quick Test
-
-✅ Model already exists: model/local_models/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
-🔄 Loading model: tinyllama-1.1b-chat-v1.0.Q4_K_M
-💻 CPU threads: 4
-✅ Model loaded in 2.3s
-📊 RAM usage: ~700MB
-
-============================================================
-
-❓ What is the capital of France?
-------------------------------------------------------------
-🤖 The capital of France is Paris.
-⚡ 12.4 tokens/sec (15 tokens in 1.2s)
-------------------------------------------------------------
+python -m unittest tests/test_local_ai.py -v
 ```
 
 ### Interactive Python Test
 ```python
-from ai_assistant.local_ai_manager import LocalAIManager
+from ai_assistant.ai.gguf_model_manager import get_gguf_manager
+from ai_assistant.ai.llm_provider import GGUFProvider
 
-# Initialize
-manager = LocalAIManager()
+# Inspect status
+mgr = get_gguf_manager()
+print(mgr.get_status())
 
-# Load model
-model_path = "model/local_models/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf"
-manager.load_model(model_path, threads=4)
-
-# Single query
-response = manager.generate("Explain Python decorators in simple terms")
+# Single query via GGUFProvider
+gguf = GGUFProvider(model="pulsar-final-q4_k_m")
+response = gguf.generate_response([{"role": "user", "content": "Explain Python decorators in simple terms"}])
 print(response)
 
-# Chat with history
-manager.chat("Hello! What can you help me with?")
-manager.chat("Write a Python function to reverse a string")
-manager.chat("Now optimize it for performance")
-
-# View stats
-print(manager.get_stats())
-
 # Cleanup
-manager.unload_model()
+mgr.unload_model()
 ```
 
 ---
 
 ## 🎨 **Step 4: Integrate with Your Backend**
 
-Add to `modern_web_backend.py`:
+Local GGUF routes in `backend/routes/local_ai_routes.py` expose the in-process runtime:
 
 ```python
-from ai_assistant.local_ai_manager import LocalAIManager
-
-# Initialize at startup
-local_ai = LocalAIManager()
-model_path = "model/local_models/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf"
-if os.path.exists(model_path):
-    local_ai.load_model(model_path, threads=4)
-    print("✅ Local AI ready")
+from ai_assistant.ai.gguf_model_manager import get_gguf_manager
+from ai_assistant.ai.llm_provider import GGUFProvider
 
 # API endpoint
 @app.route('/api/local_ai/chat', methods=['POST'])
@@ -142,23 +108,13 @@ def local_ai_chat():
     if not message:
         return jsonify({'error': 'No message provided'}), 400
     
-    response = local_ai.chat(message, max_tokens=512)
+    gguf = GGUFProvider(model='pulsar-final-q4_k_m')
+    response = gguf.generate_response([{'role': 'user', 'content': message}], max_tokens=512)
     
     return jsonify({
         'response': response,
-        'stats': local_ai.get_stats()
+        'stats': get_gguf_manager().get_status()
     })
-
-# Reset conversation
-@app.route('/api/local_ai/reset', methods=['POST'])
-def local_ai_reset():
-    local_ai.clear_history()
-    return jsonify({'message': 'Conversation reset'})
-
-# Performance stats
-@app.route('/api/local_ai/stats', methods=['GET'])
-def local_ai_stats():
-    return jsonify(local_ai.get_stats())
 ```
 
 ---
@@ -201,7 +157,7 @@ const testLocalAI = async () => {
 
 2. **Context Length:** Reduce for faster responses
    ```python
-   # In local_ai_manager.py, line 92
+   # Reduce context window if needed
    n_ctx=1024,  # Reduce from 2048 to 1024
    ```
 
@@ -293,4 +249,4 @@ huggingface-cli download TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF tinyllama-1.1b-c
 
 ---
 
-**Ready to start?** Run: `python ai_assistant/local_ai_manager.py`
+**Ready to start?** Run: `python -m unittest tests/test_local_ai.py -v`

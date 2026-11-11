@@ -57,7 +57,7 @@ ocr = [
 ai = [
     "openai",
     "anthropic",
-    "ollama",
+    "llama-cpp-python",
 ]
 google = [
     "google-api-python-client",

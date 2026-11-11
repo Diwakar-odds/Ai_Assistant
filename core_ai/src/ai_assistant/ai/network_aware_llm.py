@@ -106,11 +106,28 @@ class OnlineLLMConfig:
     
     def get_optimal_provider(self) -> Tuple[str, str]:
         """
-        Get the optimal online provider based on availability.
-        
+        Get the optimal provider based on central settings_manager first,
+        then fall back to available online providers.
+
         Returns:
             Tuple of (provider_name, model_name)
         """
+        try:
+            import sys
+            from pathlib import Path
+            backend_dir = str(Path(__file__).resolve().parents[4] / "backend")
+            if backend_dir not in sys.path:
+                sys.path.insert(0, backend_dir)
+            from settings_manager import get_provider, get_model
+
+            sm_provider = get_provider()
+            sm_model = get_model()
+            if sm_provider and sm_provider in ("gemini", "openai", "gguf"):
+                logger.info(f"Using provider from settings_manager: {sm_provider} ({sm_model})")
+                return (sm_provider, sm_model)
+        except Exception as e:
+            logger.debug(f"settings_manager lookup unavailable in network_aware_llm: {e}")
+
         # Try online providers in order of preference
         for provider, model, api_key in self.online_providers:
             if api_key:
@@ -121,7 +138,7 @@ class OnlineLLMConfig:
                 except Exception as e:
                     logger.warning(f"Provider {provider} test failed: {e}")
                     continue
-        
+
         # No providers available
         logger.error("No online providers available - check API keys")
         return ("none", "none")

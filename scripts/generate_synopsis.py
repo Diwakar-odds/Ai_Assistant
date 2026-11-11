@@ -493,7 +493,7 @@ def build_html():
             </tr>
             <tr>
               <td>Local-Only LLM Tools</td>
-              <td>Ollama CLI, LM Studio</td>
+              <td>llama.cpp CLI, LM Studio</td>
               <td>Slow generation on consumer CPUs; limited multi-step reasoning; no multimodal vision or spatial gestures.</td>
             </tr>
             <tr>

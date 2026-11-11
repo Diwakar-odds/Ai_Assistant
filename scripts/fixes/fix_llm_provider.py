@@ -12,7 +12,7 @@ from ai_assistant.modules.llm_provider import (
     LLMProvider,
     OpenAIProvider,
     GeminiProvider,
-    LocalLLMProvider,
+    GGUFProvider,
     OfflineProvider,
     LLMFactory,
 )
@@ -21,7 +21,7 @@ __all__ = [
     'LLMProvider',
     'OpenAIProvider',
     'GeminiProvider',
-    'LocalLLMProvider',
+    'GGUFProvider',
     'OfflineProvider',
     'LLMFactory',
 ]

@@ -144,10 +144,10 @@ class LLMWithFallback:
         return response.text
     
     def try_local(self, prompt):
-        """Fallback to local model"""
-        from ai_assistant.local_ai_manager import LocalAIManager
-        manager = LocalAIManager()
-        return manager.generate(prompt)
+        """Fallback to local GGUF model"""
+        from ai_assistant.ai.llm_provider import GGUFProvider
+        provider = GGUFProvider(model="pulsar-final-q4_k_m")
+        return provider.generate_response([{"role": "user", "content": prompt}])
 ```
 
 ---

@@ -48,4 +48,4 @@ for name, config in MODELS.items():
     except Exception as e:
         print(f"❌ Failed to download {name}: {e}")
 
-print("\nDone! You can now update 'local_ai_manager.py' to use one of these models.")
+print("\nDone! Place '.gguf' models in 'models/' and Pulsar GGUFModelManager will auto-discover them.")

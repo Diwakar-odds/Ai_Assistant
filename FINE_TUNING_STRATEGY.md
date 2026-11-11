@@ -40,7 +40,7 @@ To ensure the assistant is blazing fast and runs entirely locally on your Window
 1. **Model Base**: `Qwen2-1.5B` or `Llama-3-8B-Instruct`. (Qwen is extremely fast on local CPUs/GPUs).
 2. **Library**: Use **Unsloth** (makes LoRA fine-tuning 2x faster and uses 70% less VRAM).
 3. **Hardware**: You can train this on a free Google Colab T4 GPU in less than 2 hours using our generated `.jsonl` dataset.
-4. **Deployment**: Once trained, we export it as a `.gguf` file and load it directly into **Ollama** on your PC!
+4. **Deployment**: Once trained, we export it as a `.gguf` file and run it directly in-process via **llama-cpp-python (`GGUFModelManager`)** on your PC!
 
 ---
 

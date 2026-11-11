@@ -137,9 +137,8 @@ class TestPriority3BacklogItems(unittest.TestCase):
         from ai_assistant.ai.intent_classification import IntentClassifier
         self.assertIs(IntentRecognizer, IntentClassifier)
 
-        from ai_assistant.ai.local_model_manager import LocalModelManager
-        from ai_assistant.ai.local_ai_manager import LocalAIManager
-        self.assertIs(LocalModelManager, LocalAIManager)
+        from ai_assistant.ai.gguf_model_manager import GGUFModelManager, get_gguf_manager
+        self.assertIs(get_gguf_manager(), GGUFModelManager())
 
     def test_service_container_di(self):
         """Test ServiceContainer registration, resolution, and override."""

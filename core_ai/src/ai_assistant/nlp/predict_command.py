@@ -2,6 +2,13 @@ import os
 import json
 from pathlib import Path
 
+try:
+    from utils.logging_config import get_logger
+    logger = get_logger(__name__, log_category="app")
+except Exception:
+    import logging
+    logger = logging.getLogger(__name__)
+
 # We will lazily load llama_cpp to avoid errors if it's not installed yet
 try:
     from llama_cpp import Llama
@@ -13,9 +20,9 @@ except ImportError:
 class OfflineCommandPredictor:
     def __init__(self):
         try:
-            from src.ai_assistant.ai.gguf_model_manager import gguf_manager
-        except ImportError:
             from ai_assistant.ai.gguf_model_manager import gguf_manager
+        except ImportError:
+            from src.ai_assistant.ai.gguf_model_manager import gguf_manager
         
         if not LLAMA_AVAILABLE:
             raise ImportError("llama-cpp-python is not installed. Please run: pip install llama-cpp-python")
@@ -51,11 +58,7 @@ class OfflineCommandPredictor:
 if __name__ == "__main__":
     try:
         predictor = OfflineCommandPredictor()
-        print("\n\n# Setup centralized logging
-from utils.logging_config import get_logger
-logger = get_logger(__name__, log_category="app")
-
---- Offline Tri-Lingual Assistant (Llama 3.1 8B GGUF) ---")
+        print("\n\n--- Offline Tri-Lingual Assistant (Pulsar Local GGUF) ---")
         print("Type a command in English, Hindi, or Bhojpuri (or 'exit' to quit).")
         
         while True:

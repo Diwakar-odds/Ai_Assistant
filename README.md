@@ -56,7 +56,7 @@ Recent integrations have massive upgraded the assistant's autonomy and personali
 ### Prerequisites
 - Python 3.10+
 - Node.js 18+
-- [Ollama](https://ollama.com/) (for running local LLMs)
+- `llama-cpp-python` + a `.gguf` model in `models/` (optional, for running local GGUF LLMs)
 - [Tesseract-OCR](https://github.com/UB-Mannheim/tesseract/wiki) (Add to your System PATH)
 - C++ Build Tools (Required for compiling dependencies)
 
@@ -1010,20 +1010,13 @@ Below is the auto-generated AST documentation of all major Python modules in the
 ### File: `core_ai\src\ai_assistant\ai\llm_provider.py`
   - *(Documentation parsing failed for this file)*
 
-### File: `core_ai\src\ai_assistant\ai\local_ai_manager.py`
-- **Class `LocalModelConfig`**: Configuration for local AI model
-- **Class `LocalAIManager`**: Manages local AI inference with Ollama
-  - **Function `quick_test()`**: Quick test of LocalAIManager with Ollama
-  - **Function `__init__()`**: Signature: (self, models_dir)
-  - **Function `is_ollama_running()`**: Check if Ollama service is running
-  - **Function `list_ollama_models()`**: List available Ollama models
-  - **Function `find_best_available_model()`**: Find the best available model from Ollama. Priority: 1. llama3.2 (Best quality for general tasks) 2. qwen2.5 (Fastest) 3. Any other available model
-  - **Function `load_model()`**: Load model from Ollama
-  - **Function `generate()`**: Generate text using Ollama model
-  - **Function `_generate_stream()`**: Stream tokens as they're generated from Ollama
-  - **Function `chat()`**: Chat with conversation history
-  - **Function `clear_history()`**: Clear conversation history
-  - **Function `get_stats()`**: Get performance statistics
+### File: `core_ai\src\ai_assistant\ai\gguf_model_manager.py`
+- **Class `GGUFModelManager`**: Manages local GGUF inference via `llama-cpp-python`
+  - **Function `get_gguf_manager()`**: Returns singleton GGUF model manager
+  - **Function `discover_gguf_models()`**: Discovers available `.gguf` models in `models/`
+  - **Function `load_model()` / `get_model()`**: Lazily loads GGUF weights into memory
+  - **Function `get_status()`**: Reports availability, loaded model, and runtime stats
+  - **Function `unload_model()`**: Unloads GGUF weights and frees RAM
 
 ### File: `core_ai\src\ai_assistant\ai\local_model_manager.py`
 - **Class `LocalModelManager`**: Manage tiny local models optimized for low-resource systems Target: 8GB RAM, CPU-only inference and training
@@ -1169,7 +1162,6 @@ Below is the auto-generated AST documentation of all major Python modules in the
 
 ### File: `core_ai\src\ai_assistant\ai\offline_llm_provider.py`
 - **Class `OfflineLLMProvider`**: Abstract base class for offline LLM providers.
-- **Class `OllamaProvider`**: Ollama local model provider - requires Ollama to be installed and running.
 - **Class `TransformersProvider`**: Hugging Face Transformers provider for offline local models.
 - **Class `SimpleOfflineProvider`**: Simple fallback provider for basic text matching and rule-based responses.
 - **Class `OfflineLLMManager`**: Manager for offline LLM providers with fallback chain.
@@ -1179,7 +1171,6 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `count_tokens()`**: Count tokens using current provider.
   - **Function `is_available()`**: Simple provider is always available.
   - **Function `__init__()`**: Initialize with multiple offline providers.
-  - **Function `_check_availability()`**: Check if Ollama server is running and model is available.
   - **Function `is_available()`**: Simple provider is always available.
   - **Function `generate_response()`**: Generate response with fallback chain.
   - **Function `stream_response()`**: Stream response with fallback chain.
@@ -3794,7 +3785,6 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `start_ai_background_thread()`**: Starts the AI loading thread. Called by desktop app or main.
   - **Function `get_or_create_env_secret()`**: Signature: (name)
   - **Function `exempt_localhost()`**: Exempt the local desktop app from all rate limits so health checks don't ban it.
-  - **Function `initialize_local_ai()`**: Initialize local AI model in background
   - **Function `get_current_context()`**: Signature: ()
   - **Function `get_user_preferences()`**: Signature: ()
   - **Function `get_user_profile_status()`**: Signature: ()
@@ -4309,7 +4299,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
 ---
 
 ## 🛠️ 7. Comprehensive Setup & Installation
-1. Install Python 3.10+, Node.js 18+, Ollama, Tesseract-OCR, and C++ Build Tools.
+1. Install Python 3.10+, Node.js 18+, Tesseract-OCR, and C++ Build Tools (plus `llama-cpp-python` for optional local GGUF mode).
 2. Setup `.env` with `OPENAI_API_KEY`, `GOOGLE_GEMINI_API_KEY`, `ELEVEN_LABS_API_KEY`.
 3. Start Backend: `python -m venv venv && .\venv\Scripts\activate && pip install -r requirements.txt && python backend/modern_web_backend.py`
 4. Start Frontend: `cd frontend/web-app && npm install && npm run dev`

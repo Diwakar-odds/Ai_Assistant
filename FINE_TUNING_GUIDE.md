@@ -109,21 +109,11 @@ Once the training hits 100% and says "Completed", we need to export it so it can
 5. Download this `.gguf` file to your local Windows PC.
 
 ## 🚀 Step 5: Run PULSAR on Your Windows PC!
-Now that you have the `.gguf` file, you can run it completely offline natively on Windows!
+Now that you have the `.gguf` file, you can run it completely offline natively inside PULSAR on Windows!
 
-1. Download and install [Ollama](https://ollama.com/) on your Windows PC.
-2. Create a file named `Modelfile` on your desktop:
-```dockerfile
-# Point this to where you downloaded the GGUF file
-FROM ./pulsar-model-q4_k_m.gguf
-
-TEMPLATE """{{ if .System }}<|start_header_id|>system<|end_header_id|>
-{{ .System }}<|eot_id|>{{ end }}{{ if .Prompt }}<|start_header_id|>user<|end_header_id|>
-{{ .Prompt }}<|eot_id|>{{ end }}<|start_header_id|>assistant<|end_header_id|>
-"""
-```
-3. Open Terminal/PowerShell and run: `ollama create pulsar -f Modelfile`
-4. Finally, start the AI: `ollama run pulsar`
+1. Copy the exported `.gguf` file (e.g., `pulsar-final-q4_k_m.gguf`) into `models/` in the project root.
+2. Ensure `llama-cpp-python` is installed in your virtual environment.
+3. Select **GGUF (Local)** in the Pulsar UI / Settings — `GGUFModelManager` auto-discovers models under `models/` and runs them directly in-process!
 
 **Congratulations! The PULSAR AI is now ready to control your OS!**
 

@@ -2,16 +2,22 @@ import sys
 import subprocess
 import os
 import time
-import sys
 
 # Ensure project root is in path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+try:
+    from utils.logging_config import get_logger
+    logger = get_logger(__name__, log_category="app")
+except Exception:
+    import logging
+    logger = logging.getLogger(__name__)
 
 def check_fix():
     print("Checking Local Model Setup...")
     
     # 1. Check for compiler
-    print("\n\n# Setup centralized logging\nfrom utils.logging_config import get_logger\nlogger = get_logger(__name__, log_category="app")\n\n1. Checking for C++ Compiler...")
+    print("\n1. Checking for C++ Compiler...")
     try:
         subprocess.check_call(["cl"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         print("Compiler found!")
@@ -48,10 +54,12 @@ def check_fix():
             return
 
     # 3. Run Manager Test
-    print("\n3. Testing Model Loading...")
+    print("\n3. Testing Local GGUF Model Manager...")
     try:
-        from ai_assistant.local_ai_manager import quick_test
-        quick_test()
+        from ai_assistant.ai.gguf_model_manager import get_gguf_manager, llama_cpp_available
+        print(f"llama_cpp available: {llama_cpp_available()}")
+        mgr = get_gguf_manager()
+        print(f"GGUF Manager status: {mgr.get_status()}")
     except Exception as e:
         logger.debug(f"Test failed: {e}")
 
