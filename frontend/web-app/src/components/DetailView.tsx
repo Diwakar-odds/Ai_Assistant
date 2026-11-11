@@ -27,34 +27,35 @@ const DetailView = ({ isOpen, onClose, title, children }: DetailViewProps) => {
           
           {/* Detail Card */}
           <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center p-8"
+            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            onClick={onClose}
           >
             <motion.div
-              className="bg-[#16181D] border border-[#1F2228] rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden"
-              initial={{ scale: 0.9, y: 20 }}
+              className="bg-[#16181D] border border-[#1F2228] rounded-2xl shadow-2xl max-w-5xl w-full max-h-[88vh] overflow-hidden flex flex-col"
+              initial={{ scale: 0.95, y: 15 }}
               animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
+              exit={{ scale: 0.95, y: 15 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-[#1F2228]">
-                <h2 className="text-xl font-semibold text-white">{title}</h2>
+              <div className="flex items-center justify-between px-5 py-3 border-b border-[#1F2228] shrink-0">
+                <h2 className="text-base sm:text-lg font-semibold text-white">{title}</h2>
                 <motion.button
                   onClick={onClose}
-                  className="p-2 hover:bg-[#1F2228] rounded-lg transition-colors"
+                  className="p-1.5 hover:bg-[#1F2228] rounded-lg transition-colors"
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                 >
-                  <X className="w-5 h-5 text-[#9CA3AF] hover:text-white" />
+                  <X className="w-4 h-4 text-[#9CA3AF] hover:text-white" />
                 </motion.button>
               </div>
               
               {/* Content */}
-              <div className="overflow-y-auto max-h-[calc(90vh-80px)] p-6">
+              <div className="overflow-y-auto max-h-[calc(88vh-54px)] p-4 sm:p-5 custom-scrollbar">
                 <ErrorBoundary fallbackTitle={`Error displaying ${title}`}>
                   {children}
                 </ErrorBoundary>

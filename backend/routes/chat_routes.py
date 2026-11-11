@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request, send_from_directory, render_template, Response, stream_with_context
-import os, json, sys, time, datetime
+import os, json, sys, time, logging, threading
+from datetime import datetime
 from settings_manager import get_provider, get_model
 from .common import (
     logger, api_logger, limiter, validate_input, sanitize_command,
@@ -7,7 +8,92 @@ from .common import (
     jwt_required, create_access_token, get_jwt_identity, verify_jwt_in_request,
     ENABLE_VOICE, ENABLE_MULTIMODAL, ENABLE_CONVERSATIONAL_AI
 )
-from .local_ai_routes import local_ai_manager, local_ai_initialized
+
+try:
+    from ai_assistant.core.enhanced_integration import get_enhanced_ai
+    enhanced_ai = get_enhanced_ai()
+    ENHANCED_AI_AVAILABLE = enhanced_ai is not None
+except Exception:
+    enhanced_ai = None
+    ENHANCED_AI_AVAILABLE = False
+
+try:
+    from ai_assistant.ai.auto_learning_router import AutoLearningRouter
+    LEARNING_ROUTER_AVAILABLE = True
+except Exception:
+    LEARNING_ROUTER_AVAILABLE = False
+
+try:
+    from ai_assistant.ai.usage_pattern_analyzer import UsagePatternAnalyzer
+    usage_analyzer = UsagePatternAnalyzer()
+    USAGE_ANALYZER_AVAILABLE = True
+except Exception:
+    usage_analyzer = None
+    USAGE_ANALYZER_AVAILABLE = False
+
+try:
+    from ai_assistant.ai.llm_provider import UnifiedChatInterface, LLMFactory, is_local_provider
+    LLM_PROVIDER_AVAILABLE = True
+except Exception:
+    UnifiedChatInterface = None
+    LLM_PROVIDER_AVAILABLE = False
+
+    class LLMFactory:  # type: ignore[no-redef]
+        @staticmethod
+        def normalize_provider(provider):
+            return (provider or "gemini").strip().lower()
+
+        @staticmethod
+        def sanitize_model_for_provider(provider, model):
+            return model or ""
+
+    def is_local_provider(provider):  # type: ignore[no-redef]
+        return (provider or "").strip().lower() in ("gguf", "local", "offline")
+
+try:
+    from ai_assistant.automation.automation_engine import SmartAutomationEngine
+    AUTOMATION_AVAILABLE = True
+except Exception:
+    AUTOMATION_AVAILABLE = False
+
+try:
+    from ai_assistant.ai.memory import save_to_memory, search_memory
+except Exception:
+    def save_to_memory(speaker, content): return "Saved"
+    def search_memory(query, limit=10): return []
+
+chat_session_lock = threading.Lock()
+chat_sessions = {}
+
+
+def _get_chat_store():
+    try:
+        from utils.chat_session_store import get_session_store
+    except ImportError:
+        from backend.utils.chat_session_store import get_session_store
+    return get_session_store()
+
+
+def clear_chat_sessions():
+    """Clear cached SSE chat sessions so subsequent requests pick up updated settings."""
+    with chat_session_lock:
+        chat_sessions.clear()
+
+
+def _maybe_speak_http_command(data: dict, response_text: str, success: bool = True, interrupt: bool = True, intent: str = None) -> None:
+    """Speak HTTP /api/command responses on the single unified backend speaker using centralized gating."""
+    if not response_text:
+        return
+    try:
+        from ai_assistant.core.jarvis_persona import should_speak_for_request
+        if not should_speak_for_request(data, intent=intent, default_for_chat=False):
+            return
+        if not success and not (data.get('speak') or str(data.get('source', '')).lower() == 'voice'):
+            return
+        from ai_assistant.voice.tts_output_service import get_tts_service
+        get_tts_service().speak(response_text, interrupt=interrupt, source=str(data.get('source', 'http_command')))
+    except Exception:
+        pass
 
 chat_bp = Blueprint('chat', __name__)
 @chat_bp.route('/api/chat', methods=['POST'])
@@ -26,18 +112,81 @@ def api_chat():
             return jsonify({"error": error}), 400
         
         message = sanitize_command(data['message'])
+        raw_user_message = message
+        source = str(data.get('source') or 'chat')
         context = data.get('context', {})
         image_data = data.get('image', None)
         
         if not message and not image_data:
             return jsonify({"error": "No message or image provided"}), 400
 
+        store = _get_chat_store()
+        sess_id = store.get_current_session().get('id')
+        boot_id = store.get_boot_id()
+        user_msg_id = str(data.get('client_message_id') or '').strip() or store.next_message_id('chat_user')
+        ai_msg_id = store.next_message_id('chat_ai')
+        is_voice_src = any(t in source.lower() for t in ('voice', 'companion', 'whisper', 'google'))
+        if raw_user_message:
+            store.record_message(
+                'user',
+                raw_user_message,
+                source=source,
+                is_voice=is_voice_src,
+                message_id=user_msg_id,
+                expected_session_id=sess_id,
+            )
+
         try:
             from telemetry_tracer import telemetry
             telemetry.log_inbound(f"WEB_APP ({request.remote_addr or '127.0.0.1'})", message)
         except Exception:
             pass
-        
+
+        # === PRIORITY 0: Voice / Mode Control Commands (Zero LLM calls) ===
+        if message and not image_data:
+            try:
+                from ai_assistant.core.local_command_normalizer import (
+                    parse_voice_control_command,
+                    execute_voice_control_command,
+                )
+                vc_parsed = parse_voice_control_command(message)
+                if vc_parsed:
+                    vc_res = execute_voice_control_command(vc_parsed)
+                    vc_ok = bool(vc_res.get("success", True))
+                    vc_resp = vc_res.get("response", "")
+                    vc_prov = vc_res.get("provider", "local_voice_control")
+                    vc_model = vc_res.get("model", get_model())
+                    if vc_resp:
+                        store.record_message(
+                            'ai',
+                            vc_resp,
+                            source='local_voice_control',
+                            is_voice=False,
+                            message_id=ai_msg_id,
+                            provider=vc_prov,
+                            model=vc_model,
+                            intent='voice_control',
+                            success=vc_ok,
+                            expected_session_id=sess_id,
+                        )
+                    return jsonify({
+                        "success": vc_ok,
+                        "message": raw_user_message,
+                        "response": vc_resp,
+                        "features_used": ["voice_control"],
+                        "provider": vc_prov,
+                        "model": vc_model,
+                        "execution_meta": vc_res.get("execution_meta", {}),
+                        "user": current_user,
+                        "session_id": sess_id,
+                        "message_id": ai_msg_id,
+                        "user_message_id": user_msg_id,
+                        "boot_id": boot_id,
+                        "timestamp": datetime.now().isoformat()
+                    })
+            except Exception as vc_err:
+                logger.debug(f"Voice control check skipped in api_chat: {vc_err}")
+
         # === NEW: Multi-step Task Chain Orchestration ===
         try:
             from ai_assistant.integrations.orchestrator_integration import should_use_orchestrator, process_with_orchestrator
@@ -47,21 +196,53 @@ def api_chat():
                 orch_result = process_with_orchestrator(message, context)
                 
                 if orch_result['success']:
+                    store.record_message(
+                        'ai',
+                        orch_result['response'],
+                        source='multi_step_orchestration',
+                        is_voice=False,
+                        message_id=ai_msg_id,
+                        intent='orchestrator',
+                        success=True,
+                        activity_kind='action',
+                        activity_title='Orchestrated workflow completed',
+                        expected_session_id=sess_id,
+                    )
                     return jsonify({
-                        "message": message,
+                        "success": True,
+                        "message": raw_user_message,
                         "response": orch_result['response'],
                         "orchestrated": True,
                         "steps_completed": orch_result['steps_completed'],
                         "total_steps": orch_result['total_steps'],
                         "features_used": ["multi_step_orchestration"],
                         "user": current_user,
+                        "session_id": sess_id,
+                        "message_id": ai_msg_id,
+                        "user_message_id": user_msg_id,
+                        "boot_id": boot_id,
                         "timestamp": datetime.now().isoformat()
                     })
                 elif not orch_result.get('fallback'):
                     # Hard error, don't fallback
+                    err_txt = orch_result.get('error', 'Multi-step execution failed')
+                    store.record_message(
+                        'ai',
+                        err_txt,
+                        source='multi_step_orchestration',
+                        is_voice=False,
+                        message_id=ai_msg_id,
+                        intent='orchestrator',
+                        success=False,
+                        expected_session_id=sess_id,
+                    )
                     return jsonify({
-                        "error": orch_result.get('error', 'Multi-step execution failed'),
+                        "error": err_txt,
                         "orchestrated": True,
+                        "session_id": sess_id,
+                        "message_id": ai_msg_id,
+                        "user_message_id": user_msg_id,
+                        "boot_id": boot_id,
                         "timestamp": datetime.now().isoformat()
                     }), 500
                 else:
@@ -71,10 +252,67 @@ def api_chat():
             logger.warning(f"Orchestrator error, falling back: {orch_error}")
             # Continue to normal processing
         # === END: Multi-step Orchestration ===
-        
-        # Extract preferences
-        model_preference = data.get('model')
-        provider_preference = data.get('provider')
+
+        # Local Tier-1 fast dispatch for direct app/system commands sent over /api/chat
+        if message and not image_data:
+            try:
+                from agent_brain import get_agent_brain
+                brain = get_agent_brain()
+                fast_res = brain._try_fast_dispatch(message)
+                if fast_res is not None:
+                    meta = fast_res.get("execution_meta", {})
+                    fast_ok = bool(fast_res.get("success", True))
+                    fast_resp = fast_res.get("response", "")
+                    fast_prov = meta.get("provider_used", "local_fast_dispatch")
+                    fast_model = meta.get("model_used", "deterministic")
+                    if fast_resp:
+                        store.record_message(
+                            'ai',
+                            fast_resp,
+                            source='local_fast_dispatch',
+                            is_voice=False,
+                            message_id=ai_msg_id,
+                            provider=fast_prov,
+                            model=fast_model,
+                            intent=fast_res.get("intent"),
+                            success=fast_ok,
+                            activity_kind=('action' if fast_ok else 'error'),
+                            expected_session_id=sess_id,
+                        )
+                    return jsonify({
+                        "success": fast_ok,
+                        "message": raw_user_message,
+                        "response": fast_resp,
+                        "card": fast_res.get("card"),
+                        "features_used": ["local_fast_dispatch"],
+                        "provider": fast_prov,
+                        "model": fast_model,
+                        "execution_meta": meta,
+                        "user": current_user,
+                        "session_id": sess_id,
+                        "message_id": ai_msg_id,
+                        "user_message_id": user_msg_id,
+                        "boot_id": boot_id,
+                        "timestamp": datetime.now().isoformat()
+                    })
+            except Exception as fast_err:
+                logger.debug(f"Local fast dispatch check skipped in api_chat: {fast_err}")
+
+        # Extract preferences (honoring offline_mode & local provider isolation)
+        offline_mode = bool(data.get('offline_mode', False))
+        raw_prov = str(data.get('provider') or '').strip().lower()
+        if offline_mode and not is_local_provider(raw_prov):
+            provider_preference = 'gguf'
+        elif raw_prov:
+            provider_preference = LLMFactory.normalize_provider(raw_prov)
+        else:
+            provider_preference = None
+        raw_model = data.get('model')
+        model_preference = (
+            LLMFactory.sanitize_model_for_provider(provider_preference, raw_model)
+            if provider_preference
+            else raw_model
+        )
         
         # Apply learning-enhanced response generation
         try:
@@ -106,30 +344,83 @@ def api_chat():
             except Exception:
                 pass
             
+            resp_text = str(response.get("response", ""))
+            resp_ok = not resp_text.strip().startswith("Error:")
+            resp_prov = response.get("provider") or provider_preference or get_provider()
+            resp_model = response.get("model") or model_preference or get_model()
+            if resp_text:
+                store.record_message(
+                    'ai',
+                    resp_text,
+                    source='enhanced_chat',
+                    is_voice=False,
+                    message_id=ai_msg_id,
+                    provider=resp_prov,
+                    model=resp_model,
+                    success=resp_ok,
+                    expected_session_id=sess_id,
+                )
+                if resp_ok and raw_user_message and store.get_current_session().get('id') == sess_id:
+                    try:
+                        from ai_assistant.ai.memory_retrieval import persist_turn_to_conversation_ai
+                        threading.Thread(
+                            target=persist_turn_to_conversation_ai,
+                            args=(raw_user_message, resp_text),
+                            kwargs={'source': source, 'session_id': sess_id},
+                            daemon=True,
+                        ).start()
+                    except Exception:
+                        pass
             return jsonify({
-                "message": message,
-                "response": response["response"],
-                "features_used": response["features_used"],
+                "success": resp_ok,
+                "error": resp_text if not resp_ok else None,
+                "message": raw_user_message,
+                "response": resp_text,
+                "features_used": response.get("features_used", []),
                 "suggestions": response.get("suggestions", []),
                 "mood": response.get("mood", "neutral"),
                 "context_id": response.get("context_id"),
-                "provider": response.get("provider"),
-                "model": response.get("model"),
+                "provider": resp_prov,
+                "model": resp_model,
                 "user": current_user,
+                "session_id": sess_id,
+                "message_id": ai_msg_id,
+                "user_message_id": user_msg_id,
+                "boot_id": boot_id,
                 "timestamp": datetime.now().isoformat()
-            })
+            }), (200 if resp_ok else 502)
         except Exception as fallback_error:
             logger.error(f"Fallback error in api_chat: {fallback_error}")
+            err_resp = f"I'm sorry, I encountered an internal error: {fallback_error}"
+            fb_prov = provider_preference or get_provider()
+            fb_model = model_preference or get_model()
+            store.record_message(
+                'ai',
+                err_resp,
+                source='safe_fallback',
+                is_voice=False,
+                message_id=ai_msg_id,
+                provider=fb_prov,
+                model=fb_model,
+                success=False,
+                expected_session_id=sess_id,
+            )
             return jsonify({
-                "message": message,
-                "response": f"I'm sorry, I encountered an internal error. Please check the logs.",
+                "success": False,
+                "error": str(fallback_error),
+                "message": raw_user_message,
+                "response": err_resp,
                 "features_used": ["safe_fallback"],
-                "provider": get_provider(),
-                "model": get_model(),
+                "provider": fb_prov,
+                "model": fb_model,
                 "suggestions": [],
                 "user": current_user,
+                "session_id": sess_id,
+                "message_id": ai_msg_id,
+                "user_message_id": user_msg_id,
+                "boot_id": boot_id,
                 "timestamp": datetime.now().isoformat()
-            })
+            }), 500
                 
     except Exception as e:
         logging.error(f"Chat API error: {str(e)}")
@@ -152,7 +443,68 @@ def api_command():
         
         if not command:
             return jsonify({"error": "No command provided"}), 400
-        
+
+        src_str = str(data.get('source') or 'http_command')
+        is_voice_cmd = any(t in src_str.lower() for t in ('voice', 'companion', 'whisper', 'google'))
+        store = _get_chat_store()
+        sess_id = store.get_current_session().get('id')
+        boot_id = store.get_boot_id()
+        user_msg_id = str(data.get('client_message_id') or '').strip() or store.next_message_id('cmd_user')
+        ai_msg_id = store.next_message_id('cmd_ai')
+        store.record_message(
+            'user',
+            command,
+            source=src_str,
+            is_voice=is_voice_cmd,
+            message_id=user_msg_id,
+            expected_session_id=sess_id,
+        )
+
+        # === PRIORITY 0: Voice / Mode Control Commands (Zero LLM calls) ===
+        try:
+            from ai_assistant.core.local_command_normalizer import (
+                parse_voice_control_command,
+                execute_voice_control_command,
+            )
+            vc_parsed = parse_voice_control_command(command)
+            if vc_parsed:
+                vc_res = execute_voice_control_command(vc_parsed)
+                resp_text = vc_res.get("response", "")
+                vc_ok = vc_res.get("success", True)
+                vc_prov = vc_res.get("provider", "local_voice_control")
+                vc_model = vc_res.get("model", get_model())
+                if vc_res.get("tts"):
+                    _maybe_speak_http_command(data, resp_text, success=vc_ok)
+                if resp_text:
+                    store.record_message(
+                        'ai',
+                        resp_text,
+                        source='local_voice_control',
+                        is_voice=False,
+                        message_id=ai_msg_id,
+                        provider=vc_prov,
+                        model=vc_model,
+                        intent='voice_control',
+                        success=bool(vc_ok),
+                        expected_session_id=sess_id,
+                    )
+                return jsonify({
+                    "success": vc_ok,
+                    "command": command,
+                    "response": resp_text,
+                    "provider": vc_prov,
+                    "model": vc_model,
+                    "execution_meta": vc_res.get("execution_meta", {}),
+                    "session_id": sess_id,
+                    "message_id": ai_msg_id,
+                    "user_message_id": user_msg_id,
+                    "boot_id": boot_id,
+                    "skip_tts": True,
+                    "timestamp": datetime.now().isoformat()
+                })
+        except Exception as vc_err:
+            logger.debug(f"Voice control check skipped in api_command: {vc_err}")
+
         # === NEW: Multi-step Task Chain Orchestration ===
         try:
             from ai_assistant.integrations.orchestrator_integration import should_use_orchestrator, process_with_orchestrator
@@ -162,6 +514,19 @@ def api_command():
                 orch_result = process_with_orchestrator(command, {})
                 
                 if orch_result['success']:
+                    _maybe_speak_http_command(data, orch_result.get('response', ''), success=True)
+                    store.record_message(
+                        'ai',
+                        orch_result['response'],
+                        source='multi_step_orchestration',
+                        is_voice=False,
+                        message_id=ai_msg_id,
+                        intent='orchestrator',
+                        success=True,
+                        activity_kind='action',
+                        activity_title='Orchestrated workflow completed',
+                        expected_session_id=sess_id,
+                    )
                     return jsonify({
                         "success": True,
                         "command": command,
@@ -169,15 +534,35 @@ def api_command():
                         "orchestrated": True,
                         "steps_completed": orch_result['steps_completed'],
                         "total_steps": orch_result['total_steps'],
+                        "session_id": sess_id,
+                        "message_id": ai_msg_id,
+                        "user_message_id": user_msg_id,
+                        "boot_id": boot_id,
+                        "skip_tts": True,
                         "timestamp": datetime.now().isoformat()
                     })
                 elif not orch_result.get('fallback'):
                     # Hard error, don't fallback
+                    err_txt = orch_result.get('error', 'Multi-step execution failed')
+                    store.record_message(
+                        'ai',
+                        err_txt,
+                        source='multi_step_orchestration',
+                        is_voice=False,
+                        message_id=ai_msg_id,
+                        intent='orchestrator',
+                        success=False,
+                        expected_session_id=sess_id,
+                    )
                     return jsonify({
                         "success": False,
-                        "error": orch_result.get('error', 'Multi-step execution failed'),
+                        "error": err_txt,
                         "orchestrated": True,
                         "command": command,
+                        "session_id": sess_id,
+                        "message_id": ai_msg_id,
+                        "user_message_id": user_msg_id,
+                        "boot_id": boot_id,
                         "timestamp": datetime.now().isoformat()
                     }), 500
                 else:
@@ -188,83 +573,130 @@ def api_command():
             # Continue to normal processing
         # === END: Multi-step Orchestration ===
         
-        # Check if user wants to use local AI
-        use_local_ai = data.get('use_local_ai', False) or data.get('offline_mode', False)
-        
-        # DEBUG: Log the offline mode request
-        logger.info(f" Command received: {command[:30]}...")
-        logger.info(f" offline_mode flag in request: {data.get('offline_mode')}")
-        logger.info(f" use_local_ai: {use_local_ai}")
-        logger.info(f" local_ai_initialized: {local_ai_initialized}")
-        logger.info(f" local_ai_manager exists: {local_ai_manager is not None}")
-        
-        if use_local_ai and local_ai_initialized and local_ai_manager:
-            # Use local Ollama model
-            try:
-                logger.info(f"Using local AI for command: {command[:50]}...")
-                local_response = local_ai_manager.chat(command, max_tokens=512)
-                
-                return jsonify({
-                    "success": True,
-                    "command": command,
-                    "response": local_response,
-                    "model": local_ai_manager.current_model,
-                    "offline_mode": True,
-                    "timestamp": datetime.now().isoformat()
-                })
-            except Exception as local_error:
-                logger.error(f"Local AI error: {local_error}, falling back to cloud")
-                # Fall through to cloud AI below
-        
-        # Process command with cloud AI (default)
+        # Resolve provider/model/offline_mode consistently (local requests NEVER route to cloud)
+        offline_mode = bool(data.get('offline_mode', False))
+        raw_prov = str(data.get('provider') or '').strip().lower()
+        norm_prov = LLMFactory.normalize_provider(raw_prov) if raw_prov else ''
+        if offline_mode and not is_local_provider(norm_prov):
+            preferred_provider = 'gguf'
+        else:
+            preferred_provider = norm_prov or LLMFactory.normalize_provider(get_provider() or 'gguf') or 'gguf'
+        raw_model = data.get('model') or (
+            get_model() if preferred_provider == LLMFactory.normalize_provider(get_provider()) else None
+        )
+        preferred_model = LLMFactory.sanitize_model_for_provider(preferred_provider, raw_model)
+        logger.info(f"   Command received: {command[:30]}... (provider={preferred_provider}, offline={offline_mode})")
+
+        # Process command with unified JARVIS lifecycle (pre-report -> AgentBrain -> post-report)
         try:
-            # Extract provider/model preference
-            preferred_provider = data.get('provider')
-            preferred_model = data.get('model')
-            
-            if preferred_provider or preferred_model:
-                try:
-                    response = assistant.process_command(command, model_preference={'provider': preferred_provider, 'model': preferred_model})
-                except TypeError:
-                    response = assistant.process_command(command)
+            model_pref = {
+                'provider': preferred_provider,
+                'model': preferred_model,
+                'offline_mode': offline_mode,
+            }
+
+            from ai_assistant.core.jarvis_persona import get_lifecycle_coordinator, should_speak_for_request
+            coordinator = get_lifecycle_coordinator()
+            wants_speak = should_speak_for_request(data, default_for_chat=False)
+            turn_id = coordinator.begin_turn(command, source=src_str, speak=wants_speak)
+            pre_report = coordinator.emit_pre_report(turn_id, command, source=src_str, speak=wants_speak)
+            if pre_report:
+                store.record_activity(
+                    'pre_report',
+                    'Task started',
+                    pre_report,
+                    source=src_str,
+                    status='running',
+                    provider=preferred_provider,
+                    model=preferred_model,
+                    expected_session_id=sess_id,
+                )
+
+            from agent_brain import get_agent_brain
+            brain = get_agent_brain()
+            result = brain.process_command(command, source=src_str, model_preference=model_pref)
+
+            if isinstance(result, dict):
+                response = result.get('response', '')
+                meta = result.get('execution_meta', {})
+                card = result.get('card')
+                res_intent = result.get('intent')
             else:
-                response = assistant.process_command(command)
-            
+                response = str(result)
+                meta = {}
+                card = None
+                res_intent = None
+
+            actual_p = meta.get('provider_used') or preferred_provider
+            actual_m = meta.get('model_used') or preferred_model
+            is_ok = bool(result.get('success', True)) if isinstance(result, dict) else True
+
+            formatted_resp, _ = coordinator.complete_turn(
+                turn_id,
+                command,
+                response,
+                success=is_ok,
+                intent=res_intent,
+                source=src_str,
+                speak=wants_speak,
+            )
+
+            recorded_text = formatted_resp or ((result.get('error') or response) if (isinstance(result, dict) and not is_ok) else response)
+            if recorded_text:
+                store.record_message(
+                    'ai',
+                    recorded_text,
+                    source=src_str,
+                    is_voice=False,
+                    message_id=ai_msg_id,
+                    provider=actual_p,
+                    model=actual_m,
+                    intent=res_intent,
+                    success=is_ok,
+                    activity_kind=('action' if (is_ok and res_intent) else ('response' if is_ok else 'error')),
+                    expected_session_id=sess_id,
+                )
+
             return jsonify({
-                "success": True,
+                "success": is_ok,
+                "error": (result.get('error') or response) if (isinstance(result, dict) and not is_ok) else None,
                 "command": command,
-                "response": response,
+                "pre_report": pre_report,
+                "response": formatted_resp,
+                "card": card,
+                "provider": actual_p,
+                "model": actual_m,
+                "execution_meta": meta,
+                "session_id": sess_id,
+                "message_id": ai_msg_id,
+                "user_message_id": user_msg_id,
+                "boot_id": boot_id,
+                "skip_tts": True,
                 "timestamp": datetime.now().isoformat()
             })
         except Exception as cmd_error:
-            # If cloud fails and local AI is available, try local fallback
-            if local_ai_initialized and local_ai_manager:
-                logger.warning(f"Cloud AI failed ({str(cmd_error)[:100]}), using local AI fallback")
-                try:
-                    local_response = local_ai_manager.chat(command, max_tokens=512)
-                    
-                    return jsonify({
-                        "success": True,
-                        "command": command,
-                        "response": local_response,
-                        "model": local_ai_manager.current_model,
-                        "offline_mode": True,
-                        "fallback": True,
-                        "timestamp": datetime.now().isoformat()
-                    })
-                except Exception as local_error:
-                    logger.error(f"Local AI fallback also failed: {local_error}")
-                    # Re-raise original cloud error
-                    raise cmd_error
-            else:
-                # No local AI available, return error
-                raise cmd_error
-                
-        except Exception as cmd_error:
+            err_msg = f"Command processing failed: {str(cmd_error)}"
+            store.record_message(
+                'ai',
+                err_msg,
+                source=src_str,
+                is_voice=False,
+                message_id=ai_msg_id,
+                provider=preferred_provider,
+                model=preferred_model,
+                success=False,
+                expected_session_id=sess_id,
+            )
             return jsonify({
                 "success": False,
-                "error": f"Command processing failed: {str(cmd_error)}",
+                "error": err_msg,
                 "command": command,
+                "provider": preferred_provider,
+                "model": preferred_model,
+                "session_id": sess_id,
+                "message_id": ai_msg_id,
+                "user_message_id": user_msg_id,
+                "boot_id": boot_id,
                 "timestamp": datetime.now().isoformat()
             }), 500
             
@@ -487,36 +919,174 @@ def api_chat_stream():
         
         message = sanitize_command(data['message'])
         session_id = data.get('session_id', f"{current_user}_{int(time.time())}")
+        req_offline = bool(data.get('offline_mode', False))
+        req_prov_raw = str(data.get('provider') or '').strip().lower()
+        req_model_raw = data.get('model')
+        source = str(data.get('source') or 'chat_stream')
         
         if not message:
             return jsonify({"error": "No message provided"}), 400
-        
+
+        store = _get_chat_store()
+        active_sess_id = store.get_current_session().get('id')
+        boot_id = store.get_boot_id()
+        user_msg_id = str(data.get('client_message_id') or '').strip() or store.next_message_id('stream_user')
+        ai_msg_id = store.next_message_id('stream_ai')
+        is_voice_src = any(t in source.lower() for t in ('voice', 'companion', 'whisper', 'google'))
+        store.record_message(
+            'user',
+            message,
+            source=source,
+            is_voice=is_voice_src,
+            message_id=user_msg_id,
+            expected_session_id=active_sess_id,
+        )
+
+        # Priority-0 voice/barge-in/mode control guard so stop phrases never hit streaming LLM
+        try:
+            from ai_assistant.core.local_command_normalizer import (
+                parse_voice_control_command,
+                execute_voice_control_command,
+            )
+            vc_parsed = parse_voice_control_command(message)
+            if vc_parsed:
+                vc_res = execute_voice_control_command(vc_parsed)
+                vc_ok = bool(vc_res.get("success", True))
+                vc_resp = str(vc_res.get("response", "") or "")
+                vc_prov = vc_res.get("provider", "local_voice_control")
+                vc_model = vc_res.get("model", get_model())
+                if vc_resp:
+                    store.record_message(
+                        'ai',
+                        vc_resp,
+                        source='local_voice_control',
+                        is_voice=False,
+                        message_id=ai_msg_id,
+                        provider=vc_prov,
+                        model=vc_model,
+                        intent='voice_control',
+                        success=vc_ok,
+                        expected_session_id=active_sess_id,
+                    )
+
+                def _vc_stream():
+                    if vc_resp:
+                        yield f"data: {json.dumps({'token': vc_resp, 'count': 1, 'partial': vc_resp, 'provider': vc_prov, 'model': vc_model, 'stream_id': ai_msg_id, 'session_id': active_sess_id})}\n\n"
+                    yield f"data: {json.dumps({'done': True, 'tokens': 1 if vc_resp else 0, 'full_response': vc_resp, 'provider': vc_prov, 'model': vc_model, 'user': current_user, 'session_id': active_sess_id, 'message_id': ai_msg_id, 'user_message_id': user_msg_id, 'boot_id': boot_id, 'voice_control': True, 'timestamp': datetime.now().isoformat()})}\n\n"
+
+                return Response(_vc_stream(), mimetype='text/event-stream')
+        except Exception as vc_err:
+            logger.debug(f"Voice control check skipped in api_chat_stream: {vc_err}")
+
         logger.info(f"[INFO] Streaming chat for user: {current_user}, session: {session_id}")
         
         def generate_stream():
             """Generate streaming response tokens"""
             try:
-                # Get or create chat session
+                # Resolve provider/model honoring request params & offline_mode
+                norm_prov = LLMFactory.normalize_provider(req_prov_raw) if req_prov_raw else ''
+                if req_offline and not is_local_provider(norm_prov):
+                    cur_provider = 'gguf'
+                else:
+                    cur_provider = norm_prov or LLMFactory.normalize_provider(get_provider() or 'gguf') or 'gguf'
+                raw_m = req_model_raw or (
+                    get_model() if cur_provider == LLMFactory.normalize_provider(get_provider()) else None
+                )
+                cur_model = LLMFactory.sanitize_model_for_provider(cur_provider, raw_m)
+
                 with chat_session_lock:
-                    if session_id not in chat_sessions:
+                    existing_chat = chat_sessions.get(session_id)
+                    if (
+                        existing_chat is None
+                        or getattr(existing_chat, 'provider_name', None) != cur_provider
+                        or getattr(existing_chat, 'model', None) != cur_model
+                    ):
                         if LLM_PROVIDER_AVAILABLE:
-                            chat_sessions[session_id] = UnifiedChatInterface(provider=get_provider(), model=get_model())
-                            chat_sessions[session_id].add_system_message(
-                                "You are a helpful AI assistant. Respond concisely and accurately."
+                            chat_sessions[session_id] = UnifiedChatInterface(
+                                provider=cur_provider,
+                                model=cur_model,
+                                use_fallback=(not is_local_provider(cur_provider)),
                             )
                         else:
                             # Fallback if LLM not available
-                            yield f"data: {json.dumps({'error': 'LLM provider not available'})}\n\n"
+                            store.record_message(
+                                'ai',
+                                'LLM provider not available',
+                                source=source,
+                                is_voice=False,
+                                message_id=ai_msg_id,
+                                provider=cur_provider,
+                                model=cur_model,
+                                success=False,
+                                expected_session_id=active_sess_id,
+                            )
+                            yield f"data: {json.dumps({'error': 'LLM provider not available', 'session_id': active_sess_id, 'message_id': ai_msg_id, 'user_message_id': user_msg_id, 'boot_id': boot_id})}\n\n"
                             return
+                    chat = chat_sessions[session_id]
+
+                # Refresh persona system prompt + cross-session historical RAG context on EVERY turn
+                rag_ctx = ""
+                try:
+                    from ai_assistant.ai.memory_retrieval import retrieve_unified_historical_context
+                    rag_ctx = retrieve_unified_historical_context(
+                        message,
+                        current_session_id=active_sess_id,
+                        only_when_triggered=True,
+                    )
+                except Exception as rag_err:
+                    logger.debug(f"Historical RAG lookup skipped in stream: {rag_err}")
+
+                try:
+                    from ai_assistant.core.jarvis_persona import build_persona_system_prompt
+                    sys_prompt = build_persona_system_prompt(
+                        provider=cur_provider,
+                        model=cur_model,
+                        surface="chat",
+                        extra_context=rag_ctx,
+                    )
+                except Exception:
+                    sys_prompt = "You are Pulsar, an intelligent and helpful AI companion created by Diwakar."
+                    if rag_ctx:
+                        sys_prompt = f"{sys_prompt}\n{rag_ctx}"
+                if hasattr(chat, 'set_system_message'):
+                    chat.set_system_message(sys_prompt)
+
                 start_time = time.time()
                 tokens = 0
                 full_response = ""
                 
-                logger.debug(f"Starting stream for message: {message[:50]}...")
+                logger.debug(f"Starting stream for message: {message[:50]}... (provider={cur_provider}, model={cur_model})")
                 
                 try:
                     # Get streaming response
                     for token in chat.chat(message, stream=True):
+                        if store.get_current_session().get('id') != active_sess_id:
+                            yield f"data: {json.dumps({'done': True, 'aborted': True, 'reason': 'new_session', 'session_id': active_sess_id})}\n\n"
+                            return
+                        if tokens == 0 and str(token).strip().startswith("Error:"):
+                            err_tok = str(token)
+                            store.record_message(
+                                'ai',
+                                err_tok,
+                                source=source,
+                                is_voice=False,
+                                message_id=ai_msg_id,
+                                provider=cur_provider,
+                                model=cur_model,
+                                success=False,
+                                expected_session_id=active_sess_id,
+                            )
+                            error_data = json.dumps({
+                                'error': err_tok,
+                                'provider': cur_provider,
+                                'model': cur_model,
+                                'session_id': active_sess_id,
+                                'message_id': ai_msg_id,
+                                'user_message_id': user_msg_id,
+                                'boot_id': boot_id,
+                            })
+                            yield f"data: {error_data}\n\n"
+                            return
                         tokens += 1
                         full_response += token
                         
@@ -524,7 +1094,11 @@ def api_chat_stream():
                         token_data = json.dumps({
                             'token': token,
                             'count': tokens,
-                            'partial': full_response
+                            'partial': full_response,
+                            'provider': cur_provider,
+                            'model': cur_model,
+                            'stream_id': ai_msg_id,
+                            'session_id': active_sess_id,
                         })
                         yield f"data: {token_data}\n\n"
                         
@@ -532,11 +1106,57 @@ def api_chat_stream():
                         time.sleep(0.001)
                 except Exception as stream_error:
                     logger.error(f"Streaming error: {stream_error}")
-                    error_data = json.dumps({'error': f'Streaming failed: {str(stream_error)}'})
+                    err_str = f'Streaming failed: {str(stream_error)}'
+                    store.record_message(
+                        'ai',
+                        err_str,
+                        source=source,
+                        is_voice=False,
+                        message_id=ai_msg_id,
+                        provider=cur_provider,
+                        model=cur_model,
+                        success=False,
+                        expected_session_id=active_sess_id,
+                    )
+                    error_data = json.dumps({
+                        'error': err_str,
+                        'provider': cur_provider,
+                        'model': cur_model,
+                        'session_id': active_sess_id,
+                        'message_id': ai_msg_id,
+                        'user_message_id': user_msg_id,
+                        'boot_id': boot_id,
+                    })
                     yield f"data: {error_data}\n\n"
                     return
                 
+                if store.get_current_session().get('id') != active_sess_id:
+                    yield f"data: {json.dumps({'done': True, 'aborted': True, 'reason': 'new_session', 'session_id': active_sess_id})}\n\n"
+                    return
+
                 # Send completion stats
+                if full_response.strip():
+                    store.record_message(
+                        'ai',
+                        full_response,
+                        source=source,
+                        is_voice=False,
+                        message_id=ai_msg_id,
+                        provider=cur_provider,
+                        model=cur_model,
+                        success=True,
+                        expected_session_id=active_sess_id,
+                    )
+                    try:
+                        from ai_assistant.ai.memory_retrieval import persist_turn_to_conversation_ai
+                        threading.Thread(
+                            target=persist_turn_to_conversation_ai,
+                            args=(message, full_response),
+                            kwargs={'source': source, 'session_id': active_sess_id},
+                            daemon=True,
+                        ).start()
+                    except Exception:
+                        pass
                 duration = time.time() - start_time
                 completion_data = json.dumps({
                     'done': True,
@@ -544,7 +1164,13 @@ def api_chat_stream():
                     'duration': round(duration, 2),
                     'tokens_per_second': round(tokens / duration, 2) if duration > 0 else 0,
                     'full_response': full_response,
+                    'provider': cur_provider,
+                    'model': cur_model,
                     'user': current_user,
+                    'session_id': active_sess_id,
+                    'message_id': ai_msg_id,
+                    'user_message_id': user_msg_id,
+                    'boot_id': boot_id,
                     'timestamp': datetime.now().isoformat()
                 })
                 yield f"data: {completion_data}\n\n"
@@ -553,7 +1179,22 @@ def api_chat_stream():
                 
             except Exception as e:
                 logger.error(f"Stream generation error: {e}")
-                error_msg = json.dumps({'error': str(e)})
+                store.record_message(
+                    'ai',
+                    str(e),
+                    source=source,
+                    is_voice=False,
+                    message_id=ai_msg_id,
+                    success=False,
+                    expected_session_id=active_sess_id,
+                )
+                error_msg = json.dumps({
+                    'error': str(e),
+                    'session_id': active_sess_id,
+                    'message_id': ai_msg_id,
+                    'user_message_id': user_msg_id,
+                    'boot_id': boot_id,
+                })
                 yield f"data: {error_msg}\n\n"
         
         return Response(generate_stream(), mimetype='text/event-stream')

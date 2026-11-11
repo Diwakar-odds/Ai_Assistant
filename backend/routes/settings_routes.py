@@ -2,12 +2,30 @@ from flask import Blueprint, jsonify, request, send_from_directory, render_templ
 import os, json, sys, time
 from datetime import datetime, date
 from pathlib import Path
-from settings_manager import DEFAULTS, invalidate_cache, AVAILABLE_PROVIDERS
+from settings_manager import (
+    DEFAULTS, invalidate_cache, AVAILABLE_PROVIDERS,
+    deep_merge_settings, build_merged_settings,
+    update_settings_and_sync, reset_all_llm_sessions,
+    get_settings_file, get_logs_root, complete_onboarding_settings,
+)
+try:
+    from ai_assistant.utils.multilingual import Language
+except Exception:
+    Language = None
+# from ai_assistant.multilingual import Language
 from .common import (
     logger, api_logger, limiter, assistant, validate_input, sanitize_command,
     get_current_context, jwt_required, create_access_token, get_jwt_identity, verify_jwt_in_request,
     ENABLE_VOICE, ENABLE_MULTIMODAL, ENABLE_CONVERSATIONAL_AI, get_socketio
 )
+
+try:
+    from ai_assistant.core.enhanced_integration import get_enhanced_ai
+    enhanced_ai = get_enhanced_ai()
+    ENHANCED_AI_AVAILABLE = enhanced_ai is not None
+except Exception:
+    enhanced_ai = None
+    ENHANCED_AI_AVAILABLE = False
 
 try:
     from backend.voice_service import AVAILABLE_VOICES
@@ -60,7 +78,7 @@ def api_translate_text():
         if not text:
             return jsonify({"error": "Text required"}), 400
         
-        from ai_assistant.multilingual import Language
+        from ai_assistant.utils.multilingual import Language
         translated = assistant.multilingual.translate_text(text, Language(target_language))
         
         return jsonify({
@@ -150,8 +168,9 @@ def api_log_error():
             'url': error_data.get('url', ''),
         }
         
-        # Save to proper error log file in logs directory
-        log_file = Path('logs/errors/frontend_errors.json')
+        # Save to proper error log file in writable logs directory
+        log_file = get_logs_root() / 'errors' / 'frontend_errors.json'
+        log_file.parent.mkdir(parents=True, exist_ok=True)
         try:
             if log_file.exists() and log_file.stat().st_size > 0:
                 try:
@@ -184,12 +203,11 @@ def api_save_settings():
     """Save user settings"""
     try:
         settings_data = request.get_json()
-        
-        # Save settings to a file (in production, use a database)
-        settings_file = Path(__file__).parent / 'user_settings.json'
-        with open(settings_file, 'w') as f:
+        settings_file = get_settings_file()
+        settings_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(settings_file, 'w', encoding='utf-8') as f:
             json.dump(settings_data, f, indent=2)
-        
+        invalidate_cache()
         return jsonify({"success": True, "message": "Settings saved successfully"})
     
     except Exception as e:
@@ -200,9 +218,9 @@ def api_save_settings():
 def api_load_settings():
     """Load user settings"""
     try:
-        settings_file = Path(__file__).parent / 'user_settings.json'
+        settings_file = get_settings_file()
         if settings_file.exists():
-            with open(settings_file, 'r') as f:
+            with open(settings_file, 'r', encoding='utf-8') as f:
                 settings = json.load(f)
             return jsonify(settings)
         else:
@@ -212,11 +230,18 @@ def api_load_settings():
         logger.error(f"Failed to load settings: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
+_deep_merge_settings = deep_merge_settings
+
+
+def _build_merged_settings(saved_settings: dict) -> dict:
+    return build_merged_settings(saved_settings, AVAILABLE_VOICES)
+
+
 @settings_bp.route('/api/settings/all', methods=['GET'])
 def api_get_all_settings():
     """Get all comprehensive settings - schema must match frontend SettingsDetail.tsx"""
     try:
-        settings_file = Path(__file__).parent.parent.parent / 'data' / 'user_preferences' / 'settings.json'
+        settings_file = get_settings_file()
         settings_file.parent.mkdir(parents=True, exist_ok=True)
         
         # Load secure keys
@@ -228,8 +253,9 @@ def api_get_all_settings():
         
         # Backward compatibility / Migration:
         # If keyring is empty but environment variables are set, migrate them to keyring
-        if not google_gemini_key and os.getenv('GOOGLE_GEMINI_API_KEY'):
-            google_gemini_key = os.getenv('GOOGLE_GEMINI_API_KEY', '')
+        env_gemini = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_GEMINI_API_KEY')
+        if not google_gemini_key and env_gemini:
+            google_gemini_key = env_gemini
             save_secure_key('googleGemini', google_gemini_key)
         if not open_ai_key and os.getenv('OPENAI_API_KEY'):
             open_ai_key = os.getenv('OPENAI_API_KEY', '')
@@ -238,10 +264,6 @@ def api_get_all_settings():
             eleven_labs_key = os.getenv('ELEVEN_LABS_API_KEY', '')
             save_secure_key('elevenLabs', eleven_labs_key)
             
-        # Default settings matching SettingsDetail.tsx interfaces exactly
-        import copy
-        defaults = copy.deepcopy(DEFAULTS)
-        
         if settings_file.exists():
             with open(settings_file, 'r', encoding='utf-8') as f:
                 saved_settings = json.load(f)
@@ -261,25 +283,13 @@ def api_get_all_settings():
                     with open(settings_file, 'w', encoding='utf-8') as f:
                         json.dump(saved_settings, f, indent=2)
 
-            # Deep merge: saved settings override defaults
-            for key, value in saved_settings.items():
-                if key in defaults and isinstance(defaults[key], dict) and isinstance(value, dict):
-                    defaults[key].update(value)
-                else:
-                    defaults[key] = value
-                    
-            # ALWAYS override dynamically populated lists with system constants
-            if "voice" in defaults and "tts" in defaults["voice"]:
-                defaults["voice"]["tts"]["available_voices"] = AVAILABLE_VOICES
-                first_name = AVAILABLE_VOICES[0]['name'] if AVAILABLE_VOICES else 'None'
-                print(f"[DEBUG api_get_all_settings] Merged available_voices length: {len(AVAILABLE_VOICES)}, first item: {first_name}")
-                
-            settings = defaults
+            settings = _build_merged_settings(saved_settings)
         else:
-            settings = defaults
+            settings = _build_merged_settings({})
             # Save defaults on first load
             with open(settings_file, 'w', encoding='utf-8') as f:
                 json.dump(settings, f, indent=2)
+            settings = _build_merged_settings(settings)
         
         return jsonify({"success": True, "settings": settings})
     
@@ -290,110 +300,40 @@ def api_get_all_settings():
 @settings_bp.route('/api/settings/update', methods=['POST'])
 @jwt_required(optional=True)
 def api_update_settings():
-    """Update specific settings with live hot-reload of critical values"""
+    """Update specific settings via single settings_manager pipeline with live sync."""
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
         category = data.get('category')
         settings_data = data.get('settings')
-        
+
         if not category or not settings_data:
             return jsonify({"success": False, "error": "Category and settings required"}), 400
-        
-        settings_file = Path(__file__).parent.parent.parent / 'data' / 'user_preferences' / 'settings.json'
-        settings_file.parent.mkdir(parents=True, exist_ok=True)
-        
-        # Load existing settings
-        if settings_file.exists():
-            with open(settings_file, 'r', encoding='utf-8') as f:
-                all_settings = json.load(f)
-        else:
-            all_settings = {}
-        
-        # === SECURE STORAGE INTERCEPT FOR API KEYS ===
-        if category == 'security':
-            from ai_assistant.utils.secure_storage import save_secure_key, delete_secure_key, get_secure_key
-            api_keys = settings_data.get('apiKeys', {})
-            
-            # Map frontend settings keys to actual OS env names we hot-reload
-            env_map = {
-                "googleGemini": "GEMINI_API_KEY",
-                "openAI": "OPENAI_API_KEY",
-                "elevenLabs": "ELEVEN_LABS_API_KEY"
-            }
-            
-            for key_name, key_val in list(api_keys.items()):
-                if key_val == "********":
-                    # Keep existing key in keyring, and load it to os.environ for hot-reload
-                    actual_val = get_secure_key(key_name)
-                    if actual_val and key_name in env_map:
-                        os.environ[env_map[key_name]] = actual_val
-                elif key_val == "":
-                    # Delete key from keyring and clear from os.environ
-                    delete_secure_key(key_name)
-                    if key_name in env_map and env_map[key_name] in os.environ:
-                        del os.environ[env_map[key_name]]
-                else:
-                    # Save new key to keyring and load it to os.environ
-                    save_secure_key(key_name, key_val)
-                    if key_name in env_map:
-                        os.environ[env_map[key_name]] = key_val
-                        logger.info(f"˜ Secure Key '{key_name}' updated & loaded at runtime")
-            
-            # Wipe actual values from settings_data before writing to JSON file
-            cleaned_keys = {}
-            for key_name in api_keys.keys():
-                cleaned_keys[key_name] = "********" if get_secure_key(key_name) else ""
-            settings_data['apiKeys'] = cleaned_keys
-            
-        # Update category in all_settings
-        all_settings[category] = settings_data
-        
-        # Save JSON with masked values
-        with open(settings_file, 'w', encoding='utf-8') as f:
-            json.dump(all_settings, f, indent=2)
-        
-        # Always invalidate settings cache on update
-        try:
-            invalidate_cache()
-        except Exception as e:
-            logger.warning(f"Could not invalidate settings cache: {e}")
-            
-        if category == 'ai':
-            provider = settings_data.get('defaultProvider')
-            model = settings_data.get('defaultModel')
-            if provider or model:
-                logger.info(f"🤖 AI provider updated: {provider}, model: {model}")
-                if provider == 'openai' and model:
-                    os.environ["OPENAI_MODEL"] = model
-        
-        # Hot-reload global LLM config if AI or Security settings change
-        if category in ['ai', 'security']:
-            try:
-                from ai_assistant.ai.network_aware_llm import reload_global_config
-                reload_global_config()
-                logger.info("Global LLM config hot-reloaded due to settings change")
-            except Exception as e:
-                logger.warning(f"Could not hot-reload global LLM config: {e}")
-        
-        # Broadcast change to all connected clients via socket
-        try:
-            sio = get_socketio()
-            if sio:
-                sio.emit('settings_updated', {
-                    'category': category,
-                    'timestamp': datetime.now().isoformat()
-                })
-        except Exception as e:
-            logger.warning(f"Could not broadcast settings_updated: {e}")
-        
+
+        result = update_settings_and_sync(category, settings_data)
+        if not result.get("success"):
+            return jsonify(result), 400
+
         return jsonify({
             "success": True,
-            "message": f"{category.capitalize()} settings updated",
-            "settings": all_settings
+            "message": result.get("message", f"{category.capitalize()} settings updated"),
+            "settings": result["settings"]
         })
-    
+
     except Exception as e:
         logger.error(f"Failed to update settings: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@settings_bp.route('/api/settings/complete_onboarding', methods=['POST'])
+@jwt_required(optional=True)
+def api_complete_onboarding():
+    """Complete first-run onboarding and persist initial user choices."""
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+        result = complete_onboarding_settings(data)
+        return jsonify(result), (200 if result.get("success") else 400)
+    except Exception as e:
+        logger.error(f"Failed to complete onboarding: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 @settings_bp.route('/api/settings/reset', methods=['POST'])
@@ -401,10 +341,10 @@ def api_update_settings():
 def api_reset_settings():
     """Reset settings to default"""
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
         category = data.get('category')  # Optional: reset specific category
         
-        settings_file = Path(__file__).parent.parent.parent / 'data' / 'user_preferences' / 'settings.json'
+        settings_file = get_settings_file()
         
         if category:
             # Reset specific category
@@ -421,13 +361,61 @@ def api_reset_settings():
             with open(settings_file, 'w', encoding='utf-8') as f:
                 json.dump(all_settings, f, indent=2)
             
-            return jsonify({"success": True, "message": f"{category.capitalize()} settings reset"})
+            try:
+                invalidate_cache()
+                reset_all_llm_sessions()
+                from ai_assistant.ai.network_aware_llm import reload_global_config
+                reload_global_config()
+            except Exception:
+                pass
+
+            merged_settings = _build_merged_settings(all_settings)
+            try:
+                sio = get_socketio()
+                if sio:
+                    sio.emit('settings_updated', {
+                        'category': category,
+                        'settings': merged_settings.get(category, {}),
+                        'all_settings': merged_settings,
+                        'timestamp': datetime.now().isoformat(),
+                    })
+            except Exception:
+                pass
+            return jsonify({
+                "success": True,
+                "message": f"{category.capitalize()} settings reset",
+                "settings": merged_settings
+            })
         else:
             # Reset all settings
             if settings_file.exists():
                 settings_file.unlink()
+            try:
+                invalidate_cache()
+                reset_all_llm_sessions()
+                from ai_assistant.ai.network_aware_llm import reload_global_config
+                reload_global_config()
+            except Exception:
+                pass
+
+            merged_settings = _build_merged_settings({})
+            try:
+                sio = get_socketio()
+                if sio:
+                    sio.emit('settings_updated', {
+                        'category': 'all',
+                        'settings': merged_settings,
+                        'all_settings': merged_settings,
+                        'timestamp': datetime.now().isoformat(),
+                    })
+            except Exception:
+                pass
             
-            return jsonify({"success": True, "message": "All settings reset to default"})
+            return jsonify({
+                "success": True,
+                "message": "All settings reset to default",
+                "settings": merged_settings
+            })
     
     except Exception as e:
         logger.error(f"Failed to reset settings: {e}")
@@ -437,7 +425,7 @@ def api_reset_settings():
 def api_export_settings():
     """Export settings as JSON"""
     try:
-        settings_file = Path(__file__).parent.parent.parent / 'data' / 'user_preferences' / 'settings.json'
+        settings_file = get_settings_file()
         
         if settings_file.exists():
             with open(settings_file, 'r', encoding='utf-8') as f:
@@ -465,16 +453,37 @@ def api_import_settings():
         if not imported_settings:
             return jsonify({"success": False, "error": "No settings data provided"}), 400
         
-        settings_file = Path(__file__).parent.parent.parent / 'data' / 'user_preferences' / 'settings.json'
+        settings_file = get_settings_file()
         settings_file.parent.mkdir(parents=True, exist_ok=True)
         
         with open(settings_file, 'w', encoding='utf-8') as f:
             json.dump(imported_settings, f, indent=2)
+
+        try:
+            invalidate_cache()
+            reset_all_llm_sessions()
+            from ai_assistant.ai.network_aware_llm import reload_global_config
+            reload_global_config()
+        except Exception:
+            pass
+
+        merged_settings = _build_merged_settings(imported_settings)
+        try:
+            sio = get_socketio()
+            if sio:
+                sio.emit('settings_updated', {
+                    'category': 'all',
+                    'settings': merged_settings,
+                    'all_settings': merged_settings,
+                    'timestamp': datetime.now().isoformat(),
+                })
+        except Exception:
+            pass
         
         return jsonify({
             "success": True,
             "message": "Settings imported successfully",
-            "settings": imported_settings
+            "settings": merged_settings
         })
     
     except Exception as e:
@@ -585,7 +594,7 @@ def api_get_model_preference():
         current_user = get_jwt_identity() or "anonymous"
         
         # Load preferences from file
-        prefs_file = Path('data') / 'user_preferences' / f'{current_user}_model_pref.json'
+        prefs_file = get_settings_file().parent / f'{current_user}_model_pref.json'
         
         if prefs_file.exists():
             with open(prefs_file, 'r') as f:
@@ -636,7 +645,7 @@ def api_set_model_preference():
             'updated_at': datetime.now().isoformat()
         }
         
-        prefs_dir = Path('data') / 'user_preferences'
+        prefs_dir = get_settings_file().parent
         prefs_dir.mkdir(parents=True, exist_ok=True)
         
         prefs_file = prefs_dir / f'{current_user}_model_pref.json'

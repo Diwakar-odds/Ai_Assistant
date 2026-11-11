@@ -16,6 +16,7 @@ import ChatDetail from './components/DetailViews/ChatDetail';
 import VoiceDetail from './components/DetailViews/VoiceDetail';
 import SettingsDetail from './components/DetailViews/SettingsDetail';
 import AILearningDetail from './components/DetailViews/AILearningDetail';
+import AgentsChainsDetail from './components/DetailViews/AgentsChainsDetail';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import OnboardingModal from './components/OnboardingModal';
@@ -67,6 +68,10 @@ function AppContent() {
         return { title: 'Voice Control', content: <VoiceDetail /> };
       case 'settings':
         return { title: 'Settings', content: <SettingsDetail /> };
+      case 'agents':
+      case 'chains':
+      case 'orchestrator':
+        return { title: 'Agents & Chain Orchestrator', content: <AgentsChainsDetail /> };
       case 'ai-learning':
       case 'database':
       case 'systems':

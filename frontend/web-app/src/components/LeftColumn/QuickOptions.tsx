@@ -1,11 +1,26 @@
 import { motion } from 'framer-motion';
-import { Grid3x3, BarChart3, Settings, MoreHorizontal } from 'lucide-react';
+import { Grid3x3, BarChart3, Settings, MoreHorizontal, Layers, Activity } from 'lucide-react';
 import { useDashboard } from '../../contexts/DashboardContext';
 
 const QuickOptions = () => {
-  const { setSelectedView } = useDashboard();
+  const { setSelectedView, activeChains } = useDashboard();
 
   const options = [
+    {
+      icon: Layers,
+      label: 'Agents & Chains',
+      badge: activeChains && activeChains.length > 0 ? activeChains.length : undefined,
+      onClick: () => {
+        setSelectedView('agents');
+      }
+    },
+    {
+      icon: Activity,
+      label: 'System',
+      onClick: () => {
+        setSelectedView('dashboard');
+      }
+    },
     {
       icon: Grid3x3,
       label: 'Apps',
@@ -49,18 +64,23 @@ const QuickOptions = () => {
           <motion.button
             key={option.label}
             onClick={option.onClick}
-            className="glass-panel rounded-lg p-1.5 sm:p-2 md:p-2.5 flex flex-col items-center justify-center gap-1 sm:gap-1.5 md:gap-2 hover:border-neon-cyan hover:shadow-[0_0_12px_rgba(0,243,255,0.3)] transition-all duration-200 cursor-pointer group"
+            className="relative glass-panel rounded-lg p-1.5 sm:p-2 md:p-2.5 flex flex-col items-center justify-center gap-1 sm:gap-1.5 md:gap-2 hover:border-neon-cyan hover:shadow-[0_0_12px_rgba(0,243,255,0.3)] transition-all duration-200 cursor-pointer group"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.1 * index }}
+            transition={{ delay: 0.06 * index }}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
+            {option.badge !== undefined && (
+              <span className="absolute top-1.5 right-1.5 px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-[#00f3ff]/20 text-[#00f3ff] border border-[#00f3ff]/40">
+                {option.badge}
+              </span>
+            )}
             <option.icon
               className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-neon-cyan group-hover:scale-110 transition-transform"
               strokeWidth={1.5}
             />
-            <span className="text-[10px] sm:text-xs text-[#9CA3AF] group-hover:text-white transition-colors font-medium">
+            <span className="text-[10px] sm:text-xs text-[#9CA3AF] group-hover:text-white transition-colors font-medium text-center leading-tight">
               {option.label}
             </span>
           </motion.button>

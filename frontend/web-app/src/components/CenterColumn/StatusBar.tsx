@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Wifi, Bell, Battery, Mic, Terminal, PanelLeft, PanelRight, Bot } from 'lucide-react';
+import { Wifi, Bell, Terminal, PanelLeft, PanelRight, Bot, Layers } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { apiUrl } from '../../lib/api';
@@ -10,7 +10,19 @@ const StatusBar = () => {
   const [isCharging, setIsCharging] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [isFloatingActive, setIsFloatingActive] = useState(false);
-  const { isVoiceActive, isConnected, setSelectedView, isLeftSidebarOpen, isRightSidebarOpen, toggleLeftSidebar, toggleRightSidebar, systemLogs } = useDashboard();
+  const {
+    isConnected,
+    setSelectedView,
+    isLeftSidebarOpen,
+    isRightSidebarOpen,
+    toggleLeftSidebar,
+    toggleRightSidebar,
+    systemLogs,
+    activeChains,
+  } = useDashboard();
+
+  const logs = systemLogs || [];
+  const activeChainCount = activeChains ? activeChains.length : 0;
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -25,7 +37,6 @@ const StatusBar = () => {
     const getBatteryStatus = async () => {
       if ('getBattery' in navigator) {
         try {
-           
           const battery: any = await (navigator as any).getBattery();
 
           const updateBattery = () => {
@@ -44,11 +55,9 @@ const StatusBar = () => {
           };
         } catch (error) {
           console.log('Battery API not available:', error);
-          // Fallback to a reasonable default
           setBatteryLevel(100);
         }
       } else {
-        // Battery API not supported
         setBatteryLevel(100);
       }
     };
@@ -65,19 +74,6 @@ const StatusBar = () => {
     });
   };
 
-  const getBatteryIcon = () => {
-    if (isCharging) return '🔌';
-    if (batteryLevel > 80) return '🔋';
-    if (batteryLevel > 20) return '🔋';
-    return '🪫';
-  };
-
-  const getBatteryColor = () => {
-    if (isCharging) return 'text-[#3B82F6]';
-    if (batteryLevel > 20) return 'text-[#10B981]';
-    return 'text-[#EF4444]';
-  };
-
   return (
     <motion.div
       className="w-full bg-[#1a1f2e]/40 backdrop-blur-md rounded-lg border border-white/5 px-4 sm:px-6 py-3 flex items-center justify-between shadow-sm"
@@ -86,13 +82,13 @@ const StatusBar = () => {
       transition={{ delay: 0.1 }}
     >
       {/* Left Group */}
-      <div className="flex items-center gap-4 sm:gap-6 flex-1">
+      <div className="flex items-center gap-4 sm:gap-5 flex-1">
         {/* Left Sidebar Toggle */}
         <motion.div
           className="relative cursor-pointer"
           whileHover={{ scale: 1.1 }}
           onClick={toggleLeftSidebar}
-          title={isLeftSidebarOpen ? "Hide Left Sidebar" : "Show Left Sidebar"}
+          title={isLeftSidebarOpen ? 'Hide Left Sidebar' : 'Show Left Sidebar'}
         >
           <PanelLeft className={`w-5 h-5 transition-colors ${isLeftSidebarOpen ? 'text-[#00f3ff]' : 'text-[#9CA3AF] hover:text-white'}`} strokeWidth={1.5} />
         </motion.div>
@@ -106,6 +102,23 @@ const StatusBar = () => {
         >
           <Terminal className="w-5 h-5 text-[#9CA3AF] hover:text-[#00f3ff] transition-colors" strokeWidth={1.5} />
         </motion.div>
+
+        {/* Agents & Chain Orchestrator */}
+        <motion.button
+          type="button"
+          className="relative cursor-pointer flex items-center"
+          whileHover={{ scale: 1.1 }}
+          onClick={() => setSelectedView('agents')}
+          title="Multi-Agent & Chain Orchestrator"
+          aria-label="Open Multi-Agent & Chain Orchestrator"
+        >
+          <Layers className={`w-5 h-5 transition-colors ${activeChainCount > 0 ? 'text-[#00f3ff]' : 'text-[#9CA3AF] hover:text-[#00f3ff]'}`} strokeWidth={1.5} />
+          {activeChainCount > 0 && (
+            <span className="absolute -top-1 -right-1.5 min-w-[14px] h-[14px] px-0.5 rounded-full bg-[#00f3ff] text-[#050a14] text-[9px] font-bold flex items-center justify-center">
+              {activeChainCount}
+            </span>
+          )}
+        </motion.button>
       </div>
 
       {/* Center Group - Clock */}
@@ -130,8 +143,7 @@ const StatusBar = () => {
             onClick={() => setShowNotifications(!showNotifications)}
           >
             <Bell className={`w-5 h-5 transition-colors ${showNotifications ? 'text-white' : 'text-[#9CA3AF] hover:text-white'}`} strokeWidth={1.5} />
-            {/* Show dot only if there are logs (or unread logic later) */}
-            {systemLogs.length > 0 && (
+            {logs.length > 0 && (
               <span className="absolute 1 top-0 right-0 w-2 h-2 bg-[#EF4444] rounded-full border-2 border-[#1a1f2e]" />
             )}
           </motion.div>
@@ -140,9 +152,8 @@ const StatusBar = () => {
           <AnimatePresence>
             {showNotifications && (
               <>
-                {/* Backdrop to close when clicking outside */}
-                <div 
-                  className="fixed inset-0 z-40" 
+                <div
+                  className="fixed inset-0 z-40"
                   onClick={() => setShowNotifications(false)}
                 />
                 <motion.div
@@ -154,11 +165,11 @@ const StatusBar = () => {
                 >
                   <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between bg-black/20">
                     <span className="text-xs font-bold tracking-widest text-[#9CA3AF] uppercase">Recent Activity</span>
-                    <span className="text-[10px] text-white/40">{systemLogs.length} logs</span>
+                    <span className="text-[10px] text-white/40">{logs.length} logs</span>
                   </div>
                   <div className="max-h-64 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-white/10">
-                    {systemLogs.length > 0 ? (
-                      systemLogs.slice(0, 5).map((log) => {
+                    {logs.length > 0 ? (
+                      logs.slice(0, 5).map((log) => {
                         const colors = {
                           info: 'text-[#00f3ff] bg-[#00f3ff]/10',
                           success: 'text-[#10B981] bg-[#10B981]/10',
@@ -179,7 +190,7 @@ const StatusBar = () => {
                       <div className="p-4 text-center text-xs text-white/40">No recent activity</div>
                     )}
                   </div>
-                  <div 
+                  <div
                     className="p-2 border-t border-white/5 text-center bg-black/20 cursor-pointer hover:bg-white/5 transition-colors"
                     onClick={() => {
                       setSelectedView('dashboard');
@@ -209,14 +220,12 @@ const StatusBar = () => {
         {/* Minimal Battery */}
         <div className="flex items-center gap-2" title={`Battery: ${batteryLevel}% ${isCharging ? '(Charging)' : ''}`}>
           <div className="relative w-7 h-3.5 rounded-sm border border-[#9CA3AF] flex items-center p-[1px]">
-            {/* Battery fill */}
-            <motion.div 
+            <motion.div
               className={`h-full rounded-sm ${isCharging ? 'bg-[#3B82F6]' : batteryLevel > 20 ? 'bg-[#10B981]' : 'bg-[#EF4444]'}`}
               initial={{ width: 0 }}
               animate={{ width: `${batteryLevel}%` }}
               transition={{ duration: 1 }}
             />
-            {/* Battery tip */}
             <div className="absolute -right-[3px] top-1/2 -translate-y-1/2 w-[2px] h-1.5 bg-[#9CA3AF] rounded-r-sm" />
           </div>
         </div>
@@ -235,11 +244,11 @@ const StatusBar = () => {
               try {
                 await fetch(apiUrl('/api/desktop/companion/toggle'), { method: 'POST' });
               } catch (e) {
-                console.error("Failed to toggle floating companion:", e);
+                console.error('Failed to toggle floating companion:', e);
               }
             }
           }}
-          title={isFloatingActive ? "Floating Robot Launched on Screen!" : "Float Mini Robot on Screen"}
+          title={isFloatingActive ? 'Floating Robot Launched on Screen!' : 'Float Mini Robot on Screen'}
         >
           <Bot className={`w-5 h-5 transition-all ${isFloatingActive ? 'text-[#00f3ff] drop-shadow-[0_0_8px_#00f3ff] animate-pulse' : 'text-[#9CA3AF] hover:text-[#00f3ff]'}`} strokeWidth={1.5} />
         </motion.div>
@@ -249,7 +258,7 @@ const StatusBar = () => {
           className="relative cursor-pointer hidden md:block ml-2"
           whileHover={{ scale: 1.1 }}
           onClick={toggleRightSidebar}
-          title={isRightSidebarOpen ? "Hide Conversation History" : "Show Conversation History"}
+          title={isRightSidebarOpen ? 'Hide Conversation History' : 'Show Conversation History'}
         >
           <PanelRight className={`w-5 h-5 transition-colors ${isRightSidebarOpen ? 'text-[#00f3ff]' : 'text-[#9CA3AF] hover:text-white'}`} strokeWidth={1.5} />
         </motion.div>

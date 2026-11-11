@@ -1,10 +1,9 @@
 import { motion } from 'framer-motion';
-import { Calendar, Mail, Music, MessageCircle, Github, Link, Unlink, ExternalLink, RefreshCw, Key, Server } from 'lucide-react';
+import { Calendar, Mail, Music, MessageCircle, Github, Link, Unlink, ExternalLink, RefreshCw, Key, Server, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
-// import { useDashboard } from '../../contexts/DashboardContext';
-import { apiUrl } from '../../lib/api';
+import { useDashboard } from '../../contexts/DashboardContext';
+import { API_ENDPOINTS, apiFetchJson } from '../../lib/api';
 
-// Define the integration types
 type IntegrationStatus = 'connected' | 'disconnected' | 'connecting' | 'error';
 
 interface Integration {
@@ -12,13 +11,11 @@ interface Integration {
   name: string;
   description: string;
   category: string;
-   
-  icon: any; // Lucide icon
+  icon: any;
   color: string;
   status: IntegrationStatus;
   lastSync?: string;
   error?: string;
-   
   tools?: any[];
   isEnabled?: boolean;
 }
@@ -30,8 +27,8 @@ const initialIntegrations: Integration[] = [
     description: 'Sync your schedule and let the AI manage your meetings.',
     category: 'Productivity',
     icon: Calendar,
-    color: '#4285F4', // Google Blue
-    status: 'disconnected'
+    color: '#4285F4',
+    status: 'disconnected',
   },
   {
     id: 'gmail',
@@ -39,8 +36,8 @@ const initialIntegrations: Integration[] = [
     description: 'Read and draft emails automatically with AI assistance.',
     category: 'Communication',
     icon: Mail,
-    color: '#EA4335', // Google Red
-    status: 'disconnected'
+    color: '#EA4335',
+    status: 'disconnected',
   },
   {
     id: 'spotify',
@@ -48,9 +45,8 @@ const initialIntegrations: Integration[] = [
     description: 'Control your music playback and discover new tracks.',
     category: 'Media',
     icon: Music,
-    color: '#1DB954', // Spotify Green
-    status: 'connected',
-    lastSync: '2 mins ago'
+    color: '#1DB954',
+    status: 'disconnected',
   },
   {
     id: 'whatsapp',
@@ -58,8 +54,8 @@ const initialIntegrations: Integration[] = [
     description: 'Send and receive messages hands-free.',
     category: 'Communication',
     icon: MessageCircle,
-    color: '#25D366', // WhatsApp Green
-    status: 'disconnected'
+    color: '#25D366',
+    status: 'disconnected',
   },
   {
     id: 'github',
@@ -67,84 +63,83 @@ const initialIntegrations: Integration[] = [
     description: 'Manage PRs, issues, and repositories directly.',
     category: 'Development',
     icon: Github,
-    color: '#F0F6FC', // GitHub White
-    status: 'disconnected'
-  }
+    color: '#F0F6FC',
+    status: 'disconnected',
+  },
 ];
 
 const IntegrationsDetail = () => {
+  const { setSelectedView } = useDashboard();
   const [integrations, setIntegrations] = useState<Integration[]>(initialIntegrations);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'all' | 'connected' | 'productivity' | 'communication' | 'media'>('all');
+  const [feedback, setFeedback] = useState<{ type: 'info' | 'error' | 'success'; text: string } | null>(null);
+  const [selectedToolsIntegration, setSelectedToolsIntegration] = useState<Integration | null>(null);
+  const [activeTab, setActiveTab] = useState<
+    'all' | 'connected' | 'productivity' | 'communication' | 'media' | 'development' | 'mcp'
+  >('all');
 
   const fetchStatus = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      
-      // Fetch normal API integration status
-      const res = await fetch(apiUrl('/api/integrations/status'));
-      const data = await res.json();
-      
-      // Fetch MCP status
-       
-      let mcpServers: any[] = [];
-      try {
-        const mcpRes = await fetch(apiUrl('/api/integrations/mcp'));
-        const mcpData = await mcpRes.json();
-        if (mcpData.success && mcpData.servers) {
-          mcpServers = mcpData.servers;
-        }
-      } catch (err) {
-        console.error("Failed to fetch MCP status", err);
-      }
+      const [statusRes, mcpRes] = await Promise.all([
+        apiFetchJson<any>(API_ENDPOINTS.integrations.status),
+        apiFetchJson<any>(API_ENDPOINTS.integrations.mcp),
+      ]);
 
-      setIntegrations(prev => {
-        const updated = prev.map(integration => {
-          if (data.success && data.integrations && data.integrations[integration.id]) {
+      const data = statusRes.ok && statusRes.data ? statusRes.data : null;
+      const mcpServers: any[] =
+        mcpRes.ok && mcpRes.data?.success && Array.isArray(mcpRes.data.servers)
+          ? mcpRes.data.servers
+          : [];
+
+      setIntegrations((prev) => {
+        const updated = prev.map((integration) => {
+          if (data?.success && data.integrations?.[integration.id]) {
             const backendData = data.integrations[integration.id];
+            const st = (backendData.status || 'disconnected') as IntegrationStatus;
             return {
               ...integration,
-              status: backendData.status,
-              lastSync: backendData.status === 'connected' ? 'Synced' : undefined
+              status: st,
+              lastSync: st === 'connected' ? backendData.lastSync || 'Synced' : undefined,
             };
           }
           return integration;
         });
-        
-        // Merge MCP servers into the array
-        mcpServers.forEach(server => {
-          const existingIdx = updated.findIndex(i => i.id === server.id);
-          const icon = Server; // Default fallback icon
-          
+
+        mcpServers.forEach((server) => {
+          const existingIdx = updated.findIndex((i) => i.id === server.id);
+          const desc =
+            (server.description || 'MCP Integration') +
+            (server.tools?.length > 0 ? ` (${server.tools.length} tools available)` : '');
+
           if (existingIdx >= 0) {
             updated[existingIdx] = {
               ...updated[existingIdx],
-              status: server.status,
-              name: server.name,
-              description: server.description + (server.tools?.length > 0 ? ` (${server.tools.length} tools available)` : ''),
+              status: server.status || 'disconnected',
+              name: server.name || updated[existingIdx].name,
+              description: desc,
               tools: server.tools,
               isEnabled: server.isEnabled,
             };
           } else {
             updated.push({
               id: server.id,
-              name: server.name,
-              description: server.description + (server.tools?.length > 0 ? ` (${server.tools.length} tools available)` : ''),
+              name: server.name || server.id,
+              description: desc,
               category: server.category || 'MCP',
-              icon: icon,
-              color: '#8B5CF6', // Purple for MCP
-              status: server.status,
+              icon: Server,
+              color: '#8B5CF6',
+              status: server.status || 'disconnected',
               tools: server.tools,
-              isEnabled: server.isEnabled
+              isEnabled: server.isEnabled,
             });
           }
         });
-        
+
         return updated;
       });
-
     } catch (e) {
-      console.error("Failed to fetch integration status", e);
+      console.error('Failed to fetch integration status', e);
     } finally {
       setLoading(false);
     }
@@ -155,47 +150,54 @@ const IntegrationsDetail = () => {
   }, []);
 
   const handleConnect = async (id: string) => {
-    // Optimistic UI update
-    setIntegrations(prev => 
-      prev.map(init => init.id === id ? { ...init, status: 'connecting' } : init)
+    setFeedback(null);
+    setIntegrations((prev) =>
+      prev.map((init) => (init.id === id ? { ...init, status: 'connecting' } : init))
     );
 
-    try {
-      const res = await fetch(apiUrl('/api/integrations/connect'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ integration_id: id })
+    const res = await apiFetchJson<any>(API_ENDPOINTS.integrations.connect, {
+      method: 'POST',
+      body: JSON.stringify({ integration_id: id }),
+    });
+
+    if (res.ok && res.data?.success) {
+      setFeedback({ type: 'success', text: `Connected ${id} successfully.` });
+      fetchStatus();
+    } else {
+      setFeedback({
+        type: 'error',
+        text: `Failed to connect ${id}: ${res.error || res.data?.error || 'Backend integration route unavailable'}`,
       });
-      const data = await res.json();
-      
-      if (data.success) {
-        fetchStatus(); // Refresh all statuses
-      } else {
-        alert(`Failed to connect ${id}: ${data.error || 'Unknown error'}`);
-        // Revert to disconnected
-        setIntegrations(prev => 
-          prev.map(init => init.id === id ? { ...init, status: 'disconnected' } : init)
-        );
-      }
-    } catch (e) {
-      console.error(e);
-      alert("Error reaching server to connect.");
-      setIntegrations(prev => 
-        prev.map(init => init.id === id ? { ...init, status: 'disconnected' } : init)
+      setIntegrations((prev) =>
+        prev.map((init) => (init.id === id ? { ...init, status: 'disconnected' } : init))
       );
     }
   };
 
   const handleDisconnect = async (id: string) => {
-    // We don't have a backend disconnect yet for some services, just doing optimistic disconnect locally for now if it's Spotify etc.
-    // For Calendar/Email, deleting credentials.json is required manually currently.
-    alert("To fully disconnect, you may need to revoke access from your Google/Spotify account settings.");
-    setIntegrations(prev => 
-      prev.map(init => init.id === id ? { ...init, status: 'disconnected', lastSync: undefined } : init)
+    setFeedback(null);
+    const res = await apiFetchJson<any>(API_ENDPOINTS.integrations.disconnect, {
+      method: 'POST',
+      body: JSON.stringify({ integration_id: id }),
+    });
+
+    setIntegrations((prev) =>
+      prev.map((init) =>
+        init.id === id ? { ...init, status: 'disconnected', lastSync: undefined } : init
+      )
     );
+
+    if (res.ok && res.data?.success) {
+      setFeedback({ type: 'info', text: `Disconnected ${id}.` });
+    } else {
+      setFeedback({
+        type: 'info',
+        text: `Disconnected ${id} locally${res.error ? ` (${res.error})` : ''}.`,
+      });
+    }
   };
 
-  const filteredIntegrations = integrations.filter(integration => {
+  const filteredIntegrations = integrations.filter((integration) => {
     if (activeTab === 'all') return true;
     if (activeTab === 'connected') return integration.status === 'connected';
     return integration.category.toLowerCase() === activeTab;
@@ -206,13 +208,16 @@ const IntegrationsDetail = () => {
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400 mb-2">Web Services & APIs</h3>
+          <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400 mb-2">
+            Web Services & APIs
+          </h3>
           <p className="text-[#9CA3AF] max-w-lg">
-            Connect third-party apps to grant your AI assistant new capabilities. Automate tasks across your favorite platforms.
+            Connect third-party apps and MCP servers to grant your AI assistant new capabilities.
           </p>
         </div>
         <div className="flex gap-2">
           <button
+            type="button"
             onClick={() => fetchStatus()}
             disabled={loading}
             className="px-4 py-2 bg-[#2A2D35]/50 text-white rounded-lg hover:bg-[#3B82F6]/20 transition-all duration-300 font-medium flex items-center gap-2"
@@ -221,7 +226,8 @@ const IntegrationsDetail = () => {
             Refresh
           </button>
           <button
-            onClick={() => {}}
+            type="button"
+            onClick={() => setSelectedView('settings')}
             className="px-4 py-2 bg-gradient-to-r from-[#3B82F6]/20 to-[#8B5CF6]/20 text-white rounded-lg hover:from-[#3B82F6]/30 hover:to-[#8B5CF6]/30 border border-[#3B82F6]/30 transition-all duration-300 font-medium flex items-center gap-2 shadow-[0_0_15px_rgba(59,130,246,0.1)]"
           >
             <Key className="w-4 h-4 text-[#3B82F6]" />
@@ -230,20 +236,37 @@ const IntegrationsDetail = () => {
         </div>
       </div>
 
+      {feedback && (
+        <div
+          className={`flex items-center justify-between gap-2 px-4 py-2.5 rounded-lg border text-xs ${
+            feedback.type === 'error'
+              ? 'bg-red-500/10 border-red-500/30 text-red-300'
+              : feedback.type === 'success'
+              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+              : 'bg-blue-500/10 border-blue-500/30 text-blue-200'
+          }`}
+        >
+          <span>{feedback.text}</span>
+          <button type="button" onClick={() => setFeedback(null)} aria-label="Dismiss message">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Navigation Tabs */}
       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-        {['all', 'connected', 'productivity', 'communication', 'media'].map((tab) => (
+        {(['all', 'connected', 'productivity', 'communication', 'media', 'development', 'mcp'] as const).map((tab) => (
           <button
             key={tab}
-             
-            onClick={() => setActiveTab(tab as any)}
+            type="button"
+            onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 whitespace-nowrap ${
               activeTab === tab
                 ? 'bg-white text-black shadow-lg scale-105'
                 : 'bg-[#1A1D24] text-[#9CA3AF] hover:bg-[#2A2D35] hover:text-white border border-[#2A2D35]'
             }`}
           >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {tab === 'mcp' ? 'MCP' : tab.charAt(0).toUpperCase() + tab.slice(1)}
           </button>
         ))}
       </div>
@@ -255,7 +278,7 @@ const IntegrationsDetail = () => {
             key={integration.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1, duration: 0.4 }}
+            transition={{ delay: index * 0.06, duration: 0.3 }}
             whileHover={{ y: -4 }}
             className={`relative overflow-hidden bg-[#16181D] rounded-xl border border-[#2A2D35] p-6 group transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.3)] ${
               integration.status === 'connected' ? 'border-[#10B981]/30 bg-gradient-to-br from-[#16181D] to-[#10B981]/5' : ''
@@ -263,7 +286,7 @@ const IntegrationsDetail = () => {
           >
             {/* Top row: Icon & Status Badge */}
             <div className="flex justify-between items-start mb-4">
-              <div 
+              <div
                 className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110 shadow-lg"
                 style={{ backgroundColor: `${integration.color}15`, color: integration.color, border: `1px solid ${integration.color}30` }}
               >
@@ -298,10 +321,16 @@ const IntegrationsDetail = () => {
                     {integration.lastSync ? `Sync: ${integration.lastSync}` : 'Active'}
                   </span>
                   <div className="flex gap-2">
-                    <button className="p-2 text-[#9CA3AF] hover:text-white hover:bg-[#2A2D35] rounded-lg transition-colors">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedToolsIntegration(integration)}
+                      title="Inspect integration details"
+                      className="p-2 text-[#9CA3AF] hover:text-white hover:bg-[#2A2D35] rounded-lg transition-colors"
+                    >
                       <ExternalLink className="w-4 h-4" />
                     </button>
-                    <button 
+                    <button
+                      type="button"
                       onClick={() => handleDisconnect(integration.id)}
                       className="p-2 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded-lg transition-colors"
                       title="Disconnect"
@@ -312,6 +341,7 @@ const IntegrationsDetail = () => {
                 </>
               ) : (
                 <button
+                  type="button"
                   onClick={() => handleConnect(integration.id)}
                   disabled={integration.status === 'connecting'}
                   className="w-full py-2.5 bg-white text-black font-semibold rounded-lg hover:bg-gray-200 active:scale-[0.98] transition-all flex justify-center items-center gap-2"
@@ -330,7 +360,34 @@ const IntegrationsDetail = () => {
           </motion.div>
         ))}
       </div>
-      
+
+      {selectedToolsIntegration && (
+        <div className="bg-[#1F2228] border border-[#2A2D35] rounded-xl p-4 space-y-2">
+          <div className="flex items-center justify-between">
+            <h5 className="text-sm font-semibold text-white">
+              {selectedToolsIntegration.name} — Integration Details
+            </h5>
+            <button
+              type="button"
+              onClick={() => setSelectedToolsIntegration(null)}
+              className="text-[#9CA3AF] hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <p className="text-xs text-[#9CA3AF]">{selectedToolsIntegration.description}</p>
+          {selectedToolsIntegration.tools && selectedToolsIntegration.tools.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {selectedToolsIntegration.tools.map((t: any, i: number) => (
+                <span key={i} className="text-[11px] px-2 py-0.5 rounded bg-[#0D1017] border border-[#2A2D35] text-cyan-300">
+                  {typeof t === 'string' ? t : t.name || 'tool'}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {filteredIntegrations.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-[#2A2D35] rounded-xl bg-[#16181D]/50">
           <div className="w-16 h-16 rounded-full bg-[#1A1D24] border border-[#2A2D35] flex items-center justify-center mb-4">

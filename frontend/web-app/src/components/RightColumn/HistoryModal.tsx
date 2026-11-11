@@ -9,10 +9,8 @@ import {
   Search, 
   ArrowUpRight, 
   Sparkles,
-  Bot,
-  User,
+  Activity,
   Mic,
-  RotateCcw
 } from 'lucide-react';
 import { useDashboard } from '../../contexts/DashboardContext';
 
@@ -95,6 +93,12 @@ const HistoryModal = ({ isOpen, onClose }: HistoryModalProps) => {
     );
     if (aiMsg) return aiMsg.text.trim();
 
+    // Look for meaningful session activity
+    const actItem = session.activities?.find((a: any) =>
+      a.kind !== 'session' && a.kind !== 'startup' && (a.detail || a.title)
+    );
+    if (actItem) return String(actItem.detail || actItem.title).trim();
+
     return session.preview || 'Conversation Session';
   };
 
@@ -136,13 +140,19 @@ const HistoryModal = ({ isOpen, onClose }: HistoryModalProps) => {
       const preview = getSessionPreview(session).toLowerCase();
       const dateInfo = getSessionDateInfo(session);
       const hasInMessages = session.messages?.some((m: any) => m.text?.toLowerCase()?.includes(q));
+      const hasInVoice = session.voiceCommands?.some((v: any) => v.command?.toLowerCase()?.includes(q));
+      const hasInActivities = session.activities?.some(
+        (a: any) => a.title?.toLowerCase()?.includes(q) || a.detail?.toLowerCase()?.includes(q)
+      );
       return (
         preview.includes(q) ||
         dateInfo.day.toLowerCase().includes(q) ||
         dateInfo.date.toLowerCase().includes(q) ||
         session.startTime?.toLowerCase()?.includes(q) ||
         session.endTime?.toLowerCase()?.includes(q) ||
-        hasInMessages
+        hasInMessages ||
+        hasInVoice ||
+        hasInActivities
       );
     });
   }, [conversationHistory, searchQuery]);
@@ -291,6 +301,15 @@ const HistoryModal = ({ isOpen, onClose }: HistoryModalProps) => {
                     const dateInfo = getSessionDateInfo(session);
                     const previewText = getSessionPreview(session);
                     const durationText = getSessionDuration(session);
+                    const msgCount = session.messageCount ?? session.messages?.length ?? 0;
+                    const userCount = session.userMessageCount ?? session.messages?.filter((m: any) => m.type === 'user').length ?? 0;
+                    const aiCount = session.aiMessageCount ?? session.messages?.filter((m: any) => m.type === 'ai').length ?? 0;
+                    const voiceCount = session.voiceCount ?? session.voiceCommands?.length ?? 0;
+                    const activityCount = session.activityCount ?? session.activities?.length ?? 0;
+                    const hasOrbVoice = Boolean(
+                      session.messages?.some((m: any) => String(m.source || '').toLowerCase().includes('companion')) ||
+                      session.activities?.some((a: any) => String(a.source || '').toLowerCase().includes('companion'))
+                    );
 
                     return (
                       <motion.div
@@ -330,6 +349,14 @@ const HistoryModal = ({ isOpen, onClose }: HistoryModalProps) => {
                             <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-[#3B82F6]/10 text-[#60A5FA] border border-[#3B82F6]/20">
                               ⏱ {durationText}
                             </span>
+
+                            {/* Glowing Orb Badge */}
+                            {hasOrbVoice && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/25">
+                                <Sparkles className="w-2.5 h-2.5" />
+                                <span>Orb</span>
+                              </span>
+                            )}
                           </div>
 
                           {/* Delete Action */}
@@ -352,36 +379,40 @@ const HistoryModal = ({ isOpen, onClose }: HistoryModalProps) => {
 
                         {/* Bottom Row: Metrics & Quick Resume Action */}
                         <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-[#1C202B]">
-                          <div className="flex items-center gap-3 text-[11px]">
+                          <div className="flex flex-wrap items-center gap-3 text-[11px]">
                             {/* Message count */}
                             <div className="flex items-center gap-1 text-[#94A3B8]">
                               <MessageSquare className="w-3 h-3 text-[#64748B]" />
-                              <span>{session.messageCount || session.messages?.length || 0} msgs</span>
+                              <span>{msgCount} msgs</span>
                             </div>
 
                             {/* User messages count */}
                             <div className="flex items-center gap-1 text-[#64748B]">
                               <span className="w-1.5 h-1.5 rounded-full bg-[#3B82F6]" />
                               <span>User:</span>
-                              <span className="text-slate-300 font-medium">
-                                {session.userMessageCount ?? session.messages?.filter((m: any) => m.type === 'user').length ?? 0}
-                              </span>
+                              <span className="text-slate-300 font-medium">{userCount}</span>
                             </div>
 
                             {/* AI messages count */}
                             <div className="flex items-center gap-1 text-[#64748B]">
                               <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
                               <span>AI:</span>
-                              <span className="text-slate-300 font-medium">
-                                {session.aiMessageCount ?? session.messages?.filter((m: any) => m.type === 'ai').length ?? 0}
-                              </span>
+                              <span className="text-slate-300 font-medium">{aiCount}</span>
                             </div>
 
                             {/* Voice commands count */}
-                            {(session.voiceCount || 0) > 0 && (
+                            {voiceCount > 0 && (
                               <div className="flex items-center gap-1 text-[#64748B]">
                                 <Mic className="w-3 h-3 text-[#F59E0B]" />
-                                <span className="text-[#F59E0B] font-medium">{session.voiceCount}</span>
+                                <span className="text-[#F59E0B] font-medium">{voiceCount}</span>
+                              </div>
+                            )}
+
+                            {/* Unified Activity count */}
+                            {activityCount > 0 && (
+                              <div className="flex items-center gap-1 text-[#64748B]" title="Session activities">
+                                <Activity className="w-3 h-3 text-sky-400" />
+                                <span className="text-sky-300 font-medium">{activityCount}</span>
                               </div>
                             )}
                           </div>

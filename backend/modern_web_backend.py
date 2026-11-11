@@ -30,21 +30,36 @@ if sys.stderr is not None and hasattr(sys.stderr, 'reconfigure'):
     except Exception:
         pass
 
-# Fix python paths for new modular monorepo
+# Fix python paths for new modular monorepo (works in both dev and frozen PyInstaller bundles)
 from pathlib import Path
 backend_dir = Path(__file__).parent.absolute()
-project_root = backend_dir.parent.absolute()
+if getattr(sys, 'frozen', False):
+    project_root = Path(getattr(sys, '_MEIPASS', Path(sys.executable).parent)).absolute()
+else:
+    project_root = backend_dir.parent.absolute()
 core_ai_src = project_root / 'core_ai' / 'src'
 shared_dir = project_root / 'shared'
 
-if str(core_ai_src) not in sys.path:
-    sys.path.insert(0, str(core_ai_src))
-if str(shared_dir) not in sys.path:
-    sys.path.insert(0, str(shared_dir))
+for _p in (str(backend_dir), str(core_ai_src), str(shared_dir), str(project_root)):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+
+from settings_manager import get_env_file
+
+try:
+    from ai_assistant.core.local_command_normalizer import ensure_project_ffmpeg_in_path
+    ensure_project_ffmpeg_in_path(project_root)
+except Exception:
+    pass
 
 
 # Initialize new session (must be first import)
 import utils.session_init
+try:
+    from utils.chat_session_store import get_session_store as _init_chat_session_store
+    _init_chat_session_store()
+except Exception:
+    pass
 from utils.session_activity_logger import (
     log_api_request,
     log_system_command,
@@ -84,8 +99,8 @@ except ImportError:
 if sys.platform == 'win32':
     pass
 
-# Load environment variables from absolute path
-_env_path = Path(__file__).parent.parent.parent.parent / '.env'
+# Load environment variables from canonical .env path
+_env_path = get_env_file()
 if _env_path.exists():
     load_dotenv(_env_path)
 else:
@@ -194,7 +209,6 @@ CONVERSATIONAL_AI_AVAILABLE = True
 MULTILINGUAL_AVAILABLE = True
 ADVANCED_CHAT_AVAILABLE = True
 LLM_PROVIDER_AVAILABLE = True
-LOCAL_AI_AVAILABLE = True
 ENHANCED_AI_AVAILABLE = True
 USAGE_ANALYZER_AVAILABLE = True
 
@@ -299,7 +313,16 @@ def initialize_heavy_ai_models():
             logger.info("✅ Noise Reduction initialized in background")
         except Exception as e:
             logger.warning(f"⚠️ Noise Reduction module not available: {e}")
-            
+
+        # Pre-warm neural offline TTS fallback (KittenTTS mini-0.8) so first wake/command speaks instantly
+        try:
+            from ai_assistant.voice.tts_output_service import get_tts_service, load_kitten_mini_model
+            get_tts_service()
+            load_kitten_mini_model()
+            logger.info("✅ KittenTTS mini-0.8 pre-warmed in background")
+        except Exception as e:
+            logger.debug(f"KittenTTS pre-warm note: {e}")
+
         logger.info("✅ Background AI Initialization COMPLETE!")
     except Exception as e:
         logger.error(f"❌ Background AI Initialization failed: {e}")
@@ -356,6 +379,12 @@ def serve_companion():
 @app.route('/<path:path>')
 def serve_static_or_spa(path):
     """Serve static asset if it exists, otherwise fall back to index.html for client routing"""
+    if path == 'api' or path.startswith('api/'):
+        return jsonify({
+            "error": "Not found",
+            "message": f"API endpoint '/{path}' not found",
+            "timestamp": datetime.now().isoformat()
+        }), 404
     file_path = os.path.join(static_dir, path)
     if os.path.exists(file_path) and os.path.isfile(file_path):
         return send_from_directory(static_dir, path)
@@ -371,7 +400,7 @@ def get_or_create_env_secret(name: str) -> str:
         
     # Generate new stable random key
     new_key = secrets.token_hex(32)
-    env_path = Path(__file__).parent.parent.parent.parent / '.env'
+    env_path = get_env_file()
     
     try:
         env_path.parent.mkdir(parents=True, exist_ok=True)
@@ -426,8 +455,15 @@ def exempt_localhost():
     """Exempt the local desktop app from all rate limits so health checks don't ban it."""
     return request.remote_addr in ('127.0.0.1', 'localhost', '::1')
 
-# Secure CORS Configuration
-ALLOWED_ORIGINS = os.getenv('ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5000,http://127.0.0.1:3000,http://127.0.0.1:5000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:15000,http://127.0.0.1:15000').split(',')
+# Secure CORS Configuration (dynamically includes runtime desktop port)
+_runtime_port = str(os.getenv('PORT', '5000')).strip() or '5000'
+_default_origins = (
+    f'http://localhost:3000,http://localhost:5000,http://127.0.0.1:3000,http://127.0.0.1:5000,'
+    f'http://localhost:{_runtime_port},http://127.0.0.1:{_runtime_port},'
+    f'http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,'
+    f'http://localhost:15000,http://127.0.0.1:15000,tauri://localhost,https://tauri.localhost,http://tauri.localhost'
+)
+ALLOWED_ORIGINS = os.getenv('ALLOWED_ORIGINS', _default_origins).split(',')
 CORS(app, resources={
     r"/api/*": {
         "origins": ALLOWED_ORIGINS,
@@ -445,7 +481,7 @@ CORS(app, resources={
 # Initialize SocketIO for WebSocket support (single init with secure origins)
 socketio = SocketIO(
     app,
-    cors_allowed_origins=ALLOWED_ORIGINS,
+    cors_allowed_origins="*",
     async_mode='threading',
     logger=False,  # Disable verbose logging
     engineio_logger=False,  # Disable engine.io logging
@@ -504,59 +540,6 @@ logger.info(f"  - Multimodal AI: {ENABLE_MULTIMODAL}")
 logger.info(f"  - Conversational AI: {ENABLE_CONVERSATIONAL_AI}")
 logger.info(f"  - System Monitoring: {ENABLE_SYSTEM_MONITORING}")
 
-# =============================================================================
-# GLOBAL: Local AI Manager
-# =============================================================================
-
-local_ai_manager = None
-local_ai_initialized = False
-
-def initialize_local_ai():
-    """Initialize local AI model in background"""
-    global local_ai_manager, local_ai_initialized
-    
-    if not LOCAL_AI_AVAILABLE:
-        logger.warning("Local AI not available")
-        return
-    
-    try:
-        logger.info("Initializing Local AI Manager (Ollama)...")
-        local_ai_manager = LocalAIManager()
-        
-        # Check if Ollama is running
-        if not local_ai_manager.is_ollama_running():
-            logger.warning("Ollama service is not running. Start it with 'ollama serve'")
-            return
-        
-        # Check for available models using auto-detection
-        model_name = local_ai_manager.find_best_available_model()
-        
-        if model_name:
-            logger.info(f"Loading Ollama model: {model_name}")
-            if local_ai_manager.load_model(model_name):
-                local_ai_initialized = True
-                logger.info("Local AI ready!")
-            else:
-                logger.error(f"Failed to load model: {model_name}")
-        else:
-            logger.warning("No Ollama models found. Download with:")
-            logger.warning("  ollama pull llama3.2")
-    
-    except Exception as e:
-        logger.error(f"Local AI initialization failed: {e}")
-
-
-# ⚡ OPTIMIZATION: Lazy load Ollama - only initialize when user selects it
-# This saves 30-60 seconds on startup!
-# Ollama will be initialized on-demand when provider == 'ollama'
-# 
-# if BACKGROUND_INIT and LOCAL_AI_AVAILABLE:
-#     threading.Thread(target=initialize_local_ai, daemon=True).start()
-
-logger.info("⚡ Ollama will load on-demand (lazy loading enabled)")
-
-# =============================================================================
-
 # Available Voice Options for TTS - Unified from voice_service to prevent duplicates
 from voice_service import AVAILABLE_VOICES
 
@@ -581,9 +564,12 @@ from voice_service import AVAILABLE_VOICES
 try:
     from voice_service import voice_bp, init_professional_voice_services
     
-    # Register voice API blueprint
-    app.register_blueprint(voice_bp, url_prefix='/api/voice')
-    logger.info("✅ Voice API blueprint registered at /api/voice")
+    # Register voice API blueprint (guard against duplicate registration)
+    if not any(bp.name == 'voice' for bp in app.blueprints.values()):
+        app.register_blueprint(voice_bp, url_prefix='/api/voice')
+        logger.info("✅ Voice API blueprint registered at /api/voice")
+    else:
+        logger.info("✅ Voice API blueprint already registered (skipping duplicate)")
     
     # Initialize professional voice services with WebSocket support
     voice_initialized = init_professional_voice_services(socketio)
@@ -592,8 +578,8 @@ try:
         logger.info("=" * 60)
         logger.info("¤ PROFESSIONAL VOICE SYSTEM ACTIVATED")
         logger.info("=" * 60)
-        logger.info("✅ SmartWakeWordDetector - PocketSphinx (Offline)")
-        logger.info("✅ NeuralVoiceEngine - Edge-TTS + Coqui")
+        logger.info("✅ SmartWakeWordDetector - Offline Wake Detection")
+        logger.info("✅ NeuralVoiceEngine - KittenTTS (Offline Default) + EdgeTTS")
         logger.info("✅ VoiceActivityDetector - WebRTC VAD")
         logger.info("✅ Speaker Recognition - Enabled")
         logger.info("✅ Advanced STT - Whisper + Google + Vosk")
@@ -634,8 +620,8 @@ del _admin_password
 
 # Input Validation Patterns
 VALIDATION_PATTERNS = {
-    'command': re.compile(r'^[\w\s\-.,!?@#$%()+=:;"\']+$'),
-    'app_name': re.compile(r'^[\w\s\-.]+$'),
+    'command': re.compile(r'^[^\x00-\x08\x0b\x0c\x0e-\x1f<>]+$', re.UNICODE),
+    'app_name': re.compile(r'^[^\x00-\x1f<>]+$', re.UNICODE),
     'username': re.compile(r'^[a-zA-Z0-9_]{3,20}$'),
 }
 
@@ -1146,7 +1132,7 @@ if VOICE_API_AVAILABLE and 'voice_bp' in globals():
         if not any(bp.name == 'voice' for bp in app.blueprints.values()):
             app.register_blueprint(voice_bp, url_prefix='/api/voice')
             logger.info("✅ Voice API blueprint registered at /api/voice")
-            logger.info(f"   - GET /api/voice/list (12 voices available)")
+            logger.info("   - GET /api/voice/list (unified voices available)")
             logger.info(f"   - POST /api/voice/preview (voice preview generation)")
             logger.info(f"   - GET /api/voice/cache/stats (cache monitoring)")
         else:
@@ -1208,11 +1194,11 @@ try:
                     'is_busy': brain.is_busy(),
                     'active_chains': [
                         {
-                            'chain_id': c.chain_id,
-                            'command': c.command,
-                            'status': c.status.value,
-                            'progress': c.progress_percentage,
-                            'app_context': c.app_context
+                            'chain_id': getattr(c, 'chain_id', getattr(c, 'id', '')),
+                            'command': getattr(c, 'command', ''),
+                            'status': getattr(getattr(c, 'status', None), 'value', str(getattr(c, 'status', 'pending'))),
+                            'progress': getattr(c, 'progress_percentage', 0.0),
+                            'app_context': getattr(c, 'app_context', None)
                         }
                         for c in brain._active_chains.values()
                     ]
@@ -1288,26 +1274,28 @@ try:
 
         try:
             import os
-            if os.getenv('USE_LOCAL_LLM', 'false').lower() == 'true':
-                from ai_assistant.ai.gguf_model_manager import GGUFModelManager
-                manager = GGUFModelManager()
-                
-                # Report which file it will load / has loaded
-                m_path = getattr(manager, 'model_path', None)
-                if m_path:
-                    m_name = os.path.basename(str(m_path))
-                else:
-                    # Not loaded yet, look at what it prefers
-                    # From gguf_model_manager.py logic: it looks for iq3 first
-                    if os.path.exists(os.path.join("models", "pulsar-final-q4_k_m.gguf")):
+            from settings_manager import get_provider, get_model
+            active_provider = (get_provider() or "gemini").lower()
+            active_model = get_model() or ""
+
+            if active_provider == "gguf" or os.getenv('USE_LOCAL_LLM', 'false').lower() == 'true':
+                try:
+                    from ai_assistant.ai.gguf_model_manager import GGUFModelManager
+                    manager = GGUFModelManager()
+                    m_path = getattr(manager, 'model_path', None)
+                    if m_path:
+                        m_name = os.path.basename(str(m_path))
+                    elif os.path.exists(os.path.join("models", "pulsar-final-q4_k_m.gguf")):
                         m_name = "pulsar-final-q4_k_m.gguf"
                     else:
-                        m_name = getattr(manager, 'model_filename', 'pulsar-final-q3_k_m.gguf')
-                        
-                # Just show the exact model name being used locally
-                hud['active_model'] = f"{m_name}"
+                        m_name = active_model or getattr(manager, 'model_filename', 'pulsar-final-q4_k_m.gguf')
+                    hud['active_model'] = f"{m_name} (Local GGUF)"
+                except Exception:
+                    hud['active_model'] = f"{active_model or 'pulsar-final-q4_k_m'} (Local GGUF)"
+            elif active_provider == "openai":
+                hud['active_model'] = f"{active_model or 'gpt-4o'} (OpenAI)"
             else:
-                hud['active_model'] = 'Gemini 3.1 Pro (Cloud)'
+                hud['active_model'] = f"{active_model or 'gemini-2.5-flash'} (Gemini)"
         except Exception:
             pass
 
@@ -1434,7 +1422,175 @@ def _broadcast_chain_progress(progress):
 
 
 
-# SocketIO Handlers initialized cleanly
+# ============================================================
+# SocketIO Handlers for Live Frontend Command Dispatch
+# ============================================================
+@socketio.on('command')
+def handle_frontend_command(data):
+    """
+    Handles live chat commands emitted by frontend DashboardContext.tsx.
+    Emits 'command_response' to update chat UI and clear isAITyping indicator.
+    """
+    try:
+        try:
+            import voice_service as chat_handlers
+            if hasattr(chat_handlers, 'handle_command'):
+                chat_handlers.handle_command(data if isinstance(data, dict) else {'command': str(data)})
+                return
+        except Exception:
+            pass
+
+        if not isinstance(data, dict):
+            data = {'command': str(data)}
+        
+        command = data.get('command') or data.get('message', '')
+        try:
+            from utils.chat_session_store import get_session_store
+        except ImportError:
+            from backend.utils.chat_session_store import get_session_store
+        store = get_session_store()
+        sess_id = store.get_current_session().get('id')
+        boot_id = store.get_boot_id()
+        user_msg_id = str(data.get('client_message_id') or '').strip() or store.next_message_id('sock_user')
+        ai_msg_id = store.next_message_id('sock_ai')
+
+        if not command:
+            emit('command_response', {
+                'success': False,
+                'command': '',
+                'response': 'No command provided.',
+                'session_id': sess_id,
+                'boot_id': boot_id,
+                'timestamp': datetime.now().isoformat()
+            })
+            return
+
+        src_str = str(data.get('source') or 'socket_fallback')
+        is_voice_src = any(t in src_str.lower() for t in ('voice', 'companion', 'whisper', 'google'))
+        store.record_message(
+            'user',
+            command,
+            source=src_str,
+            is_voice=is_voice_src,
+            message_id=user_msg_id,
+        )
+
+        raw_prov = str(data.get('provider') or '').strip().lower()
+        model = data.get('model')
+        offline_mode = bool(data.get('offline_mode', False))
+        if offline_mode and raw_prov not in ('gguf', 'local', 'offline'):
+            provider = 'gguf'
+        else:
+            provider = raw_prov or None
+
+        logger.info(f"📥 [SOCKET.IO] Command: '{command[:40]}' (provider={provider}, model={model}, offline={offline_mode})")
+
+        from ai_assistant.core.jarvis_persona import (
+            get_lifecycle_coordinator,
+            should_speak_for_request,
+        )
+        coordinator = get_lifecycle_coordinator()
+        wants_speak = should_speak_for_request(data, default_for_chat=True)
+        turn_id = coordinator.begin_turn(command, source=src_str, speak=wants_speak)
+        coordinator.emit_pre_report(turn_id, command, source=src_str, speak=wants_speak)
+
+        from agent_brain import get_agent_brain
+        brain = get_agent_brain()
+        model_pref = (
+            {'provider': provider, 'model': model, 'offline_mode': offline_mode}
+            if (provider or model or offline_mode)
+            else None
+        )
+        result = brain.process_command(
+            command,
+            source=src_str,
+            model_preference=model_pref
+        )
+
+        if isinstance(result, dict):
+            resp_text = result.get('response', '')
+            tts_text = result.get('tts', resp_text)
+            card = result.get('card')
+            res_intent = result.get('intent')
+        else:
+            resp_text = str(result)
+            tts_text = resp_text
+            card = None
+            res_intent = None
+
+        meta = result.get('execution_meta', {}) if isinstance(result, dict) else {}
+        actual_p = meta.get('provider_used') or provider
+        actual_m = meta.get('model_used') or model
+        is_ok = bool(result.get('success', True)) if isinstance(result, dict) else True
+
+        formatted_resp, was_active = coordinator.complete_turn(
+            turn_id,
+            command,
+            resp_text,
+            success=is_ok,
+            intent=res_intent,
+            source=src_str,
+            speak=wants_speak,
+            tts_text_override=tts_text if res_intent in ('wake_greeting', 'voice_control') else None,
+        )
+        final_resp = formatted_resp or resp_text
+        if was_active and final_resp:
+            store.record_message(
+                'ai',
+                final_resp,
+                source=src_str,
+                is_voice=False,
+                message_id=ai_msg_id,
+                provider=actual_p,
+                model=actual_m,
+                intent=res_intent,
+                success=is_ok,
+            )
+
+        emit('command_response', {
+            'success': is_ok,
+            'command': command,
+            'response': final_resp,
+            'message': final_resp,
+            'tts': final_resp,
+            'card': card,
+            'provider': actual_p,
+            'model': actual_m,
+            'execution_meta': meta,
+            'message_id': ai_msg_id,
+            'user_message_id': user_msg_id,
+            'session_id': sess_id,
+            'boot_id': boot_id,
+            'skip_tts': True,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Error handling socket command: {e}")
+        err_msg = f"Error: {str(e)}"
+        try:
+            try:
+                from utils.chat_session_store import get_session_store
+            except ImportError:
+                from backend.utils.chat_session_store import get_session_store
+            store = get_session_store()
+            err_id = store.next_message_id('sock_err')
+            store.record_message('ai', err_msg, source='socket_fallback_error', is_voice=False, message_id=err_id, success=False)
+            sess_id = store.get_current_session().get('id')
+            boot_id = store.get_boot_id()
+        except Exception:
+            err_id = None
+            sess_id = None
+            boot_id = None
+        emit('command_response', {
+            'success': False,
+            'command': data.get('command', '') if isinstance(data, dict) else '',
+            'response': err_msg,
+            'message': err_msg,
+            'message_id': err_id,
+            'session_id': sess_id,
+            'boot_id': boot_id,
+            'timestamp': datetime.now().isoformat()
+        })
 
 def start_server(host=None, port=None):
     """Cleanly initialize services and start SocketIO server"""

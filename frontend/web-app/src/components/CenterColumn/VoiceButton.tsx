@@ -1,105 +1,31 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, MicOff, Globe, Zap } from 'lucide-react';
-import { useDashboard } from '../../contexts/DashboardContext';
-import { useState, useEffect } from 'react';
+import { Mic, MicOff, Globe, Zap, AlertTriangle, Loader2, Volume2 } from 'lucide-react';
+import { useDashboard, OrbState } from '../../contexts/DashboardContext';
+import { useState } from 'react';
 import ArcReactorRings from './ArcReactorRings';
 import DangerBanner from './DangerBanner';
 
-// Modern Circular Audio Waveform (like the reference image)
-const ModernWaveform = ({ audioLevel, isActive }: { audioLevel: number; isActive: boolean }) => {
-  const points = 100;
-  const centerY = 100;
-  const amplitude = isActive ? 30 + (audioLevel / 100) * 40 : 20;
-
-  // Generate smooth waveform path
-  const generateWavePath = () => {
-    let path = `M 0 ${centerY}`;
-
-    for (let i = 0; i <= points; i++) {
-      const x = (i / points) * 200;
-      const frequency = 0.05;
-      const time = Date.now() * 0.001;
-
-      // Multiple sine waves for organic feel
-      const y = centerY +
-        Math.sin(i * frequency + time * 2) * amplitude * 0.4 +
-        Math.sin(i * frequency * 2 + time * 3) * amplitude * 0.3 +
-        Math.sin(i * frequency * 0.5 + time) * amplitude * 0.3;
-
-      path += ` L ${x} ${y}`;
-    }
-
-    return path;
-  };
-
-  const [path, setPath] = useState(generateWavePath());
-
-  useEffect(() => {
-    if (!isActive && audioLevel < 5) return;
-
-    const interval = setInterval(() => {
-      setPath(generateWavePath());
-    }, 50);
-
-    return () => clearInterval(interval);
-  }, [isActive, audioLevel]);
-
-  return (
-    <svg
-      width="100%"
-      height="100%"
-      viewBox="0 0 200 200"
-      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-      preserveAspectRatio="xMidYMid meet"
-    >
-      {/* Waveform */}
-      <motion.path
-        d={path}
-        stroke="#00f3ff"
-        strokeWidth="2"
-        fill="none"
-        strokeLinecap="round"
-        initial={{ opacity: 0 }}
-        animate={{
-          opacity: isActive ? [0.6, 1, 0.6] : 0.3,
-          filter: isActive ? 'drop-shadow(0 0 8px #00f3ff)' : 'none'
-        }}
-        transition={{
-          opacity: { duration: 2, repeat: Infinity, ease: 'easeInOut' }
-        }}
-      />
-
-      {/* Mirror waveform */}
-      <motion.path
-        d={path}
-        stroke="#00f3ff"
-        strokeWidth="2"
-        fill="none"
-        strokeLinecap="round"
-        className="origin-center scale-y-[-1]"
-        initial={{ opacity: 0 }}
-        animate={{
-          opacity: isActive ? [0.4, 0.7, 0.4] : 0.2,
-          filter: isActive ? 'drop-shadow(0 0 6px #00f3ff)' : 'none'
-        }}
-        transition={{
-          opacity: { duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }
-        }}
-      />
-    </svg>
-  );
+const STATE_UI_META: Record<OrbState, { label: string; color: string }> = {
+  idle: { label: 'Standing still · Tap or say "Pulsar"', color: '#818cf8' },
+  listening: { label: 'Listening...', color: '#00f3ff' },
+  speaking: { label: 'Speaking...', color: '#ec4899' },
+  processing: { label: 'Processing...', color: '#f59e0b' },
+  error: { label: 'Action failed — check attention', color: '#ef4444' },
 };
 
 const VoiceButton = () => {
   const {
     isVoiceActive,
     interimTranscript,
-    audioLevel,
+    orbState,
+    orbAudioLevel,
+    orbError,
     toggleVoice,
     setVoiceLanguage,
     alwaysActive,
     toggleAlwaysActive,
     requireWakeWord,
+    wakeWordDetected,
     toggleWakeWord,
     aiProvider,
     setAIProvider,
@@ -125,7 +51,6 @@ const VoiceButton = () => {
 
   const aiProviders = [
     { id: 'gguf' as const, name: 'GGUF (Local)', icon: '🧠', color: 'yellow' },
-    { id: 'ollama' as const, name: 'Ollama', icon: '🤖', color: 'purple' },
     { id: 'openai' as const, name: 'OpenAI', icon: '🟢', color: 'green' },
     { id: 'gemini' as const, name: 'Gemini', icon: '🔷', color: 'blue' },
   ];
@@ -139,12 +64,19 @@ const VoiceButton = () => {
     setShowLangSelector(false);
   };
 
-  const handleProviderChange = (providerId: 'gemini' | 'openai' | 'ollama' | 'gguf') => {
+  const handleProviderChange = (providerId: 'gemini' | 'openai' | 'gguf') => {
     setAIProvider(providerId);
     setShowProviderSelector(false);
   };
 
-  const isListening = isVoiceActive || alwaysActive;
+  const isListening = orbState === 'listening' || isVoiceActive || wakeWordDetected;
+  const activeMeta = STATE_UI_META[orbState] || STATE_UI_META.idle;
+  const statusLabel =
+    orbState === 'error' && orbError
+      ? orbError
+      : orbState === 'idle'
+        ? (alwaysActive ? 'Always Wake ON · Say "Hey Pulsar"' : 'Standing still · Tap or say "Hey Pulsar"')
+        : activeMeta.label;
 
   return (
     <motion.div
@@ -153,126 +85,80 @@ const VoiceButton = () => {
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.6, ease: 'easeOut' }}
     >
-      {/* Main circular visualizer */}
-      <div id="ai-orb" className="relative w-[75%] max-w-[260px] aspect-square overflow-visible transition-transform duration-100 ease-out">
-        {/* Outer glowing circle */}
-        <motion.div
-          className="absolute inset-0 rounded-full border-2 border-[#00f3ff]"
-          style={{
-            boxShadow: isListening ? '0 0 40px rgba(0, 217, 255, 0.4), inset 0 0 40px rgba(0, 217, 255, 0.1)' : '0 0 20px rgba(0, 217, 255, 0.2)',
-          }}
-          animate={{
-            scale: isListening ? [1, 1.02, 1] : 1,
-            opacity: isListening ? [0.8, 1, 0.8] : 0.6,
-          }}
-          transition={{
-            duration: 3,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
-        />
-
-        {/* Arc Reactor HUD Rings */}
+      {/* 4D Glowing Particle Orb */}
+      <div
+        id="ai-orb"
+        onClick={toggleVoice}
+        className="relative w-[84%] max-w-[300px] aspect-square overflow-visible cursor-pointer select-none"
+      >
         <ArcReactorRings
           mood={hudData.mood}
           projectProgress={hudData.projectProgress}
           projectName={hudData.projectName}
           systemHealth={hudData.systemHealth}
           dangerMode={!!pendingDangerAction}
+          orbState={orbState}
+          audioLevel={orbAudioLevel}
         />
 
-        {/* Waveform visualization */}
-        <ModernWaveform audioLevel={audioLevel} isActive={isListening} />
-
-        {/* Center microphone button */}
+        {/* Minimal translucent frosted center mic pill so the 4D core shines through */}
         <motion.button
-          onClick={toggleVoice}
-          className="absolute inset-0 m-auto w-[28%] h-[28%] rounded-full bg-gradient-to-br from-[#1a1f2e] to-[#0f1419] border-2 border-[#00f3ff]/30 flex items-center justify-center cursor-pointer group z-10"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-          animate={{
-            boxShadow: isListening
-              ? ['0 0 20px rgba(0, 217, 255, 0.5)', '0 0 30px rgba(0, 217, 255, 0.7)', '0 0 20px rgba(0, 217, 255, 0.5)']
-              : '0 0 10px rgba(0, 217, 255, 0.2)',
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleVoice();
           }}
-          transition={{
-            boxShadow: {
-              duration: 2,
-              repeat: Infinity,
-              ease: 'easeInOut',
-            },
+          aria-label={isListening ? 'Stop listening' : 'Start voice listening'}
+          className="absolute inset-0 m-auto w-11 h-11 rounded-full bg-slate-950/35 backdrop-blur-sm flex items-center justify-center cursor-pointer z-10 transition-colors"
+          style={{
+            border: `1px solid ${activeMeta.color}44`,
+            boxShadow: `0 0 18px ${activeMeta.color}33`,
           }}
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.94 }}
         >
-          {isListening ? (
+          {orbState === 'error' ? (
+            <AlertTriangle className="w-5 h-5" style={{ color: activeMeta.color }} strokeWidth={2} />
+          ) : orbState === 'processing' ? (
+            <Loader2 className="w-5 h-5 animate-spin" style={{ color: activeMeta.color }} strokeWidth={2} />
+          ) : orbState === 'speaking' ? (
+            <Volume2 className="w-5 h-5" style={{ color: activeMeta.color }} strokeWidth={2} />
+          ) : isListening ? (
             <motion.div
-              animate={{
-                scale: [1, 1.2, 1],
-              }}
-              transition={{
-                duration: 1.5,
-                repeat: Infinity,
-                ease: 'easeInOut',
-              }}
+              animate={{ scale: [1, 1.18, 1] }}
+              transition={{ duration: 1.3, repeat: Infinity, ease: 'easeInOut' }}
             >
-              <Mic className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-[#00f3ff]" strokeWidth={2} />
+              <Mic className="w-5 h-5" style={{ color: activeMeta.color }} strokeWidth={2} />
             </motion.div>
           ) : (
-            <MicOff className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-[#00f3ff]/60 group-hover:text-[#00f3ff] transition-colors" strokeWidth={2} />
+            <MicOff className="w-5 h-5 text-indigo-200/75 hover:text-cyan-300 transition-colors" strokeWidth={1.8} />
           )}
         </motion.button>
-
-        {/* Pulsing rings when active */}
-        {isListening && (
-          <>
-            <motion.div
-              className="absolute inset-0 rounded-full border-2 border-[#00f3ff]/40"
-              animate={{
-                scale: [1, 1.15, 1.15],
-                opacity: [0.6, 0, 0],
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: 'easeOut',
-              }}
-            />
-            <motion.div
-              className="absolute inset-0 rounded-full border-2 border-[#00f3ff]/40"
-              animate={{
-                scale: [1, 1.15, 1.15],
-                opacity: [0.6, 0, 0],
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: 'easeOut',
-                delay: 0.7,
-              }}
-            />
-          </>
-        )}
       </div>
 
       {/* Status text */}
       <motion.div
         className="text-center"
         animate={{
-          opacity: isListening ? [0.7, 1, 0.7] : 0.5,
+          opacity: orbState !== 'idle' ? [0.78, 1, 0.78] : 0.75,
         }}
         transition={{
-          duration: 2,
+          duration: orbState === 'error' ? 0.9 : 2,
           repeat: Infinity,
           ease: 'easeInOut',
         }}
       >
-        <p className="text-[#00f3ff] text-sm sm:text-base md:text-lg font-light tracking-wide">
-          {isListening ? 'Listening...' : 'Tap to speak'}
+        <p
+          className="text-sm sm:text-base md:text-lg font-light tracking-wide transition-colors duration-300"
+          style={{ color: activeMeta.color }}
+        >
+          {statusLabel}
         </p>
-        {isListening && interimTranscript && (
+        {interimTranscript && orbState !== 'idle' && (
           <motion.p
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-white/60 text-xs sm:text-sm mt-2 max-w-md px-4"
+            className="text-white/70 text-xs sm:text-sm mt-2 max-w-md px-4"
           >
             {interimTranscript}
           </motion.p>
@@ -310,7 +196,7 @@ const VoiceButton = () => {
             }`}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          title={requireWakeWord ? 'Wake word active ("Hey Assistant", "Pulsar")' : 'Wake word off (executes directly)'}
+          title={requireWakeWord ? 'Wake word active ("Hey Pulsar", "Pulsar", "Hey Assistant")' : 'Wake word off (executes directly)'}
         >
           <Mic className="w-2.5 h-2.5 sm:w-3 sm:h-3 inline mr-1" />
           Wake Word: {requireWakeWord ? 'ON' : 'OFF'}
@@ -320,8 +206,8 @@ const VoiceButton = () => {
         <div className="relative">
           <motion.button
             onClick={() => setShowProviderSelector(!showProviderSelector)}
-            className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-medium transition-all ${aiProvider === 'ollama'
-              ? 'bg-purple-500/20 text-purple-400 border border-purple-400/40'
+            className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-medium transition-all ${aiProvider === 'gguf'
+              ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/40'
               : aiProvider === 'openai'
                 ? 'bg-green-500/20 text-green-400 border border-green-400/40'
                 : 'bg-blue-500/20 text-blue-400 border border-blue-400/40'

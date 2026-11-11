@@ -44,7 +44,7 @@ export const PWAInstallPrompt = () => {
           
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-lg mb-1">
-              Install YourDaddy AI
+              Install Pulsar AI
             </h3>
             <p className="text-sm text-white/90 mb-3">
               Add to your home screen for quick access and offline use!
