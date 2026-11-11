@@ -15,6 +15,10 @@ from pathlib import Path
 
 # Smart Data Root Detection
 def get_data_root() -> Path:
+    override = os.environ.get('PULSAR_DATA_DIR')
+    if override and override.strip():
+        return Path(override.strip()).expanduser().resolve() / 'data'
+
     if getattr(sys, 'frozen', False):
         # PyInstaller/packaged app -> user's AppData
         # Fallback to local APPDATA if not on Windows, though this is a Windows app

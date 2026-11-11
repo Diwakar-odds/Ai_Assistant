@@ -54,8 +54,8 @@ BACKGROUND_INIT = os.getenv('BACKGROUND_INIT', 'true').lower() == 'true'
 
 # Input validation patterns
 VALIDATION_PATTERNS = {
-    'command': re.compile(r'^[\w\s\-.,!?@#$%()+=:;"\']+$'),
-    'app_name': re.compile(r'^[\w\s\-.]+$'),
+    'command': re.compile(r'^(?:[^\x00-\x08\x0b\x0c\x0e-\x1f\x7f<>]|(?<=[-=])>)+$', re.UNICODE),
+    'app_name': re.compile(r'^[^\x00-\x1f<>]+$', re.UNICODE),
     'username': re.compile(r'^[a-zA-Z0-9_]{3,20}$'),
 }
 
@@ -68,8 +68,9 @@ def validate_input(data, field, pattern_name):
     if not isinstance(value, str):
         return False, f"{field} must be a string"
     
-    if len(value) > 1000:
-        return False, f"{field} is too long (max 1000 characters)"
+    max_len = 2000 if pattern_name == 'command' else 1000
+    if len(value) > max_len:
+        return False, f"{field} is too long (max {max_len} characters)"
     
     pattern = VALIDATION_PATTERNS.get(pattern_name)
     if pattern and not pattern.match(value):
@@ -78,13 +79,24 @@ def validate_input(data, field, pattern_name):
     return True, None
 
 def sanitize_command(command):
-    """Sanitize command input to prevent injection"""
+    """Sanitize command input while preserving compound delimiters and quotes."""
     if not command:
         return ""
-    dangerous_chars = ['|', '&', ';', '`', '$', '(', ')', '<', '>', '\n', '\r']
-    for char in dangerous_chars:
-        command = command.replace(char, '')
-    return command.strip()[:500]
+    # Strip NUL/unsafe ASCII control characters, backticks, HTML '<', and '>' unless part of '->' or '=>'
+    cleaned = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f`<]', '', str(command))
+    cleaned = re.sub(r'(?<![-=])>', '', cleaned)
+    return cleaned.strip()[:2000]
+
+def run_async(coro):
+    """Run an async coroutine safely from synchronous Flask/worker threads."""
+    import asyncio
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+    import concurrent.futures
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        return pool.submit(asyncio.run, coro).result()
 
 # Global singleton holders
 _assistant = None

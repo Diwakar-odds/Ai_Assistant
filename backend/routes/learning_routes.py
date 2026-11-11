@@ -1,6 +1,8 @@
 from flask import Blueprint, jsonify, request, send_from_directory, render_template, Response, stream_with_context
-import os, json, sys, time, datetime
+import os, json, sys, time
+from datetime import datetime
 from pathlib import Path
+from ai_assistant.core.database_config import get_db_path, get_db_path_str
 from .common import logger, api_logger, jwt_required, get_jwt_identity, limiter
 
 try:
@@ -156,7 +158,7 @@ def api_all_learning_stats():
         stats = get_learning_stats()
         return jsonify({
             "success": True,
-            "timestamp": datetime.datetime.now().isoformat(),
+            "timestamp": datetime.now().isoformat(),
             "systems": stats,
             "total_systems": len(stats)
         })

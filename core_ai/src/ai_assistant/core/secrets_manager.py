@@ -81,9 +81,17 @@ class SecretsManager:
             logger.warning("python-dotenv not installed. Using system environment only.")
             return
         
-        # Search for env files in priority order
+        # Search for env files in priority order (AppData first when packaged)
+        import sys as _sys
+        frozen_env = None
+        if os.environ.get('PULSAR_DATA_DIR'):
+            frozen_env = str(Path(os.environ['PULSAR_DATA_DIR']).expanduser() / '.env')
+        elif getattr(_sys, 'frozen', False):
+            appdata = os.environ.get('LOCALAPPDATA', os.path.expanduser('~/.pulsar_ai'))
+            frozen_env = str(Path(appdata) / 'PulsarAI' / '.env')
         search_paths = [
             env_file,
+            frozen_env,
             'config/app_integration.env',
             'config/backend.env',
             '.env',

@@ -1,19 +1,35 @@
 import json
+import logging
 from pathlib import Path
 import os
+import sys
 from typing import Dict, Any, Tuple
+
+logger = logging.getLogger(__name__)
+
+
+def _default_onboarding_settings_path() -> Path:
+    try:
+        from settings_manager import get_settings_file
+        return get_settings_file()
+    except Exception:
+        pass
+    override = os.environ.get('PULSAR_DATA_DIR')
+    if override and override.strip():
+        return Path(override.strip()).expanduser().resolve() / 'data' / 'user_preferences' / 'settings.json'
+    if getattr(sys, 'frozen', False):
+        appdata = os.environ.get('LOCALAPPDATA', os.path.expanduser('~/.pulsar_ai'))
+        return Path(appdata) / 'PulsarAI' / 'data' / 'user_preferences' / 'settings.json'
+    return Path(__file__).resolve().parents[4] / 'data' / 'user_preferences' / 'settings.json'
+
 
 class OnboardingManager:
     def __init__(self, settings_path: str = None):
         if settings_path is None:
-            # Try to find the root config dir
-            current_dir = Path(__file__).parent
-            while current_dir.name != 'Ai_Assistant' and current_dir.parent != current_dir:
-                current_dir = current_dir.parent
-            self.settings_path = current_dir / 'config' / 'user_settings.json'
+            self.settings_path = _default_onboarding_settings_path()
         else:
             self.settings_path = Path(settings_path)
-            
+
         self.settings = self._load_settings()
 
     def _load_settings(self) -> Dict[str, Any]:

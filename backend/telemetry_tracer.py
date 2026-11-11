@@ -42,7 +42,9 @@ if sys.platform == 'win32':
 
 
 def safe_print(msg: str):
-    """Prints message safely across all Windows console encodings (UTF-8, cp1252, etc)."""
+    """Prints message safely across all Windows console encodings and GUI windowed mode."""
+    if sys.stdout is None:
+        return
     try:
         print(msg)
     except UnicodeEncodeError:

@@ -28,8 +28,12 @@ except ImportError:
     def get_logger(name: str, log_category: str = 'modules', **kwargs) -> logging.Logger:
         logger = logging.getLogger(name)
         if not logger.handlers:
-            handler = logging.StreamHandler(sys.stdout)
-            handler.setFormatter(logging.Formatter('%(asctime)s | %(name)s | %(levelname)s | %(message)s'))
+            stream = sys.stdout if sys.stdout is not None else sys.stderr
+            if stream is not None:
+                handler = logging.StreamHandler(stream)
+                handler.setFormatter(logging.Formatter('%(asctime)s | %(name)s | %(levelname)s | %(message)s'))
+            else:
+                handler = logging.NullHandler()
             logger.addHandler(handler)
             logger.setLevel(logging.INFO)
         return logger

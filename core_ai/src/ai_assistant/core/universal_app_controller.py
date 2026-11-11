@@ -150,27 +150,35 @@ class UniversalAppController:
                 return {
                     'success': False,
                     'app_name': app_name,
+                    'raw_result': result,
                     'error': result,
                     'message': f"Failed to open {app_name}: {result}"
                 }
-            
-            # Poll for window handle up to 3 seconds
+
+            # Web/protocol launches open in an existing browser or shell handler asynchronously;
+            # skip the 3s blocking native-window poll for them.
+            is_web_or_protocol = any(
+                tag in result for tag in ("Opened Web App", "Opened Web/Windows App", "Opened Windows App Protocol")
+            )
             window = None
-            start_poll = time.time()
-            while time.time() - start_poll < 3.0:
+            if is_web_or_protocol:
                 window = find_window_by_name(app_name)
-                if window:
-                    break
-                time.sleep(0.3)
-            
+            else:
+                start_poll = time.time()
+                while time.time() - start_poll < 3.0:
+                    window = find_window_by_name(app_name)
+                    if window:
+                        break
+                    time.sleep(0.3)
+
             # Enforce foreground visibility
             is_fg = False
             if window:
                 bring_window_to_foreground(window)
                 is_fg = is_window_foreground(window)
-            else:
+            elif not is_web_or_protocol:
                 bring_window_to_foreground(app_name)
-            
+
             # Extract PID and window title if available
             pid = 0
             window_title = app_name
@@ -180,7 +188,7 @@ class UniversalAppController:
                     window_title = win32gui.GetWindowText(window) or app_name
                 except Exception:
                     pass
-            
+
             # Track as active app with handle and foreground status
             self.active_apps[app_name.lower()] = {
                 'app_name': app_name,
@@ -192,10 +200,11 @@ class UniversalAppController:
                 'pid': pid,
                 'is_foreground': is_fg
             }
-            
+
             return {
                 'success': True,
                 'app_name': app_name,
+                'raw_result': result,
                 'hwnd': window,
                 'pid': pid,
                 'is_foreground': is_fg,

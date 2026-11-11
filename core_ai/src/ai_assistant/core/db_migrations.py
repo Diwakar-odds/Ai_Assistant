@@ -1,5 +1,5 @@
 """
-Database Migrations Engine for YourDaddy AI Assistant.
+Database Migrations Engine for Pulsar AI Assistant.
 Provides version-tracked, safe schema migrations for all SQLite databases.
 """
 

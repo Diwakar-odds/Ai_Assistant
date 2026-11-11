@@ -4,10 +4,17 @@ logger = get_logger(__name__, log_category="app")
 
 
 import os
+import sys
 import json
 from datetime import datetime
 
-USER_DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'user_data')
+if getattr(sys, 'frozen', False):
+    _appdata = os.environ.get('LOCALAPPDATA', os.path.expanduser('~/.pulsar_ai'))
+    USER_DATA_DIR = os.path.join(_appdata, 'PulsarAI', 'user_data')
+elif os.environ.get('PULSAR_DATA_DIR'):
+    USER_DATA_DIR = os.path.join(os.environ['PULSAR_DATA_DIR'], 'user_data')
+else:
+    USER_DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'user_data')
 
 def get_timestamp():
     return datetime.now().strftime('%Y%m%d_%H%M%S')

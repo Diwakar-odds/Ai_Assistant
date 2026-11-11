@@ -388,6 +388,36 @@ class SmartContextWindow:
         }
 
 
+class ContextOptimizer:
+    """Manages environmental, time, and session context to inject into LLM prompts."""
+
+    def __init__(self):
+        self.compressor = ConversationCompressor()
+
+    def get_time_context(self) -> str:
+        """Determines time-of-day category: work, home, or night."""
+        hour = datetime.now().hour
+        if 9 <= hour < 18:
+            return 'work'
+        elif 18 <= hour < 23:
+            return 'home'
+        else:
+            return 'night'
+
+    def get_current_profile(self) -> Dict[str, Any]:
+        """Returns the user profile context snapshot."""
+        return {
+            'time_context': self.get_time_context(),
+            'timestamp': datetime.now().isoformat()
+        }
+
+    def inject_context_into_prompt(self, base_prompt: str) -> str:
+        """Enriches the base prompt with current environmental and temporal context."""
+        ctx = self.get_time_context()
+        now_str = datetime.now().strftime("%A, %I:%M %p")
+        return f"{base_prompt}\nCurrent context: It is {now_str} ({ctx} context). Provide helpful, concise, and context-aware responses."
+
+
 if __name__ == "__main__":
     # Demo
     ctx = SmartContextWindow(max_tokens=2000)

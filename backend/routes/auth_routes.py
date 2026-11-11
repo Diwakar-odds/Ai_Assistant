@@ -1,6 +1,8 @@
 from flask import Blueprint, jsonify, request, send_from_directory, render_template, Response, stream_with_context
-import os, json, sys, time, datetime
+import os, json, sys, time, sqlite3
+from datetime import datetime
 from werkzeug.security import generate_password_hash
+from ai_assistant.core.database_config import get_db_path, get_db_path_str
 from .common import (
     logger, api_logger, limiter, USERS_DB, validate_input, get_assistant,
     jwt_required, create_access_token, get_jwt_identity, verify_jwt_in_request,

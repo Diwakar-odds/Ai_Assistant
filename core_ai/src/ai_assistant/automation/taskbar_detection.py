@@ -138,6 +138,150 @@ class TaskbarDetector:
             logger.error(f"Error enumerating windows: {e}")
         
         return windows
+
+    _IGNORED_WINDOW_TITLES = frozenset({
+        "program manager",
+        "default ime",
+        "msctfime ui",
+        "windows input experience",
+        "popuphost",
+        "desktopwindowxamlssource",
+        "nvidia geforce overlay",
+        "battery meter",
+        "network flyout",
+        "settings",  # only when 0x0 or empty host, handled below
+    })
+    _IGNORED_SHELL_CLASSES = frozenset({
+        "Progman",
+        "WorkerW",
+        "Shell_TrayWnd",
+        "Shell_SecondaryTrayWnd",
+        "DV2ControlHost",
+        "Windows.UI.Core.CoreWindow",
+        "ApplicationFrameInputSinkWindow",
+    })
+    _IGNORED_PROCESSES = frozenset({
+        "textinputhost.exe",
+        "shellexperiencehost.exe",
+        "searchhost.exe",
+        "startmenuexperiencehost.exe",
+        "lockapp.exe",
+        "idle",
+        "system",
+    })
+    _FRIENDLY_APP_NAMES = {
+        "chrome.exe": "Google Chrome",
+        "msedge.exe": "Microsoft Edge",
+        "brave.exe": "Brave",
+        "firefox.exe": "Firefox",
+        "code.exe": "VS Code",
+        "whatsapp.exe": "WhatsApp",
+        "whatsapp.root.exe": "WhatsApp",
+        "spotify.exe": "Spotify",
+        "explorer.exe": "File Explorer",
+        "windowsterminal.exe": "Windows Terminal",
+        "powershell.exe": "PowerShell",
+        "pwsh.exe": "PowerShell",
+        "cmd.exe": "Command Prompt",
+        "notepad.exe": "Notepad",
+        "applicationframehost.exe": "Windows App",
+        "antigravity.exe": "Antigravity",
+        "electron.exe": "Desktop App",
+        "vlc.exe": "VLC",
+        "discord.exe": "Discord",
+        "telegram.exe": "Telegram",
+    }
+
+    def get_taskbar_open_apps(self) -> Dict[str, Any]:
+        """
+        Enumerate currently open desktop/taskbar GUI application windows cleanly,
+        excluding hidden system/IME/shell helper windows and kernel background processes.
+        """
+        windows = self._get_window_information() if WIN32_AVAILABLE else []
+        filtered_windows: List[Dict[str, Any]] = []
+        grouped: Dict[str, Dict[str, Any]] = {}
+
+        for win in windows:
+            title = str(win.get("title") or "").strip()
+            title_lower = title.lower()
+            class_name = str(win.get("class_name") or "").strip()
+            proc_name = str(win.get("process_name") or "").strip()
+            proc_lower = proc_name.lower()
+            pos = win.get("position") or {}
+            width = int(pos.get("width", 0) or 0)
+            height = int(pos.get("height", 0) or 0)
+            is_min = bool(win.get("is_minimized", False))
+
+            if not title or class_name in self._IGNORED_SHELL_CLASSES:
+                continue
+            if proc_lower in self._IGNORED_PROCESSES:
+                continue
+            if title_lower in {
+                "program manager", "default ime", "msctfime ui",
+                "windows input experience", "popuphost", "nvidia geforce overlay",
+            }:
+                continue
+            if title_lower == "settings" and proc_lower in ("applicationframehost.exe", "systemsettings.exe") and width <= 0 and height <= 0:
+                continue
+            if not is_min and (width <= 2 or height <= 2):
+                continue
+
+            friendly = self._FRIENDLY_APP_NAMES.get(proc_lower)
+            if not friendly:
+                stem = proc_name[:-4] if proc_lower.endswith(".exe") else proc_name
+                friendly = stem.replace("_", " ").title() if stem and stem.lower() != "unknown" else title
+
+            entry = {
+                "app": friendly,
+                "process_name": proc_name,
+                "title": title,
+                "is_minimized": is_min,
+                "is_maximized": bool(win.get("is_maximized", False)),
+                "pid": win.get("pid", 0),
+            }
+            filtered_windows.append(entry)
+
+            key = friendly.lower()
+            if key not in grouped:
+                grouped[key] = {
+                    "app": friendly,
+                    "process_name": proc_name,
+                    "windows": [],
+                    "minimized_count": 0,
+                    "visible_count": 0,
+                }
+            grouped[key]["windows"].append(entry)
+            if is_min:
+                grouped[key]["minimized_count"] += 1
+            else:
+                grouped[key]["visible_count"] += 1
+
+        apps_list = list(grouped.values())
+        return {
+            "apps": apps_list,
+            "windows": filtered_windows,
+            "app_count": len(apps_list),
+            "window_count": len(filtered_windows),
+        }
+
+    def format_taskbar_open_apps(self) -> str:
+        """Return a clean human-readable multi-line list of open taskbar GUI apps."""
+        info = self.get_taskbar_open_apps()
+        apps = info.get("apps") or []
+        if not apps:
+            return "Abhi taskbar par koi visible GUI application window open nahi dikh rahi."
+
+        lines = [f"Taskbar par abhi {len(apps)} app(s) open hain:"]
+        for item in apps:
+            app_name = item["app"]
+            wins = item["windows"]
+            sample_title = str(wins[0].get("title") or "").strip()
+            if len(sample_title) > 70:
+                sample_title = sample_title[:67] + "..."
+            state = "minimized" if item["visible_count"] == 0 else "active/visible"
+            extra = f" ({len(wins)} windows)" if len(wins) > 1 else ""
+            lines.append(f"- {app_name}{extra} [{state}]: {sample_title}")
+        return "\n".join(lines)
     
     def get_taskbar_apps_visual(self) -> Dict[str, Any]:
         """
@@ -351,9 +495,22 @@ class TaskbarDetector:
             # Otherwise, just finding the app process or window is enough
             is_successful = app_found_in_processes or app_found_in_windows
         
-        # Visual search if available (Fallback)
+        # Visual search if available (Fallback - only when active provider is Gemini with key)
         visual_result = {}
+        allow_vlm = False
         if self.multimodal and not is_successful:
+            try:
+                import sys
+                from pathlib import Path
+                bdir = str(Path(__file__).resolve().parents[4] / "backend")
+                if bdir not in sys.path:
+                    sys.path.insert(0, bdir)
+                from settings_manager import get_provider, get_api_key
+                allow_vlm = (get_provider() == "gemini" and bool(get_api_key("gemini")))
+            except Exception:
+                allow_vlm = False
+
+        if self.multimodal and not is_successful and allow_vlm:
             try:
                 visual_prompt = f"""
                 Look at this Windows desktop screenshot and determine:

@@ -10,7 +10,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional
-from utils.logging_config import get_logger, SessionManager
+from utils.logging_config import get_logger, SessionManager, LoggingConfig
 
 class SessionActivityLogger:
     """Logs all user activities in session-specific files"""
@@ -41,7 +41,7 @@ class SessionActivityLogger:
         """Initialize logger components (called after session is ready)"""
         self.session_id = SessionManager.get_current_session()
         self.current_date = SessionManager.get_current_date()
-        self.activities_dir = Path('logs') / self.current_date / 'activities'
+        self.activities_dir = LoggingConfig.BASE_LOG_DIR / self.current_date / 'activities'
         self.activities_dir.mkdir(parents=True, exist_ok=True)
         
         # Category-specific loggers

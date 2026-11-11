@@ -19,12 +19,28 @@ from typing import Optional
 import uuid
 import os
 
-# Fix Windows console encoding for emojis
+# Fix Windows console encoding for emojis (safe in GUI/windowed mode where stdout is None)
 if sys.platform == 'win32':
-    if hasattr(sys.stdout, 'reconfigure'):
-        sys.stdout.reconfigure(encoding='utf-8')
-    if hasattr(sys.stderr, 'reconfigure'):
-        sys.stderr.reconfigure(encoding='utf-8')
+    if sys.stdout is not None and hasattr(sys.stdout, 'reconfigure'):
+        try:
+            sys.stdout.reconfigure(encoding='utf-8')
+        except Exception:
+            pass
+    if sys.stderr is not None and hasattr(sys.stderr, 'reconfigure'):
+        try:
+            sys.stderr.reconfigure(encoding='utf-8')
+        except Exception:
+            pass
+
+
+def _resolve_base_log_dir() -> Path:
+    override = os.environ.get('PULSAR_DATA_DIR')
+    if override and override.strip():
+        return Path(override.strip()).expanduser().resolve() / 'logs'
+    if getattr(sys, 'frozen', False):
+        appdata = os.environ.get('LOCALAPPDATA', os.path.expanduser('~/.pulsar_ai'))
+        return Path(appdata) / 'PulsarAI' / 'logs'
+    return Path("logs")
 
 
 class SessionManager:
@@ -55,9 +71,9 @@ class SessionManager:
             'platform': sys.platform
         }
         
-        # Save session info in date-based folder
+        # Save session info in date-based folder under BASE_LOG_DIR
         date_folder = cls.get_current_date()
-        session_file = Path('logs') / date_folder / 'sessions' / f'session_{cls._current_session}.json'
+        session_file = _resolve_base_log_dir() / date_folder / 'sessions' / f'session_{cls._current_session}.json'
         session_file.parent.mkdir(parents=True, exist_ok=True)
         
         import json
@@ -92,7 +108,6 @@ class TerminalConsoleFilter(logging.Filter):
         "Startup Configuration:", "Lazy Initialization:", "Background Initialization:", "Voice Features:",
         "Multimodal AI:", "Conversational AI:", "System Monitoring:",
         "Wake Word:", "Neural TTS:", "VAD:", "Speaker Recognition",
-        "Ollama will load on-demand",
         "Voice API blueprint registered", "Initializing Professional Voice System",
         "Wake word detector initialized", "KittenTTS available",
         "Neural TTS engine initialized", "VAD initialized",
@@ -150,8 +165,8 @@ class LoggingConfigMeta(type):
 class LoggingConfig(metaclass=LoggingConfigMeta):
     """Centralized logging configuration manager"""
     
-    # Base log directory structure
-    BASE_LOG_DIR = Path("logs")
+    # Base log directory structure (writable AppData when packaged)
+    BASE_LOG_DIR = _resolve_base_log_dir()
     
     @classmethod
     def get_dated_log_dirs(cls):
@@ -379,7 +394,9 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     
     @classmethod
     def get_console_handler(cls) -> logging.Handler:
-        """Create console handler"""
+        """Create console handler (returns NullHandler when stdout is unavailable in GUI mode)"""
+        if sys.stdout is None:
+            return logging.NullHandler()
         handler = logging.StreamHandler(sys.stdout)
         handler.setLevel(cls.CONSOLE_LEVEL)
         handler.addFilter(TerminalConsoleFilter())

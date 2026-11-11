@@ -64,7 +64,10 @@ class AIProcessor:
         """Lazy load Multilingual Support"""
         if self._multilingual is None and self.enable_multilingual:
             try:
-                from ai_assistant.multilingual import MultilingualSupport
+                try:
+                    from ai_assistant.utils.multilingual import MultilingualSupport
+                except ImportError:
+                    from ai_assistant.multilingual import MultilingualSupport
                 self._multilingual = MultilingualSupport()
                 self._init_status['multilingual'] = 'ready'
                 logger.info("✅ Multilingual support initialized")
