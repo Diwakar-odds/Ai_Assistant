@@ -12,6 +12,7 @@ eggs/
 .eggs/
 lib/
 lib64/
+!frontend/web-app/src/lib/
 parts/
 sdist/
 var/
@@ -67,6 +68,7 @@ gmail_token.pickle
 user_data/
 offline_cache/
 data/
+!tests/data/
 
 # User-Specific Configuration (Auto-Generated)
 config/discovered_apps.json
@@ -83,6 +85,7 @@ config/*.env
 logs/
 *.log
 *.log.*
+desktop_app.log
 
 # IDE / Editor
 .vscode/
@@ -117,6 +120,7 @@ screenshots/
 *.jpeg
 !static/**/*.png
 !static/**/*.jpg
+!frontend/web-app/src-tauri/icons/*.png
 
 # Temporary Files
 tmp/
@@ -173,6 +177,7 @@ $RECYCLE.BIN/
 
 # PyInstaller
 *.spec
+!desktop/pyinstaller_specs/*.spec
 
 # Miscellaneous
 .sass-cache/
@@ -199,7 +204,12 @@ legacy_backup/
 !requirements.txt
 !requirements-ci.txt
 !pytest.ini
+!docs/LICENSE.txt
+!deploy/runtime.txt
+!config/requirements/*.txt
 *_REPORT.md
+!*.github/ISSUE_TEMPLATE/bug_report.md
+!.github/ISSUE_TEMPLATE/bug_report.md
 *_PLAN.md
 *_OPTIMIZATION.md
 BACKEND_OPTIMIZATION.md

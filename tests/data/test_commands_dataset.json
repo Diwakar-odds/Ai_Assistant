@@ -1,0 +1,1691 @@
+[
+  {
+    "id": "CMD_000",
+    "text": "open chrome",
+    "expected_intent": "OPEN_BROWSER",
+    "expected_entities": {
+      "url": null
+    },
+    "expected_action_type": "BROWSER",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "open"
+    ]
+  },
+  {
+    "id": "CMD_001",
+    "text": "launch chrome",
+    "expected_intent": "OPEN_BROWSER",
+    "expected_entities": {
+      "url": null
+    },
+    "expected_action_type": "BROWSER",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "launch"
+    ]
+  },
+  {
+    "id": "CMD_002",
+    "text": "chrome kholo",
+    "expected_intent": "OPEN_BROWSER",
+    "expected_entities": {
+      "url": null
+    },
+    "expected_action_type": "BROWSER",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "open"
+    ]
+  },
+  {
+    "id": "CMD_003",
+    "text": "chrome chalu karo",
+    "expected_intent": "OPEN_BROWSER",
+    "expected_entities": {
+      "url": null
+    },
+    "expected_action_type": "BROWSER",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "launch"
+    ]
+  },
+  {
+    "id": "CMD_004",
+    "text": "chrome khol da",
+    "expected_intent": "OPEN_BROWSER",
+    "expected_entities": {
+      "url": null
+    },
+    "expected_action_type": "BROWSER",
+    "expected_chain_steps": 1,
+    "language": "Bhojpuri",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "open"
+    ]
+  },
+  {
+    "id": "CMD_005",
+    "text": "open spotify",
+    "expected_intent": "OPEN_APP",
+    "expected_entities": {
+      "app": "spotify"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "open"
+    ]
+  },
+  {
+    "id": "CMD_006",
+    "text": "launch spotify",
+    "expected_intent": "OPEN_APP",
+    "expected_entities": {
+      "app": "spotify"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "launch"
+    ]
+  },
+  {
+    "id": "CMD_007",
+    "text": "spotify kholo",
+    "expected_intent": "OPEN_APP",
+    "expected_entities": {
+      "app": "spotify"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "open"
+    ]
+  },
+  {
+    "id": "CMD_008",
+    "text": "spotify chalu karo",
+    "expected_intent": "OPEN_APP",
+    "expected_entities": {
+      "app": "spotify"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "launch"
+    ]
+  },
+  {
+    "id": "CMD_009",
+    "text": "spotify khol da",
+    "expected_intent": "OPEN_APP",
+    "expected_entities": {
+      "app": "spotify"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "Bhojpuri",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "open"
+    ]
+  },
+  {
+    "id": "CMD_010",
+    "text": "open notepad",
+    "expected_intent": "OPEN_APP",
+    "expected_entities": {
+      "app": "notepad"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "open"
+    ]
+  },
+  {
+    "id": "CMD_011",
+    "text": "launch notepad",
+    "expected_intent": "OPEN_APP",
+    "expected_entities": {
+      "app": "notepad"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "launch"
+    ]
+  },
+  {
+    "id": "CMD_012",
+    "text": "notepad kholo",
+    "expected_intent": "OPEN_APP",
+    "expected_entities": {
+      "app": "notepad"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "open"
+    ]
+  },
+  {
+    "id": "CMD_013",
+    "text": "notepad chalu karo",
+    "expected_intent": "OPEN_APP",
+    "expected_entities": {
+      "app": "notepad"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "launch"
+    ]
+  },
+  {
+    "id": "CMD_014",
+    "text": "notepad khol da",
+    "expected_intent": "OPEN_APP",
+    "expected_entities": {
+      "app": "notepad"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "Bhojpuri",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "open"
+    ]
+  },
+  {
+    "id": "CMD_015",
+    "text": "open calculator",
+    "expected_intent": "OPEN_APP",
+    "expected_entities": {
+      "app": "calculator"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "open"
+    ]
+  },
+  {
+    "id": "CMD_016",
+    "text": "launch calculator",
+    "expected_intent": "OPEN_APP",
+    "expected_entities": {
+      "app": "calculator"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "launch"
+    ]
+  },
+  {
+    "id": "CMD_017",
+    "text": "calculator kholo",
+    "expected_intent": "OPEN_APP",
+    "expected_entities": {
+      "app": "calculator"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "open"
+    ]
+  },
+  {
+    "id": "CMD_018",
+    "text": "calculator chalu karo",
+    "expected_intent": "OPEN_APP",
+    "expected_entities": {
+      "app": "calculator"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "launch"
+    ]
+  },
+  {
+    "id": "CMD_019",
+    "text": "calculator khol da",
+    "expected_intent": "OPEN_APP",
+    "expected_entities": {
+      "app": "calculator"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "Bhojpuri",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "open"
+    ]
+  },
+  {
+    "id": "CMD_020",
+    "text": "close chrome",
+    "expected_intent": "CLOSE_APP",
+    "expected_entities": {
+      "app": "chrome"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "close"
+    ]
+  },
+  {
+    "id": "CMD_021",
+    "text": "quit chrome",
+    "expected_intent": "CLOSE_APP",
+    "expected_entities": {
+      "app": "chrome"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "quit"
+    ]
+  },
+  {
+    "id": "CMD_022",
+    "text": "chrome band karo",
+    "expected_intent": "CLOSE_APP",
+    "expected_entities": {
+      "app": "chrome"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "close"
+    ]
+  },
+  {
+    "id": "CMD_023",
+    "text": "chrome band kar da",
+    "expected_intent": "CLOSE_APP",
+    "expected_entities": {
+      "app": "chrome"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "Bhojpuri",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "close"
+    ]
+  },
+  {
+    "id": "CMD_024",
+    "text": "close spotify",
+    "expected_intent": "CLOSE_APP",
+    "expected_entities": {
+      "app": "spotify"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "close"
+    ]
+  },
+  {
+    "id": "CMD_025",
+    "text": "quit spotify",
+    "expected_intent": "CLOSE_APP",
+    "expected_entities": {
+      "app": "spotify"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "quit"
+    ]
+  },
+  {
+    "id": "CMD_026",
+    "text": "spotify band karo",
+    "expected_intent": "CLOSE_APP",
+    "expected_entities": {
+      "app": "spotify"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "close"
+    ]
+  },
+  {
+    "id": "CMD_027",
+    "text": "spotify band kar da",
+    "expected_intent": "CLOSE_APP",
+    "expected_entities": {
+      "app": "spotify"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "Bhojpuri",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "close"
+    ]
+  },
+  {
+    "id": "CMD_028",
+    "text": "close notepad",
+    "expected_intent": "CLOSE_APP",
+    "expected_entities": {
+      "app": "notepad"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "close"
+    ]
+  },
+  {
+    "id": "CMD_029",
+    "text": "quit notepad",
+    "expected_intent": "CLOSE_APP",
+    "expected_entities": {
+      "app": "notepad"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "quit"
+    ]
+  },
+  {
+    "id": "CMD_030",
+    "text": "notepad band karo",
+    "expected_intent": "CLOSE_APP",
+    "expected_entities": {
+      "app": "notepad"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "close"
+    ]
+  },
+  {
+    "id": "CMD_031",
+    "text": "notepad band kar da",
+    "expected_intent": "CLOSE_APP",
+    "expected_entities": {
+      "app": "notepad"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "Bhojpuri",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "close"
+    ]
+  },
+  {
+    "id": "CMD_032",
+    "text": "close calculator",
+    "expected_intent": "CLOSE_APP",
+    "expected_entities": {
+      "app": "calculator"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "close"
+    ]
+  },
+  {
+    "id": "CMD_033",
+    "text": "quit calculator",
+    "expected_intent": "CLOSE_APP",
+    "expected_entities": {
+      "app": "calculator"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "quit"
+    ]
+  },
+  {
+    "id": "CMD_034",
+    "text": "calculator band karo",
+    "expected_intent": "CLOSE_APP",
+    "expected_entities": {
+      "app": "calculator"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "close"
+    ]
+  },
+  {
+    "id": "CMD_035",
+    "text": "calculator band kar da",
+    "expected_intent": "CLOSE_APP",
+    "expected_entities": {
+      "app": "calculator"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "Bhojpuri",
+    "category": "app_control",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "app",
+      "close"
+    ]
+  },
+  {
+    "id": "CMD_036",
+    "text": "shut down the computer",
+    "expected_intent": "SYSTEM_SHUTDOWN",
+    "expected_entities": {},
+    "expected_action_type": "SYSTEM",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "system",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "shutdown"
+    ]
+  },
+  {
+    "id": "CMD_037",
+    "text": "turn off the pc",
+    "expected_intent": "SYSTEM_SHUTDOWN",
+    "expected_entities": {},
+    "expected_action_type": "SYSTEM",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "system",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "shutdown"
+    ]
+  },
+  {
+    "id": "CMD_038",
+    "text": "power off the system",
+    "expected_intent": "SYSTEM_SHUTDOWN",
+    "expected_entities": {},
+    "expected_action_type": "SYSTEM",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "system",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "shutdown"
+    ]
+  },
+  {
+    "id": "CMD_039",
+    "text": "computer band kar do",
+    "expected_intent": "SYSTEM_SHUTDOWN",
+    "expected_entities": {},
+    "expected_action_type": "SYSTEM",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "system",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "shutdown"
+    ]
+  },
+  {
+    "id": "CMD_040",
+    "text": "pc off kar do",
+    "expected_intent": "SYSTEM_SHUTDOWN",
+    "expected_entities": {},
+    "expected_action_type": "SYSTEM",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "system",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "shutdown"
+    ]
+  },
+  {
+    "id": "CMD_041",
+    "text": "system band kardo",
+    "expected_intent": "SYSTEM_SHUTDOWN",
+    "expected_entities": {},
+    "expected_action_type": "SYSTEM",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "system",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "shutdown"
+    ]
+  },
+  {
+    "id": "CMD_042",
+    "text": "computerwa band kar da",
+    "expected_intent": "SYSTEM_SHUTDOWN",
+    "expected_entities": {},
+    "expected_action_type": "SYSTEM",
+    "expected_chain_steps": 1,
+    "language": "Bhojpuri",
+    "category": "system",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "shutdown"
+    ]
+  },
+  {
+    "id": "CMD_043",
+    "text": "systemwa off kar da",
+    "expected_intent": "SYSTEM_SHUTDOWN",
+    "expected_entities": {},
+    "expected_action_type": "SYSTEM",
+    "expected_chain_steps": 1,
+    "language": "Bhojpuri",
+    "category": "system",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "shutdown"
+    ]
+  },
+  {
+    "id": "CMD_044",
+    "text": "pc band kara",
+    "expected_intent": "SYSTEM_SHUTDOWN",
+    "expected_entities": {},
+    "expected_action_type": "SYSTEM",
+    "expected_chain_steps": 1,
+    "language": "Bhojpuri",
+    "category": "system",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "shutdown"
+    ]
+  },
+  {
+    "id": "CMD_045",
+    "text": "increase the volume",
+    "expected_intent": "VOLUME_UP",
+    "expected_entities": {},
+    "expected_action_type": "SYSTEM",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "system",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "volume",
+      "up"
+    ]
+  },
+  {
+    "id": "CMD_046",
+    "text": "volume up",
+    "expected_intent": "VOLUME_UP",
+    "expected_entities": {},
+    "expected_action_type": "SYSTEM",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "system",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "volume",
+      "up"
+    ]
+  },
+  {
+    "id": "CMD_047",
+    "text": "make it louder",
+    "expected_intent": "VOLUME_UP",
+    "expected_entities": {},
+    "expected_action_type": "SYSTEM",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "system",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "volume",
+      "up"
+    ]
+  },
+  {
+    "id": "CMD_048",
+    "text": "awaaz badha do",
+    "expected_intent": "VOLUME_UP",
+    "expected_entities": {},
+    "expected_action_type": "SYSTEM",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "system",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "volume",
+      "up"
+    ]
+  },
+  {
+    "id": "CMD_049",
+    "text": "volume tez karo",
+    "expected_intent": "VOLUME_UP",
+    "expected_entities": {},
+    "expected_action_type": "SYSTEM",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "system",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "volume",
+      "up"
+    ]
+  },
+  {
+    "id": "CMD_050",
+    "text": "awaaz tej kara",
+    "expected_intent": "VOLUME_UP",
+    "expected_entities": {},
+    "expected_action_type": "SYSTEM",
+    "expected_chain_steps": 1,
+    "language": "Bhojpuri",
+    "category": "system",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "volume",
+      "up"
+    ]
+  },
+  {
+    "id": "CMD_051",
+    "text": "decrease the volume",
+    "expected_intent": "VOLUME_DOWN",
+    "expected_entities": {},
+    "expected_action_type": "SYSTEM",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "system",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "volume",
+      "down"
+    ]
+  },
+  {
+    "id": "CMD_052",
+    "text": "volume down",
+    "expected_intent": "VOLUME_DOWN",
+    "expected_entities": {},
+    "expected_action_type": "SYSTEM",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "system",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "volume",
+      "down"
+    ]
+  },
+  {
+    "id": "CMD_053",
+    "text": "make it quieter",
+    "expected_intent": "VOLUME_DOWN",
+    "expected_entities": {},
+    "expected_action_type": "SYSTEM",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "system",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "volume",
+      "down"
+    ]
+  },
+  {
+    "id": "CMD_054",
+    "text": "awaaz kam karo",
+    "expected_intent": "VOLUME_DOWN",
+    "expected_entities": {},
+    "expected_action_type": "SYSTEM",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "system",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "volume",
+      "down"
+    ]
+  },
+  {
+    "id": "CMD_055",
+    "text": "volume dheere karo",
+    "expected_intent": "VOLUME_DOWN",
+    "expected_entities": {},
+    "expected_action_type": "SYSTEM",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "system",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "volume",
+      "down"
+    ]
+  },
+  {
+    "id": "CMD_056",
+    "text": "awaaz kam kara",
+    "expected_intent": "VOLUME_DOWN",
+    "expected_entities": {},
+    "expected_action_type": "SYSTEM",
+    "expected_chain_steps": 1,
+    "language": "Bhojpuri",
+    "category": "system",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "volume",
+      "down"
+    ]
+  },
+  {
+    "id": "CMD_057",
+    "text": "search for AI news",
+    "expected_intent": "web_search",
+    "expected_entities": {
+      "query": "AI news"
+    },
+    "expected_action_type": "BROWSER",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "web",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "search"
+    ]
+  },
+  {
+    "id": "CMD_058",
+    "text": "google who is the president",
+    "expected_intent": "web_search",
+    "expected_entities": {
+      "query": "who is the president"
+    },
+    "expected_action_type": "BROWSER",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "web",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "search",
+      "google"
+    ]
+  },
+  {
+    "id": "CMD_059",
+    "text": "find a recipe for pasta",
+    "expected_intent": "web_search",
+    "expected_entities": {
+      "query": "a recipe for pasta"
+    },
+    "expected_action_type": "BROWSER",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "web",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "search"
+    ]
+  },
+  {
+    "id": "CMD_060",
+    "text": "AI news dhund ke batao",
+    "expected_intent": "web_search",
+    "expected_entities": {
+      "query": "AI news"
+    },
+    "expected_action_type": "BROWSER",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "web",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "search"
+    ]
+  },
+  {
+    "id": "CMD_061",
+    "text": "internet pe search karo machine learning",
+    "expected_intent": "web_search",
+    "expected_entities": {
+      "query": "machine learning"
+    },
+    "expected_action_type": "BROWSER",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "web",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "search"
+    ]
+  },
+  {
+    "id": "CMD_062",
+    "text": "pasta recipe khoj karo",
+    "expected_intent": "web_search",
+    "expected_entities": {
+      "query": "pasta recipe"
+    },
+    "expected_action_type": "BROWSER",
+    "expected_chain_steps": 1,
+    "language": "Bhojpuri",
+    "category": "web",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "search"
+    ]
+  },
+  {
+    "id": "CMD_063",
+    "text": "play some music",
+    "expected_intent": "play",
+    "expected_entities": {},
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "media",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "play",
+      "music"
+    ]
+  },
+  {
+    "id": "CMD_064",
+    "text": "put on a song",
+    "expected_intent": "play",
+    "expected_entities": {},
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "media",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "play",
+      "music"
+    ]
+  },
+  {
+    "id": "CMD_065",
+    "text": "search for techburner on youtube",
+    "expected_intent": "play",
+    "expected_entities": {
+      "query": "techburner"
+    },
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "media",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "play",
+      "youtube"
+    ]
+  },
+  {
+    "id": "CMD_066",
+    "text": "gana bajao",
+    "expected_intent": "play",
+    "expected_entities": {},
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "media",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "play",
+      "music"
+    ]
+  },
+  {
+    "id": "CMD_067",
+    "text": "kuch chalao",
+    "expected_intent": "play",
+    "expected_entities": {},
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "media",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "play",
+      "video"
+    ]
+  },
+  {
+    "id": "CMD_068",
+    "text": "baja do kuch",
+    "expected_intent": "play",
+    "expected_entities": {},
+    "expected_action_type": "APP",
+    "expected_chain_steps": 1,
+    "language": "Bhojpuri",
+    "category": "media",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "play"
+    ]
+  },
+  {
+    "id": "CMD_069",
+    "text": "look at this",
+    "expected_intent": "vision",
+    "expected_entities": {},
+    "expected_action_type": "CUSTOM",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "vision",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "vision",
+      "look"
+    ]
+  },
+  {
+    "id": "CMD_070",
+    "text": "what is on my screen",
+    "expected_intent": "vision",
+    "expected_entities": {},
+    "expected_action_type": "CUSTOM",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "vision",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "vision",
+      "screen"
+    ]
+  },
+  {
+    "id": "CMD_071",
+    "text": "screen dekho",
+    "expected_intent": "vision",
+    "expected_entities": {},
+    "expected_action_type": "CUSTOM",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "vision",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "vision",
+      "screen"
+    ]
+  },
+  {
+    "id": "CMD_072",
+    "text": "kya hai ye screen par",
+    "expected_intent": "vision",
+    "expected_entities": {},
+    "expected_action_type": "CUSTOM",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "vision",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "vision",
+      "screen"
+    ]
+  },
+  {
+    "id": "CMD_073",
+    "text": "ankhein khol ke dekho",
+    "expected_intent": "vision",
+    "expected_entities": {},
+    "expected_action_type": "CUSTOM",
+    "expected_chain_steps": 1,
+    "language": "Bhojpuri",
+    "category": "vision",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "vision"
+    ]
+  },
+  {
+    "id": "CMD_074",
+    "text": "create a file named report.txt with content hello",
+    "expected_intent": "create_file",
+    "expected_entities": {
+      "filename": "report.txt",
+      "content": "hello"
+    },
+    "expected_action_type": "FILE",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "file",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "file",
+      "create"
+    ]
+  },
+  {
+    "id": "CMD_075",
+    "text": "create file script.py",
+    "expected_intent": "create_file",
+    "expected_entities": {
+      "filename": "script.py"
+    },
+    "expected_action_type": "FILE",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "file",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "file",
+      "create"
+    ]
+  },
+  {
+    "id": "CMD_076",
+    "text": "save this document",
+    "expected_intent": "create_file",
+    "expected_entities": {},
+    "expected_action_type": "FILE",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "file",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "file",
+      "save"
+    ]
+  },
+  {
+    "id": "CMD_077",
+    "text": "report.txt naam ka file banao",
+    "expected_intent": "create_file",
+    "expected_entities": {
+      "filename": "report.txt"
+    },
+    "expected_action_type": "FILE",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "file",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "file",
+      "create"
+    ]
+  },
+  {
+    "id": "CMD_078",
+    "text": "ek naya file bana da",
+    "expected_intent": "create_file",
+    "expected_entities": {},
+    "expected_action_type": "FILE",
+    "expected_chain_steps": 1,
+    "language": "Bhojpuri",
+    "category": "file",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "file",
+      "create"
+    ]
+  },
+  {
+    "id": "CMD_079",
+    "text": "what is the weather like",
+    "expected_intent": "GET_WEATHER",
+    "expected_entities": {},
+    "expected_action_type": "CUSTOM",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "weather",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "weather"
+    ]
+  },
+  {
+    "id": "CMD_080",
+    "text": "check the weather",
+    "expected_intent": "GET_WEATHER",
+    "expected_entities": {},
+    "expected_action_type": "CUSTOM",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "weather",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "weather"
+    ]
+  },
+  {
+    "id": "CMD_081",
+    "text": "is it raining outside",
+    "expected_intent": "GET_WEATHER",
+    "expected_entities": {},
+    "expected_action_type": "CUSTOM",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "weather",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "weather"
+    ]
+  },
+  {
+    "id": "CMD_082",
+    "text": "mausam kaisa hai",
+    "expected_intent": "GET_WEATHER",
+    "expected_entities": {},
+    "expected_action_type": "CUSTOM",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "weather",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "weather"
+    ]
+  },
+  {
+    "id": "CMD_083",
+    "text": "bahar ka mausam batao",
+    "expected_intent": "GET_WEATHER",
+    "expected_entities": {},
+    "expected_action_type": "CUSTOM",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "weather",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "weather"
+    ]
+  },
+  {
+    "id": "CMD_084",
+    "text": "mausam kaisan ba",
+    "expected_intent": "GET_WEATHER",
+    "expected_entities": {},
+    "expected_action_type": "CUSTOM",
+    "expected_chain_steps": 1,
+    "language": "Bhojpuri",
+    "category": "weather",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "weather"
+    ]
+  },
+  {
+    "id": "CMD_085",
+    "text": "research AI agents and give me a summary",
+    "expected_intent": "research_summarize",
+    "expected_entities": {
+      "topic": "AI agents"
+    },
+    "expected_action_type": "CUSTOM",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "research",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "research",
+      "summarize"
+    ]
+  },
+  {
+    "id": "CMD_086",
+    "text": "research quantum computing",
+    "expected_intent": "research",
+    "expected_entities": {
+      "topic": "quantum computing"
+    },
+    "expected_action_type": "CUSTOM",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "research",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "research"
+    ]
+  },
+  {
+    "id": "CMD_087",
+    "text": "scrape http://example.com and give me a summary",
+    "expected_intent": "scrape_summarize",
+    "expected_entities": {
+      "url": "http://example.com"
+    },
+    "expected_action_type": "CUSTOM",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "research",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "scrape",
+      "summarize"
+    ]
+  },
+  {
+    "id": "CMD_088",
+    "text": "AI agents ke bare mein research karo",
+    "expected_intent": "research",
+    "expected_entities": {
+      "topic": "AI agents"
+    },
+    "expected_action_type": "CUSTOM",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "research",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "research"
+    ]
+  },
+  {
+    "id": "CMD_089",
+    "text": "open chrome and search for AI",
+    "expected_intent": "MULTI_STEP",
+    "expected_entities": {},
+    "expected_action_type": "CHAIN",
+    "expected_chain_steps": 2,
+    "language": "English",
+    "category": "multi_step",
+    "is_multi_step": true,
+    "difficulty": "medium",
+    "tags": [
+      "chain",
+      "browser"
+    ]
+  },
+  {
+    "id": "CMD_090",
+    "text": "WhatsApp kholo aur message karo hi",
+    "expected_intent": "MULTI_STEP",
+    "expected_entities": {},
+    "expected_action_type": "CHAIN",
+    "expected_chain_steps": 2,
+    "language": "Hindi",
+    "category": "multi_step",
+    "is_multi_step": true,
+    "difficulty": "medium",
+    "tags": [
+      "chain",
+      "app"
+    ]
+  },
+  {
+    "id": "CMD_091",
+    "text": "create a file named test.txt, write hello, and close notepad",
+    "expected_intent": "MULTI_STEP",
+    "expected_entities": {},
+    "expected_action_type": "CHAIN",
+    "expected_chain_steps": 3,
+    "language": "English",
+    "category": "multi_step",
+    "is_multi_step": true,
+    "difficulty": "hard",
+    "tags": [
+      "chain",
+      "file",
+      "app"
+    ]
+  },
+  {
+    "id": "CMD_092",
+    "text": "volume tez karo aur spotify pe gana bajao",
+    "expected_intent": "MULTI_STEP",
+    "expected_entities": {},
+    "expected_action_type": "CHAIN",
+    "expected_chain_steps": 2,
+    "language": "Hindi",
+    "category": "multi_step",
+    "is_multi_step": true,
+    "difficulty": "medium",
+    "tags": [
+      "chain",
+      "system",
+      "media"
+    ]
+  },
+  {
+    "id": "CMD_093",
+    "text": "research quantum mechanics and create a file summary.txt with the results",
+    "expected_intent": "MULTI_STEP",
+    "expected_entities": {},
+    "expected_action_type": "CHAIN",
+    "expected_chain_steps": 2,
+    "language": "English",
+    "category": "multi_step",
+    "is_multi_step": true,
+    "difficulty": "hard",
+    "tags": [
+      "chain",
+      "research",
+      "file"
+    ]
+  },
+  {
+    "id": "CMD_094",
+    "text": "do something cool",
+    "expected_intent": "unknown",
+    "expected_entities": {},
+    "expected_action_type": "CUSTOM",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "ambiguous",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "unknown"
+    ]
+  },
+  {
+    "id": "CMD_095",
+    "text": "kuch karo",
+    "expected_intent": "unknown",
+    "expected_entities": {},
+    "expected_action_type": "CUSTOM",
+    "expected_chain_steps": 1,
+    "language": "Hindi",
+    "category": "ambiguous",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "unknown"
+    ]
+  },
+  {
+    "id": "CMD_096",
+    "text": "I need help",
+    "expected_intent": "unknown",
+    "expected_entities": {},
+    "expected_action_type": "CUSTOM",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "ambiguous",
+    "is_multi_step": false,
+    "difficulty": "easy",
+    "tags": [
+      "unknown"
+    ]
+  },
+  {
+    "id": "CMD_097",
+    "text": "",
+    "expected_intent": "unknown",
+    "expected_entities": {},
+    "expected_action_type": "CUSTOM",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "edge_cases",
+    "is_multi_step": false,
+    "difficulty": "hard",
+    "tags": [
+      "empty"
+    ]
+  },
+  {
+    "id": "CMD_098",
+    "text": "                                                  ",
+    "expected_intent": "unknown",
+    "expected_entities": {},
+    "expected_action_type": "CUSTOM",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "edge_cases",
+    "is_multi_step": false,
+    "difficulty": "hard",
+    "tags": [
+      "spaces"
+    ]
+  },
+  {
+    "id": "CMD_099",
+    "text": "shutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshutshut",
+    "expected_intent": "unknown",
+    "expected_entities": {},
+    "expected_action_type": "CUSTOM",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "edge_cases",
+    "is_multi_step": false,
+    "difficulty": "hard",
+    "tags": [
+      "long"
+    ]
+  },
+  {
+    "id": "CMD_100",
+    "text": "DROP TABLE users; --",
+    "expected_intent": "unknown",
+    "expected_entities": {},
+    "expected_action_type": "CUSTOM",
+    "expected_chain_steps": 1,
+    "language": "English",
+    "category": "edge_cases",
+    "is_multi_step": false,
+    "difficulty": "hard",
+    "tags": [
+      "injection"
+    ]
+  }
+]

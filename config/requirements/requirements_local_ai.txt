@@ -1,0 +1,52 @@
+# Local AI Requirements - Optimized for 8GB RAM / 1GB GPU
+# CPU-only inference with llama.cpp
+
+# Core dependency - CPU-optimized builds
+llama-cpp-python==0.2.32        # CPU inference engine (no GPU required)
+
+# Optional: For downloading models from HuggingFace
+huggingface-hub>=0.20.0
+
+# Optional: For advanced features
+numpy>=1.24.0                   # Fast array operations
+tqdm>=4.65.0                    # Progress bars for downloads
+
+# Installation Instructions:
+# ========================
+# 
+# 1. Basic Installation (CPU-only):
+#    pip install llama-cpp-python
+#
+# 2. With AVX2 optimization (faster on modern CPUs):
+#    CMAKE_ARGS="-DLLAMA_AVX2=ON" pip install llama-cpp-python --force-reinstall --no-cache-dir
+#
+# 3. Full installation:
+#    pip install -r requirements_local_ai.txt
+#
+# 4. Verify installation:
+#    python -c "from llama_cpp import Llama; print('✅ llama-cpp-python installed')"
+#
+# Model Downloads:
+# ===============
+# 
+# TinyLlama-1.1B (Recommended for 8GB RAM):
+#   Size: ~700MB
+#   Speed: 10-15 tokens/sec on CPU
+#   Download: 
+#     huggingface-cli download TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF \
+#       tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf \
+#       --local-dir model/local_models
+#
+# Qwen2-0.5B (Fastest option):
+#   Size: ~400MB  
+#   Speed: 15-25 tokens/sec on CPU
+#   Download:
+#     huggingface-cli download Qwen/Qwen2-0.5B-Instruct-GGUF \
+#       qwen2-0_5b-instruct-q4_k_m.gguf \
+#       --local-dir model/local_models
+#
+# Manual Download Alternative:
+# ============================
+# Visit: https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF
+# Download: tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
+# Place in: F:\bn\assitant\model\local_models\

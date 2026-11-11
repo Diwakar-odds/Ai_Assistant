@@ -1,0 +1,34 @@
+# Mobile Access Requirements
+# Additional dependencies for PWA and mobile support
+
+# Core web dependencies (if not already installed)
+flask>=2.3.0
+flask-socketio>=5.3.0
+flask-cors>=4.0.0
+flask-jwt-extended>=4.5.0
+flask-limiter>=3.3.0
+
+# WebSocket support
+python-socketio>=5.9.0
+python-engineio>=4.7.0
+
+# For HTTPS/SSL (optional, for production)
+pyopenssl>=23.2.0
+
+# For Ngrok integration (optional, for internet access)
+pyngrok>=6.0.0
+
+# Compression for faster mobile loading
+flask-compress>=1.13
+
+# For QR code generation (share links easily)
+qrcode[pil]>=7.4.2
+
+# Push notifications (optional, for advanced PWA)
+pywebpush>=1.14.0
+
+# Image optimization for mobile
+pillow>=10.0.0
+
+# For mobile analytics (optional)
+user-agents>=2.2.0
