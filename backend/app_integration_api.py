@@ -424,41 +424,23 @@ def stop_hardware_mic():
 
 @app.route('/api/hardware/tts/play', methods=['POST'])
 def play_hardware_tts():
-    """Generate and play TTS directly through OS speakers"""
+    """Generate and play TTS directly through OS speakers via unified TTSOutputService."""
     data = request.get_json() or {}
     text = data.get('text', '')
-    
+
     if not text:
         return jsonify({'success': False, 'error': 'No text provided'}), 400
-        
+
     try:
-        import pygame
-        # Initialize pygame mixer if not already
-        if not pygame.mixer.get_init():
-            pygame.mixer.init()
-            
-        # We need the path to the TTS engine. For now, let's assume we can import it
-        try:
-            from core_ai.src.ai_assistant.voice.neural_voice_engine import get_neural_voice_engine
-            engine = get_neural_voice_engine()
-            audio_file = engine.speak(text)
-            
-            if audio_file and os.path.exists(audio_file):
-                logger.info(f"Playing audio directly to hardware: {audio_file}")
-                pygame.mixer.music.load(audio_file)
-                pygame.mixer.music.play()
-                
-                # We could wait for it to finish, but returning immediately is better for API
-                return jsonify({'success': True, 'message': 'Playing audio on hardware speakers'}), 200
-            else:
-                return jsonify({'success': False, 'error': 'Failed to generate audio file'}), 500
-                
-        except ImportError as e:
-            logger.error(f"Could not load TTS engine: {e}")
-            return jsonify({'success': False, 'error': f'TTS Engine error: {e}'}), 500
-            
-    except ImportError:
-        return jsonify({'success': False, 'error': 'pygame module not installed'}), 500
+        from ai_assistant.voice.tts_output_service import get_tts_service
+        queued = get_tts_service().speak(
+            text,
+            interrupt=bool(data.get('interrupt', True)),
+            source='hardware_api',
+        )
+        if queued:
+            return jsonify({'success': True, 'message': 'Playing audio on hardware speakers'}), 200
+        return jsonify({'success': False, 'error': 'TTS output skipped or disabled'}), 400
     except Exception as e:
         logger.error(f"Hardware TTS error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500

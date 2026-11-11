@@ -44,7 +44,7 @@ const VoiceDetail = () => {
       const data = await response.json();
       if (data.success) {
         setSettings(data.settings);
-        setSelectedVoice(data.settings?.tts?.voice_id || 'en-US-AriaNeural');
+        setSelectedVoice(data.settings?.tts?.voice_id || 'kitten:Bella');
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -65,18 +65,22 @@ const VoiceDetail = () => {
     }
   };
 
-  const saveSettings = async () => {
-    if (!settings) return;
+  const saveSettings = async (overrideSettings?: any) => {
+    const payload = overrideSettings || settings;
+    if (!payload) return;
 
     setSaving(true);
     try {
       const response = await fetch(apiUrl('/api/voice/settings'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings)
+        body: JSON.stringify(payload)
       });
       const data = await response.json();
       if (data.success) {
+        if (data.settings) {
+          setSettings(data.settings);
+        }
         console.log('Settings saved successfully');
       }
     } catch (error) {
@@ -90,18 +94,19 @@ const VoiceDetail = () => {
     const voice = voices.find(v => v.id === voiceId);
     if (!voice) return;
 
-    setSelectedVoice(voiceId);
-    setSettings({
+    const isKitten = voiceId === 'kittentts' || voiceId.startsWith('kitten:');
+    const nextSettings = {
       ...settings,
       tts: {
-        ...settings.tts,
+        ...settings?.tts,
+        engine: isKitten ? 'kittentts' : 'edge_tts',
         voice_id: voiceId,
         voice_name: voice.name
       }
-    });
-
-    // Auto-save
-    setTimeout(() => saveSettings(), 100);
+    };
+    setSelectedVoice(voiceId);
+    setSettings(nextSettings);
+    saveSettings(nextSettings);
   };
 
   const playVoicePreview = async () => {
@@ -117,10 +122,13 @@ const VoiceDetail = () => {
       });
       const data = await response.json();
 
-      if (data.success && data.audio_data) {
+      if (response.ok && data.success && data.audio_data) {
         const audio = new Audio(data.audio_data);
-        audio.play();
         audio.onended = () => setPreviewPlaying(false);
+        audio.onerror = () => setPreviewPlaying(false);
+        await audio.play();
+      } else {
+        setPreviewPlaying(false);
       }
     } catch (error) {
       console.error('Preview failed:', error);
@@ -129,27 +137,30 @@ const VoiceDetail = () => {
   };
 
   const toggleTTS = () => {
-    setSettings({
+    const nextSettings = {
       ...settings,
-      tts: { ...settings.tts, enabled: !settings.tts?.enabled }
-    });
-    setTimeout(() => saveSettings(), 100);
+      tts: { ...settings?.tts, enabled: !settings?.tts?.enabled }
+    };
+    setSettings(nextSettings);
+    saveSettings(nextSettings);
   };
 
   const toggleSTT = () => {
-    setSettings({
+    const nextSettings = {
       ...settings,
-      stt: { ...settings.stt, enabled: !settings.stt?.enabled }
-    });
-    setTimeout(() => saveSettings(), 100);
+      stt: { ...settings?.stt, enabled: !settings?.stt?.enabled }
+    };
+    setSettings(nextSettings);
+    saveSettings(nextSettings);
   };
 
   const toggleNoiseReduction = () => {
-    setSettings({
+    const nextSettings = {
       ...settings,
-      stt: { ...settings.stt, noise_reduction: !settings.stt?.noise_reduction }
-    });
-    setTimeout(() => saveSettings(), 100);
+      stt: { ...settings?.stt, noise_reduction: !settings?.stt?.noise_reduction }
+    };
+    setSettings(nextSettings);
+    saveSettings(nextSettings);
   };
 
   if (loading) {
@@ -283,11 +294,12 @@ const VoiceDetail = () => {
               <select
                 value={settings?.stt?.engine || 'whisper'}
                 onChange={(e) => {
-                  setSettings({
+                  const nextSettings = {
                     ...settings,
-                    stt: { ...settings.stt, engine: e.target.value }
-                  });
-                  setTimeout(() => saveSettings(), 100);
+                    stt: { ...settings?.stt, engine: e.target.value }
+                  };
+                  setSettings(nextSettings);
+                  saveSettings(nextSettings);
                 }}
                 className="w-full bg-[#2A2D35] text-white px-4 py-2 rounded-lg border border-[#3A3D45] focus:border-[#3B82F6] focus:outline-none"
                 disabled={!settings?.stt?.enabled}

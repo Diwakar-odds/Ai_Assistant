@@ -1,9 +1,19 @@
 {
   "tts": {
     "engines": {
-      "edge_tts": {
+      "kittentts": {
         "enabled": true,
         "priority": 1,
+        "model": "models/tts/kitten-tts-mini-0.8",
+        "voices": {
+          "female": "kitten:Bella",
+          "male": "kitten:Jasper",
+          "default": "kitten:Bella"
+        }
+      },
+      "edge_tts": {
+        "enabled": true,
+        "priority": 2,
         "voices": {
           "en-US": {
             "female": "en-US-AriaNeural",
@@ -31,19 +41,19 @@
       },
       "pyttsx3": {
         "enabled": true,
-        "priority": 2,
+        "priority": 3,
         "rate": 150,
         "volume": 0.9
       },
       "gtts": {
-        "enabled": true,
-        "priority": 3,
+        "enabled": false,
+        "priority": 4,
         "slow": false
       }
     },
-    "default_engine": "edge_tts",
-    "default_voice": "en-US-AriaNeural",
-    "default_language": "en-US",
+    "default_engine": "kittentts",
+    "default_voice": "kitten:Bella",
+    "default_language": "hi-IN",
     "default_gender": "female",
     "speed": 1.0,
     "volume": 0.9,
@@ -125,12 +135,12 @@
   "wake_word": {
     "enabled": true,
     "phrases": [
-      "hey daddy",
-      "ok daddy",
-      "hey assistant",
-      "ok assistant"
+      "hey pulsar",
+      "pulsar",
+      "ok pulsar",
+      "hey assistant"
     ],
-    "sensitivity": 0.5,
+    "sensitivity": 0.6,
     "detection_mode": "pattern_matching",
     "phonetic_matching": true,
     "timeout": 5,

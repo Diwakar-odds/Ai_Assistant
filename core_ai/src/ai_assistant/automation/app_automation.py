@@ -429,6 +429,11 @@ class StickyNotesAutomation(AppAutomation):
         self.tts_engine = None
         if TTS_AVAILABLE:
             self.tts_engine = pyttsx3.init()
+            try:
+                from ai_assistant.voice.tts_output_service import configure_sapi5_voice
+                configure_sapi5_voice(self.tts_engine)
+            except Exception:
+                pass
     
     def open_sticky_notes(self) -> bool:
         """Open Sticky Notes app"""

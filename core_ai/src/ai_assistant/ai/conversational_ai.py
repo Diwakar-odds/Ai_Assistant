@@ -257,7 +257,7 @@ class AdvancedConversationalAI:
             except:
                 pass  # dotenv not available, use system env vars
             
-            from ai_assistant.ai.llm_provider import UnifiedChatInterface, LLMFactory
+            from ai_assistant.ai.llm_provider import UnifiedChatInterface, LLMFactory, is_local_provider
             
             try:
                 import sys
@@ -268,24 +268,31 @@ class AdvancedConversationalAI:
             except ImportError:
                 _sm_provider, _sm_model = None, None
 
-            # Try to create a unified chat interface with automatic provider detection
+            if _sm_provider:
+                _sm_provider = LLMFactory.normalize_provider(_sm_provider)
+                _sm_model = LLMFactory.sanitize_model_for_provider(_sm_provider, _sm_model)
+
+            # Create unified chat interface (local providers NEVER fall back to cloud)
             self.llm_provider = UnifiedChatInterface(
                 provider=_sm_provider,
                 model=_sm_model,
-                use_fallback=True
+                use_fallback=(not is_local_provider(_sm_provider))
             )
             
-                        # Add a system prompt for the assistant
-            system_prompt = (
-                "You are Pulsar, a smart, helpful, and concise AI assistant created by Diwakar. "
-                "You MUST NEVER identify as a large language model trained by Google or any other company. "
-                "You MUST NEVER mention Gemma, OpenAI, Google, or any base models. "
-                "Keep your answers brief and directly address the user. "
-                "You are capable of controlling the system, managing files, and executing complex chains of action. "
-                "Navigate the system freely. If asked to do something, simply confirm it shall be done. "
-                "CRITICAL INSTRUCTION: If the user writes in Hindi or Hinglish (like 'kkrh ho', 'kya kar rahe ho'), you MUST understand and reply naturally in Hinglish/Hindi. "
-                "CRITICAL INSTRUCTION: If the user asks an ethical, sensitive, or complex question, answer it directly and thoughtfully. DO NOT change the subject or output random facts."
-            )
+            # Build unified persona system prompt
+            try:
+                from ai_assistant.core.jarvis_persona import build_persona_system_prompt
+                system_prompt = build_persona_system_prompt(
+                    provider=_sm_provider or "",
+                    model=_sm_model or "",
+                    surface="chat",
+                )
+            except Exception:
+                system_prompt = (
+                    "You are Pulsar, a smart, helpful, and concise AI companion created by Diwakar. "
+                    "You MUST NEVER identify as Google, OpenAI, Gemma, or any base model. "
+                    "If the user writes in Hindi or Hinglish, reply naturally in Hinglish/Hindi."
+                )
 
             # Try to load user profile to personalize the prompt
             try:
@@ -385,7 +392,10 @@ class AdvancedConversationalAI:
             except Exception as e:
                 print(f"⚠️   Error loading user profile: {e}")
 
-            self.llm_provider.add_system_message(system_prompt)
+            if hasattr(self.llm_provider, 'set_system_message'):
+                self.llm_provider.set_system_message(system_prompt)
+            else:
+                self.llm_provider.add_system_message(system_prompt)
             print("✅ LLM provider initialized for real-time AI responses")
         except Exception as e:
             print(f"⚠️   LLM provider initialization failed: {e}")
@@ -1650,29 +1660,39 @@ class AdvancedConversationalAI:
         """Generate a contextual response using LLM or fallback to rule-based."""
         message_lower = message.lower().strip()
         
-        # Determine which provider to use
+        # Determine which provider to use (local requests NEVER fall back to cloud)
+        from ai_assistant.ai.llm_provider import UnifiedChatInterface, LLMFactory, is_local_provider
         active_provider = self.llm_provider
-        
-        # Dynamic Switching if requested
-        if provider and active_provider:
-             # If requested provider is different from current
-             current_name = active_provider.provider_name.lower() if hasattr(active_provider, 'provider_name') else ''
-             if provider.lower() not in current_name:
-                  try:
-                       print(f"🔄 Temporarily switching LLM: {current_name} -> {provider}")
-                       from ai_assistant.ai.llm_provider import UnifiedChatInterface
-                       # Create temp provider
-                       active_provider = UnifiedChatInterface(provider=provider, model=model, use_fallback=True)
-                       
-                       # Add Identity System Message
-                       if 'openai' in provider.lower():
-                            active_provider.add_system_message("You are an AI assistant powered by OpenAI.")
-                       elif 'gemini' in provider.lower():
-                            active_provider.add_system_message("You are Pulsar, powered by Google Gemini.")
-                            
-                  except Exception as e:
-                       print(f"⚠️  Failed to switch provider: {e}")
-                       active_provider = self.llm_provider # Fallback to default
+        is_local_req = False
+        req_prov = LLMFactory.normalize_provider(provider) if provider else None
+
+        # Dynamic Switching if requested (check both provider and model, even if active_provider is None)
+        if req_prov:
+            is_local_req = is_local_provider(req_prov)
+            req_model = LLMFactory.sanitize_model_for_provider(req_prov, model) if model else None
+            current_name = LLMFactory.normalize_provider(getattr(active_provider, 'provider_name', '') or '') if active_provider else ''
+            current_model = getattr(active_provider, 'model', '') if active_provider else ''
+            if active_provider is None or req_prov != current_name or (req_model and req_model != current_model):
+                try:
+                    print(f"🔄 Temporarily switching LLM: {current_name or 'none'} -> {req_prov} ({req_model or 'default'})")
+                    active_provider = UnifiedChatInterface(
+                        provider=req_prov,
+                        model=req_model,
+                        use_fallback=(not is_local_req),
+                    )
+                    from ai_assistant.core.jarvis_persona import build_persona_system_prompt
+                    sys_msg = build_persona_system_prompt(provider=req_prov, model=req_model or '')
+                    if hasattr(active_provider, 'set_system_message'):
+                        active_provider.set_system_message(sys_msg)
+                    else:
+                        active_provider.add_system_message(sys_msg)
+                except Exception as e:
+                    if is_local_req:
+                        return f"Error: Local AI ({req_prov}) failed: {e}"
+                    print(f"⚠️ Failed to switch provider: {e}")
+                    active_provider = self.llm_provider  # Fallback to default (cloud-only)
+        elif active_provider is not None:
+            is_local_req = is_local_provider(getattr(active_provider, 'provider_name', None))
 
         # FIRST: Try to use the LLM provider for real-time AI responses
         if active_provider:
@@ -1801,15 +1821,19 @@ class AdvancedConversationalAI:
                     response = active_provider.provider.generate_response(clean_messages)
                 
                 # Sync clean history to active_provider (no prompt pollution)
+                resp_str = str(response or "").strip()
+                is_err_resp = resp_str.startswith("Error:")
                 active_provider.add_user_message(message)
-                if response and "Error" not in str(response):
+                if resp_str and not is_err_resp:
                     active_provider.add_assistant_message(response)
                 
                 logger.debug(f"DEBUG: LLM response type: {type(response)}, length: {len(str(response)) if response else 0}")
                 logger.debug(f"DEBUG: Response content: {str(response)[:100]}")
                 
-                if response and "Error" not in str(response) and len(str(response)) > 2:
+                if response and not is_err_resp and len(resp_str) > 2:
                     print(f"✅ AI response generated successfully")
+                    return response
+                elif is_local_req and is_err_resp:
                     return response
                 else:
                     print(f"⚠️  LLM returned empty or error response, using fallback")
@@ -1817,7 +1841,9 @@ class AdvancedConversationalAI:
             except Exception as e:
                 import traceback
                 traceback.print_exc()
-                print(f"⚠️   LLM response generation failed: {e}, using rule-based fallback")
+                if is_local_req:
+                    return f"Error: Local AI failed: {e}"
+                print(f"⚠️  LLM response generation failed: {e}, using rule-based fallback")
         
         # FALLBACK: Rule-based responses for common queries (when LLM unavailable)
         # Handle greetings

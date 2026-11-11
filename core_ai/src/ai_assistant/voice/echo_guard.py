@@ -36,6 +36,7 @@ architecture (24 kHz TTS playback, 16 kHz mic capture, WebSocket audio flow).
 from __future__ import annotations
 
 import time
+import threading
 import logging
 from typing import Optional
 
@@ -134,6 +135,8 @@ class EchoGuard:
     """
 
     def __init__(self) -> None:
+        self._lock = threading.RLock()
+
         # Recent output history: (timestamp, band_energies, level)
         self._hist: list[tuple[float, np.ndarray, float]] = []
 
@@ -161,27 +164,32 @@ class EchoGuard:
     @property
     def gain(self) -> float:
         """Learned mic-to-speaker level ratio."""
-        return self._gain
+        with self._lock:
+            return self._gain
 
     @property
     def calibrated(self) -> bool:
         """True once the estimate rests on enough real echo to be trusted."""
-        return self._seen >= 8
+        with self._lock:
+            return self._seen >= 8
 
     @property
     def floor(self) -> float:
         """Residual left by this room's echo.  Higher = harder to separate."""
-        return self._floor
+        with self._lock:
+            return self._floor
 
     @property
     def reliable(self) -> bool:
         """False when the acoustics are too poor to judge on content alone."""
-        return self._floor < _UNRELIABLE_FLOOR
+        with self._lock:
+            return self._floor < _UNRELIABLE_FLOOR
 
     @property
     def threshold(self) -> float:
         """The residual a block must clear to count as a voice."""
-        return max(_MIN_USER, self._head * _HEAD_MULT)
+        with self._lock:
+            return max(_MIN_USER, self._head * _HEAD_MULT)
 
     @property
     def required_blocks(self) -> int:
@@ -191,35 +199,39 @@ class EchoGuard:
     @property
     def last_similarity(self) -> float:
         """1.0 = fully explained by our output, 0.0 = nothing to do with it."""
-        return self._last_sim
+        with self._lock:
+            return self._last_sim
 
     @property
     def is_playing(self) -> bool:
         """True if TTS output is currently being tracked."""
-        return self._is_playing
+        with self._lock:
+            return self._is_playing
 
     # ── Public control ────────────────────────────────────────────────────
 
     def reset(self) -> None:
         """Playback stopped — drop the output history, keep what was learned."""
-        self._hist.clear()
-        self._last_sim = 0.0
-        self._is_playing = False
+        with self._lock:
+            self._hist.clear()
+            self._last_sim = 0.0
+            self._is_playing = False
         logger.debug("[EchoGuard] Reset — playback stopped")
 
     def get_status(self) -> dict:
         """Return a status dict for the diagnostics API."""
-        return {
-            "calibrated": self.calibrated,
-            "gain": round(self._gain, 3),
-            "floor": round(self._floor, 3),
-            "reliable": self.reliable,
-            "threshold": round(self.threshold, 3),
-            "is_playing": self._is_playing,
-            "history_size": len(self._hist),
-            "residuals_count": len(self._residuals),
-            "seen_echo_blocks": self._seen,
-        }
+        with self._lock:
+            return {
+                "calibrated": self.calibrated,
+                "gain": round(self._gain, 3),
+                "floor": round(self._floor, 3),
+                "reliable": self.reliable,
+                "threshold": round(self.threshold, 3),
+                "is_playing": self._is_playing,
+                "history_size": len(self._hist),
+                "residuals_count": len(self._residuals),
+                "seen_echo_blocks": self._seen,
+            }
 
     # ── Entry point 1: Record what we are playing ─────────────────────────
 
@@ -253,13 +265,13 @@ class EchoGuard:
                 else:
                     level = 0.0
 
-            self._hist.append((t, band_energies(pcm, sr), float(level)))
-            self._is_playing = True
-
-            # Prune old entries
+            energies = band_energies(pcm, sr)
             cutoff = t - _HISTORY_S
-            if len(self._hist) > 8:
-                self._hist = [h for h in self._hist if h[0] >= cutoff]
+            with self._lock:
+                self._hist.append((t, energies, float(level)))
+                self._is_playing = True
+                if len(self._hist) > 8:
+                    self._hist = [h for h in self._hist if h[0] >= cutoff]
         except Exception:
             pass  # Never let bookkeeping disturb playback
 
@@ -295,19 +307,22 @@ class EchoGuard:
 
             if level < _MIN_LEVEL:
                 # Microphone hears nothing — record that for calibration
-                if self._hist and max(h[2] for h in self._hist) > 0.15:
-                    self._residuals.append(0.0)
-                    if len(self._residuals) > _FLOOR_WINDOW:
-                        del self._residuals[:-_FLOOR_WINDOW]
-                    if len(self._residuals) >= _WARMUP:
-                        self._floor = float(np.percentile(self._residuals, _FLOOR_Q))
-                        self._head = float(np.percentile(self._residuals, _HEAD_Q))
-                self._run = 0
+                with self._lock:
+                    if self._hist and max(h[2] for h in self._hist) > 0.15:
+                        self._residuals.append(0.0)
+                        if len(self._residuals) > _FLOOR_WINDOW:
+                            del self._residuals[:-_FLOOR_WINDOW]
+                        if len(self._residuals) >= _WARMUP:
+                            self._floor = float(np.percentile(self._residuals, _FLOOR_Q))
+                            self._head = float(np.percentile(self._residuals, _HEAD_Q))
+                    self._run = 0
                 return False
 
-            if not self._hist:
-                # Nothing playing that we know of — anything audible is theirs
-                return True
+            with self._lock:
+                if not self._hist:
+                    # Nothing playing that we know of — anything audible is theirs
+                    return True
+                hist_snapshot = list(self._hist)
 
             t = time.monotonic() if when is None else when
             bands = band_energies(pcm, sr)
@@ -319,7 +334,7 @@ class EchoGuard:
             # Subtract as much of it as fits.  What's left over is whatever
             # the mic heard that we did NOT play.
             best_res, best_level = 1.0, 0.0
-            for ts, ref, ref_level in self._hist:
+            for ts, ref, ref_level in hist_snapshot:
                 if ts > t or t - ts > _HISTORY_S:
                     continue
                 denom = float(np.dot(ref, ref))
@@ -332,48 +347,49 @@ class EchoGuard:
                 if ratio < best_res:
                     best_res, best_level = ratio, ref_level
 
-            self._last_sim = 1.0 - best_res
+            with self._lock:
+                self._last_sim = 1.0 - best_res
 
-            # Nothing in the window explained it — that is not our sound
-            if best_level <= 0.0:
-                return True
+                # Nothing in the window explained it — that is not our sound
+                if best_level <= 0.0:
+                    return True
 
-            # --- Learning ---
-            # While warming up, learn from EVERY block (so we don't misjudge
-            # the first echo as a voice).  Once warm, learn only from blocks
-            # BELOW the bar (so user speech doesn't lift the threshold).
-            warming = len(self._residuals) < _WARMUP
-            thr = self.threshold
-            speech = (not warming) and best_res >= thr
+                # --- Learning ---
+                # While warming up, learn from EVERY block (so we don't misjudge
+                # the first echo as a voice).  Once warm, learn only from blocks
+                # BELOW the bar (so user speech doesn't lift the threshold).
+                warming = len(self._residuals) < _WARMUP
+                thr = max(_MIN_USER, self._head * _HEAD_MULT)
+                speech = (not warming) and best_res >= thr
 
-            if speech:
-                self._run += 1
-                # A run this long is not someone interrupting — nobody talks
-                # over an assistant for seconds on end.  The room changed
-                # (volume, headphones unplugged), so characterise it again.
-                if self._run > _RELEARN_RUN:
-                    self._residuals.clear()
-                    self._run = 0
+                if speech:
+                    self._run += 1
+                    # A run this long is not someone interrupting — nobody talks
+                    # over an assistant for seconds on end.  The room changed
+                    # (volume, headphones unplugged), so characterise it again.
+                    if self._run > _RELEARN_RUN:
+                        self._residuals.clear()
+                        self._run = 0
+                        return False
+                    return True
+
+                self._run = 0
+                self._residuals.append(best_res)
+                if len(self._residuals) > _FLOOR_WINDOW:
+                    del self._residuals[:-_FLOOR_WINDOW]
+                if len(self._residuals) >= _WARMUP:
+                    self._floor = float(np.percentile(self._residuals, _FLOOR_Q))
+                    self._head = float(np.percentile(self._residuals, _HEAD_Q))
+                if warming:
                     return False
-                return True
 
-            self._run = 0
-            self._residuals.append(best_res)
-            if len(self._residuals) > _FLOOR_WINDOW:
-                del self._residuals[:-_FLOOR_WINDOW]
-            if len(self._residuals) >= _WARMUP:
-                self._floor = float(np.percentile(self._residuals, _FLOOR_Q))
-                self._head = float(np.percentile(self._residuals, _HEAD_Q))
-            if warming:
+                # Comfortably just us: also a safe moment to learn how loudly
+                # this room returns our voice.
+                if best_res <= self._floor * 1.15 and best_level > 0.05:
+                    obs = level / max(best_level, 1e-6)
+                    self._gain += (min(obs, 3.0) - self._gain) * 0.08
+                    self._seen = min(self._seen + 1, 999)
                 return False
-
-            # Comfortably just us: also a safe moment to learn how loudly
-            # this room returns our voice.
-            if best_res <= self._floor * 1.15 and best_level > 0.05:
-                obs = level / max(best_level, 1e-6)
-                self._gain += (min(obs, 3.0) - self._gain) * 0.08
-                self._seen = min(self._seen + 1, 999)
-            return False
 
         except Exception as e:
             logger.debug(f"[EchoGuard] is_user_speech error (safe fallback): {e}")
@@ -383,6 +399,7 @@ class EchoGuard:
 # ---------------------------------------------------------------------------
 # Module-level singleton
 # ---------------------------------------------------------------------------
+_echo_guard_lock = threading.Lock()
 _echo_guard_instance: Optional[EchoGuard] = None
 
 
@@ -390,7 +407,9 @@ def get_echo_guard() -> EchoGuard:
     """Get or create the module-level EchoGuard singleton."""
     global _echo_guard_instance
     if _echo_guard_instance is None:
-        _echo_guard_instance = EchoGuard()
+        with _echo_guard_lock:
+            if _echo_guard_instance is None:
+                _echo_guard_instance = EchoGuard()
     return _echo_guard_instance
 
 

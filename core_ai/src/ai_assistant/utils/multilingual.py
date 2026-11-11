@@ -250,17 +250,26 @@ class MultilingualSupport:
         try:
             if TTS_AVAILABLE:
                 self.tts_engine = pyttsx3.init()
+                try:
+                    from ai_assistant.voice.tts_output_service import configure_sapi5_voice
+                    configure_sapi5_voice(self.tts_engine)
+                except Exception:
+                    pass
                 voices = self.tts_engine.getProperty('voices')
                 
-                # Find Hindi and English voices
+                # Find Female Hindi and English voices (avoiding male David default)
                 self.hindi_voice = None
                 self.english_voice = None
                 
                 for voice in voices:
-                    if 'hindi' in voice.name.lower() or 'hi' in voice.id.lower():
-                        self.hindi_voice = voice.id
-                    elif 'english' in voice.name.lower() or 'en' in voice.id.lower():
-                        self.english_voice = voice.id
+                    v_low = f"{getattr(voice, 'name', '')} {getattr(voice, 'id', '')}".lower()
+                    is_male = any(m in v_low for m in ('david', 'mark', 'ravi', 'hemant', 'george', 'richard'))
+                    if is_male:
+                        continue
+                    if 'hindi' in v_low or 'kalpana' in v_low or 'heera' in v_low or 'hi-in' in v_low:
+                        self.hindi_voice = self.hindi_voice or voice.id
+                    elif 'zira' in v_low or 'hazel' in v_low or 'english' in v_low or 'en-' in v_low:
+                        self.english_voice = self.english_voice or voice.id
                 
                 logging.info("✅ pyttsx3 TTS initialized as fallback")
         except Exception as e:
@@ -602,7 +611,16 @@ class MultilingualSupport:
             return f"❌ Speech recognition failed: {str(e)}", Language.ENGLISH
     
     def speak_multilingual(self, text: str, language: Language = Language.AUTO_DETECT) -> str:
-        """Speak text in the appropriate language using Edge-TTS, gTTS, or pyttsx3 fallback."""
+        """Speak text via the unified desktop TTS service (EdgeTTS / offline KittenTTS mini-0.8)."""
+        try:
+            from ai_assistant.voice.tts_output_service import get_tts_service
+            svc = get_tts_service()
+            if svc.speak(text, wait=True, source="multilingual"):
+                engine_used = svc.get_status().get("active_engine", "unified_tts")
+                return f"✅ Spoken via {engine_used}"
+        except Exception as unified_err:
+            logging.debug(f"Unified TTS unavailable in multilingual, using legacy fallback: {unified_err}")
+
         try:
             # Detect language if auto-detect is enabled
             if language == Language.AUTO_DETECT:
@@ -736,6 +754,13 @@ class MultilingualSupport:
     def process_hinglish_command(self, text: str) -> Dict[str, Any]:
         """Process Hinglish commands with cultural context."""
         try:
+            # Check user setting
+            try:
+                from settings_manager import get_general_settings
+                if not get_general_settings().get('enableHinglish', True):
+                    return {'command': None, 'parameters': {}}
+            except Exception:
+                pass
             # Detect language context
             context = self.detect_language(text)
             

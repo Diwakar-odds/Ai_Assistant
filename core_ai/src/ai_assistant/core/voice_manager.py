@@ -56,6 +56,11 @@ class VoiceManager:
             try:
                 if pyttsx3:
                     self._tts_engine = pyttsx3.init()
+                    try:
+                        from ai_assistant.voice.tts_output_service import configure_sapi5_voice
+                        configure_sapi5_voice(self._tts_engine)
+                    except Exception:
+                        pass
                     self._tts_engine.setProperty('rate', 175)
                     self._tts_engine.setProperty('volume', 0.9)
                     logger.info("✅ TTS engine initialized")
@@ -88,10 +93,17 @@ class VoiceManager:
         return {"status": "stopped", "message": "Voice listening stopped"}
 
     def speak_text(self, text: str) -> bool:
-        """Speak text using TTS engine asynchronously"""
+        """Speak text via the unified single-speaker TTS output service asynchronously."""
         if not text:
             return False
-            
+
+        try:
+            from ai_assistant.voice.tts_output_service import get_tts_service
+            if get_tts_service().speak(text, source="voice_manager"):
+                return True
+        except Exception as e:
+            logger.debug(f"TTSOutputService unavailable in VoiceManager, using legacy fallback: {e}")
+
         try:
             from ai_assistant.voice.text_cleaner import clean_text_for_tts
             text = clean_text_for_tts(text)
@@ -102,9 +114,8 @@ class VoiceManager:
             return False
 
         self.stop_speaking()
-        
+
         try:
-            # Try to use Neural Voice Engine first if available
             try:
                 from ai_assistant.voice.neural_voice_engine import get_neural_voice_engine
                 nve = get_neural_voice_engine()
@@ -115,7 +126,7 @@ class VoiceManager:
                     return True
             except Exception as e:
                 logger.warning(f"Neural TTS failed, falling back to pyttsx3: {e}")
-                
+
             if self.tts_engine:
                 import tempfile
                 import winsound
@@ -130,6 +141,11 @@ class VoiceManager:
 
     def stop_speaking(self):
         """Stop any ongoing speech playback"""
+        try:
+            from ai_assistant.voice.tts_output_service import get_tts_service
+            get_tts_service().stop(reason="voice_manager_stop")
+        except Exception:
+            pass
         try:
             import winsound
             winsound.PlaySound(None, winsound.SND_PURGE)
