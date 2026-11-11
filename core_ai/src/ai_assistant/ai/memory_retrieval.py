@@ -1,19 +1,24 @@
 # Setup centralized logging
-from utils.logging_config import get_logger
+try:
+    from ai_assistant.utils.logging_config import get_logger
+except ImportError:
+    from utils.logging_config import get_logger
 logger = get_logger(__name__, log_category="app")
 
 """
 Memory Retrieval Engine (RAG)
 ============================
-Zero-dependency long-term memory search using SQLite FTS5.
-Allows Pulsar to answer questions about past conversations
-by searching the conversation_ai.db database.
+Zero-dependency long-term memory search using SQLite FTS5 across:
+- conversation_ai.db (historical conversations + live synced turns)
+- data/sessions/history.json (archived WebUI/Orb sessions)
+- personal_knowledge.db (user_dna profile facts)
+- commitments.db & automation/commitments.db
+- memory.db (plaintext memory / knowledge_base / daily_summaries)
+- historical_rag.db (interactions)
 
-Uses only: sqlite3, re, json, datetime (all stdlib).
-
-Optional semantic fallback: if a sentence-transformers embedder is available
-via ai.memory.get_embedding_model(), we run a BM25+vector hybrid search.
-Otherwise FTS5-only.
+Uses only stdlib (`sqlite3`, `re`, `json`, `datetime`, `pathlib`, `threading`) on
+the hot retrieval path so context injection completes in <25ms without blocking
+on SentenceTransformer weight downloads.
 """
 
 import sqlite3
@@ -25,12 +30,15 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 
 # Locate this file and resolve relative DB path to be CWD-independent.
-from ai_assistant.core.database_config import get_db_path_str
+from ai_assistant.core.database_config import DATA_DIR, PROJECT_ROOT, get_db_path_str
 _DEFAULT_DB = get_db_path_str('conversation_ai')
+_persist_lock = threading.Lock()
+_singleton_lock = threading.Lock()
+_default_retriever: Optional["MemoryRetrieval"] = None
 
 
 class MemoryRetrieval:
-    """Search engine for past conversations using SQLite FTS5 full-text search."""
+    """Search engine for past conversations and historical stores using SQLite FTS5 + SQL fallbacks."""
 
     STOP_WORDS = frozenset({
         'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
@@ -40,11 +48,13 @@ class MemoryRetrieval:
         'your', 'we', 'our', 'they', 'their', 'it', 'its', 'this', 'that',
         'what', 'which', 'who', 'whom', 'when', 'where', 'how', 'not', 'no',
         'so', 'if', 'then', 'than', 'too', 'very', 'just', 'about', 'up',
-        'out', 'some', 'any', 'all', 'more', 'also', 'like',
-        'kya', 'hai', 'ka', 'ki', 'ke', 'ko', 'se', 'mein', 'ne', 'par',
-        'ho', 'tha', 'thi', 'the', 'ye', 'wo', 'jo', 'aur', 'ya', 'bhi',
+        'out', 'some', 'any', 'all', 'more', 'also', 'like', 'into', 'from',
+        'look', 'tell', 'mera', 'meri', 'mere', 'kon', 'kaun', 'kya', 'hai',
+        'ka', 'ki', 'ke', 'ko', 'se', 'mein', 'ne', 'par', 'ho', 'tha',
+        'thi', 'the', 'ye', 'wo', 'jo', 'aur', 'ya', 'bhi', 'sa', 'hum',
         'remember', 'recall', 'did', 'last', 'time', 'ago', 'before',
-        'previously', 'earlier', 'history', 'yaad', 'pehle',
+        'previously', 'earlier', 'history', 'yaad', 'pehle', 'chat', 'session',
+        'talked', 'talk', 'baat', 'pichli', 'pichle', 'previous', 'old', 'purani',
     })
 
     MEMORY_TRIGGERS = [
@@ -52,25 +62,51 @@ class MemoryRetrieval:
         'yesterday', 'last week', 'ago', 'before', 'previously', 'earlier',
         'history', 'kab', 'pehle', 'yaad', 'what was', 'have i', 'was i',
         'did we', 'what were', 'which app', 'which song', 'what song',
-        'what music', 'what job', 'today earlier', 'this morning'
+        'what music', 'what job', 'today earlier', 'this morning',
+        'past', 'month', 'months', 'mahine', 'previous chat', 'previous session',
+        'previous conversation', 'pichli chat', 'pichli baat', 'we talked',
+        'humne baat', 'baat ki thi', 'who is', 'kaun hai', 'kon hai',
+        'remind me', 'kya bataya', 'earlier today', 'old chat', 'purani chat',
+        'purani baat', 'kl ', 'kal ', 'favorite', 'know about me',
     ]
 
+    _BROAD_HISTORY_RE = re.compile(
+        r'(?:\b(?:past|last|pichle)\s+(?:\d+(?:\s*(?:or|to|-)\s*\d+)?\s*)?(?:months?|mahine|weeks?|days?)\b'
+        r'|\b(?:previous\s+(?:chat|chats|session|sessions|conversation|conversations)|old\s+chats?|pichli\s+(?:chat|baat)|purani\s+(?:chat|baat)|history|we\s+talked|humne\s+baat|baat\s+ki\s+thi|look\s+into\s+previous)\b)',
+        re.IGNORECASE,
+    )
+
+    _STARTUP_SOURCES = frozenset({
+        'webui_startup', 'startup_greeting', 'new_session', 'webui_new_session',
+        'backend_startup', 'webui_startup_offline', 'webui_new_session_offline',
+    })
+
     # Audit fix A1: when True, retrieval runs on every LLM call (background context).
-    # Default keeps backward compatibility; flip to True once you've verified the
-    # prompt overhead is acceptable for your model.
     RUN_AS_BACKGROUND_CONTEXT = False
 
-    def __init__(self, db_path: Optional[str] = None):
+    def __init__(self, db_path: Optional[str] = None, data_dir: Optional[Path] = None):
         """
         Initialize the memory retrieval engine.
 
         Args:
             db_path: Path to the conversation_ai.db SQLite database.
-                     Defaults to a path anchored to this file's location.
+                     Defaults to `data/core/conversation_ai.db`.
+            data_dir: Optional root data directory (for testing isolation).
         """
+        self._explicit_db = db_path is not None
         self.db_path = str(db_path) if db_path else _DEFAULT_DB
-        # Audit fix A5: ensure parent directory exists.
-        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
+        db_p = Path(self.db_path)
+        db_p.parent.mkdir(parents=True, exist_ok=True)
+        if data_dir is not None:
+            self.data_dir = Path(data_dir)
+            self._is_isolated = True
+        elif self._explicit_db:
+            self.data_dir = db_p.parent.parent if db_p.parent.name == 'core' else db_p.parent
+            self._is_isolated = True
+        else:
+            self.data_dir = DATA_DIR
+            self._is_isolated = False
+
         # Audit fix A6: thread-safe connections.
         self._local = threading.local()
         # Audit fix A9 (X1): lazy embedder, no import-time cost.
@@ -89,7 +125,7 @@ class MemoryRetrieval:
             conn = sqlite3.connect(
                 self.db_path,
                 timeout=10.0,
-                check_same_thread=False,  # we serialize via _local anyway
+                check_same_thread=False,  # serialized per-thread via _local
             )
             conn.execute("PRAGMA journal_mode=WAL")
             conn.execute("PRAGMA synchronous=NORMAL")
@@ -98,10 +134,26 @@ class MemoryRetrieval:
             self._local.conn = conn
         return conn
 
+    def _ensure_conversations_table(self, conn: sqlite3.Connection):
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS conversations (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                topic TEXT NOT NULL,
+                started_at TEXT NOT NULL,
+                last_activity TEXT NOT NULL,
+                state TEXT NOT NULL,
+                messages TEXT NOT NULL,
+                metadata TEXT NOT NULL,
+                priority INTEGER DEFAULT 1
+            )
+        """)
+
     def _ensure_fts_index(self):
-        """Create the FTS5 virtual table if it doesn't exist, and do initial indexing."""
+        """Create the FTS5 virtual table if needed, and sync any unindexed rows."""
         try:
             conn = self._conn()
+            self._ensure_conversations_table(conn)
             conn.execute("""
                 CREATE VIRTUAL TABLE IF NOT EXISTS conversation_fts USING fts5(
                     conversation_id,
@@ -113,21 +165,50 @@ class MemoryRetrieval:
             """)
             conn.commit()
 
-            cursor = conn.execute("SELECT COUNT(*) FROM conversation_fts")
-            count = cursor.fetchone()[0]
+            fts_count = conn.execute("SELECT COUNT(*) FROM conversation_fts").fetchone()[0]
+            conv_count = conn.execute("SELECT COUNT(*) FROM conversations").fetchone()[0]
 
-            if count == 0:
+            if fts_count == 0 and conv_count > 0:
                 logger.info("[RAG] First run: Building memory search index...")
                 self._rebuild_index_internal(conn)
-                cursor = conn.execute("SELECT COUNT(*) FROM conversation_fts")
-                new_count = cursor.fetchone()[0]
+                new_count = conn.execute("SELECT COUNT(*) FROM conversation_fts").fetchone()[0]
                 logger.info(f"[RAG] Memory index built: {new_count} conversation entries indexed")
-                print(f"[OK] Memory index built: {new_count} conversation entries indexed")
+            elif conv_count > fts_count:
+                self._sync_missing_fts_internal(conn)
             else:
-                logger.info(f"[RAG] Memory search index ready ({count} entries)")
+                logger.info(f"[RAG] Memory search index ready ({fts_count} entries)")
         except Exception as e:
             logger.error(f"[RAG] Memory retrieval init failed: {e}")
-            print(f"[WARN] Memory retrieval init failed: {e}")
+
+    def _sync_missing_fts_internal(self, conn: sqlite3.Connection) -> int:
+        """Index any rows in conversations that are missing from conversation_fts."""
+        added = 0
+        try:
+            missing_rows = conn.execute("""
+                SELECT c.id, c.topic, c.messages, c.started_at
+                FROM conversations c
+                WHERE c.id NOT IN (SELECT conversation_id FROM conversation_fts)
+            """).fetchall()
+            for row in missing_rows:
+                conv_id, topic, messages_json, started_at = row[0], row[1], row[2], row[3]
+                try:
+                    messages = json.loads(messages_json) if messages_json else []
+                    message_text = self._flatten_messages(messages)
+                    if message_text.strip():
+                        conv_date = started_at[:10] if started_at else ""
+                        conn.execute(
+                            "INSERT INTO conversation_fts (conversation_id, topic, message_text, conversation_date) VALUES (?, ?, ?, ?)",
+                            (conv_id, topic or "", message_text, conv_date),
+                        )
+                        added += 1
+                except Exception:
+                    continue
+            if added:
+                conn.commit()
+                logger.info(f"[RAG] Delta-synced {added} missing conversation(s) to FTS5")
+        except Exception as exc:
+            logger.debug(f"[RAG] Delta sync skipped: {exc}")
+        return added
 
     def _rebuild_index_internal(self, conn: sqlite3.Connection):
         """Rebuild the FTS index from all existing conversations."""
@@ -157,7 +238,7 @@ class MemoryRetrieval:
         logger.info("[RAG] Memory index rebuilt successfully")
 
     def index_conversation(self, context_id: str, topic: str, messages: List[Dict], timestamp: datetime):
-        """Index a single conversation. Audit note A4: O(n) per save — acceptable for chat."""
+        """Index a single conversation."""
         try:
             message_text = self._flatten_messages(messages)
             if not message_text.strip():
@@ -182,68 +263,213 @@ class MemoryRetrieval:
     # Search
     # -------------------------------------------------------------------------
 
+    def _build_safe_fts_query(self, keywords: List[str]) -> str:
+        safe_terms = []
+        for kw in keywords:
+            cleaned = re.sub(r'[^a-zA-Z0-9\u0900-\u097F_]+', '', str(kw))
+            if len(cleaned) >= 2:
+                safe_terms.append(f'"{cleaned}"')
+        return " OR ".join(safe_terms)
+
+    def _run_fts_query(
+        self,
+        conn: sqlite3.Connection,
+        fts_query: str,
+        limit: int,
+        date_filter: Optional[Dict[str, Any]] = None,
+    ) -> List[Dict[str, Any]]:
+        if not fts_query:
+            return []
+        if date_filter:
+            cursor = conn.execute(
+                """
+                SELECT conversation_id, topic, message_text, conversation_date, rank
+                FROM conversation_fts
+                WHERE conversation_fts MATCH ?
+                AND conversation_date BETWEEN ? AND ?
+                ORDER BY rank
+                LIMIT ?
+                """,
+                (fts_query, date_filter['start'], date_filter['end'], limit),
+            )
+        else:
+            cursor = conn.execute(
+                """
+                SELECT conversation_id, topic, message_text, conversation_date, rank
+                FROM conversation_fts
+                WHERE conversation_fts MATCH ?
+                ORDER BY rank
+                LIMIT ?
+                """,
+                (fts_query, limit),
+            )
+
+        results = []
+        seen_ids = set()
+        for row in cursor:
+            conv_id, topic, _message_text, conv_date, rank = row
+            if conv_id in seen_ids:
+                continue
+            seen_ids.add(conv_id)
+            msg_row = conn.execute(
+                "SELECT messages, started_at, last_activity FROM conversations WHERE id = ?",
+                (conv_id,),
+            ).fetchone()
+            actual_messages = []
+            resolved_date = conv_date
+            if msg_row:
+                try:
+                    actual_messages = json.loads(msg_row["messages"])
+                except (json.JSONDecodeError, TypeError):
+                    pass
+                if not resolved_date and msg_row["started_at"]:
+                    resolved_date = str(msg_row["started_at"])[:10]
+
+            results.append({
+                'conversation_id': conv_id,
+                'topic': topic,
+                'date': resolved_date,
+                'messages': actual_messages,
+                'relevance_score': abs(rank) if rank else 0,
+            })
+        return results
+
+    def _sql_like_fallback(
+        self,
+        conn: sqlite3.Connection,
+        keywords: List[str],
+        limit: int,
+        date_filter: Optional[Dict[str, Any]] = None,
+    ) -> List[Dict[str, Any]]:
+        if not keywords:
+            return []
+        like_clauses = []
+        params: List[Any] = []
+        for kw in keywords[:6]:
+            like_val = f"%{kw}%"
+            like_clauses.append("(topic LIKE ? OR messages LIKE ?)")
+            params.extend([like_val, like_val])
+        where_parts = [f"({' OR '.join(like_clauses)})"]
+        if date_filter:
+            where_parts.append("substr(started_at, 1, 10) BETWEEN ? AND ?")
+            params.extend([date_filter['start'], date_filter['end']])
+        params.append(limit)
+        sql = f"""
+            SELECT id, topic, messages, started_at, last_activity
+            FROM conversations
+            WHERE {' AND '.join(where_parts)}
+            ORDER BY last_activity DESC
+            LIMIT ?
+        """
+        rows = conn.execute(sql, params).fetchall()
+        results = []
+        for row in rows:
+            try:
+                actual_messages = json.loads(row["messages"]) if row["messages"] else []
+            except Exception:
+                actual_messages = []
+            results.append({
+                'conversation_id': row["id"],
+                'topic': row["topic"],
+                'date': str(row["started_at"] or "")[:10],
+                'messages': actual_messages,
+                'relevance_score': 0.5,
+                'source': 'sql_like_fallback',
+            })
+        return results
+
+    def _get_recent_substantive_conversations(
+        self,
+        conn: sqlite3.Connection,
+        limit: int = 5,
+        date_filter: Optional[Dict[str, Any]] = None,
+    ) -> List[Dict[str, Any]]:
+        """Return recent non-empty substantive conversations for broad historical overview queries."""
+        where_sql = ""
+        params: List[Any] = []
+        if date_filter:
+            where_sql = "WHERE substr(started_at, 1, 10) BETWEEN ? AND ?"
+            params.extend([date_filter['start'], date_filter['end']])
+        params.append(max(20, limit * 4))
+        rows = conn.execute(
+            f"""
+            SELECT id, topic, messages, started_at, last_activity
+            FROM conversations
+            {where_sql}
+            ORDER BY last_activity DESC
+            LIMIT ?
+            """,
+            params,
+        ).fetchall()
+        if not rows and date_filter:
+            rows = conn.execute(
+                """
+                SELECT id, topic, messages, started_at, last_activity
+                FROM conversations
+                ORDER BY last_activity DESC
+                LIMIT ?
+                """,
+                (max(20, limit * 4),),
+            ).fetchall()
+
+        results = []
+        for row in rows:
+            try:
+                msgs = json.loads(row["messages"]) if row["messages"] else []
+            except Exception:
+                msgs = []
+            if not msgs:
+                continue
+            combined_len = sum(len(str(m.get("content", "")).strip()) for m in msgs)
+            first_user = next(
+                (str(m.get("content", "")).strip().lower() for m in msgs if m.get("role") == "user"),
+                "",
+            )
+            # Prefer real multi-word discussions over bare 1-word "hello" ping rows
+            if first_user in ("hello", "hi", "hey") and len(msgs) <= 4 and combined_len < 180:
+                continue
+            results.append({
+                'conversation_id': row["id"],
+                'topic': row["topic"],
+                'date': str(row["started_at"] or row["last_activity"] or "")[:10],
+                'messages': msgs,
+                'relevance_score': 0.3,
+                'source': 'recent_history',
+            })
+            if len(results) >= limit:
+                break
+        return results
+
     def search_memory(self, query: str, limit: int = 5) -> List[Dict[str, Any]]:
         """Search past conversations. Returns list of result dicts."""
         try:
+            conn = self._conn()
+            self._sync_missing_fts_internal(conn)
+
             keywords = self._extract_keywords(query)
             if not keywords:
-                keywords = [w for w in query.lower().split() if len(w) > 2 and w not in self.STOP_WORDS]
+                keywords = [
+                    w for w in re.findall(r'[a-zA-Z0-9\u0900-\u097F]+', query.lower())
+                    if len(w) >= 2 and w not in self.STOP_WORDS
+                ]
             if not keywords:
                 return []
 
             date_filter = self._extract_date_filter(query)
-            fts_query = " OR ".join(keywords)
-            conn = self._conn()
+            fts_query = self._build_safe_fts_query(keywords)
 
-            if date_filter:
-                cursor = conn.execute(
-                    """
-                    SELECT conversation_id, topic, message_text, conversation_date, rank
-                    FROM conversation_fts
-                    WHERE conversation_fts MATCH ?
-                    AND conversation_date BETWEEN ? AND ?
-                    ORDER BY rank
-                    LIMIT ?
-                    """,
-                    (fts_query, date_filter['start'], date_filter['end'], limit),
-                )
-            else:
-                cursor = conn.execute(
-                    """
-                    SELECT conversation_id, topic, message_text, conversation_date, rank
-                    FROM conversation_fts
-                    WHERE conversation_fts MATCH ?
-                    ORDER BY rank
-                    LIMIT ?
-                    """,
-                    (fts_query, limit),
-                )
+            results = self._run_fts_query(conn, fts_query, limit, date_filter=date_filter)
 
-            results = []
-            for row in cursor:
-                conv_id, topic, message_text, conv_date, rank = row
-                msg_cursor = conn.execute(
-                    "SELECT messages FROM conversations WHERE id = ?", (conv_id,)
-                )
-                msg_row = msg_cursor.fetchone()
-                actual_messages = []
-                if msg_row:
-                    try:
-                        actual_messages = json.loads(msg_row["messages"])
-                    except (json.JSONDecodeError, TypeError):
-                        pass
+            # Retry WITHOUT narrow date_filter if nothing found in that window
+            # (e.g., "kal" can refer to tomorrow's exam discussed in an earlier session today)
+            if not results and date_filter:
+                results = self._run_fts_query(conn, fts_query, limit, date_filter=None)
 
-                results.append({
-                    'conversation_id': conv_id,
-                    'topic': topic,
-                    'date': conv_date,
-                    'messages': actual_messages,
-                    'relevance_score': abs(rank) if rank else 0,
-                })
-
-            # Audit fix A2: optional semantic fallback (hybrid).
+            # Fast SQL LIKE fallback when FTS missed (partial substrings / non-indexed tokens)
             if not results:
-                results = self._semantic_fallback(query, limit=limit, date_filter=date_filter)
+                results = self._sql_like_fallback(conn, keywords, limit, date_filter=date_filter)
+                if not results and date_filter:
+                    results = self._sql_like_fallback(conn, keywords, limit, date_filter=None)
 
             logger.info(f"[RAG] Memory search for '{query[:50]}' returned {len(results)} results")
             return results
@@ -256,17 +482,10 @@ class MemoryRetrieval:
         self, query: str, limit: int, date_filter: Optional[Dict[str, str]]
     ) -> List[Dict[str, Any]]:
         """
-        Audit fix A2: if FTS returns nothing and an embedder is available, try vector search.
-        Best-effort only — degrades gracefully if sentence-transformers is missing.
+        Best-effort optional vector fallback if an embedder is ALREADY loaded in memory.
+        Never downloads weights on demand in hot chat path.
         """
         try:
-            with self._embedder_lock:
-                if self._embedder is None:
-                    try:
-                        from ai_assistant.ai.memory import get_embedding_model
-                        self._embedder = get_embedding_model()
-                    except Exception:
-                        return []
             if self._embedder is None:
                 return []
 
@@ -332,11 +551,354 @@ class MemoryRetrieval:
             return []
 
     def is_memory_query(self, message: str) -> bool:
-        """Audit fix A1: gate stays as opt-in default; flip RUN_AS_BACKGROUND_CONTEXT to bypass."""
+        """Return True when the user's message references past chats, history, people, or facts."""
         if self.RUN_AS_BACKGROUND_CONTEXT:
             return True
+        if not message:
+            return False
         message_lower = message.lower()
-        return any(trigger in message_lower for trigger in self.MEMORY_TRIGGERS)
+        if any(trigger in message_lower for trigger in self.MEMORY_TRIGGERS):
+            return True
+        if re.search(r'\b(?:kl|kal|aaj|pehle|pichli|pichle|purani|abhishek|mahine)\b', message_lower):
+            return True
+        if self._BROAD_HISTORY_RE.search(message_lower):
+            return True
+        return False
+
+    def _is_broad_history_query(self, query: str) -> bool:
+        if not query:
+            return False
+        if self._BROAD_HISTORY_RE.search(query):
+            return True
+        kws = self._extract_keywords(query)
+        return len(kws) <= 1 and self.is_memory_query(query)
+
+    # -------------------------------------------------------------------------
+    # Cross-Store Unified Historical Context (<25ms, stdlib-only)
+    # -------------------------------------------------------------------------
+
+    def _search_session_history_json(
+        self,
+        keywords: List[str],
+        broad: bool,
+        current_session_id: Optional[str] = None,
+        limit: int = 3,
+    ) -> List[str]:
+        history_path = self.data_dir / "sessions" / "history.json"
+        if not history_path.exists():
+            return []
+        try:
+            with open(history_path, "r", encoding="utf-8") as f:
+                sessions = json.load(f)
+            if not isinstance(sessions, list):
+                return []
+        except Exception:
+            return []
+
+        scored: List[Tuple[int, str, str]] = []
+        for idx, sess in enumerate(sessions[:50]):
+            if not isinstance(sess, dict):
+                continue
+            sid = sess.get("id")
+            if current_session_id and sid == current_session_id:
+                continue
+
+            date_label = str(sess.get("date") or sess.get("formattedDate") or "Past session")
+            lines: List[str] = []
+            for m in sess.get("messages") or []:
+                if not isinstance(m, dict):
+                    continue
+                if m.get("source") in self._STARTUP_SOURCES:
+                    continue
+                txt = str(m.get("text") or "").strip()
+                if not txt:
+                    continue
+                role = "User" if m.get("type") == "user" else "Pulsar"
+                lines.append(f"{role}: {txt[:180]}")
+
+            for vc in sess.get("voiceCommands") or []:
+                cmd = str(vc.get("command") or "").strip() if isinstance(vc, dict) else ""
+                if cmd and not any(cmd in l for l in lines):
+                    lines.append(f"User (voice): {cmd[:150]}")
+
+            if not lines:
+                continue
+
+            joined_low = " ".join(lines).lower()
+            hits = sum(1 for kw in keywords if kw in joined_low) if keywords else 0
+            if hits == 0 and not broad:
+                continue
+
+            snippet = " | ".join(lines[:6])
+            if len(snippet) > 420:
+                snippet = snippet[:417] + "..."
+            entry = f"[{date_label} | Session {sid}] {snippet}"
+            scored.append((hits * 10 + max(0, 5 - idx), str(sess.get("startTimestamp") or ""), entry))
+
+        scored.sort(key=lambda item: item[0], reverse=True)
+        return [item[2] for item in scored[:limit]]
+
+    def _search_personal_knowledge(self, keywords: List[str], broad: bool) -> List[str]:
+        db_path = self.data_dir / "core" / "personal_knowledge.db"
+        if not db_path.exists():
+            return []
+        facts: List[str] = []
+        try:
+            with sqlite3.connect(str(db_path), timeout=3.0) as conn:
+                has_tbl = conn.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='user_dna'"
+                ).fetchone()
+                if not has_tbl:
+                    return []
+                rows = conn.execute(
+                    "SELECT key, value FROM user_dna ORDER BY confidence DESC, last_updated DESC LIMIT 30"
+                ).fetchall()
+                for k, v in rows:
+                    try:
+                        val_decoded = json.loads(v) if isinstance(v, str) and (v.startswith('"') or v.startswith('{') or v.startswith('[')) else v
+                    except Exception:
+                        val_decoded = v
+                    fact_str = f"{k}: {val_decoded}"
+                    fact_low = fact_str.lower()
+                    if broad or not keywords or any(kw in fact_low for kw in keywords):
+                        facts.append(fact_str)
+        except Exception:
+            pass
+        return facts[:10]
+
+    def _search_commitments(self, keywords: List[str], broad: bool) -> List[str]:
+        candidates = [
+            self.data_dir / "commitments.db",
+            self.data_dir / "automation" / "commitments.db",
+        ]
+        items: List[str] = []
+        seen = set()
+        for db_path in candidates:
+            if not db_path.exists():
+                continue
+            try:
+                with sqlite3.connect(str(db_path), timeout=3.0) as conn:
+                    has_tbl = conn.execute(
+                        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='commitments'"
+                    ).fetchone()
+                    if not has_tbl:
+                        continue
+                    rows = conn.execute(
+                        "SELECT text, action, deadline, party, status, created_at FROM commitments ORDER BY created_at DESC LIMIT 20"
+                    ).fetchall()
+                    for text, action, deadline, party, status, created_at in rows:
+                        blob = f"{text or ''} {action or ''} {party or ''}".strip()
+                        if not blob or blob in seen:
+                            continue
+                        blob_low = blob.lower()
+                        if broad or not keywords or any(kw in blob_low for kw in keywords):
+                            seen.add(blob)
+                            date_p = str(created_at or "")[:10]
+                            parts = [f"[{date_p or 'commitment'} | {status}] {text or action}"]
+                            if party:
+                                parts.append(f"(party: {party})")
+                            if deadline:
+                                parts.append(f"(deadline: {str(deadline)[:16]})")
+                            items.append(" ".join(parts))
+            except Exception:
+                continue
+        return items[:6]
+
+    def _search_memory_db(self, keywords: List[str], broad: bool) -> List[str]:
+        db_path = self.data_dir / "core" / "memory.db"
+        if not db_path.exists():
+            return []
+        lines: List[str] = []
+        try:
+            with sqlite3.connect(str(db_path), timeout=3.0) as conn:
+                tables = {
+                    r[0]
+                    for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+                }
+                if "knowledge_base" in tables:
+                    for topic, content, created_at in conn.execute(
+                        "SELECT topic, content, created_at FROM knowledge_base ORDER BY confidence DESC, created_at DESC LIMIT 20"
+                    ).fetchall():
+                        c_str = str(content or "")
+                        if not c_str or c_str.startswith("enc:"):
+                            continue
+                        row_str = f"[{str(created_at or '')[:10]} KB] {topic}: {c_str[:180]}"
+                        if broad or not keywords or any(kw in row_str.lower() for kw in keywords):
+                            lines.append(row_str)
+
+                if "enhanced_memory" in tables:
+                    for ts, speaker, content in conn.execute(
+                        "SELECT timestamp, speaker, content FROM enhanced_memory WHERE content IS NOT NULL AND content NOT LIKE 'enc:%' ORDER BY timestamp DESC LIMIT 20"
+                    ).fetchall():
+                        c_str = str(content or "")
+                        row_str = f"[{str(ts or '')[:10]}] {speaker}: {c_str[:180]}"
+                        if broad or not keywords or any(kw in row_str.lower() for kw in keywords):
+                            lines.append(row_str)
+
+                if "daily_summaries" in tables:
+                    for d_str, summary, key_topics in conn.execute(
+                        "SELECT date, summary, key_topics FROM daily_summaries ORDER BY date DESC LIMIT 10"
+                    ).fetchall():
+                        row_str = f"[{d_str}] Summary: {summary} (Topics: {key_topics})"
+                        if broad or not keywords or any(kw in row_str.lower() for kw in keywords):
+                            lines.append(row_str)
+        except Exception:
+            pass
+        return lines[:6]
+
+    def _search_historical_rag(self, keywords: List[str], broad: bool) -> List[str]:
+        candidate_paths = [self.data_dir / "core" / "historical_rag.db"]
+        if not self._is_isolated:
+            extra_rag = PROJECT_ROOT / "core_ai" / "data" / "historical_rag.db"
+            if extra_rag not in candidate_paths:
+                candidate_paths.append(extra_rag)
+
+        entries: List[str] = []
+        seen = set()
+        for db_path in candidate_paths:
+            if not db_path.exists():
+                continue
+            try:
+                with sqlite3.connect(str(db_path), timeout=3.0) as conn:
+                    has_tbl = conn.execute(
+                        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='interactions'"
+                    ).fetchone()
+                    if not has_tbl:
+                        continue
+                    rows = conn.execute(
+                        "SELECT query, response, created_at FROM interactions ORDER BY created_at DESC LIMIT 30"
+                    ).fetchall()
+                    for q_txt, r_txt, ts in rows:
+                        q_s = str(q_txt or "").strip()
+                        r_s = str(r_txt or "").strip()
+                        if not q_s or (q_s, r_s) in seen:
+                            continue
+                        blob_low = f"{q_s} {r_s}".lower()
+                        if broad or not keywords or any(kw in blob_low for kw in keywords):
+                            seen.add((q_s, r_s))
+                            entries.append(f"[{str(ts or '')[:10]}] User: {q_s[:100]} -> Pulsar: {r_s[:140]}")
+            except Exception:
+                continue
+        return entries[:5]
+
+    def retrieve_unified_context(
+        self,
+        query: str,
+        max_chars: int = 1600,
+        max_results: int = 6,
+        current_session_id: Optional[str] = None,
+    ) -> str:
+        """
+        Aggregate relevant historical facts & past conversation snippets across all
+        persistent stores cleanly within `max_chars`. Zero heavy ML weights loaded.
+        """
+        if not query or not str(query).strip():
+            return ""
+
+        keywords = self._extract_keywords(query)
+        if not keywords:
+            keywords = [
+                w for w in re.findall(r'[a-zA-Z0-9\u0900-\u097F]+', query.lower())
+                if len(w) >= 2 and w not in self.STOP_WORDS
+            ]
+        broad = self._is_broad_history_query(query)
+        date_filter = self._extract_date_filter(query)
+
+        # 1. Conversation AI FTS5 + SQL LIKE
+        conv_results = self.search_memory(query, limit=max_results) if keywords else []
+        if (broad or len(conv_results) < 2) and self._conn() is not None:
+            try:
+                recent = self._get_recent_substantive_conversations(
+                    self._conn(),
+                    limit=max_results,
+                    date_filter=date_filter,
+                )
+                existing_ids = {r['conversation_id'] for r in conv_results}
+                for rec in recent:
+                    if rec['conversation_id'] not in existing_ids:
+                        conv_results.append(rec)
+                        existing_ids.add(rec['conversation_id'])
+                    if len(conv_results) >= max_results:
+                        break
+            except Exception:
+                pass
+
+        # 2. Archived WebUI/Orb session history.json
+        hist_snippets = self._search_session_history_json(
+            keywords=keywords,
+            broad=broad,
+            current_session_id=current_session_id,
+            limit=3,
+        )
+
+        # 3. User DNA (personal knowledge)
+        dna_facts = self._search_personal_knowledge(keywords=keywords, broad=broad)
+
+        # 4. Commitments
+        commitment_items = self._search_commitments(keywords=keywords, broad=broad)
+
+        # 5. Memory DB (plaintext entries, summaries, knowledge base)
+        memory_items = self._search_memory_db(keywords=keywords, broad=broad)
+
+        # 6. Historical RAG interactions
+        rag_items = self._search_historical_rag(keywords=keywords, broad=broad)
+
+        if not any((conv_results, hist_snippets, dna_facts, commitment_items, memory_items, rag_items)):
+            return ""
+
+        parts: List[str] = ["### RELEVANT HISTORICAL MEMORY (across past sessions) ###"]
+        budget = max_chars - 110
+
+        def _append_section(header: str, lines: List[str]) -> None:
+            if not lines:
+                return
+            current_len = sum(len(p) + 1 for p in parts)
+            if current_len + len(header) >= budget:
+                return
+            parts.append(header)
+            for line in lines:
+                current_len = sum(len(p) + 1 for p in parts)
+                if current_len + len(line) + 1 > budget:
+                    break
+                parts.append(line)
+
+        if dna_facts:
+            _append_section("User Facts:", [f"- {f}" for f in dna_facts])
+
+        if hist_snippets:
+            _append_section("Recent Archived Sessions:", [f"- {s}" for s in hist_snippets])
+
+        if conv_results:
+            conv_lines: List[str] = []
+            for r in conv_results:
+                header = f"- [{r.get('date') or 'past'}] {r.get('topic') or 'Chat'}:"
+                msg_snippets = []
+                for msg in (r.get('messages') or [])[:4]:
+                    role = "User" if str(msg.get('role', 'user')).lower() == 'user' else "Pulsar"
+                    c_txt = str(msg.get('content', '')).strip().replace('\n', ' ')
+                    if not c_txt:
+                        continue
+                    if len(c_txt) > 150:
+                        c_txt = c_txt[:147] + "..."
+                    msg_snippets.append(f"{role}: {c_txt}")
+                if msg_snippets:
+                    conv_lines.append(f"{header} " + " | ".join(msg_snippets))
+            _append_section("Past Conversations (conversation_ai.db):", conv_lines)
+
+        if commitment_items:
+            _append_section("Tracked Commitments/Notes:", [f"- {c}" for c in commitment_items])
+
+        if memory_items:
+            _append_section("Stored Memory Entries:", [f"- {m}" for m in memory_items])
+
+        if rag_items:
+            _append_section("Historical Q&A Log:", [f"- {g}" for g in rag_items])
+
+        if len(parts) <= 1:
+            return ""
+
+        parts.append("(Use these verified historical records naturally if relevant; never invent unseen past facts.)")
+        return "\n".join(parts)[:max_chars]
 
     def format_for_llm(self, results: List[Dict[str, Any]], max_chars: int = 1500) -> str:
         """Format search results into a context string suitable for LLM injection."""
@@ -374,28 +936,50 @@ class MemoryRetrieval:
     def _flatten_messages(self, messages: List[Dict]) -> str:
         parts = []
         for msg in messages:
-            content = msg.get('content', '')
+            if not isinstance(msg, dict):
+                continue
+            content = msg.get('content', '') or msg.get('text', '')
             if content:
-                parts.append(content)
+                parts.append(str(content))
         return " ".join(parts)
 
     def _extract_keywords(self, query: str) -> List[str]:
-        words = re.findall(r'[a-zA-Z\u0900-\u097F]+', query.lower())
-        return [w for w in words if w not in self.STOP_WORDS and len(w) > 2]
+        words = re.findall(r'[a-zA-Z0-9\u0900-\u097F]+', query.lower())
+        seen = set()
+        out = []
+        for w in words:
+            if w not in self.STOP_WORDS and len(w) > 2 and w not in seen:
+                seen.add(w)
+                out.append(w)
+        return out
 
-    def _extract_date_filter(self, query: str) -> Optional[Dict[str, str]]:
+    def _extract_date_filter(self, query: str) -> Optional[Dict[str, Any]]:
         """
-        Audit fix A3: log a WARNING when an extracted filter would yield zero rows
-        (e.g. feb 30) instead of silently returning an unmatchable filter.
+        Extract explicit date ranges including multi-month spans ("past 4 or 5 months",
+        "last 3 months", "pichle 4 mahine").
         """
         query_lower = query.lower()
         today = datetime.now()
+
+        # Multi-month patterns FIRST so they take precedence over single-month phrases
+        multi_month = re.search(
+            r'(?:last|past|pichle|pichhle)\s+(\d+)(?:\s*(?:to|or|-)\s*(\d+))?\s*(?:months?|mahine|mahino)'
+            r'|(\d+)(?:\s*(?:to|or|-)\s*(\d+))?\s*(?:months?|mahine|mahino)\s*(?:ago|pehle|tak|se)?',
+            query_lower,
+        )
+        if multi_month:
+            raw_nums = [int(x) for x in multi_month.groups() if x is not None]
+            if raw_nums:
+                months_count = max(1, min(120, max(raw_nums)))
+                start = (today - timedelta(days=months_count * 31)).strftime('%Y-%m-%d')
+                end = today.strftime('%Y-%m-%d')
+                return {'start': start, 'end': end, 'broad': True}
 
         if any(word in query_lower for word in ['today', 'aaj', 'this morning', 'today earlier']):
             date_str = today.strftime('%Y-%m-%d')
             return {'start': date_str, 'end': date_str}
 
-        if any(word in query_lower for word in ['yesterday', 'kal']):
+        if re.search(r'\b(?:yesterday|kal|kl)\b', query_lower):
             yesterday = today - timedelta(days=1)
             date_str = yesterday.strftime('%Y-%m-%d')
             return {'start': date_str, 'end': date_str}
@@ -406,7 +990,7 @@ class MemoryRetrieval:
             return {'start': start, 'end': end}
 
         if any(phrase in query_lower for phrase in ['last month', 'pichle mahine', 'past month']):
-            start = (today - timedelta(days=30)).strftime('%Y-%m-%d')
+            start = (today - timedelta(days=31)).strftime('%Y-%m-%d')
             end = today.strftime('%Y-%m-%d')
             return {'start': start, 'end': end}
 
@@ -433,7 +1017,7 @@ class MemoryRetrieval:
                 except ValueError:
                     logger.warning(
                         f"[RAG] Date filter: ordinal day {day} is not valid in current month; "
-                        f"query='{query[:80]}' will return no date-scoped results."
+                        f"query='{query[:80]}' will fall back cleanly."
                     )
 
         month_names = {
@@ -456,7 +1040,143 @@ class MemoryRetrieval:
                 except ValueError:
                     logger.warning(
                         f"[RAG] Date filter: {month_name} {day} is not a real date; "
-                        f"query='{query[:80]}' will return no date-scoped results."
+                        f"query='{query[:80]}' will fall back cleanly."
                     )
 
         return None
+
+
+def get_memory_retriever(db_path: Optional[str] = None) -> MemoryRetrieval:
+    """Return process-wide singleton MemoryRetrieval instance (or dedicated path instance)."""
+    global _default_retriever
+    if db_path:
+        return MemoryRetrieval(db_path=db_path)
+    if _default_retriever is None:
+        with _singleton_lock:
+            if _default_retriever is None:
+                _default_retriever = MemoryRetrieval()
+    return _default_retriever
+
+
+def retrieve_unified_historical_context(
+    query: str,
+    *,
+    max_chars: int = 1600,
+    max_results: int = 6,
+    current_session_id: Optional[str] = None,
+    db_path: Optional[str] = None,
+    only_when_triggered: bool = False,
+) -> str:
+    """Fast cross-store historical retrieval helper safe to invoke before LLM calls."""
+    if not query or not str(query).strip():
+        return ""
+    retriever = get_memory_retriever(db_path=db_path)
+    if only_when_triggered and not retriever.is_memory_query(query):
+        return ""
+    return retriever.retrieve_unified_context(
+        query,
+        max_chars=max_chars,
+        max_results=max_results,
+        current_session_id=current_session_id,
+    )
+
+
+def persist_turn_to_conversation_ai(
+    user_text: str,
+    ai_text: str,
+    *,
+    source: str = "chat",
+    session_id: Optional[str] = None,
+    db_path: Optional[str] = None,
+) -> bool:
+    """
+    Lightweight thread-safe persistence of completed turns into conversation_ai.db
+    + conversation_fts so every WebUI/Orb turn becomes searchable in future sessions.
+    """
+    u_clean = str(user_text or "").strip()
+    a_clean = str(ai_text or "").strip()
+    if not u_clean or not a_clean or a_clean.lower().startswith("error:"):
+        return False
+
+    target_db = str(db_path or _DEFAULT_DB)
+    Path(target_db).parent.mkdir(parents=True, exist_ok=True)
+    now = datetime.now()
+    now_iso = now.isoformat()
+    conv_id = f"live_{session_id}" if session_id else f"live_{now.strftime('%Y%m%d')}_{source}"
+    topic_seed = re.sub(r'\s+', ' ', u_clean)[:64]
+
+    try:
+        with _persist_lock:
+            with sqlite3.connect(target_db, timeout=5.0) as conn:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS conversations (
+                        id TEXT PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        topic TEXT NOT NULL,
+                        started_at TEXT NOT NULL,
+                        last_activity TEXT NOT NULL,
+                        state TEXT NOT NULL,
+                        messages TEXT NOT NULL,
+                        metadata TEXT NOT NULL,
+                        priority INTEGER DEFAULT 1
+                    )
+                """)
+                conn.execute("""
+                    CREATE VIRTUAL TABLE IF NOT EXISTS conversation_fts USING fts5(
+                        conversation_id,
+                        topic,
+                        message_text,
+                        conversation_date,
+                        tokenize='unicode61'
+                    )
+                """)
+                row = conn.execute(
+                    "SELECT topic, started_at, messages, metadata FROM conversations WHERE id = ?",
+                    (conv_id,),
+                ).fetchone()
+
+                if row:
+                    topic = row[0] or topic_seed
+                    started_at = row[1] or now_iso
+                    try:
+                        msgs = json.loads(row[2]) if row[2] else []
+                    except Exception:
+                        msgs = []
+                    meta = row[3] or json.dumps({"source": source})
+                else:
+                    topic = topic_seed
+                    started_at = now_iso
+                    msgs = []
+                    meta = json.dumps({"source": source, "session_id": session_id})
+
+                msgs.append({"role": "user", "content": u_clean, "timestamp": now_iso, "source": source})
+                msgs.append({"role": "assistant", "content": a_clean, "timestamp": now_iso, "source": source})
+                if len(msgs) > 80:
+                    msgs = msgs[-80:]
+
+                msgs_json = json.dumps(msgs, ensure_ascii=False)
+                conn.execute(
+                    """
+                    INSERT OR REPLACE INTO conversations
+                    (id, name, topic, started_at, last_activity, state, messages, metadata, priority)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (conv_id, f"Session {session_id or now.strftime('%Y-%m-%d')}", topic, started_at, now_iso, "active", msgs_json, meta, 1),
+                )
+
+                flattened = " ".join(
+                    str(m.get("content", "")).strip()
+                    for m in msgs
+                    if isinstance(m, dict) and m.get("content")
+                )
+                conv_date = started_at[:10]
+                conn.execute("DELETE FROM conversation_fts WHERE conversation_id = ?", (conv_id,))
+                conn.execute(
+                    "INSERT INTO conversation_fts (conversation_id, topic, message_text, conversation_date) VALUES (?, ?, ?, ?)",
+                    (conv_id, topic, flattened, conv_date),
+                )
+                conn.commit()
+        return True
+    except Exception as exc:
+        logger.debug(f"[RAG] persist_turn_to_conversation_ai skipped: {exc}")
+        return False

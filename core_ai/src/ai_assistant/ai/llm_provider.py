@@ -23,7 +23,31 @@ try:
 except ImportError:
     pass
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, log_category="app")
+
+
+LOCAL_PROVIDERS = frozenset({"gguf", "local", "offline"})
+
+
+def is_local_provider(provider: Optional[str]) -> bool:
+    """Return True if the provider name refers to a local/offline inference backend."""
+    if not provider:
+        return False
+    return str(provider).strip().lower() in LOCAL_PROVIDERS
+
+
+def _read_generation_defaults() -> tuple[float, int]:
+    """Read temperature & max_tokens from central settings_manager safely."""
+    import sys
+    from pathlib import Path
+    try:
+        backend_dir = str(Path(__file__).resolve().parents[4] / 'backend')
+        if backend_dir not in sys.path:
+            sys.path.insert(0, backend_dir)
+        from settings_manager import get_temperature, get_max_tokens
+        return float(get_temperature()), int(get_max_tokens())
+    except Exception:
+        return 0.7, 1024
 
 
 class LLMProvider(ABC):
@@ -50,6 +74,17 @@ class OpenAIProvider(LLMProvider):
     
     def __init__(self, api_key: Optional[str] = None, model: str = "gpt-3.5-turbo", base_url: Optional[str] = None):
         """Initialize OpenAI provider."""
+        if not api_key:
+            try:
+                import sys
+                from pathlib import Path
+                backend_dir = str(Path(__file__).resolve().parents[4] / 'backend')
+                if backend_dir not in sys.path:
+                    sys.path.insert(0, backend_dir)
+                from settings_manager import get_api_key
+                api_key = get_api_key("openai")
+            except Exception:
+                api_key = None
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         self.base_url = base_url or os.getenv("OPENAI_BASE_URL")
         self.model = model
@@ -148,6 +183,17 @@ class GeminiProvider(LLMProvider):
     
     def __init__(self, api_key: Optional[str] = None, model: str = "gemini-2.5-flash"):
         """Initialize Gemini provider."""
+        if not api_key:
+            try:
+                import sys
+                from pathlib import Path
+                backend_dir = str(Path(__file__).resolve().parents[4] / 'backend')
+                if backend_dir not in sys.path:
+                    sys.path.insert(0, backend_dir)
+                from settings_manager import get_api_key
+                api_key = get_api_key("gemini")
+            except Exception:
+                api_key = None
         self.api_key = api_key or os.getenv("GEMINI_API_KEY")
         self.model = model
         
@@ -275,98 +321,6 @@ class GeminiProvider(LLMProvider):
             return len(text) // 4
 
 
-class LocalLLMProvider(LLMProvider):
-    """Local LLM provider using Ollama or compatible API."""
-    
-    def __init__(self, api_url: str = "http://localhost:11434", model: str = "llama2"):
-        """Initialize local LLM provider."""
-        self.api_url = api_url
-        self.model = model
-        
-        try:
-            import requests
-            self.requests = requests
-        except ImportError:
-            raise ImportError("requests package required: pip install requests")
-    
-    def generate_response(self, messages: List[Dict[str, str]], **kwargs) -> str:
-        """Generate response from local LLM."""
-        try:
-            prompt = self._format_messages(messages)
-            
-            import sys
-            from pathlib import Path
-            try:
-                sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
-                from settings_manager import get_temperature, get_max_tokens
-                default_temp = get_temperature()
-                default_max = get_max_tokens()
-            except ImportError:
-                default_temp = 0.7
-                default_max = 2048
-
-            response = self.requests.post(
-                f"{self.api_url}/api/generate",
-                json={
-                    "model": self.model,
-                    "prompt": prompt,
-                    "stream": False,
-                    "temperature": kwargs.get("temperature", default_temp),
-                    "top_p": kwargs.get("top_p", 0.95),
-                    "max_tokens": kwargs.get("max_tokens", default_max),
-                },
-                timeout=120
-            )
-            
-            if response.status_code == 200:
-                return response.json()["response"]
-            else:
-                return f"Error: {response.status_code}"
-        except Exception as e:
-            logger.error(f"Local LLM generation failed: {e}")
-            return f"Error: {str(e)}"
-    
-    def stream_response(self, messages: List[Dict[str, str]], **kwargs) -> Generator[str, None, None]:
-        """Stream response from local LLM."""
-        try:
-            prompt = self._format_messages(messages)
-            
-            response = self.requests.post(
-                f"{self.api_url}/api/generate",
-                json={
-                    "model": self.model,
-                    "prompt": prompt,
-                    "stream": True,
-                    "temperature": kwargs.get("temperature", 0.7),
-                },
-                stream=True,
-                timeout=120
-            )
-            
-            for line in response.iter_lines():
-                if line:
-                    data = json.loads(line)
-                    yield data.get("response", "")
-        except Exception as e:
-            logger.error(f"Local LLM streaming failed: {e}")
-            yield f"Error: {str(e)}"
-    
-    def count_tokens(self, text: str) -> int:
-        """Estimate tokens for local LLM."""
-        # Simple estimation: 1 token ‰ˆ 4 characters
-        return len(text) // 4
-    
-    def _format_messages(self, messages: List[Dict[str, str]]) -> str:
-        """Format messages as prompt for local LLM."""
-        formatted = ""
-        for msg in messages:
-            role = msg["role"].upper()
-            content = msg["content"]
-            formatted += f"{role}: {content}\n\n"
-        formatted += "ASSISTANT: "
-        return formatted
-
-
 class OfflineProvider(LLMProvider):
     """Offline LLM provider using local models with fallback strategies."""
     
@@ -418,19 +372,25 @@ class OfflineProvider(LLMProvider):
 
 class GGUFProvider(LLMProvider):
     """Local GGUF model provider using llama_cpp via singleton manager."""
-    
+
     def __init__(self, **kwargs):
-        """Initialize GGUF provider."""
+        """Initialize GGUF provider with optional requested model name."""
         try:
-            from src.ai_assistant.ai.gguf_model_manager import gguf_manager
-        except ImportError:
             from ai_assistant.ai.gguf_model_manager import gguf_manager
-            
-        self.llm = gguf_manager.get_model()
-        
+        except ImportError:
+            from src.ai_assistant.ai.gguf_model_manager import gguf_manager
+
+        self._mgr = gguf_manager
+        requested_model = kwargs.get("model")
+        self.llm = gguf_manager.get_model(model_name=requested_model)
+        self.model = (
+            gguf_manager.model_path.stem
+            if getattr(gguf_manager, "model_path", None)
+            else (requested_model or "pulsar-final-q4_k_m")
+        )
+
     def _format_messages(self, messages: List[Dict[str, str]]) -> str:
         """Format messages for Llama 3 Instruct."""
-        # Llama 3 prompt format
         formatted = ""
         for msg in messages:
             role = msg.get("role", "user")
@@ -439,90 +399,211 @@ class GGUFProvider(LLMProvider):
         formatted += "<|start_header_id|>assistant<|end_header_id|>\n\n"
         return formatted
 
+    def _estimate_tokens(self, llm: Any, text: str) -> int:
+        try:
+            return len(llm.tokenize(text.encode("utf-8"), add_bos=False)) + 6
+        except Exception:
+            return max(1, len(text) // 3) + 6
+
+    def _prepare_messages_and_limits(
+        self,
+        llm: Any,
+        messages: List[Dict[str, str]],
+        requested_max_tokens: int,
+    ) -> tuple[List[Dict[str, str]], int]:
+        """Deduplicate system messages and trim oldest history to stay safely within n_ctx."""
+        try:
+            n_ctx = int(llm.n_ctx()) if callable(getattr(llm, "n_ctx", None)) else 2048
+        except Exception:
+            n_ctx = 2048
+
+        system_parts: List[str] = []
+        non_system: List[Dict[str, str]] = []
+        for msg in messages or []:
+            if not isinstance(msg, dict):
+                continue
+            role = str(msg.get("role", "user")).strip().lower() or "user"
+            content = str(msg.get("content", "") or "")
+            if not content:
+                continue
+            if role == "system":
+                if content not in system_parts:
+                    system_parts.append(content)
+            else:
+                non_system.append({"role": role, "content": content})
+
+        if not non_system and system_parts:
+            non_system = [{"role": "user", "content": system_parts.pop(0)}]
+
+        max_gen = max(64, min(int(requested_max_tokens), max(128, n_ctx // 2)))
+        max_prompt_tokens = max(256, n_ctx - max_gen - 32)
+
+        system_msg: Optional[Dict[str, str]] = None
+        if system_parts:
+            sys_text = system_parts[-1]
+            # Clamp extreme system prompt so at least user message fits cleanly
+            sys_budget = max(128, max_prompt_tokens // 2)
+            if self._estimate_tokens(llm, sys_text) > sys_budget:
+                sys_text = sys_text[: sys_budget * 3]
+            system_msg = {"role": "system", "content": sys_text}
+
+        sys_tokens = self._estimate_tokens(llm, system_msg["content"]) if system_msg else 0
+        remaining_budget = max(128, max_prompt_tokens - sys_tokens)
+
+        kept_reversed: List[Dict[str, str]] = []
+        used_tokens = 0
+        for msg in reversed(non_system):
+            t_est = self._estimate_tokens(llm, msg["content"])
+            if not kept_reversed:
+                # Always keep the latest user turn, truncating only if larger than budget
+                if t_est > remaining_budget:
+                    msg = {
+                        "role": msg["role"],
+                        "content": msg["content"][-(remaining_budget * 3):],
+                    }
+                    t_est = self._estimate_tokens(llm, msg["content"])
+                kept_reversed.append(msg)
+                used_tokens += t_est
+            elif used_tokens + t_est <= remaining_budget:
+                kept_reversed.append(msg)
+                used_tokens += t_est
+            else:
+                break
+
+        prepared: List[Dict[str, str]] = []
+        if system_msg:
+            prepared.append(system_msg)
+        prepared.extend(reversed(kept_reversed))
+        return prepared, max_gen
+
     def generate_response(self, messages: List[Dict[str, str]], **kwargs) -> str:
         """Generate full response using local GGUF model."""
         try:
-            print("🧠 [GGUF] Generating response using local model...")
-            import sys
-            from pathlib import Path
-            try:
-                sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
-                from settings_manager import get_temperature, get_max_tokens
-                default_temp = get_temperature()
-                default_max = get_max_tokens()
-            except ImportError:
-                default_temp = 0.3
-                default_max = 512
+            default_temp, default_max = _read_generation_defaults()
+            llm = self._mgr.get_model(model_name=self.model)
+            self.llm = llm
+            prepared_msgs, safe_max_tokens = self._prepare_messages_and_limits(
+                llm,
+                messages,
+                int(kwargs.get("max_tokens", default_max)),
+            )
 
             completion_kwargs = {
-                "messages": messages,
-                "max_tokens": kwargs.get("max_tokens", default_max),
+                "messages": prepared_msgs,
+                "max_tokens": safe_max_tokens,
                 "temperature": kwargs.get("temperature", default_temp),
                 "top_p": kwargs.get("top_p", 0.9),
                 "repeat_penalty": 1.1,
             }
             if "response_format" in kwargs:
                 completion_kwargs["response_format"] = kwargs["response_format"]
-                
-            response = self.llm.create_chat_completion(**completion_kwargs)
-            return response['choices'][0]['message']['content'].strip()
+
+            logger.info(f"[GGUF:{self.model}] Generating sync response ({len(prepared_msgs)} msgs, max_tokens={safe_max_tokens})")
+            with self._mgr._infer_lock:
+                response = llm.create_chat_completion(**completion_kwargs)
+            return str(response["choices"][0]["message"]["content"] or "").strip()
         except Exception as e:
             logger.error(f"GGUF generation failed: {e}")
             return f"Error: {str(e)}"
-            
+
     def stream_response(self, messages: List[Dict[str, str]], **kwargs) -> Generator[str, None, None]:
         """Stream response using local GGUF model."""
         try:
-            print("🧠 [GGUF] Streaming response using local model...")
-            stream = self.llm.create_chat_completion(
-                messages=messages,
-                max_tokens=kwargs.get("max_tokens", 512),
-                temperature=kwargs.get("temperature", 0.3),
-                top_p=kwargs.get("top_p", 0.9),
-                repeat_penalty=1.1,
-                stream=True
+            default_temp, default_max = _read_generation_defaults()
+            llm = self._mgr.get_model(model_name=self.model)
+            self.llm = llm
+            prepared_msgs, safe_max_tokens = self._prepare_messages_and_limits(
+                llm,
+                messages,
+                int(kwargs.get("max_tokens", default_max)),
             )
-            for chunk in stream:
-                delta = chunk['choices'][0].get('delta', {})
-                text = delta.get('content', '')
-                if text:
-                    yield text
+
+            logger.info(f"[GGUF:{self.model}] Streaming response ({len(prepared_msgs)} msgs, max_tokens={safe_max_tokens})")
+            with self._mgr._infer_lock:
+                stream = llm.create_chat_completion(
+                    messages=prepared_msgs,
+                    max_tokens=safe_max_tokens,
+                    temperature=kwargs.get("temperature", default_temp),
+                    top_p=kwargs.get("top_p", 0.9),
+                    repeat_penalty=1.1,
+                    stream=True,
+                )
+                for chunk in stream:
+                    delta = chunk["choices"][0].get("delta", {})
+                    text = delta.get("content", "")
+                    if text:
+                        yield text
         except Exception as e:
             logger.error(f"GGUF streaming failed: {e}")
             yield f"Error: {str(e)}"
-            
+
     def count_tokens(self, text: str) -> int:
         """Count tokens using llama_cpp tokenizer."""
         try:
-            return len(self.llm.tokenize(text.encode('utf-8')))
-        except:
-            return len(text) // 4
+            if self.llm is not None:
+                return len(self.llm.tokenize(text.encode("utf-8")))
+        except Exception:
+            pass
+        return len(text) // 4
 
 
 class LLMFactory:
     """Factory for creating LLM providers."""
-    
+
     PROVIDERS = {
         "gguf": GGUFProvider,
         "openai": OpenAIProvider,
         "gemini": GeminiProvider,
-        "local": LocalLLMProvider,
-        "ollama": LocalLLMProvider,
+        "google": GeminiProvider,
+        "local": GGUFProvider,
         "offline": OfflineProvider,
     }
-    
+
+    @classmethod
+    def normalize_provider(cls, provider: Optional[str]) -> str:
+        """Normalize legacy/alias provider identifiers cleanly."""
+        p = str(provider or "").strip().lower()
+        if p == "google":
+            return "gemini"
+        if p == "local":
+            return "gguf"
+        return p
+
+    @classmethod
+    def sanitize_model_for_provider(cls, provider: str, model: Optional[str]) -> str:
+        """Ensure model names never leak across incompatible providers (e.g., gemini model -> gguf)."""
+        p = cls.normalize_provider(provider)
+        m = str(model or "").strip()
+        ml = m.lower()
+        if p == "gguf":
+            if not m or any(tok in ml for tok in ("gemini", "gpt-", "claude", "llama3.", "qwen2.5-coder")):
+                return "pulsar-final-q4_k_m"
+            return m
+        if p == "gemini":
+            if not m or any(tok in ml for tok in ("pulsar", "gpt-", "claude")):
+                return "gemini-2.5-flash"
+            return m
+        if p == "openai":
+            if not m or any(tok in ml for tok in ("pulsar", "gemini", "claude")):
+                return "gpt-4o-mini"
+            return m
+        return m
+
     @classmethod
     def create(cls, provider: str = "openai", **kwargs) -> LLMProvider:
         """Create an LLM provider."""
-        provider_lower = provider.lower()
-        
+        provider_lower = cls.normalize_provider(provider)
+
         if provider_lower not in cls.PROVIDERS:
             available = ", ".join(cls.PROVIDERS.keys())
             raise ValueError(f"Unknown provider: {provider}. Available: {available}")
-        
+
+        if "model" in kwargs:
+            kwargs["model"] = cls.sanitize_model_for_provider(provider_lower, kwargs.get("model"))
+
         provider_class = cls.PROVIDERS[provider_lower]
         return provider_class(**kwargs)
-    
+
     @classmethod
     def detect_provider(cls) -> tuple[str, str]:
         """Detect provider from user settings (single source of truth)."""
@@ -537,36 +618,29 @@ class LLMFactory:
                 from settings_manager import get_provider, get_model
                 return (get_provider(), get_model())
             except ImportError:
-                # Fallback if settings_manager not available
-                import os
                 if os.getenv("GEMINI_API_KEY"):
                     return ("gemini", "gemini-2.5-flash")
                 return ("gguf", "pulsar-final-q4_k_m")
-    
+
     @classmethod
     def create_with_fallback(cls, preferred_provider: Optional[str] = None, **kwargs) -> LLMProvider:
         """
-        Create provider with automatic fallback to offline.
-        
-        Args:
-            preferred_provider: Preferred provider name
-            **kwargs: Additional arguments for provider
-        
-        Returns:
-            LLM provider instance
+        Create provider with automatic fallback to local GGUF ONLY when preferred
+        provider is a cloud provider. Explicit local providers never silently switch.
         """
-        provider = preferred_provider
-        
-        if provider is None:
+        provider = cls.normalize_provider(preferred_provider) if preferred_provider else None
+
+        if not provider:
             provider, model = cls.detect_provider()
+            provider = cls.normalize_provider(provider)
             kwargs.setdefault('model', model)
-        
+
         # Try preferred provider first
         try:
             return cls.create(provider, **kwargs)
         except Exception as e:
             logger.warning(f"Failed to create {provider} provider: {e}")
-            if provider != "gguf":
+            if not is_local_provider(provider):
                 logger.info("Attempting automatic fallback to local GGUF model...")
                 try:
                     return cls.create("gguf", model="pulsar-final-q4_k_m")
@@ -581,59 +655,87 @@ class UnifiedChatInterface:
     def __init__(self, provider: Optional[str] = None, model: Optional[str] = None, use_fallback: bool = True):
         """
         Initialize unified chat interface.
-        
-        Args:
-            provider: Preferred LLM provider
-            model: Model to use
-            use_fallback: Whether to fallback to offline mode
+
+        Strict isolation guarantee: when a local provider ('gguf', 'local',
+        'offline') is resolved, `use_fallback` is disabled so local requests NEVER
+        silently fall back or route to Google Gemini / OpenAI.
         """
         if provider is None or model is None:
             detected_provider, detected_model = LLMFactory.detect_provider()
             provider = provider or detected_provider
             model = model or detected_model
-        
-        logger.info(f"Initializing {provider} with model {model}")
-        # LLM session provider initialized
-        
-        # Try to create provider with fallback support
-        if use_fallback:
+
+        raw_prov = str(provider or "").strip().lower()
+        provider_norm = LLMFactory.normalize_provider(raw_prov)
+        model_sanitized = LLMFactory.sanitize_model_for_provider(provider_norm, model)
+
+        factory_provider = "offline" if raw_prov == "offline" else provider_norm
+
+        # Never silently fall back from a requested local provider to cloud AI
+        allow_fallback = bool(use_fallback) and not is_local_provider(raw_prov) and not is_local_provider(provider_norm)
+
+        logger.info(f"Initializing {factory_provider} with model {model_sanitized} (allow_fallback={allow_fallback})")
+
+        if allow_fallback:
             try:
-                self.provider = LLMFactory.create(provider, model=model)
-                self.provider_name = provider
-                self.model = model
+                self.provider = LLMFactory.create(factory_provider, model=model_sanitized)
+                self.provider_name = factory_provider
+                self.model = getattr(self.provider, "model", model_sanitized) or model_sanitized
             except Exception as e:
-                logger.warning(f"Failed to create preferred provider {provider}: {e}")
-                fallback_provider, fallback_model = LLMFactory.detect_provider()
-                if provider != fallback_provider:
-                    print(f"⚠️ [{provider}] unavailable ({e}). Falling back to detected {fallback_provider} model...")
+                logger.warning(f"Failed to create preferred provider {factory_provider}: {e}")
+                candidates = [("gguf", "pulsar-final-q4_k_m")]
+                try:
+                    det_prov, det_model = LLMFactory.detect_provider()
+                    det_prov_norm = LLMFactory.normalize_provider(det_prov)
+                    if det_prov_norm and det_prov_norm != factory_provider:
+                        candidates.insert(0, (det_prov_norm, det_model))
+                except Exception:
+                    pass
+                candidates.extend([("gemini", "gemini-2.5-flash"), ("openai", "gpt-4o-mini")])
+
+                recovered = False
+                for fb_prov, fb_model in candidates:
+                    if fb_prov == factory_provider:
+                        continue
                     try:
-                        self.provider = LLMFactory.create(fallback_provider, model=fallback_model)
-                        self.provider_name = fallback_provider
-                        self.model = fallback_model
-                    except Exception as fallback_err:
-                        logger.error(f"Fallback to {fallback_provider} failed: {fallback_err}")
-                        raise e
-                else:
+                        self.provider = LLMFactory.create(fb_prov, model=fb_model)
+                        self.provider_name = fb_prov
+                        self.model = getattr(self.provider, "model", fb_model) or fb_model
+                        logger.info(f"Fallback recovered using {fb_prov} ({self.model})")
+                        recovered = True
+                        break
+                    except Exception:
+                        continue
+                if not recovered:
                     raise e
         else:
-            self.provider = LLMFactory.create(provider, model=model)
-            self.provider_name = provider
-            self.model = model
+            self.provider = LLMFactory.create(factory_provider, model=model_sanitized)
+            self.provider_name = factory_provider
+            self.model = getattr(self.provider, "model", model_sanitized) or model_sanitized
 
-        self.use_fallback = use_fallback
+        self.use_fallback = allow_fallback
         self.conversation_history: List[Dict[str, str]] = []
-        
-        # Enforce strong assistant persona for all models (especially local GGUF which defaults to Google/Gemma identity)
-        default_system_prompt = (
-            "You are Pulsar, a smart, helpful, and concise AI assistant created by Diwakar. "
-            "You MUST NEVER identify as a large language model trained by Google or any other company. "
-            "You MUST NEVER mention Gemma, OpenAI, Google, or any base models. "
-            "Keep your answers brief and directly address the user. "
-            "CRITICAL: Always reply in the exact same language the user speaks. If the user speaks in Hindi or Hinglish, you MUST reply naturally in Hindi or Hinglish."
-        )
+
+        # Single source of truth for Pulsar assistant persona (prevents base-model identity leaks)
+        try:
+            from ai_assistant.core.jarvis_persona import build_persona_system_prompt
+            default_system_prompt = build_persona_system_prompt(
+                provider=self.provider_name,
+                model=self.model,
+            )
+        except Exception:
+            default_system_prompt = (
+                "You are Pulsar, a smart, helpful, and human-like AI companion created by Diwakar. "
+                "You MUST NEVER identify as a large language model trained by Google or any other company. "
+                "You MUST NEVER mention Gemma, OpenAI, Google, or any base models. "
+                "Keep your answers brief and directly address the user. "
+                "CRITICAL: Always reply in the exact same language the user speaks. If the user speaks in Hindi or Hinglish, you MUST reply naturally in Hindi or Hinglish."
+            )
         self.conversation_history.append({"role": "system", "content": default_system_prompt})
-        
-        self.offline_mode = isinstance(self.provider, OfflineProvider)
+
+        self.offline_mode = is_local_provider(self.provider_name) or isinstance(
+            self.provider, (OfflineProvider, GGUFProvider)
+        )
         
         if self.offline_mode:
             logger.warning("š  Running in offline mode - features may be limited")
@@ -642,9 +744,18 @@ class UnifiedChatInterface:
         """Check if currently in offline mode."""
         return self.offline_mode
     
+    def set_system_message(self, content: str):
+        """Set or replace the leading system message without stacking duplicates."""
+        if not content:
+            return
+        if self.conversation_history and self.conversation_history[0].get("role") == "system":
+            self.conversation_history[0] = {"role": "system", "content": content}
+        else:
+            self.conversation_history.insert(0, {"role": "system", "content": content})
+
     def add_system_message(self, content: str):
-        """Add system message."""
-        self.conversation_history.insert(0, {"role": "system", "content": content})
+        """Replace leading system message cleanly (backward-compatible alias)."""
+        self.set_system_message(content)
     
     def add_user_message(self, content: str):
         """Add user message."""
@@ -653,35 +764,52 @@ class UnifiedChatInterface:
     def add_assistant_message(self, content: str):
         """Add assistant message."""
         self.conversation_history.append({"role": "assistant", "content": content})
+
+    def _drop_trailing_user_message(self, user_message: str) -> None:
+        if (
+            self.conversation_history
+            and self.conversation_history[-1].get("role") == "user"
+            and self.conversation_history[-1].get("content") == user_message
+        ):
+            self.conversation_history.pop()
     
     def chat(self, user_message: str, stream: bool = False, **kwargs) -> Union[str, Generator[str, None, None]]:
-        """Send a chat message and get response, with dynamic fallback."""
+        """Send a chat message and get response."""
         self.add_user_message(user_message)
         
         try:
             if stream:
                 def _capturing_stream():
                     full_response = ""
-                    for chunk in self.provider.stream_response(self.conversation_history, **kwargs):
-                        if chunk:
-                            full_response += chunk
-                            yield chunk
-                    if full_response and not full_response.startswith("Error:"):
+                    try:
+                        for chunk in self.provider.stream_response(self.conversation_history, **kwargs):
+                            if chunk:
+                                full_response += chunk
+                                yield chunk
+                    except Exception as stream_err:
+                        logger.error(f"Stream iteration failed: {stream_err}")
+                        self._drop_trailing_user_message(user_message)
+                        yield f"Error: Generation failed: {stream_err}"
+                        return
+                    if full_response and not full_response.strip().startswith("Error:"):
                         self.add_assistant_message(full_response)
+                    else:
+                        self._drop_trailing_user_message(user_message)
                 return _capturing_stream()
             else:
                 response = self.provider.generate_response(self.conversation_history, **kwargs)
-                if response.startswith("Error:"):
+                if str(response or "").strip().startswith("Error:"):
                     raise Exception(response)
                 self.add_assistant_message(response)
                 return response
         except Exception as e:
             logger.error(f"Chat generation failed: {e}")
+            self._drop_trailing_user_message(user_message)
             if stream:
                 def _error_stream():
                     yield f"Error: Generation failed: {e}"
                 return _error_stream()
-            return f"Error: I encountered an error during generation: {e}"
+            return f"Error: {e}"
     
     def reset(self):
         """Reset conversation history."""

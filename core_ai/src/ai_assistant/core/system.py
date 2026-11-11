@@ -51,7 +51,7 @@ def get_system_status() -> str:
         try:
             battery = psutil.sensors_battery()
             if battery:
-                battery_info = f"\\n🔋 Battery: {battery.percent:.1f}% ({'Charging' if battery.power_plugged else 'Not Charging'})"
+                battery_info = f"\n🔋 Battery: {battery.percent:.1f}% ({'Charging' if battery.power_plugged else 'Not Charging'})"
         except:
             pass
         
@@ -79,22 +79,25 @@ def get_running_processes(limit: int = 10) -> str:
         for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent']):
             try:
                 proc_info = proc.info
+                pname = str(proc_info.get('name') or '')
+                if pname.lower() in ('system idle process', 'registry', 'memory compression'):
+                    continue
                 processes.append(proc_info)
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 pass
         
-        # Sort by CPU usage
-        processes = sorted(processes, key=lambda x: x['cpu_percent'] or 0, reverse=True)[:limit]
+        # Sort by CPU/memory usage
+        processes = sorted(processes, key=lambda x: ((x['cpu_percent'] or 0), (x['memory_percent'] or 0)), reverse=True)[:limit]
         
-        process_report = "📋 TOP RUNNING PROCESSES\\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n"
+        process_report = "📋 TOP RUNNING PROCESSES\n" + ("─" * 56) + "\n"
         for proc in processes:
             name = proc['name'][:25].ljust(25)
             cpu = f"{proc['cpu_percent'] or 0:.1f}%".rjust(6)
             mem = f"{proc['memory_percent'] or 0:.1f}%".rjust(6)
             pid = str(proc['pid']).rjust(6)
-            process_report += f"🔹 {name} | CPU: {cpu} | RAM: {mem} | PID: {pid}\\n"
+            process_report += f"🔹 {name} | CPU: {cpu} | RAM: {mem} | PID: {pid}\n"
         
-        return process_report
+        return process_report.rstrip()
         
     except Exception as e:
         return f"Error getting running processes: {e}"
@@ -140,18 +143,18 @@ def get_network_info() -> str:
         interfaces = psutil.net_if_addrs()
         network_stats = psutil.net_io_counters(pernic=True)
         
-        network_report = "🌐 NETWORK INFORMATION\\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n"
+        network_report = "🌐 NETWORK INFORMATION\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
         
         for interface_name, interface_addrs in interfaces.items():
             if interface_name in network_stats:
                 stats = network_stats[interface_name]
-                network_report += f"📡 {interface_name}:\\n"
+                network_report += f"📡 {interface_name}:\n"
                 
                 for addr in interface_addrs:
                     if addr.family.name == 'AF_INET':  # IPv4
-                        network_report += f"   📍 IPv4: {addr.address}\\n"
+                        network_report += f"   📍 IPv4: {addr.address}\n"
                 
-                network_report += f"   📊 Sent: {stats.bytes_sent // (1024**2):.1f}MB | Received: {stats.bytes_recv // (1024**2):.1f}MB\\n\\n"
+                network_report += f"   📊 Sent: {stats.bytes_sent // (1024**2):.1f}MB | Received: {stats.bytes_recv // (1024**2):.1f}MB\n\n"
         
         return network_report
         
@@ -190,7 +193,7 @@ def monitor_system_alerts() -> str:
             pass
         
         if alerts:
-            return "🚨 SYSTEM ALERTS:\\n" + "\\n".join(alerts)
+            return "🚨 SYSTEM ALERTS:\n" + "\n".join(alerts)
         else:
             return "✅ All systems running normally. No alerts detected."
             
@@ -236,14 +239,14 @@ def get_battery_status() -> str:
         plugged = battery.power_plugged
         seconds_left = battery.secsleft
         
-        status = f"🔋 BATTERY STATUS\\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n"
-        status += f"⚡ Charge Level: {percent}%\\n"
-        status += f"🔌 Power Adapter: {'Connected' if plugged else 'Disconnected'}\\n"
+        status = f"🔋 BATTERY STATUS\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        status += f"⚡ Charge Level: {percent}%\n"
+        status += f"🔌 Power Adapter: {'Connected' if plugged else 'Disconnected'}\n"
         
         if seconds_left != psutil.POWER_TIME_UNLIMITED and not plugged:
             hours, remainder = divmod(seconds_left, 3600)
             minutes = remainder // 60
-            status += f"⏱️  Time Remaining: {int(hours)}h {int(minutes)}m\\n"
+            status += f"⏱️  Time Remaining: {int(hours)}h {int(minutes)}m\n"
         
         # Status indicator
         if percent > 80:

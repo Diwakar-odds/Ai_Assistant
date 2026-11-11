@@ -57,13 +57,17 @@ except ImportError:
     CONVERSATIONAL_AI_AVAILABLE = False
 
 try:
-    from ai_assistant.multilingual import MultilingualSupport, Language, LanguageContext
+    from ai_assistant.utils.multilingual import MultilingualSupport, Language, LanguageContext
     MULTILINGUAL_AVAILABLE = True
 except ImportError:
-    MultilingualSupport = None
-    Language = None
-    LanguageContext = None
-    MULTILINGUAL_AVAILABLE = False
+    try:
+        from ai_assistant.multilingual import MultilingualSupport, Language, LanguageContext
+        MULTILINGUAL_AVAILABLE = True
+    except ImportError:
+        MultilingualSupport = None
+        Language = None
+        LanguageContext = None
+        MULTILINGUAL_AVAILABLE = False
 
 # Internal imports - Automation tools
 try:
@@ -82,7 +86,15 @@ except ImportError:
     AUTOMATION_AVAILABLE = False
     # Stub functions
     setup_memory = lambda: None
-    save_to_memory = lambda *args: None
+    save_to_memory = lambda *args, **kwargs: None
+
+# Optional Smart Memory Retrieval / Knowledge stubs (prevents NameError in chat paths)
+memory_retriever = None
+SMART_MEMORY_AVAILABLE = False
+try:
+    from ai_assistant.automation.automation_tools_new import save_knowledge  # type: ignore
+except ImportError:
+    save_knowledge = lambda *args, **kwargs: None
 
 # Internal imports - Logging
 try:
@@ -143,6 +155,8 @@ class ModernAssistant:
         self._conversational_ai = None
         self._multilingual = None
         self._llm_chat = None
+        self._agent_registry = None
+        self._agent_coordinator = None
         
         self._tts_engine = None
         self._audio_stream = None
@@ -156,7 +170,8 @@ class ModernAssistant:
             'llm_chat': 'not_started',
             'voice_system': 'not_started',
             'memory': 'not_started',
-            'system_monitoring': 'not_started'
+            'system_monitoring': 'not_started',
+            'multi_agent': 'not_started',
         }
         self._init_lock = threading.Lock()
         
@@ -185,14 +200,30 @@ class ModernAssistant:
     def process_query(self, query: str) -> str:
         """Process user query and return response"""
         
-        # Check custom commands first
+        # Check custom commands / macros first
         try:
             from ai_assistant.core.custom_commands import CustomCommandManager
             if not hasattr(self, '_custom_cmd_mgr'):
                 self._custom_cmd_mgr = CustomCommandManager()
             resolved = self._custom_cmd_mgr.resolve_command(query)
             if len(resolved) > 1:
-                return f"Executing macro: {', '.join(resolved)} (Multi-step macros are partially supported)"
+                chain_res = self.execute_chain(" && ".join(resolved), source="macro", wait=True)
+                if chain_res.get("requires_confirmation"):
+                    return str(chain_res.get("response") or "Confirmation required to run macro.")
+                if chain_res.get("success") or chain_res.get("response"):
+                    return str(chain_res.get("response") or f"Completed {len(resolved)} macro steps.")
+            elif len(resolved) == 1 and resolved[0] and resolved[0] != query:
+                query = resolved[0]
+        except Exception:
+            pass
+
+        # Route explicit multi-step chains safely
+        try:
+            from ai_assistant.integrations.orchestrator_integration import should_use_orchestrator
+            if should_use_orchestrator(query):
+                chain_res = self.execute_chain(query, source="query", wait=True)
+                if chain_res.get("requires_confirmation") or chain_res.get("success"):
+                    return str(chain_res.get("response") or "Multi-step command executed.")
         except Exception:
             pass
             
@@ -203,52 +234,64 @@ class ModernAssistant:
         try:
             # Lazy import to avoid circular dependencies
             try:
-                from ai_assistant.ai.llm_provider import UnifiedChatInterface
+                from ai_assistant.ai.llm_provider import UnifiedChatInterface, LLMFactory, is_local_provider
                 from ai_assistant.core.onboarding import OnboardingManager
                 from ai_assistant.core.context_optimizer import ContextOptimizer
                 
+                _sm_provider, _sm_model = self._get_configured_provider_model()
+                if _sm_provider:
+                    _sm_provider = LLMFactory.normalize_provider(_sm_provider)
+                    _sm_model = LLMFactory.sanitize_model_for_provider(_sm_provider, _sm_model)
+                if self._llm_chat is not None and _sm_provider:
+                    cur_p = getattr(self._llm_chat, 'provider_name', None)
+                    cur_m = getattr(self._llm_chat, 'model', None)
+                    if cur_p != _sm_provider or (_sm_model and cur_m != _sm_model):
+                        self.reset_llm_session()
+
                 if self._llm_chat is None:
-                    try:
-                        import sys
-                        from pathlib import Path
-                        sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
-                        from settings_manager import get_provider, get_model
-                        _sm_provider, _sm_model = get_provider(), get_model()
-                    except ImportError:
-                        _sm_provider, _sm_model = None, None
-                    self._llm_chat = UnifiedChatInterface(provider=_sm_provider, model=_sm_model, use_fallback=True)
+                    from ai_assistant.core.jarvis_persona import build_persona_system_prompt
+                    self._llm_chat = UnifiedChatInterface(
+                        provider=_sm_provider,
+                        model=_sm_model,
+                        use_fallback=(not is_local_provider(_sm_provider)),
+                    )
                     self._onboarding_mgr = OnboardingManager()
                     self._context_opt = ContextOptimizer()
-                    
+
                     if not self._onboarding_mgr.is_onboarded():
-                        self._llm_chat.add_system_message(self._onboarding_mgr.get_onboarding_system_prompt())
+                        self._llm_chat.set_system_message(self._onboarding_mgr.get_onboarding_system_prompt())
                     else:
-                        base_prompt = "You are 'Pulsar', a smart and helpful AI assistant."
-                        self._llm_chat.add_system_message(self._context_opt.inject_context_into_prompt(base_prompt))
-                
-                # --- JARVIS HOOK: Inject emotional context before sending to LLM ---
+                        base_prompt = build_persona_system_prompt(provider=_sm_provider, model=_sm_model)
+                        self._llm_chat.set_system_message(self._context_opt.inject_context_into_prompt(base_prompt))
+
+                # --- JARVIS HOOK: Inject emotional context + live persona before sending to LLM ---
                 emotion_context = {}
                 self._current_turn_mood = "neutral"
                 if hasattr(self, '_learning_loop') and self._learning_loop:
                     emotion_context = self._learning_loop.get_emotion_context(query)
                     self._current_turn_mood = emotion_context.get("mood", "neutral")
                     modifier = emotion_context.get("prompt_modifier", "")
-                    if modifier:
-                        # Temporarily inject the emotion-aware system instruction
-                        self._llm_chat.add_system_message(modifier)
-                
+                    if modifier and getattr(self, '_onboarding_mgr', None) and self._onboarding_mgr.is_onboarded():
+                        from ai_assistant.core.jarvis_persona import build_persona_system_prompt
+                        live_prompt = build_persona_system_prompt(
+                            provider=_sm_provider,
+                            model=_sm_model,
+                            extra_context=modifier,
+                        )
+                        self._llm_chat.set_system_message(self._context_opt.inject_context_into_prompt(live_prompt))
+
                 # Fetch response
                 response = self._llm_chat.chat(query)
-                
+
                 # Process onboarding if active
                 if hasattr(self, '_onboarding_mgr') and not self._onboarding_mgr.is_onboarded():
                     response, is_complete = self._onboarding_mgr.process_onboarding_response(response)
                     if is_complete:
-                        # Reset system message once onboarding completes
+                        from ai_assistant.core.jarvis_persona import build_persona_system_prompt
                         if not hasattr(self, '_context_opt'):
                             self._context_opt = ContextOptimizer()
-                        base_prompt = "You are 'Pulsar', a smart and helpful AI assistant."
-                        self._llm_chat.add_system_message(self._context_opt.inject_context_into_prompt(base_prompt))
+                        base_prompt = build_persona_system_prompt(provider=_sm_provider, model=_sm_model)
+                        self._llm_chat.set_system_message(self._context_opt.inject_context_into_prompt(base_prompt))
                 
                 # --- JARVIS HOOK: Fire async learning loop after every interaction ---
                 if hasattr(self, '_learning_loop') and self._learning_loop:
@@ -349,6 +392,260 @@ class ModernAssistant:
     def get_init_status(self):
         """Get initialization status of all components"""
         return self._init_status.copy()
+
+    @property
+    def agent_registry(self):
+        """Lazy-load global AgentRegistry."""
+        if self._agent_registry is None:
+            with self._init_lock:
+                if self._agent_registry is None:
+                    try:
+                        try:
+                            from ai_assistant.agents.registry import get_global_registry
+                            self._agent_registry = get_global_registry()
+                        except Exception:
+                            from ai_assistant.agents.registry import AgentRegistry
+                            from ai_assistant.agents.loader import AgentLoader
+                            reg = AgentRegistry()
+                            if hasattr(AgentLoader, "load_all_agents"):
+                                AgentLoader.load_all_agents(registry=reg, eager=False)
+                            else:
+                                AgentLoader.register_agent_definitions(reg)
+                            self._agent_registry = reg
+                        self._init_status['multi_agent'] = 'ready'
+                    except Exception as e:
+                        logger.warning(f"Could not initialize AgentRegistry: {e}")
+                        self._init_status['multi_agent'] = 'failed'
+        return self._agent_registry
+
+    @property
+    def multi_agent_coordinator(self):
+        """Lazy-load MultiAgentCoordinator bound to AgentRegistry."""
+        if self._agent_coordinator is None:
+            with self._init_lock:
+                if self._agent_coordinator is None:
+                    try:
+                        reg = self.agent_registry
+                        try:
+                            from ai_assistant.core.multi_agent_coordinator import get_multi_agent_coordinator
+                            self._agent_coordinator = get_multi_agent_coordinator(reg)
+                        except Exception:
+                            from ai_assistant.core.multi_agent_coordinator import MultiAgentCoordinator
+                            self._agent_coordinator = MultiAgentCoordinator(reg)
+                        self._init_status['multi_agent'] = 'ready'
+                    except Exception as e:
+                        logger.warning(f"Could not initialize MultiAgentCoordinator: {e}")
+                        self._init_status['multi_agent'] = 'failed'
+        return self._agent_coordinator
+
+    def get_agents_status(self):
+        """Return live agent roster DTO list."""
+        reg = self.agent_registry
+        if reg is None:
+            return []
+        if hasattr(reg, "list_agents_dto"):
+            try:
+                return reg.list_agents_dto()
+            except Exception:
+                pass
+        try:
+            from routes.agent_routes import _synthesize_agents_dto
+            return _synthesize_agents_dto(reg)
+        except Exception:
+            try:
+                from backend.routes.agent_routes import _synthesize_agents_dto
+                return _synthesize_agents_dto(reg)
+            except Exception:
+                return []
+
+    @staticmethod
+    def _run_coro_sync(coro):
+        import asyncio
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(coro)
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            return pool.submit(asyncio.run, coro).result()
+
+    @staticmethod
+    def _check_safety_gate(command_text: str, agent_id: str = None, confirmed: bool = False):
+        """Enforce permissions & Tier-3 confirmation gates for assistant chains/agent tasks."""
+        lower = (command_text or "").lower()
+        if any(w in lower for w in ("shutdown", "shut down", "restart computer", "reboot", "sleep pc", "lock pc")):
+            try:
+                from settings_manager import is_system_control_allowed
+                if not is_system_control_allowed():
+                    return {
+                        "success": False,
+                        "blocked": True,
+                        "response": "System control commands are disabled by your Security -> Permissions settings.",
+                    }
+            except Exception:
+                pass
+
+        if confirmed:
+            return None
+
+        tier3_phrases = (
+            "send whatsapp", "whatsapp message", "send email", "email to",
+            "send message", "message bhejo", "shutdown", "shut down",
+            "restart computer", "reboot", "delete file", "delete all",
+            "remove file", "format drive", "end call",
+        )
+        is_comm_agent = (agent_id or "").lower() in ("comm-001", "communication_01", "communication-001") and any(
+            w in lower for w in ("send", "whatsapp", "email", "bhejo", "message", "reply")
+        )
+        if is_comm_agent or any(p in lower for p in tier3_phrases):
+            try:
+                try:
+                    from agent_brain import get_agent_brain
+                except ImportError:
+                    from backend.agent_brain import get_agent_brain
+                brain = get_agent_brain()
+                intent_name = "multi_agent_task" if agent_id else "action_chain"
+                act_name = "execute_agent" if agent_id else "execute_chain"
+                return brain._create_pending_confirmation(
+                    command_text,
+                    intent_name,
+                    act_name,
+                    {"command": command_text, "agent_id": agent_id, "confirmed": True},
+                    {"summary": f"{act_name}: {command_text[:120]}"},
+                )
+            except Exception:
+                return {
+                    "success": True,
+                    "requires_confirmation": True,
+                    "response": f"Please confirm before executing high-risk action: {command_text[:120]}",
+                }
+        return None
+
+    def _match_specialized_agent_task(self, text: str):
+        """Detect unambiguous requests meant for specialized multi-agent execution."""
+        c = (text or "").strip().lower()
+        if not c or len(c.split()) < 2:
+            return None
+        patterns = [
+            ("deep-research-001", "deep_research", ("deep research", "comprehensive research", "in-depth report", "detailed research on")),
+            ("research-001", "web_research", ("research on ", "research about ", "investigate ", "gather sources on")),
+            ("data-001", "data_analysis", ("analyze csv", "analyze dataset", "plot chart", "create chart from", "visualize data", "data analysis")),
+            ("database-001", "sql_query", ("query database", "run sql", "select * from", "inspect database")),
+            ("writer-001", "write_document", ("write an essay", "write essay", "draft an article", "proofread this", "write report about")),
+            ("creative-001", "generate_image", ("generate an image", "create a banner", "generate poster", "design thumbnail")),
+            ("productivity-001", "create_pdf", ("create a pdf", "generate pdf", "create presentation", "create spreadsheet", "excel sheet")),
+            ("audio-001", "transcribe_audio", ("transcribe audio", "generate voiceover", "convert text to audio file")),
+            ("video-001", "edit_video", ("summarize video", "clip video", "create video thumbnail", "trim video")),
+            ("student-001", "study_help", ("quiz me on", "create flashcards", "solve math", "study guide for")),
+        ]
+        for aid, cap, cues in patterns:
+            if any(cue in c for cue in cues):
+                return {"agent_id": aid, "capability": cap}
+        return None
+
+    def execute_agent_task(self, description: str, agent_id: str = None, params: dict = None, context: dict = None, confirmed: bool = False):
+        """Dispatch a task through MultiAgentCoordinator respecting confirmation gates."""
+        gate = self._check_safety_gate(description, agent_id=agent_id, confirmed=confirmed)
+        if gate:
+            return gate
+
+        coord = self.multi_agent_coordinator
+        reg = self.agent_registry
+        if coord is None or reg is None:
+            return {"success": False, "error": "Multi-agent system unavailable", "response": "Multi-agent coordinator is unavailable."}
+
+        import inspect
+        import uuid
+        task_id = f"task_{uuid.uuid4().hex[:12]}"
+        task_params = dict(params or {})
+        task_ctx = dict(context or {})
+
+        try:
+            from ai_assistant.agents.models import Task
+            sig = inspect.signature(Task)
+            kwargs = {"task_id": task_id, "description": description, "params": task_params}
+            if "target_agent_id" in sig.parameters and agent_id:
+                kwargs["target_agent_id"] = agent_id
+            if "context" in sig.parameters:
+                kwargs["context"] = task_ctx
+            task_obj = Task(**kwargs)
+
+            async def _run():
+                if agent_id and hasattr(coord, "execute_agent"):
+                    return await coord.execute_agent(agent_id, task_obj)
+                if hasattr(coord, "execute_step"):
+                    return await coord.execute_step(
+                        description,
+                        params=task_params,
+                        preferred_agent_id=agent_id,
+                        chain_context=task_ctx,
+                    )
+                if hasattr(coord, "coordinate_task"):
+                    return await coord.coordinate_task(task_obj)
+                if agent_id:
+                    ag = reg.get_agent(agent_id)
+                    if ag:
+                        return await ag.execute(task_obj)
+                raise RuntimeError("No execution method available on MultiAgentCoordinator")
+
+            res = self._run_coro_sync(_run())
+            data = getattr(res, "data", {}) or {}
+            if not isinstance(data, dict):
+                data = {"raw": data}
+            out_txt = (
+                data.get("output")
+                or data.get("summary")
+                or data.get("text")
+                or data.get("response")
+                or data.get("message")
+                or getattr(res, "output_path", None)
+                or ""
+            )
+            ok = bool(getattr(res, "success", False))
+            err = getattr(res, "error", None)
+            return {
+                "success": ok,
+                "task_id": task_id,
+                "agent_id": getattr(res, "agent_id", None) or agent_id,
+                "agent_name": getattr(res, "agent_name", None),
+                "data": data,
+                "output_path": getattr(res, "output_path", None),
+                "artifacts": list(getattr(res, "artifacts", []) or []),
+                "error": err,
+                "response": str(out_txt) if out_txt else (str(err) if err else "Agent task completed."),
+            }
+        except Exception as exc:
+            logger.error(f"ModernAssistant.execute_agent_task error: {exc}", exc_info=True)
+            return {"success": False, "task_id": task_id, "agent_id": agent_id, "error": str(exc), "response": f"Agent execution failed: {exc}"}
+
+    def execute_chain(self, command: str, source: str = "assistant", context: dict = None, wait: bool = True, timeout: float = 30.0, model_preference: dict = None, confirmed: bool = False):
+        """Route a multi-step command through orchestrator_integration preserving Tier-3 gates."""
+        gate = self._check_safety_gate(command, confirmed=confirmed)
+        if gate:
+            return gate
+
+        try:
+            import inspect
+            from ai_assistant.integrations.orchestrator_integration import process_with_orchestrator
+            sig = inspect.signature(process_with_orchestrator)
+            kwargs = {}
+            if "wait" in sig.parameters:
+                kwargs["wait"] = wait
+            if "timeout" in sig.parameters:
+                kwargs["timeout"] = timeout
+            if isinstance(model_preference, dict):
+                if "provider" in sig.parameters and model_preference.get("provider"):
+                    kwargs["provider"] = model_preference.get("provider")
+                if "model" in sig.parameters and model_preference.get("model"):
+                    kwargs["model"] = model_preference.get("model")
+                if "offline_mode" in sig.parameters and "offline_mode" in model_preference:
+                    kwargs["offline_mode"] = bool(model_preference.get("offline_mode"))
+            ctx = dict(context or {})
+            ctx.setdefault("source", source)
+            return process_with_orchestrator(command, ctx, **kwargs)
+        except Exception as exc:
+            logger.error(f"ModernAssistant.execute_chain error: {exc}", exc_info=True)
+            return {"success": False, "error": str(exc), "response": f"Chain orchestration failed: {exc}", "fallback": True}
     
     # Lazy loading properties
     @property
@@ -372,25 +669,70 @@ class ModernAssistant:
             self._init_multilingual_internal()
         return self._multilingual
     
+    def _get_configured_provider_model(self):
+        """Read active (provider, model) from central settings_manager if available."""
+        try:
+            import sys
+            from pathlib import Path
+            backend_dir = str(Path(__file__).resolve().parents[4] / 'backend')
+            if backend_dir not in sys.path:
+                sys.path.insert(0, backend_dir)
+            from settings_manager import get_provider, get_model
+            return get_provider(), get_model()
+        except Exception:
+            return None, None
+
+    def reset_llm_session(self):
+        """Reset cached LLM chat interface so subsequent turns use updated settings."""
+        with self._init_lock:
+            self._llm_chat = None
+            self.current_llm_config = None
+            self._init_status['llm_chat'] = 'not_started'
+
     @property
     def llm_chat(self):
-        """Lazy-load LLM chat on first access"""
+        """Lazy-load LLM chat on first access, auto-resetting if settings changed."""
+        if self._llm_chat is not None:
+            cfg_p, cfg_m = self._get_configured_provider_model()
+            cur_p = getattr(self._llm_chat, 'provider_name', None)
+            cur_m = getattr(self._llm_chat, 'model', None)
+            if cfg_p and (cur_p != cfg_p or (cfg_m and cur_m != cfg_m)):
+                self.reset_llm_session()
         if self._llm_chat is None and LAZY_INIT:
             self._init_smart_llm_internal()
         return self._llm_chat
     
     @property
     def whisper_model(self):
-        """Lazy-load whisper model (uses 'small' for accurate Hindi/Hinglish, fallback to 'base')"""
+        """Lazy-load configured faster-whisper model offline-first ('small' -> 'base' fallback)."""
         if not hasattr(self, '_whisper_model') or self._whisper_model is None:
             try:
                 import os
                 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
                 from faster_whisper import WhisperModel
+
+                cfg_model = 'small'
                 try:
-                    self._whisper_model = WhisperModel('small', device='cpu', compute_type='int8')
+                    from settings_manager import get_stt_model
+                    cfg_model = str(get_stt_model() or 'small').strip().lower() or 'small'
                 except Exception:
-                    self._whisper_model = WhisperModel('base', device='cpu', compute_type='int8')
+                    cfg_model = 'small'
+
+                candidates = tuple(dict.fromkeys([c for c in (cfg_model, 'small', 'base') if c]))
+                for size in candidates:
+                    try:
+                        self._whisper_model = WhisperModel(
+                            size, device='cpu', compute_type='int8', local_files_only=True
+                        )
+                        break
+                    except Exception:
+                        try:
+                            self._whisper_model = WhisperModel(size, device='cpu', compute_type='int8')
+                            break
+                        except Exception:
+                            continue
+                else:
+                    self._whisper_model = None
             except Exception:
                 self._whisper_model = None
         return self._whisper_model
@@ -459,12 +801,23 @@ class ModernAssistant:
         
         try:
             from ai_assistant.ai.network_aware_llm import get_optimal_llm_config
-            from ai_assistant.ai.llm_provider import UnifiedChatInterface
+            from ai_assistant.ai.llm_provider import UnifiedChatInterface, LLMFactory
             
-            # Get optimal configuration based on network status
-            config = get_optimal_llm_config()
-            provider = config["provider"]
-            model = config["model"]
+            # Get optimal configuration from central settings_manager first, then network config
+            sm_provider, sm_model = self._get_configured_provider_model()
+            if sm_provider:
+                provider = LLMFactory.normalize_provider(sm_provider)
+                model = LLMFactory.sanitize_model_for_provider(provider, sm_model)
+                config = {
+                    "provider": provider,
+                    "model": model,
+                    "network_status": provider in ("gemini", "openai"),
+                    "source": "settings_manager",
+                }
+            else:
+                config = get_optimal_llm_config()
+                provider = config["provider"]
+                model = config["model"]
             
             print(f"  Initializing LLM: {provider} ({model})")
             print(f" Network status: {'Online' if config['network_status'] else 'Offline'}")
@@ -564,19 +917,24 @@ class ModernAssistant:
                             return f"Volume set to {param}%"
                         elif action == 'volume_up':
                             if AUTOMATION_AVAILABLE:
-                                current = get_system_volume() if hasattr(globals(), 'get_system_volume') else 50
-                                return set_system_volume(min(100, current + 10))
+                                from ai_assistant.core.core import volume_up as core_volume_up
+                                return core_volume_up()
                             return "Volume increased"
                         elif action == 'volume_down':
                             if AUTOMATION_AVAILABLE:
-                                current = get_system_volume() if hasattr(globals(), 'get_system_volume') else 50
-                                return set_system_volume(max(0, current - 10))
+                                from ai_assistant.core.core import volume_down as core_volume_down
+                                return core_volume_down()
                             return "Volume decreased"
                         elif action == 'mute':
                             if AUTOMATION_AVAILABLE:
                                 from ai_assistant.core.core import mute_volume
                                 return mute_volume()
                             return "Muted"
+                        elif action == 'unmute':
+                            if AUTOMATION_AVAILABLE:
+                                from ai_assistant.core.core import unmute_volume
+                                return unmute_volume()
+                            return "Unmuted"
                         elif action == 'media_pause':
                             if AUTOMATION_AVAILABLE:
                                 import ctypes
@@ -623,8 +981,8 @@ class ModernAssistant:
                 # Initialize speech recognition (Faster-Whisper local)
                 try:
                     import os
-                    os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
-                    os.environ['PHONEMIZER_ESPEAK_LIBRARY'] = r'C:\Program Files\eSpeak NG\libespeak-ng.dll'
+                    from ai_assistant.voice.tts_output_service import ensure_espeak_environment, load_kitten_mini_model
+                    ensure_espeak_environment()
                     # Ensure ffmpeg in bin/ is found
                     bin_dir = os.path.abspath('bin')
                     if bin_dir not in os.environ['PATH']:
@@ -637,11 +995,10 @@ class ModernAssistant:
                     print(f"[WARN] Faster-Whisper initialization failed: {e}")
                     
                 
-                # Initialize text-to-speech (KittenTTS)
+                # Initialize text-to-speech (KittenTTS mini-0.8 offline)
                 try:
-                    from kittentts import KittenTTS
-                    self._tts_engine = KittenTTS()
-                    print("[OK] KittenTTS initialized")
+                    self._tts_engine = load_kitten_mini_model()
+                    print("[OK] KittenTTS mini-0.8 initialized")
                 except Exception as e:
                     print(f"[WARN] KittenTTS initialization failed: {e}")
                     self._tts_engine = None
@@ -819,8 +1176,8 @@ class ModernAssistant:
         
         return network_stats
     
-    def process_command(self, command_text, model_preference=None):
-        """Process user command with multilingual support"""
+    def process_command(self, command_text, model_preference=None, include_chains: bool = True, include_agents: bool = True):
+        """Process user command with chain orchestration, specialized agents, and multilingual support"""
         log_query(command_text)
         
         # --- FUN EASTER EGG INJECTED ---
@@ -833,6 +1190,41 @@ class ModernAssistant:
         
         with self._process_lock:
             try:
+                # 1. Check multi-step chains before single-step intent handlers
+                if include_chains:
+                    try:
+                        from ai_assistant.integrations.orchestrator_integration import should_use_orchestrator
+                        if should_use_orchestrator(command_text):
+                            chain_res = self.execute_chain(
+                                command_text,
+                                source="assistant_command",
+                                wait=True,
+                                model_preference=model_preference,
+                            )
+                            if chain_res.get("requires_confirmation") or chain_res.get("blocked") or (
+                                chain_res.get("success") and not chain_res.get("fallback")
+                            ):
+                                resp_str = str(chain_res.get("response") or "Chain executed.")
+                                log_reply(resp_str)
+                                return resp_str
+                    except Exception as chain_err:
+                        logger.debug(f"Assistant chain check skipped: {chain_err}")
+
+                # 2. Check explicit specialized agent requests
+                if include_agents:
+                    agent_match = self._match_specialized_agent_task(command_text)
+                    if agent_match:
+                        agent_res = self.execute_agent_task(
+                            command_text,
+                            agent_id=agent_match.get("agent_id"),
+                            params={"capability": agent_match.get("capability"), "model_preference": model_preference},
+                            context={"source": "assistant_command"},
+                        )
+                        if agent_res.get("requires_confirmation") or agent_res.get("blocked") or agent_res.get("success"):
+                            resp_str = str(agent_res.get("response") or "Agent task completed.")
+                            log_reply(resp_str)
+                            return resp_str
+
                 # Process with multilingual support first
                 if self.multilingual:
                     response = self.process_multilingual_command(command_text, model_preference)
@@ -858,7 +1250,11 @@ class ModernAssistant:
                 
                 # Use conversational AI if available
                 if self.conversational_ai:
-                    response = self.conversational_ai.process_message(command_text)
+                    pref_provider = model_preference.get('provider') if isinstance(model_preference, dict) else None
+                    pref_model = model_preference.get('model') if isinstance(model_preference, dict) else None
+                    response = self.conversational_ai.process_message(
+                        command_text, provider=pref_provider, model=pref_model
+                    )
                     return response
                 
                 # Fallback to automation tools processing
@@ -920,7 +1316,11 @@ class ModernAssistant:
             # Process the command
             if self.conversational_ai:
                 log_module_usage('conversational_ai', 'process_message')
-                response = self.conversational_ai.process_message(processed_command)
+                pref_provider = model_preference.get('provider') if isinstance(model_preference, dict) else None
+                pref_model = model_preference.get('model') if isinstance(model_preference, dict) else None
+                response = self.conversational_ai.process_message(
+                    processed_command, provider=pref_provider, model=pref_model
+                )
             else:
                 response = self.process_automation_command(processed_command)
             
@@ -1114,19 +1514,30 @@ Just speak naturally - I understand context! """
         context_id = None
         actual_provider = None
         actual_model = None
+        is_local_req = False
+        try:
+            from ai_assistant.ai.llm_provider import LLMFactory, is_local_provider
+            if provider_preference:
+                is_local_req = is_local_provider(LLMFactory.normalize_provider(provider_preference))
+        except Exception:
+            pass
         
         try:
             # Initialize context if not provided
             if context is None:
                 context = {}
             
-            # 0. CHECK SMART MEMORY FIRST (for questions)
-            if '?' in message and SMART_MEMORY_AVAILABLE and memory_retriever:
+            # 0. Retrieve unified historical RAG context if relevant (injected cleanly into prompt)
+            rag_context_block = ""
+            if message:
                 try:
-                    memory_answer = memory_retriever.answer_from_memory(message)
-                    if memory_answer:
-                        # Found answer in memory!
-                        response_text = f"­ **From Memory**: {memory_answer}\n\n"
+                    from ai_assistant.ai.memory_retrieval import retrieve_unified_historical_context
+                    rag_context_block = retrieve_unified_historical_context(
+                        message,
+                        max_chars=1500,
+                        only_when_triggered=True,
+                    )
+                    if rag_context_block:
                         features_used.append("memory_retrieval")
                 except Exception as e:
                     print(f"Memory retrieval error: {e}")
@@ -1182,21 +1593,40 @@ Just speak naturally - I understand context! """
                         if context_dict and context_dict.get("prompt_modifier"):
                             processed_message = f"{context_dict['prompt_modifier']}\n\nUser: {processed_message}"
                     
-                    # Use smart LLM system that auto-selects best provider
-                    if hasattr(self, 'llm_chat') and self.llm_chat:
-                        chat_interface = self.llm_chat
-                        
-                        if provider_preference or model_preference:
+                    # Use smart LLM system or explicit provider/model preference (local NEVER falls back to cloud)
+                    from ai_assistant.ai.llm_provider import UnifiedChatInterface, LLMFactory, is_local_provider
+                    chat_interface = None
+                    if provider_preference or model_preference:
+                        norm_pref = LLMFactory.normalize_provider(provider_preference) if provider_preference else None
+                        target_p = norm_pref or (getattr(self.llm_chat, 'provider_name', None) if self.llm_chat else None)
+                        if not target_p:
+                            cfg_p, _ = self._get_configured_provider_model()
+                            target_p = LLMFactory.normalize_provider(cfg_p or 'gguf')
+                        is_local_req = is_local_provider(target_p)
+                        target_m = LLMFactory.sanitize_model_for_provider(target_p, model_preference) if model_preference else None
+                        if (
+                            self.llm_chat is not None
+                            and getattr(self.llm_chat, 'provider_name', None) == target_p
+                            and (not target_m or getattr(self.llm_chat, 'model', None) == target_m)
+                        ):
+                            chat_interface = self.llm_chat
+                        else:
                             try:
-                                from ai_assistant.ai.llm_provider import UnifiedChatInterface
                                 chat_interface = UnifiedChatInterface(
-                                    provider=provider_preference,
-                                    model=model_preference,
-                                    use_fallback=True
+                                    provider=target_p,
+                                    model=target_m,
+                                    use_fallback=(not is_local_req),
                                 )
                             except Exception as e:
+                                if is_local_req:
+                                    raise RuntimeError(f"Requested local provider '{target_p}' failed: {e}") from e
                                 logger.warning(f"Warning: Failed to use preferred provider {provider_preference}: {e}")
-                        
+                                chat_interface = self.llm_chat
+                    elif hasattr(self, 'llm_chat') and self.llm_chat:
+                        chat_interface = self.llm_chat
+                        is_local_req = is_local_provider(getattr(chat_interface, 'provider_name', None))
+
+                    if chat_interface is not None:
                         # Get current provider info
                         provider_info = ""
                         actual_provider = getattr(chat_interface, 'provider_name', 'unknown')
@@ -1208,12 +1638,62 @@ Just speak naturally - I understand context! """
                         else:
                             provider_info = f" (Custom - {actual_provider}:{actual_model})"
                         
+                        # Inject unified persona + historical RAG context before generating response
+                        if hasattr(chat_interface, 'set_system_message'):
+                            try:
+                                from ai_assistant.core.jarvis_persona import build_persona_system_prompt
+                                sys_prompt = build_persona_system_prompt(
+                                    provider=actual_provider,
+                                    model=actual_model,
+                                    surface="chat",
+                                    extra_context=rag_context_block,
+                                )
+                                chat_interface.set_system_message(sys_prompt)
+                            except Exception:
+                                if rag_context_block:
+                                    processed_message = f"{rag_context_block}\n\nUser message: {processed_message}"
+
                         # Generate response using smart LLM
                         ai_response = chat_interface.chat(processed_message, stream=False)
+                        if (
+                            isinstance(ai_response, str)
+                            and ai_response.startswith("Error:")
+                            and not is_local_req
+                            and not is_local_provider(actual_provider)
+                        ):
+                            try:
+                                from pathlib import Path
+                                gguf_file = Path(__file__).resolve().parents[4] / "models" / "pulsar-final-q4_k_m.gguf"
+                                if gguf_file.exists():
+                                    gguf_chat = UnifiedChatInterface(
+                                        provider="gguf",
+                                        model="pulsar-final-q4_k_m",
+                                        use_fallback=False,
+                                    )
+                                    fb_resp = gguf_chat.chat(processed_message, stream=False)
+                                    if isinstance(fb_resp, str) and not fb_resp.startswith("Error:"):
+                                        ai_response = fb_resp
+                                        actual_provider = "gguf"
+                                        actual_model = "pulsar-final-q4_k_m"
+                                        features_used.append("gguf_fallback")
+                            except Exception as fb_err:
+                                logger.warning(f"Local GGUF fallback failed in enhanced chat: {fb_err}")
+                        if is_local_req and str(ai_response or "").strip().startswith("Error:"):
+                            return {
+                                'response': str(ai_response).strip(),
+                                'features_used': features_used,
+                                'suggestions': [],
+                                'mood': mood,
+                                'context_id': context_id,
+                                'detected_language': detected_language,
+                                'message_type': 'error',
+                                'provider': actual_provider,
+                                'model': actual_model,
+                            }
                         response_text += ai_response
                         features_used.append(f"smart_llm{provider_info}")
                         
-                    # Fallback to conversational AI if smart LLM fails
+                    # Fallback to conversational AI if smart LLM is unconfigured
                     elif self.conversational_ai:
                         # Create or get conversation context
                         if not hasattr(self, '_current_context_id') or not self._current_context_id:
@@ -1222,8 +1702,12 @@ Just speak naturally - I understand context! """
                             )
                         context_id = self._current_context_id
                         
-                        # Process with conversational AI
-                        ai_response = self.conversational_ai.process_message(processed_message)
+                        # Process with conversational AI (forward provider/model preferences)
+                        ai_response = self.conversational_ai.process_message(
+                            processed_message,
+                            provider=provider_preference,
+                            model=model_preference,
+                        )
                         response_text += ai_response
                         features_used.append("conversational_ai_fallback")
                         
@@ -1235,6 +1719,8 @@ Just speak naturally - I understand context! """
                         response_text += "  No AI system available for processing"
                         
                 except Exception as e:
+                    if is_local_req:
+                        raise
                     response_text += f"  AI processing failed: {str(e)}\n\n"
             
             # 5. SMART AUTOMATION DETECTION
@@ -1286,8 +1772,8 @@ Just speak naturally - I understand context! """
             except Exception as e:
                 print(f"Advanced integration error: {e}")
             
-            # 8. FALLBACK TO AUTOMATION COMMAND PROCESSING
-            if not response_text or len(response_text.strip()) < 10:
+            # 8. FALLBACK TO AUTOMATION COMMAND PROCESSING (only when completely empty)
+            if not response_text or not response_text.strip():
                 response_text = self.process_automation_command(processed_message or "help")
                 features_used.append("automation_fallback")
             
@@ -1360,6 +1846,8 @@ Just speak naturally - I understand context! """
             import traceback
             error_details = traceback.format_exc()
             print(f"Enhanced chat processing error:\n{error_details}")
+            if is_local_req:
+                raise
             
             return {
                 "response": f" Enhanced chat processing failed: {str(e)}\n\nFallback response: {self.process_automation_command(message or 'help')}",
@@ -1445,58 +1933,95 @@ Just speak naturally - I understand context! """
             return f"Visual Q&A error: {str(e)}"
     
     def start_voice_listening(self):
-        """Start voice listening session"""
+        """Start voice listening session (guarded against re-entrancy and companion mic ownership)."""
         if not VOICE_AVAILABLE or not (self.whisper_model or self.speech_recognizer):
             return {"error": "Voice recognition not available"}
-        
-        try:
-            self.voice_listening = True
-            socketio.emit('voice_status', {'listening': True})
-            
-            def listen_worker():
-                with sr.Microphone() as source:
-                    self.speech_recognizer.adjust_for_ambient_noise(source, duration=1)
-                
-                while self.voice_listening:
-                    try:
-                        with sr.Microphone() as source:
-                            audio = self.speech_recognizer.listen(source, timeout=1, phrase_time_limit=5)
-                        
-                        # Recognize speech
-                        text = self.speech_recognizer.recognize_google(audio)
-                        
-                        if text:
-                            socketio.emit('voice_transcript', {'text': text})
-                            response = self.process_command(text)
-                            socketio.emit('voice_response', {
-                                'command': text, 
-                                'response': response
-                            })
-                            
-                            # Speak response if TTS is available
-                            if self.tts_engine:
-                                self.speak_text(response)
-                    
-                    except sr.WaitTimeoutError:
-                        continue
-                    except sr.UnknownValueError:
-                        continue
-                    except Exception as e:
-                        print(f"Voice recognition error: {e}")
-                        break
-                
+
+        if getattr(self, '_voice_listen_lock', None) is None:
+            self._voice_listen_lock = threading.Lock()
+
+        with self._voice_listen_lock:
+            if getattr(self, 'voice_listening', False):
+                return {"success": True, "already_running": True, "message": "Voice listening already active"}
+
+            # If desktop companion overlay holds the Windows mic/wake-word daemon mutex, delegate cleanly
+            if sys.platform == 'win32':
+                try:
+                    import ctypes
+                    _SYNCHRONIZE = 0x00100000
+                    _h_mutex = ctypes.windll.kernel32.OpenMutexW(
+                        _SYNCHRONIZE, False, "Global\\Pulsar_Ambient_Mascot_Robot_Mutex"
+                    )
+                    if _h_mutex:
+                        ctypes.windll.kernel32.CloseHandle(_h_mutex)
+                        return {
+                            "success": True,
+                            "delegated": True,
+                            "message": "Voice listening delegated to active desktop companion",
+                        }
+                except Exception:
+                    pass
+
+            try:
+                self.voice_listening = True
+                socketio.emit('voice_status', {'listening': True})
+
+                def listen_worker():
+                    with sr.Microphone() as source:
+                        self.speech_recognizer.adjust_for_ambient_noise(source, duration=1)
+
+                    while self.voice_listening:
+                        try:
+                            # Never capture mic while unified TTS is actively speaking over speakers
+                            try:
+                                from ai_assistant.voice.tts_output_service import get_tts_service
+                                if get_tts_service().is_speaking():
+                                    time.sleep(0.15)
+                                    continue
+                            except Exception:
+                                pass
+
+                            with sr.Microphone() as source:
+                                audio = self.speech_recognizer.listen(source, timeout=1, phrase_time_limit=5)
+
+                            # Recognize speech
+                            text = self.speech_recognizer.recognize_google(audio)
+
+                            if text:
+                                socketio.emit('voice_transcript', {'text': text})
+                                response = self.process_command(text)
+                                socketio.emit('voice_response', {
+                                    'command': text,
+                                    'response': response
+                                })
+
+                                # Speak response strictly via unified desktop TTS output service
+                                try:
+                                    from ai_assistant.voice.tts_output_service import get_tts_service
+                                    get_tts_service().speak(response, source="assistant_voice_loop")
+                                except Exception as tts_err:
+                                    logger.debug(f"Unified TTS output error in listen_worker: {tts_err}")
+
+                        except sr.WaitTimeoutError:
+                            continue
+                        except sr.UnknownValueError:
+                            continue
+                        except Exception as e:
+                            print(f"Voice recognition error: {e}")
+                            break
+
+                    self.voice_listening = False
+                    socketio.emit('voice_status', {'listening': False})
+
+                # Start listening in background thread
+                listen_thread = threading.Thread(target=listen_worker, daemon=True, name="AssistantVoiceListenWorker")
+                listen_thread.start()
+
+                return {"success": True, "message": "Voice listening started"}
+
+            except Exception as e:
                 self.voice_listening = False
-                socketio.emit('voice_status', {'listening': False})
-            
-            # Start listening in background thread
-            listen_thread = threading.Thread(target=listen_worker, daemon=True)
-            listen_thread.start()
-            
-            return {"success": True, "message": "Voice listening started"}
-            
-        except Exception as e:
-            self.voice_listening = False
-            return {"error": f"Failed to start voice listening: {str(e)}"}
+                return {"error": f"Failed to start voice listening: {str(e)}"}
     
     def stop_voice_listening(self):
         """Stop voice listening session"""
@@ -1505,23 +2030,35 @@ Just speak naturally - I understand context! """
         return {"success": True, "message": "Voice listening stopped"}
     
     def speak_text(self, text, mood=None):
-        """Convert text to speech and return base64 audio data"""
-        if not self.tts_engine:
-            return None
-            
+        """Convert text to speech (WAV base64) using local KittenTTS mini-0.8."""
+        from ai_assistant.voice.tts_output_service import (
+            load_kitten_mini_model,
+            pcm_to_wav_bytes,
+            resolve_kitten_voice,
+        )
+
+        if not self._tts_engine:
+            try:
+                self._tts_engine = load_kitten_mini_model()
+            except Exception as e:
+                logger.warning(f"KittenTTS load failed: {e}")
+                return None
+
         # Dynamically retrieve mood if not provided
         if mood is None:
-            # Prefer the mood from the current interaction turn
             mood = getattr(self, '_current_turn_mood', None)
-            # Fallback to learning loop history if unavailable
             if mood is None and getattr(self, '_learning_loop', None) and self._learning_loop.dna:
                 mood = self._learning_loop.dna.get_trait("recent_mood")
-        
-        # Default voice params
-        voice = 'expr-voice-2-m'
+
+        configured_voice = None
+        try:
+            from settings_manager import get_tts_config
+            configured_voice = get_tts_config().get('voice_id')
+        except Exception:
+            pass
+        voice = resolve_kitten_voice(configured_voice)
         speed = 1.0
-        
-        # Adjust based on mood
+
         if mood:
             mood_lower = mood.lower()
             if mood_lower in ['happy', 'excited']:
@@ -1530,11 +2067,10 @@ Just speak naturally - I understand context! """
                 speed = 0.85
             elif mood_lower in ['frustrated', 'angry']:
                 speed = 1.1
-                # Could change voice here if more voices are added
-        # Sanitize text for TTS (remove Markdown, LaTeX, emojis, formatting symbols)
+
         try:
-            from ai_assistant.voice.text_cleaner import clean_text_for_tts
-            text = clean_text_for_tts(text)
+            from ai_assistant.voice.text_cleaner import prepare_text_for_kitten_tts
+            text = prepare_text_for_kitten_tts(text)
         except Exception as e:
             logger.debug(f"Could not sanitize text for TTS: {e}")
 
@@ -1542,18 +2078,10 @@ Just speak naturally - I understand context! """
             return None
 
         try:
-            # Generate audio using KittenTTS with mood-aware parameters
-            audio_array = self.tts_engine.generate(text, voice=voice, speed=speed)
-            
-            import io
-            import soundfile as sf
+            audio_array = self._tts_engine.generate(text, voice=voice, speed=speed, clean_text=True)
             import base64
-            
-            # Convert to WAV and Base64
-            buffer = io.BytesIO()
-            sf.write(buffer, audio_array, 24000, format='WAV')
-            b64_audio = base64.b64encode(buffer.getvalue()).decode('utf-8')
-            return b64_audio
+            wav_bytes = pcm_to_wav_bytes(audio_array, sample_rate=24000)
+            return base64.b64encode(wav_bytes).decode('utf-8')
         except Exception as e:
             print(f"KittenTTS error: {e}")
             return None
@@ -1602,17 +2130,18 @@ Just speak naturally - I understand context! """
                     from pathlib import Path
                     sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
                     from settings_manager import get_stt_language_short
-                    whisper_lang = get_stt_language_short()
-                    logger.info(f"[WHISPER] Language from settings: '{whisper_lang}'")
+                    raw_stt = str(get_stt_language_short() or '').strip().lower()
+                    whisper_lang = None if raw_stt in ('', 'auto') else raw_stt
+                    logger.info(f"[WHISPER] Language from settings: '{whisper_lang or 'auto'}'")
                 except ImportError:
                     whisper_lang = 'hi'
                     logger.info(f"[WHISPER] Language auto/unset → defaulting to Hindi ('hi')")
             
-            # Use language-specific initial_prompt to avoid script confusion
-            if whisper_lang == 'hi':
-                initial_prompt = "नमस्ते, कैसे हो? क्या हाल है? सब ठीक है? बताओ क्या करना है? गाना चलाओ, वॉल्यूम बढ़ाओ, स्क्रीनशॉट लो।"
+            # Use bilingual Hinglish initial_prompt to preserve wake words + English app names in Hindi
+            if whisper_lang == 'en':
+                initial_prompt = "Hey Pulsar, OK Pulsar. Open WhatsApp, Chrome, YouTube Music, VS Code, take a screenshot."
             else:
-                initial_prompt = "Hello, how are you? Open the application, take a screenshot, play music, increase volume."
+                initial_prompt = "Hey Pulsar, OK Pulsar, नमस्ते! WhatsApp, YouTube Music, Chrome, VS Code खोलो, स्क्रीनशॉट लो, बताओ क्या करना है?"
 
             try:
                 # Transcribe using Faster-Whisper

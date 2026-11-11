@@ -1,6 +1,9 @@
 from ai_assistant.core.database_config import get_db_path_str
 # Setup centralized logging
-from utils.logging_config import get_logger
+try:
+    from ai_assistant.utils.logging_config import get_logger
+except ImportError:
+    from utils.logging_config import get_logger
 logger = get_logger(__name__, log_category="app")
 
 # Memory Management Module
@@ -45,12 +48,8 @@ except ImportError:
     # logger.warning("WARNING: Encryption not available - sensitive data will not be encrypted")
     pass
 
-# Import database configuration
-try:
-    from database_config import get_db_path_str
-    DB_PATH = get_db_path_str('memory')
-except ImportError:
-    DB_PATH = 'memory.db'
+# Use centralized database configuration imported at top of module
+DB_PATH = get_db_path_str('memory')
 
 # Connection pool for SQLite
 class ConnectionPool:
@@ -314,39 +313,37 @@ def search_memory(query: str, limit: int = 10) -> str:
     """
     print(f"--- 'Hands' (search_memory) activated. Query: {query} ---")
     try:
+        search_term = f"%{query}%"
         with get_db_connection() as conn:
             c = conn.cursor()
-        
-        # Search in enhanced memory first (better categorization)
-        search_term = f"%{query}%"
-        c.execute("""
-            SELECT speaker, content, timestamp, importance_level, category 
-            FROM enhanced_memory 
-            WHERE content LIKE ? OR summary LIKE ? OR category LIKE ?
-            ORDER BY importance_level DESC, timestamp DESC 
-            LIMIT ?
-        """, (search_term, search_term, search_term, limit))
-        
-        results = c.fetchall()
-        conn.close()
-        
+            # Search in enhanced memory first (skipping undecryptable enc: rows)
+            c.execute("""
+                SELECT speaker, content, timestamp, importance_level, category 
+                FROM enhanced_memory 
+                WHERE (content IS NOT NULL AND content NOT LIKE 'enc:%')
+                  AND (content LIKE ? OR summary LIKE ? OR category LIKE ?)
+                ORDER BY importance_level DESC, timestamp DESC 
+                LIMIT ?
+            """, (search_term, search_term, search_term, limit))
+            results = c.fetchall()
+
         if not results:
             return f"No conversations found containing '{query}'."
-        
-        search_report = f"🔍 MEMORY SEARCH RESULTS for '{query}'\\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n"
-        
+
+        search_report = f"🔍 MEMORY SEARCH RESULTS for '{query}'\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+
         for speaker, content, timestamp, importance, category in results:
-            # Format timestamp
-            dt = datetime.datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-            formatted_time = dt.strftime("%m/%d %I:%M %p")
-            
-            # Importance indicator
+            try:
+                dt = datetime.datetime.fromisoformat(str(timestamp).replace('Z', '+00:00'))
+                formatted_time = dt.strftime("%m/%d %I:%M %p")
+            except Exception:
+                formatted_time = str(timestamp or "")[:16]
+
             importance_icon = "🔴" if importance >= 4 else "🟡" if importance >= 3 else "🟢"
-            
-            search_report += f"{importance_icon} [{formatted_time}] {speaker}: {content[:100]}{'...' if len(content) > 100 else ''}\\n"
-        
+            search_report += f"{importance_icon} [{formatted_time}] {speaker}: {content[:100]}{'...' if len(content) > 100 else ''}\n"
+
         return search_report
-        
+
     except Exception as e:
         return f"Error searching memory: {e}"
 
@@ -362,47 +359,44 @@ def get_conversation_summary(date: str = "") -> str:
     try:
         with get_db_connection() as conn:
             c = conn.cursor()
-        
-        # Check if summary already exists
-        c.execute("SELECT summary, key_topics, important_events FROM daily_summaries WHERE date = ?", (date,))
-        existing = c.fetchone()
-        
-        if existing:
-            summary, topics, events = existing
-            return f"📋 CONVERSATION SUMMARY for {date}\\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n{summary}\\n\\n🏷️ Key Topics: {topics}\\n📌 Important Events: {events}"
-        
-        # Generate new summary from conversations
-        c.execute("""
-            SELECT speaker, content FROM memory 
-            WHERE DATE(timestamp) = ? 
-            ORDER BY timestamp
-        """, (date,))
-        
-        conversations = c.fetchall()
-        
-        if not conversations:
-            return f"No conversations found for {date}."
-        
-        # Generate summary (simplified version)
-        total_messages = len(conversations)
-        user_messages = len([c for c in conversations if c[0] == "User"])
-        assistant_messages = len([c for c in conversations if c[0] == "Pulsar"])
-        
-        summary = f"Total messages: {total_messages} (User: {user_messages}, Assistant: {assistant_messages})"
-        topics = "General conversation, assistance requests"
-        events = "Daily interaction with AI assistant"
-        
-        # Save the generated summary
-        c.execute("""
-            INSERT OR REPLACE INTO daily_summaries (date, summary, key_topics, important_events)
-            VALUES (?, ?, ?, ?)
-        """, (date, summary, topics, events))
-        
-        conn.commit()
-        conn.close()
-        
-        return f"📋 CONVERSATION SUMMARY for {date}\\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n{summary}\\n\\n🏷️ Key Topics: {topics}\\n📌 Important Events: {events}"
-        
+
+            # Check if summary already exists
+            c.execute("SELECT summary, key_topics, important_events FROM daily_summaries WHERE date = ?", (date,))
+            existing = c.fetchone()
+
+            if existing:
+                summary, topics, events = existing
+                return f"📋 CONVERSATION SUMMARY for {date}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n{summary}\n\n🏷️ Key Topics: {topics}\n📌 Important Events: {events}"
+
+            # Generate new summary from conversations
+            c.execute("""
+                SELECT speaker, content FROM memory 
+                WHERE DATE(timestamp) = ? 
+                ORDER BY timestamp
+            """, (date,))
+
+            conversations = c.fetchall()
+
+            if not conversations:
+                return f"No conversations found for {date}."
+
+            total_messages = len(conversations)
+            user_messages = len([row for row in conversations if str(row[0]).lower() == "user"])
+            assistant_messages = len([row for row in conversations if str(row[0]).lower() in ("pulsar", "assistant", "ai")])
+
+            summary = f"Total messages: {total_messages} (User: {user_messages}, Assistant: {assistant_messages})"
+            topics = "General conversation, assistance requests"
+            events = "Daily interaction with AI assistant"
+
+            c.execute("""
+                INSERT OR REPLACE INTO daily_summaries (date, summary, key_topics, important_events)
+                VALUES (?, ?, ?, ?)
+            """, (date, summary, topics, events))
+
+            conn.commit()
+
+        return f"📋 CONVERSATION SUMMARY for {date}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n{summary}\n\n🏷️ Key Topics: {topics}\n📌 Important Events: {events}"
+
     except Exception as e:
         return f"Error getting conversation summary: {e}"
 
@@ -463,14 +457,14 @@ def get_knowledge(topic: str) -> str:
         if not results:
             return f"No knowledge found for topic: '{topic}'"
         
-        knowledge_report = f"📚 KNOWLEDGE BASE RESULTS for '{topic}'\\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n"
+        knowledge_report = f"📚 KNOWLEDGE BASE RESULTS for '{topic}'\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
         
         for topic_name, content, source, confidence, created_at in results:
             dt = datetime.datetime.fromisoformat(created_at.replace('Z', '+00:00'))
             formatted_date = dt.strftime("%m/%d/%Y")
             confidence_icon = "🟢" if confidence >= 0.8 else "🟡" if confidence >= 0.6 else "🔴"
             
-            knowledge_report += f"{confidence_icon} **{topic_name}** (Source: {source}, {formatted_date})\\n   {content}\\n\\n"
+            knowledge_report += f"{confidence_icon} **{topic_name}** (Source: {source}, {formatted_date})\n   {content}\n\n"
         
         return knowledge_report
         
@@ -590,13 +584,13 @@ def semantic_search_memory(query: str, limit: int = 5, threshold: float = 0.3) -
         if not top_results:
             return f"No semantically relevant conversations found for: '{query}'"
             
-        search_report = f"🔍 SEMANTIC RAG RESULTS for '{query}'\\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n"
+        search_report = f"🔍 SEMANTIC RAG RESULTS for '{query}'\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
         for score, speaker, content, timestamp, importance, category in top_results:
             dt = datetime.datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
             formatted_time = dt.strftime("%m/%d %I:%M %p")
             importance_icon = "🔴" if importance >= 4 else "🟡" if importance >= 3 else "🟢"
             
-            search_report += f"{importance_icon} [{formatted_time}] {speaker} (Sim: {score:.2f}, {category}): {content}\\n\\n"
+            search_report += f"{importance_icon} [{formatted_time}] {speaker} (Sim: {score:.2f}, {category}): {content}\n\n"
             
         return search_report
         

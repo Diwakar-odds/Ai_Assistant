@@ -28,7 +28,9 @@ import json
 import re
 import subprocess
 import shlex
-from typing import Optional
+import gc
+import ctypes
+from typing import Optional, Tuple
 
 # Import the intelligent app discovery system
 from .app_discovery import smart_open_application, discover_applications, refresh_app_database, list_installed_apps
@@ -117,16 +119,24 @@ def open_application(app_name: str) -> str:
     return smart_open_application(app_name)
 
 def open_settings_page(page_name: str) -> str:
-    """Opens a specific Windows settings page using ms-settings URI."""
+    """Opens a Windows Settings page via ms-settings URI or launches Control Panel."""
     print(f"--- 'Hands' (open_settings_page) activated. Page: {page_name} ---")
     try:
+        clean_page = str(page_name or "").strip()
+        if clean_page.lower() in ("control-panel", "control", "control panel", "controlpanel"):
+            subprocess.Popen(["control.exe"])
+            return "Opened Windows Control Panel"
+
+        if not clean_page:
+            os.startfile("ms-settings:")
+            return "Opened Windows Settings"
+
         # Validate page_name to prevent command injection
-        # Only allow alphanumeric characters, hyphens, and underscores
-        if not re.match(r'^[a-zA-Z0-9\-_]+$', page_name):
-            return f"Error: Invalid settings page name. Only alphanumeric characters, hyphens, and underscores are allowed."
-        
-        os.startfile(f'ms-settings:{page_name}')
-        return f"Opened settings page: {page_name}"
+        if not re.match(r'^[a-zA-Z0-9\-_]+$', clean_page):
+            return "Error: Invalid settings page name. Only alphanumeric characters, hyphens, and underscores are allowed."
+
+        os.startfile(f'ms-settings:{clean_page}')
+        return f"Opened settings page: {clean_page}"
     except Exception as e:
         return f"Error opening settings page {page_name}: {e}"
 
@@ -197,6 +207,82 @@ def close_application(app_name: str) -> str:
 
 
 
+def _run_with_audio_endpoint(fn):
+    """Run `fn(IAudioEndpointVolume)` inside a worker-thread-safe COM apartment lifecycle."""
+    if not VOLUME_CONTROL_AVAILABLE:
+        raise RuntimeError("Volume control requires 'pycaw' package.")
+
+    import comtypes
+
+    should_uninit = False
+    try:
+        # COINIT_APARTMENTTHREADED (0x2) works cleanly across Flask/SocketIO/ThreadPool worker threads.
+        hr = ctypes.windll.ole32.CoInitializeEx(None, 0x2)
+        if hr > 0x7FFFFFFF:
+            hr -= 0x100000000
+        # S_OK (0) and S_FALSE (1) increment COM init count and require paired CoUninitialize.
+        # RPC_E_CHANGED_MODE (-2147417850) means COM is already initialized in MTA mode.
+        if hr in (0, 1):
+            should_uninit = True
+        elif hr != -2147417850:
+            comtypes.CoInitialize()
+            should_uninit = True
+    except OSError as ce:
+        if getattr(ce, "winerror", None) != -2147417850:
+            comtypes.CoInitialize()
+            should_uninit = True
+    except Exception:
+        try:
+            comtypes.CoInitialize()
+            should_uninit = True
+        except OSError as ce2:
+            if getattr(ce2, "winerror", None) != -2147417850:
+                raise
+
+    def _invoke():
+        devices = None
+        interface = None
+        volume = None
+        try:
+            devices = AudioUtilities.GetSpeakers()
+            interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+            volume = cast(interface, POINTER(IAudioEndpointVolume))
+            return fn(volume)
+        finally:
+            volume = None
+            interface = None
+            devices = None
+
+    try:
+        return _invoke()
+    finally:
+        gc.collect()
+        if should_uninit:
+            try:
+                ctypes.windll.ole32.CoUninitialize()
+            except Exception:
+                try:
+                    comtypes.CoUninitialize()
+                except Exception:
+                    pass
+
+
+def get_system_volume_state() -> Tuple[Optional[int], Optional[bool]]:
+    """Return `(volume_percent, is_muted)` read back directly from Windows audio endpoint."""
+    if not VOLUME_CONTROL_AVAILABLE:
+        return None, None
+    try:
+        def _read(volume):
+            pct = int(round(float(volume.GetMasterVolumeLevelScalar()) * 100))
+            muted = bool(volume.GetMute())
+            return max(0, min(100, pct)), muted
+
+        return _run_with_audio_endpoint(_read)
+    except Exception as e:
+        logger.debug(f"get_system_volume_state error: {e}")
+        return None, None
+
+
 def set_system_volume(level: int) -> str:
     """Sets the system's master volume to a specific level (0-100)."""
     if not VOLUME_CONTROL_AVAILABLE:
@@ -204,39 +290,36 @@ def set_system_volume(level: int) -> str:
 
     print(f"--- 'Hands' (set_system_volume) activated. Level: {level} ---")
     try:
-        if not (0 <= level <= 100):
+        target = int(str(level).replace("%", "").strip())
+        if not (0 <= target <= 100):
             return "Error: Volume must be between 0 and 100."
-        
-        devices = AudioUtilities.GetSpeakers()
-        interface = devices.Activate(
-            IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-        volume = cast(interface, POINTER(IAudioEndpointVolume))
-        
-        scalar_level = level / 100.0
-        volume.SetMasterVolumeLevelScalar(scalar_level, None)
-        return f"Successfully set volume to {level}%."
+
+        def _apply(volume):
+            scalar_level = target / 100.0
+            volume.SetMasterVolumeLevelScalar(scalar_level, None)
+            actual = int(round(float(volume.GetMasterVolumeLevelScalar()) * 100))
+            return actual
+
+        actual = _run_with_audio_endpoint(_apply)
+        return f"Successfully set volume to {actual}%."
     except Exception as e:
         return f"Error setting volume: {e}"
 
 
 def get_system_volume() -> str:
-    """Gets the current system volume level (0-100)."""
+    """Gets the current system volume level (0-100) and mute state."""
     if not VOLUME_CONTROL_AVAILABLE:
         return "❌ Volume control requires 'pycaw' package."
 
     print("--- 'Hands' (get_system_volume) activated ---")
     try:
-        devices = AudioUtilities.GetSpeakers()
-        interface = devices.Activate(
-            IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-        volume = cast(interface, POINTER(IAudioEndpointVolume))
-        
-        current_volume = volume.GetMasterVolumeLevelScalar()
-        volume_percent = int(current_volume * 100)
-        
-        is_muted = volume.GetMute()
-        status = "🔇 Muted" if is_muted else f"🔊 {volume_percent}%"
-        
+        def _read(volume):
+            pct = int(round(float(volume.GetMasterVolumeLevelScalar()) * 100))
+            muted = bool(volume.GetMute())
+            return max(0, min(100, pct)), muted
+
+        volume_percent, is_muted = _run_with_audio_endpoint(_read)
+        status = f"🔇 Muted ({volume_percent}%)" if is_muted else f"🔊 {volume_percent}%"
         return f"System Volume: {status}"
     except Exception as e:
         return f"Error getting volume: {e}"
@@ -249,16 +332,18 @@ def volume_up(increment: int = 10) -> str:
 
     print(f"--- 'Hands' (volume_up) activated. Increment: {increment} ---")
     try:
-        devices = AudioUtilities.GetSpeakers()
-        interface = devices.Activate(
-            IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-        volume = cast(interface, POINTER(IAudioEndpointVolume))
-        
-        current_volume = volume.GetMasterVolumeLevelScalar()
-        new_volume = min(1.0, current_volume + (increment / 100.0))
-        volume.SetMasterVolumeLevelScalar(new_volume, None)
-        
-        new_percent = int(new_volume * 100)
+        inc = max(1, min(100, int(increment)))
+
+        def _apply(volume):
+            current_volume = float(volume.GetMasterVolumeLevelScalar())
+            new_volume = min(1.0, current_volume + (inc / 100.0))
+            if volume.GetMute():
+                volume.SetMute(0, None)
+            volume.SetMasterVolumeLevelScalar(new_volume, None)
+            actual = int(round(float(volume.GetMasterVolumeLevelScalar()) * 100))
+            return actual
+
+        new_percent = _run_with_audio_endpoint(_apply)
         return f"🔊 Volume increased to {new_percent}%"
     except Exception as e:
         return f"Error increasing volume: {e}"
@@ -271,26 +356,37 @@ def volume_down(decrement: int = 10) -> str:
 
     print(f"--- 'Hands' (volume_down) activated. Decrement: {decrement} ---")
     try:
-        devices = AudioUtilities.GetSpeakers()
-        interface = devices.Activate(
-            IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-        volume = cast(interface, POINTER(IAudioEndpointVolume))
-        
-        current_volume = volume.GetMasterVolumeLevelScalar()
-        new_volume = max(0.0, current_volume - (decrement / 100.0))
-        volume.SetMasterVolumeLevelScalar(new_volume, None)
-        
-        new_percent = int(new_volume * 100)
+        dec = max(1, min(100, int(decrement)))
+
+        def _apply(volume):
+            current_volume = float(volume.GetMasterVolumeLevelScalar())
+            new_volume = max(0.0, current_volume - (dec / 100.0))
+            volume.SetMasterVolumeLevelScalar(new_volume, None)
+            actual = int(round(float(volume.GetMasterVolumeLevelScalar()) * 100))
+            return actual
+
+        new_percent = _run_with_audio_endpoint(_apply)
         return f"🔉 Volume decreased to {new_percent}%"
     except Exception as e:
         return f"Error decreasing volume: {e}"
 
 
 def mute_volume() -> str:
-    """Mutes system volume."""
+    """Deterministically mutes system volume and verifies endpoint mute state."""
     print("--- 'Hands' (mute_volume) activated ---")
+    if VOLUME_CONTROL_AVAILABLE:
+        try:
+            def _mute(volume):
+                volume.SetMute(1, None)
+                return bool(volume.GetMute())
+
+            muted = _run_with_audio_endpoint(_mute)
+            if muted:
+                return "✅ Volume muted"
+            return "Error: Windows audio endpoint refused mute request."
+        except Exception as e:
+            return f"Error muting volume: {e}"
     try:
-        import ctypes
         ctypes.windll.user32.keybd_event(0xAD, 0, 0, 0)
         ctypes.windll.user32.keybd_event(0xAD, 0, 2, 0)
         return "✅ Volume muted"
@@ -299,10 +395,23 @@ def mute_volume() -> str:
 
 
 def unmute_volume() -> str:
-    """Unmutes system volume."""
+    """Deterministically unmutes system volume and verifies endpoint mute state."""
     print("--- 'Hands' (unmute_volume) activated ---")
+    if VOLUME_CONTROL_AVAILABLE:
+        try:
+            def _unmute(volume):
+                volume.SetMute(0, None)
+                muted = bool(volume.GetMute())
+                vol = int(round(float(volume.GetMasterVolumeLevelScalar()) * 100))
+                return muted, max(0, min(100, vol))
+
+            muted, vol = _run_with_audio_endpoint(_unmute)
+            if not muted:
+                return f"🔊 Volume unmuted ({vol}%)"
+            return "Error: Windows audio endpoint refused unmute request."
+        except Exception as e:
+            return f"Error unmuting volume: {e}"
     try:
-        import ctypes
         ctypes.windll.user32.keybd_event(0xAD, 0, 0, 0)
         ctypes.windll.user32.keybd_event(0xAD, 0, 2, 0)
         return "🔊 Volume unmuted"

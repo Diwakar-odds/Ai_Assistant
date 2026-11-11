@@ -279,22 +279,53 @@ class ContextManager:
 
     def is_override(self, new_command: str) -> bool:
         """
-        Detect if new command is an override of current task.
-
-        Override keywords: नहीं, no, wait, stop, cancel, change
+        Detect if new command is an explicit override/cancellation of an active task.
+        Uses whole-word boundary matching and only triggers when an execution is active.
         """
-        override_keywords = ['नहीं', 'nahi', 'no', 'wait', 'stop', 'cancel', 'change', 'instead']
+        if not new_command or not new_command.strip():
+            return False
 
-        new_command_lower = new_command.lower()
-        for keyword in override_keywords:
-            if keyword in new_command_lower:
-                return True
-
-        # Check if currently executing
         state = self.get_state()
-        if state in [ExecutionState.EXECUTING, ExecutionState.WAITING_FOR_INPUT]:
-            # New command while executing = potential override
-            return True
+        is_actively_running = state in (ExecutionState.EXECUTING, ExecutionState.WAITING_FOR_INPUT)
+        if not is_actively_running and not self.is_busy():
+            return False
+
+        strong_cancel_keywords = [
+            'cancel', 'abort', 'stop', 'ruko', 'band karo', 'mat karo',
+            'रुको', 'बंद करो', 'मत करो',
+        ]
+        leading_override_keywords = [
+            'no wait', 'actually', 'instead', 'change to', 'not that',
+            'नहीं', 'nahi', 'wait', 'change',
+        ]
+
+        try:
+            from ai_assistant.core.local_command_normalizer import (
+                word_boundary_contains,
+                normalize_hinglish_devanagari,
+            )
+            norm = normalize_hinglish_devanagari(new_command) or new_command
+        except Exception:
+            norm = new_command
+            def word_boundary_contains(t: str, kw: str) -> bool:
+                import re
+                return bool(re.search(rf'\b{re.escape(kw.lower())}\b', (t or '').lower()))
+
+        head_tokens = norm.lower().split()[:4]
+        head_snippet = " ".join(head_tokens)
+
+        for kw in strong_cancel_keywords:
+            if word_boundary_contains(head_snippet, kw) or word_boundary_contains(new_command, kw):
+                # Do not misread explicit app/media targets like "stop spotify" or "notepad band karo" as override
+                rem_tokens = [t for t in norm.lower().split() if t not in kw.split()]
+                if len(rem_tokens) == 0 or not any(
+                    app in rem_tokens for app in ('spotify', 'chrome', 'notepad', 'music', 'song', 'video', 'app')
+                ):
+                    return True
+
+        for kw in leading_override_keywords:
+            if word_boundary_contains(head_snippet, kw):
+                return True
 
         return False
 
@@ -303,7 +334,7 @@ class ContextManager:
         Handle command override.
 
         Pauses current execution and prepares for new command.
-        Now also signals the Executive Brain to cancel active chains.
+        Only cancels ExecutiveBrain active chains when busy with another chain.
         """
         logger.warning(f"Override detected: {new_command}")
 
@@ -314,11 +345,17 @@ class ContextManager:
         # Clear current task
         self.clear_task_chain()
 
-        # Signal Executive Brain to cancel active chains
+        # Signal Executive Brain to cancel active chains only if busy with a different chain
         try:
             from ai_assistant.core.command_brain import get_executive_brain
             brain = get_executive_brain()
-            brain._cancel_all_active(reason=new_command)
+            if brain.is_busy():
+                other_active = any(
+                    (getattr(m, 'command', '') or '').strip().lower() != (new_command or '').strip().lower()
+                    for m in getattr(brain, '_active_chains', {}).values()
+                )
+                if other_active:
+                    brain._cancel_all_active(reason=new_command, emit_notice=False)
         except ImportError:
             pass
         except Exception as e:
@@ -396,6 +433,15 @@ class ContextManager:
                 with open(self.storage_path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                     self.context = ConversationContext.from_dict(data)
+                    # Normalize stale transient execution states left behind by prior crashes/exits
+                    if self.context.execution_state in (
+                        ExecutionState.PARSING.value,
+                        ExecutionState.EXECUTING.value,
+                        ExecutionState.WAITING_FOR_APP.value,
+                    ):
+                        self.context.execution_state = ExecutionState.IDLE.value
+                        self.context.current_task_chain = []
+                        self.context.current_step = 0
                     logger.info(f"Context loaded from disk for storage {self.storage_path}")
             else:
                 self.context = ConversationContext()

@@ -23,9 +23,30 @@ PROFILE_ALIASES = {
     "diwakar saurashtra": "Profile 5",
     "saurashtra": "Profile 5",
     "kit": "Profile 5",
+    "college": "Profile 5",
+    "university": "Profile 5",
+    "campus": "Profile 5",
+    "institute": "Profile 5",
+    "academic": "Profile 5",
     "rajat": "Profile 15",
     "codeforeveryone": "Profile 4"
 }
+
+_ACADEMIC_KEYWORDS = ("college", "university", "uni", "campus", "institute", "academic", "edu", "kit", "school")
+_PROFILE_FILLER_RE = re.compile(
+    r'\b(chrome|google\s+chrome|profile|browser|google|account|open|kholo|khol|launch|start|mere|meri|mera|ki|ka|ke|wala|wali|wale|in|on|with)\b',
+    re.IGNORECASE,
+)
+
+
+def _match_academic_profile(discovered: Dict[str, Dict]) -> Optional[str]:
+    """Dynamically find an institutional/college Chrome profile (e.g. @*.ac.in / @*.edu)."""
+    for dir_name, info in discovered.items():
+        email = (info.get('email') or '').lower()
+        domain = email.split('@')[1] if '@' in email else ''
+        if any(tag in domain for tag in ('.ac.in', '.edu', 'college', 'univ', 'kit.')):
+            return dir_name
+    return None
 
 def get_chrome_executable() -> Optional[str]:
     candidates = [
@@ -112,11 +133,18 @@ def resolve_chrome_profile(profile_query: str) -> Optional[str]:
     if q in PROFILE_ALIASES:
         return PROFILE_ALIASES[q]
         
-    # Strip common wrapper words like 'profile', 'chrome', 'browser'
-    clean_q = re.sub(r'\b(chrome|profile|browser|google|account|open|kholo)\b', '', q, flags=re.IGNORECASE).strip()
+    # Strip common wrapper and Hinglish filler words like 'mere', 'ki', 'profile', 'chrome'
+    clean_q = _PROFILE_FILLER_RE.sub('', q)
+    clean_q = re.sub(r'\s+', ' ', clean_q).strip()
     if clean_q and clean_q in PROFILE_ALIASES:
         return PROFILE_ALIASES[clean_q]
-        
+
+    # Dynamic institutional/college profile resolution via Local State email domain (.ac.in / .edu)
+    if any(re.search(r'\b' + re.escape(kw) + r'\b', q) for kw in _ACADEMIC_KEYWORDS):
+        academic_dir = _match_academic_profile(discovered)
+        if academic_dir:
+            return academic_dir
+
     # 3. Substring / word-boundary matches on known aliases (longest alias first)
     for alias in sorted(PROFILE_ALIASES.keys(), key=len, reverse=True):
         pattern = r'\b' + re.escape(alias) + r'\b'
@@ -170,7 +198,12 @@ def extract_profile_from_text(text: str) -> Tuple[Optional[str], str]:
     
     # 1. Match against known aliases (longest alias first)
     for alias in sorted(PROFILE_ALIASES.keys(), key=len, reverse=True):
-        pattern = r'\b(?:in|on|with|profile|profile\s+of)?\s*' + re.escape(alias) + r'(?:\s+profile|\s+kholo|\s+open)?\b'
+        pattern = (
+            r'\b(?:(?:in|on|with|my|mere|meri|mera)\s+)*'
+            r'(?:profile(?:\s+of)?\s+)?'
+            + re.escape(alias) +
+            r'(?:\s+(?:ki|ka|ke))?(?:\s+(?:chrome|browser))?(?:\s+(?:profile|kholo|khol|open))*\b'
+        )
         match = re.search(pattern, t, flags=re.IGNORECASE)
         if match:
             cleaned = (t[:match.start()] + ' ' + t[match.end():]).strip()
@@ -182,7 +215,12 @@ def extract_profile_from_text(text: str) -> Tuple[Optional[str], str]:
     for dir_name, info in profiles.items():
         name = info.get('name', '').strip().lower()
         if name and len(name) >= 3 and name not in ['default', 'person', 'profile']:
-            pattern = r'\b(?:in|on|with|profile|profile\s+of)?\s*' + re.escape(name) + r'(?:\s+profile|\s+kholo|\s+open)?\b'
+            pattern = (
+                r'\b(?:(?:in|on|with|my|mere|meri|mera)\s+)*'
+                r'(?:profile(?:\s+of)?\s+)?'
+                + re.escape(name) +
+                r'(?:\s+(?:ki|ka|ke))?(?:\s+(?:chrome|browser))?(?:\s+(?:profile|kholo|khol|open))*\b'
+            )
             match = re.search(pattern, t, flags=re.IGNORECASE)
             if match:
                 cleaned = (t[:match.start()] + ' ' + t[match.end():]).strip()

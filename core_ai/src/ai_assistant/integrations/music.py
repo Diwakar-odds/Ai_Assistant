@@ -526,106 +526,87 @@ def get_media_players() -> List[str]:
 
 def control_media_player(action: str, player: str = "any") -> str:
     """
-    Control local media players using Windows media keys
+    Control local media players using Windows Virtual Key media keys (works globally across
+    Spotify, Chrome/YouTube Music, VLC, etc.) with optional `keyboard` library support.
     Args:
-        action: play_pause, next, previous, volume_up, volume_down
+        action: play_pause, pause, resume, next, previous, volume_up, volume_down, mute
         player: specific player or "any"
     """
+    action_norm = (action or "").strip().lower()
+    alias_map = {
+        "pause": "play_pause",
+        "resume": "play_pause",
+        "play": "play_pause",
+        "skip": "next",
+        "prev": "previous",
+        "mute": "volume_mute",
+        "unmute": "volume_mute",
+    }
+    action_norm = alias_map.get(action_norm, action_norm)
+
+    vk_codes = {
+        'play_pause': 0xB3,   # VK_MEDIA_PLAY_PAUSE
+        'next': 0xB0,         # VK_MEDIA_NEXT_TRACK
+        'previous': 0xB1,     # VK_MEDIA_PREV_TRACK
+        'volume_mute': 0xAD,  # VK_VOLUME_MUTE
+        'volume_down': 0xAE,  # VK_VOLUME_DOWN
+        'volume_up': 0xAF,    # VK_VOLUME_UP
+    }
+    if action_norm not in vk_codes:
+        return f"❌ Unknown action: {action}"
+
+    # Prefer native Win32 keybd_event on Windows for deterministic VK media key delivery
+    if os.name == 'nt':
+        try:
+            import ctypes
+            vk = vk_codes[action_norm]
+            KEYEVENTF_EXTENDEDKEY = 0x0001
+            KEYEVENTF_KEYUP = 0x0002
+            ctypes.windll.user32.keybd_event(vk, 0, KEYEVENTF_EXTENDEDKEY, 0)
+            ctypes.windll.user32.keybd_event(vk, 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0)
+            return f"🎵 Sent {action_norm} command to media player"
+        except Exception as win_err:
+            logger.debug(f"Win32 keybd_event fallback to keyboard module: {win_err}")
+
     try:
         import keyboard
-        
-        # Map actions to Windows media key codes
+
         key_mappings = {
             'play_pause': 'play/pause media',
             'next': 'next track',
             'previous': 'previous track',
             'volume_up': 'volume up',
-            'volume_down': 'volume down'
+            'volume_down': 'volume down',
+            'volume_mute': 'volume mute',
         }
-        
-        if action in key_mappings:
-            keyboard.send(key_mappings[action])
-            return f"🎵 Sent {action} command to media player"
-        else:
-            return f"❌ Unknown action: {action}"
-            
-    except ImportError:
-        # Fallback to sending keystrokes using subprocess
-        try:
-            key_codes = {
-                'play_pause': 'F13',  # Media play/pause
-                'next': 'F14',        # Media next
-                'previous': 'F15',    # Media previous
-            }
-            
-            if action in key_codes:
-                # Use PowerShell to send media keys
-                ps_cmd = f"""
-                Add-Type -AssemblyName System.Windows.Forms
-                [System.Windows.Forms.SendKeys]::SendWait('{{F13}}')
-                """
-                subprocess.run(['powershell', '-Command', ps_cmd], capture_output=True)
-                return f"🎵 Sent {action} command via PowerShell"
-            else:
-                return f"❌ Action not supported: {action}"
-                
-        except Exception as e:
-            return f"❌ Media control error: {str(e)}"
+        keyboard.send(key_mappings[action_norm])
+        return f"🎵 Sent {action_norm} command to media player"
     except Exception as e:
         return f"❌ Media control error: {str(e)}"
 
 def get_system_volume() -> str:
     """
-    Get current system volume level
+    Get current system volume level (thread-safe COM via core.py).
     """
     try:
-        from pycaw.pycaw import AudioUtilities, AudioSession, AudioEndpointVolume
-        from comtypes import CLSCTX_ALL
-        
-        # Get default audio device
-        devices = AudioUtilities.GetSpeakers()
-        interface = devices.Activate(AudioEndpointVolume._iid_, CLSCTX_ALL, None)
-        volume = AudioEndpointVolume(interface)
-        
-        # Get volume level (0.0 to 1.0)
-        current_volume = volume.GetMasterScalarVolume()
-        volume_percent = int(current_volume * 100)
-        
-        is_muted = volume.GetMute()
-        status = "🔇 Muted" if is_muted else f"🔊 {volume_percent}%"
-        
-        return f"🎵 System Volume: {status}"
-        
+        from ai_assistant.core.core import get_system_volume as _core_get_system_volume
+        return _core_get_system_volume()
     except ImportError:
-        return "❌ pycaw library required for volume control. Install with: pip install pycaw"
+        return "❌ pycaw/core volume control module unavailable."
     except Exception as e:
         return f"❌ Volume check error: {str(e)}"
 
 def set_system_volume(level: int) -> str:
     """
-    Set system volume level
+    Set system volume level (thread-safe COM via core.py).
     Args:
         level: Volume level (0-100)
     """
     try:
-        from pycaw.pycaw import AudioUtilities, AudioEndpointVolume
-        from comtypes import CLSCTX_ALL
-        
-        # Validate level
-        level = max(0, min(100, level))
-        
-        # Get default audio device
-        devices = AudioUtilities.GetSpeakers()
-        interface = devices.Activate(AudioEndpointVolume._iid_, CLSCTX_ALL, None)
-        volume = AudioEndpointVolume(interface)
-        
-        # Set volume level (convert to 0.0-1.0 range)
-        volume.SetMasterScalarVolume(level / 100.0, None)
-        
-        return f"🔊 System volume set to {level}%"
-        
+        from ai_assistant.core.core import set_system_volume as _core_set_system_volume
+        return _core_set_system_volume(max(0, min(100, int(level))))
     except ImportError:
-        return "❌ pycaw library required for volume control. Install with: pip install pycaw"
+        return "❌ pycaw/core volume control module unavailable."
     except Exception as e:
         return f"❌ Volume control error: {str(e)}"
 

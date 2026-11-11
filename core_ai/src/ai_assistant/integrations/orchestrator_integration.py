@@ -38,23 +38,28 @@ def should_use_orchestrator(command: str) -> bool:
     if not BRAIN_AVAILABLE and not ORCHESTRATOR_AVAILABLE:
         return False
     
-    # Sequential keywords
+    # Sequential keywords (whole-word matching to prevent 'and' matching 'command'/'android')
     sequential_keywords = [
         'फिर', 'phir', 'then',
         'और फिर', 'aur phir', 'and then',
         'और', 'aur', 'and',
         'के बाद', 'ke baad', 'after',
     ]
-    
-    command_lower = command.lower()
-    
-    for keyword in sequential_keywords:
-        if keyword in command_lower:
+
+    try:
+        from ai_assistant.core.local_command_normalizer import contains_any_sequential_keyword
+        if contains_any_sequential_keyword(command, sequential_keywords):
             return True
-    
+    except Exception:
+        import re
+        command_lower = command.lower()
+        for keyword in sequential_keywords:
+            if re.search(rf'(?<!\S){re.escape(keyword.lower())}(?!\S)', command_lower, re.UNICODE):
+                return True
+
     if ',' in command:
         return True
-    
+
     return False
 
 

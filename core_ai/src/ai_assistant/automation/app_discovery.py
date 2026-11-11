@@ -856,23 +856,26 @@ def smart_open_application(app_name: str, action_type: str = 'open_app') -> str:
     if len(app_name) > 200:
         return "❌ Application name is too long"
     
-    # Normalize app name
+    # Normalize app name (including Devanagari / Hinglish -> canonical English)
     original_app_name = app_name
     try:
         import re
-        app_name = re.sub(r'[^a-zA-Z0-9\s-]', '', app_name.lower().strip())
+        from ai_assistant.core.local_command_normalizer import normalize_hinglish_devanagari
+        normalized_unicode = normalize_hinglish_devanagari(app_name)
+        app_name = re.sub(r'[^a-zA-Z0-9\s-]', '', (normalized_unicode or app_name).lower().strip())
+        app_name = re.sub(r'\s+(?:app|karo|kar|do|de|please)\s*$', '', app_name).strip()
     except Exception as e:
         logger.warning(f"Failed to normalize app name: {e}")
-    
+
     # Check preferences (learned behavior)
     pref = app_discovery.get_preferred_app_for_action(action_type)
-    if pref and original_app_name.lower().strip() in ["play music", "music", "play"]:
+    if pref and app_name in ["play music", "music", "play"]:
         # If generic action and we have a preference, try it
         app_name = pref[0]
         print(f"  💡 Using learned preference for {action_type}: {app_name}")
 
     # Check direct protocol handlers first
-    clean_lower = original_app_name.lower().strip()
+    clean_lower = (app_name or original_app_name).lower().strip()
     protocol_schemes = {
         'whatsapp': 'whatsapp:',
         'whatsapp:': 'whatsapp:',
@@ -902,6 +905,37 @@ def smart_open_application(app_name: str, action_type: str = 'open_app') -> str:
         except Exception as proto_err:
             logger.warning(f"Protocol launch failed for {target_proto}: {proto_err}")
 
+    # Distinct multi-word web apps should not be hijacked by partial single-word shortcuts (e.g. "youtube" for "youtube music")
+    web_fallbacks = {
+        'youtube': 'https://www.youtube.com',
+        'youtube music': 'https://music.youtube.com',
+        'yt music': 'https://music.youtube.com',
+        'spotify': 'https://open.spotify.com',
+        'discord': 'https://discord.com/app',
+        'slack': 'https://app.slack.com',
+        'zoom': 'https://zoom.us/join',
+        'teams': 'https://teams.microsoft.com',
+        'netflix': 'https://www.netflix.com',
+        'prime video': 'https://www.primevideo.com',
+        'facebook': 'https://www.facebook.com',
+        'instagram': 'https://www.instagram.com',
+        'twitter': 'https://twitter.com',
+        'x': 'https://twitter.com',
+        'whatsapp': 'https://web.whatsapp.com',
+        'telegram': 'https://web.telegram.org',
+        'github': 'https://github.com',
+        'gmail': 'https://mail.google.com',
+        'google': 'https://www.google.com',
+        'google maps': 'https://maps.google.com',
+        'google drive': 'https://drive.google.com',
+        'google docs': 'https://docs.google.com',
+        'google sheets': 'https://sheets.google.com',
+        'chatgpt': 'https://chat.openai.com',
+        'claude': 'https://claude.ai',
+        'bard': 'https://bard.google.com',
+        'gemini': 'https://gemini.google.com',
+    }
+
     # First, try to find in discovered apps
     app_path = app_discovery.find_app(app_name)
     if not app_path and app_name != original_app_name:
@@ -917,6 +951,13 @@ def smart_open_application(app_name: str, action_type: str = 'open_app') -> str:
             app_path = app_discovery.find_app(app_name)
             if app_path:
                 break
+
+    # Prevent partial single-word native match (like "YouTube") from overriding multi-word web apps ("youtube music")
+    if app_path and len(clean_lower.split()) > 1 and clean_lower in web_fallbacks:
+        matched_keys = [k for k, v in getattr(app_discovery, 'apps_database', {}).items() if v == app_path]
+        haystack = (" ".join(matched_keys) + " " + str(app_path)).lower()
+        if not all(w in haystack for w in clean_lower.split()):
+            app_path = ""
                 
     if app_path:
         try:
@@ -988,40 +1029,26 @@ def smart_open_application(app_name: str, action_type: str = 'open_app') -> str:
             except Exception as e:
                 return f"❌ Failed to launch {original_app_name}: {e}"
 
-        # If not found natively, try web fallbacks
-        web_fallbacks = {
-            'youtube': 'https://www.youtube.com',
-            'youtube music': 'https://music.youtube.com',
-            'spotify': 'https://open.spotify.com',
-            'discord': 'https://discord.com/app',
-            'slack': 'https://app.slack.com',
-            'zoom': 'https://zoom.us/join',
-            'teams': 'https://teams.microsoft.com',
-            'netflix': 'https://www.netflix.com',
-            'prime video': 'https://www.primevideo.com',
-            'facebook': 'https://www.facebook.com',
-            'instagram': 'https://www.instagram.com',
-            'twitter': 'https://twitter.com',
-            'x': 'https://twitter.com',
-            'whatsapp': 'https://web.whatsapp.com',
-            'telegram': 'https://web.telegram.org',
-            'github': 'https://github.com',
-            'chatgpt': 'https://chat.openai.com',
-            'claude': 'https://claude.ai',
-            'bard': 'https://bard.google.com',
-            'gemini': 'https://gemini.google.com'
-        }
-        
-        app_lower = app_name.lower().strip()
-        
+        # If not found natively, try web fallbacks (longest-key-first so 'youtube music' beats 'youtube')
+        app_lower = (app_name or original_app_name).lower().strip()
+        try:
+            from ai_assistant.core.local_command_normalizer import word_boundary_contains
+        except Exception:
+            word_boundary_contains = None
+
         # METHOD 1: WEB APP (Fallback)
-        for key, url in web_fallbacks.items():
-            if key in app_lower:
+        for key, url in sorted(web_fallbacks.items(), key=lambda kv: len(kv[0]), reverse=True):
+            matched = (
+                word_boundary_contains(app_lower, key)
+                if word_boundary_contains
+                else (key == app_lower or (len(key) >= 4 and key in app_lower))
+            )
+            if matched:
                 try:
                     print(f"  🌐 Launching Web App fallback: {url}")
                     try:
                         os.startfile(url)
-                    except AttributeError:
+                    except (AttributeError, OSError):
                         import webbrowser
                         webbrowser.open(url)
                     app_discovery.track_app_launch(app_name, url, success=True)
@@ -1442,54 +1469,93 @@ class TaskbarDetector:
         
         return results
     
-    def find_specific_app_in_taskbar(self, app_name: str) -> Dict[str, Any]:
+    def find_specific_app_in_taskbar(self, app_name: str, expected_title_keyword: str = None) -> Dict[str, Any]:
         """
-        Look for a specific application in the taskbar.
-        
-        Args:
-            app_name: Name of the application to find
-            
-        Returns:
-            Information about whether the app is found and its status
+        Look for a specific application in the taskbar and optionally match its window title.
         """
         print(f" Looking for '{app_name}' in taskbar...")
         
         # Check running processes first
         app_found_in_processes = False
         matching_processes = []
-        
+        app_lower = (app_name or "").lower().strip()
+
         for proc in psutil.process_iter(['pid', 'name']):
             try:
-                if app_name.lower() in proc.info['name'].lower():
+                pname = proc.info.get('name') or ""
+                if app_lower and app_lower in pname.lower():
                     matching_processes.append(proc.info)
                     app_found_in_processes = True
-            except:
+            except Exception:
                 continue
-        
-        # Visual search if available
+
+        # Check visible window titles as well (profiles, folders, web apps, UWP apps)
+        app_found_in_windows = False
+        title_match_found = False
+        matching_windows = []
+
+        if WIN32_AVAILABLE and hasattr(self, "_get_window_information"):
+            try:
+                windows = self._get_window_information()
+                for win in windows:
+                    title_lower = (win.get("title") or "").lower()
+                    process_lower = (win.get("process_name") or "").lower()
+                    if app_lower and (app_lower in process_lower or app_lower in title_lower):
+                        app_found_in_windows = True
+                        matching_windows.append(win)
+                        if expected_title_keyword and expected_title_keyword.lower() in title_lower:
+                            title_match_found = True
+            except Exception:
+                pass
+
+        if expected_title_keyword:
+            is_successful = title_match_found
+        else:
+            is_successful = app_found_in_processes or app_found_in_windows
+
+        # Visual search only if OS check failed AND active provider is Gemini with valid key
         visual_result = {}
-        if self.multimodal:
+        allow_vlm = False
+        if self.multimodal and not is_successful:
+            try:
+                import sys
+                from pathlib import Path
+                bdir = str(Path(__file__).resolve().parents[4] / "backend")
+                if bdir not in sys.path:
+                    sys.path.insert(0, bdir)
+                from settings_manager import get_provider, get_api_key
+                allow_vlm = (get_provider() == "gemini" and bool(get_api_key("gemini")))
+            except Exception:
+                allow_vlm = False
+
+        if self.multimodal and not is_successful and allow_vlm:
             try:
                 visual_prompt = f"""
                 Look at this Windows desktop screenshot and determine:
-                
+
                 1. Is there an icon for "{app_name}" in the taskbar?
                 2. If yes, does it appear to be running (highlighted/active)?
                 3. Is there an open window for this application?
                 4. Where exactly do you see it?
-                
+
                 Be specific about what you observe.
                 """
-                
+                if expected_title_keyword:
+                    visual_prompt += f'\n5. Do you see the text "{expected_title_keyword}" anywhere in the application window?'
+
                 visual_result = self.multimodal.answer_visual_question(visual_prompt)
-                
+
             except Exception as e:
                 visual_result = {"error": str(e)}
-        
+
         return {
             "app_name": app_name,
             "found_in_processes": app_found_in_processes,
+            "app_found_in_windows": app_found_in_windows,
+            "title_match_found": title_match_found,
+            "is_successful": is_successful,
             "matching_processes": matching_processes,
+            "matching_windows": matching_windows,
             "visual_search_result": visual_result,
             "timestamp": datetime.now().isoformat()
         }

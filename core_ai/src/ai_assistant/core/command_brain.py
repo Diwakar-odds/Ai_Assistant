@@ -111,17 +111,33 @@ class ExecutiveBrain:
     
     # ===== MAIN ENTRY POINT =====
     
-    def receive_command(self, command: str, source: str = 'chat') -> BrainResponse:
+    def receive_command(
+        self,
+        command: str,
+        source: str = 'chat',
+        turn_id: Optional[int] = None,
+        speak: bool = True,
+        provider_preference: Optional[str] = None,
+        offline_mode: Optional[bool] = None,
+    ) -> BrainResponse:
         """
         Single entry point for ALL commands from ALL sources.
-        
+
         Args:
             command: The user's command text
             source: Where the command came from ('voice', 'chat', 'api', 'websocket')
-            
+            turn_id: Optional lifecycle turn token for pre/post report coordination
+            speak: Whether unified TTS is enabled for this turn
+            provider_preference: Optional per-request provider override
+            offline_mode: Optional per-request offline flag
+
         Returns:
             BrainResponse describing what action was taken
         """
+        self._active_turn_id = turn_id
+        self._active_turn_speak = bool(speak)
+        self._request_provider_override = provider_preference
+        self._request_offline_override = offline_mode
         source_enum = CommandSource(source) if source in [s.value for s in CommandSource] else CommandSource.CHAT
         priority = CommandPriority.VOICE if source_enum == CommandSource.VOICE else CommandPriority.CHAT
         
@@ -133,7 +149,51 @@ class ExecutiveBrain:
         )
         
         logger.info(f"🧠 Brain received: '{command}' from {source} (priority: {priority.name})")
-        
+
+        # Step 0: Check Executive Stop / Pause / Resume first!
+        cmd_strip = command.strip().lower()
+        if (
+            cmd_strip in ("stop", "emergency stop", "halt", "cancel chain", "abort", "halt all actions")
+            or any(kw == cmd_strip or cmd_strip.startswith(f"{kw} ") for kw in EXECUTIVE_STOP_KEYWORDS)
+        ):
+            res = self._cancel_all_active(command)
+            res.action_taken = 'stop'
+            return res
+
+        if (
+            cmd_strip in ("pause", "pause chain", "hold on", "pause all")
+            or any(kw == cmd_strip or cmd_strip.startswith(f"{kw} ") for kw in EXECUTIVE_PAUSE_KEYWORDS)
+        ):
+            res = self._pause_all_active()
+            res.action_taken = 'pause'
+            return res
+
+        if (
+            cmd_strip in ("resume", "resume chain", "continue chain", "resume all")
+            or any(kw == cmd_strip or cmd_strip.startswith(f"{kw} ") for kw in EXECUTIVE_RESUME_KEYWORDS)
+        ):
+            res = self._resume_all_active()
+            res.action_taken = 'resume'
+            return res
+
+        # Fast Voice / Mode Control interception (Zero LLM calls)
+        try:
+            from ai_assistant.core.local_command_normalizer import (
+                parse_voice_control_command,
+                execute_voice_control_command,
+            )
+            vc_parsed = parse_voice_control_command(command)
+            if vc_parsed:
+                vc_res = execute_voice_control_command(vc_parsed)
+                return BrainResponse(
+                    action_taken='completed',
+                    message=vc_res.get('response', ''),
+                    success=bool(vc_res.get('success', True)),
+                    active_chains=list(self._active_chains.keys()),
+                )
+        except Exception as vc_err:
+            logger.debug(f"Voice control check skipped in ExecutiveBrain: {vc_err}")
+
         # Background memory extraction (Commitments & Graph)
         def _background_extraction(cmd_text):
             commitment_keywords = ["remind", "promise", "deadline", "by tomorrow", "schedule", "task", "meeting", "submit", "deliver", "kal", "parso", "yaad", "bhul mat"]
@@ -144,16 +204,36 @@ class ExecutiveBrain:
                     tracker.extract_and_store(cmd_text)
                 except Exception as e:
                     logger.error(f"Background extraction failed: {e}")
-        
+
         # Only extract from chat/voice, not API calls unless they are explicit commands
         if source_enum in [CommandSource.VOICE, CommandSource.CHAT]:
             threading.Thread(target=_background_extraction, args=(command,), daemon=True).start()
-        
+
+        # Bare contextual follow-up resolution (e.g., "off कर दो" right after "Bluetooth on कर दो")
+        if not self._active_chains:
+            try:
+                from ai_assistant.core.local_command_normalizer import resolve_contextual_toggle_command
+                resolved_toggle = resolve_contextual_toggle_command(command, self._get_context_manager())
+                if resolved_toggle:
+                    t_intent, t_params = resolved_toggle
+                    enable = bool(t_params.get('enable', False))
+                    state_word = 'on' if enable else 'off'
+                    if t_intent == 'wifi_toggle':
+                        command = f"turn {state_word} wifi"
+                    elif t_intent == 'bluetooth_toggle':
+                        command = f"turn {state_word} bluetooth"
+                    elif t_intent == 'dark_mode_toggle':
+                        command = "dark mode on" if enable else "dark mode off"
+                    ts_command.text = command
+                    logger.info(f"🧠 Resolved contextual bare toggle to: '{command}'")
+            except Exception as ctx_err:
+                logger.debug(f"Contextual toggle resolution skipped: {ctx_err}")
+
         # Step 1: Classify the command
         classification = self._classify_command(command)
         ts_command.classification = classification
         logger.info(f"   Classification: {classification.value}")
-        
+
         # Step 2: Route based on classification
         if classification in [
             CommandClassification.EXECUTIVE_STOP,
@@ -161,76 +241,98 @@ class ExecutiveBrain:
             CommandClassification.EXECUTIVE_RESUME,
         ]:
             return self._handle_executive(classification, command)
-        
+
         if classification == CommandClassification.TASK_MODIFY:
             return self._handle_modification(command, ts_command)
-        
+
         if classification == CommandClassification.CONVERSATIONAL:
             return BrainResponse(
                 action_taken='chatting',
                 message='Routing to chat handler',
                 active_chains=list(self._active_chains.keys())
             )
-        
+
         # Step 3: For TASK_NEW / TASK_RELATED — check relatedness to active chains
         if classification in [CommandClassification.TASK_NEW, CommandClassification.TASK_RELATED]:
             return self._handle_task(command, ts_command)
-        
+
         # Fallback
         return BrainResponse(
             action_taken='chatting',
             message='Could not determine intent, routing to chat',
             active_chains=list(self._active_chains.keys())
         )
-    
+
     # ===== CLASSIFICATION =====
-    
+
     def _classify_command(self, command: str) -> CommandClassification:
         """
         Classify a command using the unified IntentRouter.
         """
         from ai_assistant.ai.intent_router import IntentRouter
+        from ai_assistant.core.local_command_normalizer import (
+            word_boundary_contains,
+            contains_any_sequential_keyword,
+        )
+
         router = IntentRouter() # Singleton
-        
+
         # We need to map our semantic IntentResult to CommandClassification
-        intent_result = router.route(command)
-        
-        # 1. Check for specific Modification/Sequential keywords first since they apply to active chains
+        intent_result = router.route(
+            command,
+            provider_override=getattr(self, '_request_provider_override', None),
+            offline_mode=getattr(self, '_request_offline_override', None),
+        )
+
+        # 1. Whole-token checks for Modification / Sequential keywords
         cmd_lower = command.lower().strip()
-        for keyword in MODIFICATION_KEYWORDS:
-            if cmd_lower.startswith(keyword) or keyword in cmd_lower[:30]:
-                return CommandClassification.TASK_MODIFY
-                
-        for keyword in SEQUENTIAL_KEYWORDS:
-            if cmd_lower.startswith(keyword) or f' {keyword} ' in f' {cmd_lower} ':
-                return CommandClassification.TASK_RELATED
+        head_snippet = " ".join(cmd_lower.split()[:5])
+        if self._active_chains or intent_result is None:
+            for keyword in MODIFICATION_KEYWORDS:
+                if word_boundary_contains(head_snippet, keyword):
+                    return CommandClassification.TASK_MODIFY
+
+        if self._active_chains and contains_any_sequential_keyword(command, SEQUENTIAL_KEYWORDS):
+            return CommandClassification.TASK_RELATED
 
         # 2. Map IntentRouter outputs
         if intent_result:
             intent_name = intent_result.intent_name
-            # Executive intents might be mapped directly if we passed 'action' in parameters
-            if intent_result.tier == 1 and intent_result.parameters.get("action") == "stop":
-                return CommandClassification.EXECUTIVE_STOP
-            elif intent_result.tier == 1 and intent_result.parameters.get("action") == "pause":
-                return CommandClassification.EXECUTIVE_PAUSE
-            elif intent_result.tier == 1 and intent_result.parameters.get("action") == "resume":
-                return CommandClassification.EXECUTIVE_RESUME
-            
+            # Executive intents apply only to non-media/system commands
+            non_executive_intents = {
+                'media_control', 'play_media', 'play_video', 'volume_control',
+                'system_control', 'wifi_toggle', 'bluetooth_toggle', 'dark_mode_toggle',
+            }
+            if intent_name not in non_executive_intents:
+                if intent_result.tier == 1 and intent_result.parameters.get("action") == "stop":
+                    return CommandClassification.EXECUTIVE_STOP
+                elif intent_result.tier == 1 and intent_result.parameters.get("action") == "pause":
+                    if self._active_chains:
+                        return CommandClassification.EXECUTIVE_PAUSE
+                    return CommandClassification.TASK_NEW
+                elif intent_result.tier == 1 and intent_result.parameters.get("action") == "resume":
+                    if self._active_chains:
+                        return CommandClassification.EXECUTIVE_RESUME
+                    return CommandClassification.TASK_NEW
+
             # Info queries and conversational fall back to CONVERSATIONAL in the command brain
             if intent_name == "info_query" or intent_name == "conversational":
                 return CommandClassification.CONVERSATIONAL
-                
+
             # If it's a known system intent, treat it as a new task
             system_intents = [
                 'open_app', 'close_app', 'search_web', 'youtube_search', 'youtube_history',
-                'play_media', 'play_video', 'send_message', 'volume_control',
-                'system_control', 'battery_status', 'list_running_apps', 'bluetooth_toggle',
-                'create_document', 'create_folder', 'open_settings', 'analyze_screen',
-                'download_media', 'task_automation', 'file_operation'
+                'play_media', 'play_video', 'media_control', 'send_message', 'volume_control',
+                'set_brightness', 'brightness_control', 'dark_mode_toggle',
+                'system_control', 'battery_status', 'list_running_apps', 'check_taskbar',
+                'bluetooth_toggle', 'wifi_toggle', 'create_document', 'create_folder',
+                'find_file', 'open_folder', 'open_explorer', 'skip_time',
+                'open_settings', 'analyze_screen', 'download_media', 'task_automation',
+                'file_operation', 'switch_model', 'settings_control',
             ]
             if intent_name in system_intents:
                 return CommandClassification.TASK_NEW
-                
+
         # 3. Default fallback
         # If router returned None, it means it's pure conversation
         return CommandClassification.CONVERSATIONAL
@@ -264,7 +366,7 @@ class ExecutiveBrain:
         
         return BrainResponse(action_taken='error', message='Unknown executive command', success=False)
     
-    def _cancel_all_active(self, reason: str = '') -> BrainResponse:
+    def _cancel_all_active(self, reason: str = '', emit_notice: bool = True) -> BrainResponse:
         """Cancel all active chains, halt TaskChainOrchestrator, and release inputs"""
         with self._lock:
             cancelled_ids = []
@@ -302,26 +404,32 @@ class ExecutiveBrain:
             except Exception:
                 pass
 
-        # 4. Broadcast stop signal via Socket.IO
+        # 4. Cancel active lifecycle turns & optionally broadcast stop signal via Socket.IO
         try:
-            import sys
-            from datetime import datetime
-            if 'voice_service' in sys.modules or 'backend.voice_service' in sys.modules:
-                try:
-                    from voice_service import safe_emit
-                except ImportError:
-                    from backend.voice_service import safe_emit
-                safe_emit('emergency_stop', {'reason': reason or 'Emergency Stop', 'timestamp': datetime.now().isoformat()})
-                safe_emit('command_response', {
-                    'success': False,
-                    'response': f"🛑 Stop command executed: Live tasks halted immediately. {reason}".strip(),
-                    'command': 'stop',
-                    'source': 'executive_stop',
-                    'timestamp': datetime.now().isoformat(),
-                    'skip_tts': False
-                })
-        except Exception as emit_e:
-            logger.debug(f"Emit stop notice: {emit_e}")
+            from ai_assistant.core.jarvis_persona import get_lifecycle_coordinator
+            get_lifecycle_coordinator().cancel_all(reason=reason or 'executive_stop')
+        except Exception:
+            pass
+        if emit_notice:
+            try:
+                import sys
+                from datetime import datetime
+                if 'voice_service' in sys.modules or 'backend.voice_service' in sys.modules:
+                    try:
+                        from voice_service import safe_emit
+                    except ImportError:
+                        from backend.voice_service import safe_emit
+                    safe_emit('emergency_stop', {'reason': reason or 'Emergency Stop', 'timestamp': datetime.now().isoformat()})
+                    safe_emit('command_response', {
+                        'success': False,
+                        'response': f"🛑 Stop command executed: Live tasks halted immediately. {reason}".strip(),
+                        'command': 'stop',
+                        'source': 'executive_stop',
+                        'timestamp': datetime.now().isoformat(),
+                        'skip_tts': True
+                    })
+            except Exception as emit_e:
+                logger.debug(f"Emit stop notice: {emit_e}")
         
         count = len(cancelled_ids)
         logger.info(f"🛑 Cancelled {count} active chain(s): {cancelled_ids}")
@@ -402,13 +510,12 @@ class ExecutiveBrain:
             return None
         
         cmd_lower = command.lower()
-        
-        # Rule 1: Sequential keywords → always related to latest chain
-        for keyword in SEQUENTIAL_KEYWORDS:
-            if keyword in cmd_lower:
-                # Find most recent chain
-                latest = max(self._active_chains.values(), key=lambda c: c.created_at)
-                return latest.chain_id
+
+        # Rule 1: Whole-word sequential keywords → always related to latest chain
+        from ai_assistant.core.local_command_normalizer import contains_any_sequential_keyword
+        if contains_any_sequential_keyword(command, SEQUENTIAL_KEYWORDS):
+            latest = max(self._active_chains.values(), key=lambda c: c.created_at)
+            return latest.chain_id
         
         # Extract app from command
         command_app = self._extract_app_name(cmd_lower)
@@ -530,68 +637,216 @@ class ExecutiveBrain:
 
     def _start_new_chain(self, command: str, ts_cmd: TimestampedCommand) -> BrainResponse:
         import threading
-        self._state = BrainState.EXECUTING
-        
+        chain_id = f"chain_{int(time.time() * 1000)}_{len(self._completed_chains) + len(self._active_chains) + 1}"
+        managed = ManagedChain(
+            chain_id=chain_id,
+            command=command,
+            source=ts_cmd.source,
+            created_at=time.time(),
+        )
+        with self._lock:
+            self._active_chains[chain_id] = managed
+            self._state = BrainState.EXECUTING
+
+        src_str = ts_cmd.source.value if hasattr(ts_cmd.source, 'value') else str(ts_cmd.source or 'chat')
+        turn_id = getattr(self, '_active_turn_id', None)
+        speak_flag = getattr(self, '_active_turn_speak', True)
+
+        coordinator = None
+        pre_msg = None
+        try:
+            from ai_assistant.core.jarvis_persona import get_lifecycle_coordinator, should_speak_for_request
+            coordinator = get_lifecycle_coordinator()
+            if turn_id is None:
+                speak_flag = should_speak_for_request({'source': src_str}, default_for_chat=speak_flag)
+                turn_id = coordinator.begin_turn(command=command, source=src_str, speak=speak_flag)
+            else:
+                speak_flag = bool(speak_flag) and should_speak_for_request({'source': src_str}, force=speak_flag)
+            pre_msg = coordinator.emit_pre_report(
+                turn_id,
+                command,
+                intent='task_chain_orchestrator',
+                source=src_str,
+                speak=speak_flag,
+            )
+        except Exception as lc_err:
+            logger.debug(f"Pre-report hook skipped in ExecutiveBrain: {lc_err}")
+
         def run_execution():
             import sys
             from datetime import datetime
-            
+
             success = False
             response_msg = ""
-            
+
             try:
+                if managed.is_cancelled:
+                    return
+                if coordinator is not None and turn_id is not None and not coordinator.is_turn_active(turn_id):
+                    return
                 # 1. Primary execution engine: TaskChainOrchestrator
                 from ai_assistant.core.task_chain_orchestrator import get_orchestrator
                 orchestrator = get_orchestrator()
-                res = orchestrator.execute_command(command)
-                
-                success = res.success
+                res = orchestrator.execute_command(command, skip_override_check=True)
+
+                success = bool(res.success)
+                details = []
+                for r in res.results:
+                    if isinstance(r, dict):
+                        res_val = r.get('result')
+                        if isinstance(res_val, dict) and res_val.get('message'):
+                            details.append(str(res_val['message']))
+                        elif isinstance(res_val, str) and res_val.strip():
+                            details.append(res_val.strip())
                 if success:
-                    details = []
-                    for r in res.results:
-                        if isinstance(r, dict):
-                            res_val = r.get('result')
-                            if isinstance(res_val, dict) and res_val.get('message'):
-                                details.append(res_val['message'])
-                            elif isinstance(res_val, str):
-                                details.append(res_val)
-                    if details:
-                        response_msg = " | ".join(details)
-                    else:
-                        response_msg = res.message or "Command executed successfully"
+                    response_msg = " | ".join(details) if details else (res.message or "Command executed successfully")
                 else:
-                    response_msg = res.message or res.error or "Command execution failed"
+                    response_msg = res.error or res.message or (" | ".join(details) if details else "Command execution failed")
             except Exception as orch_e:
                 logger.error(f"TaskChainOrchestrator error: {orch_e}")
                 response_msg = f"Execution error: {orch_e}"
-                
-            # Emit result back to UI via SocketIO
-            try:
-                if 'voice_service' in sys.modules or 'backend.voice_service' in sys.modules:
+            finally:
+                with self._lock:
+                    popped = self._active_chains.pop(chain_id, None)
+                    if popped:
+                        self._completed_chains[chain_id] = popped
+                    if not self._active_chains and self._state == BrainState.EXECUTING:
+                        self._state = BrainState.IDLE
+
+            if managed.is_cancelled:
+                return
+
+            if coordinator is not None:
+                try:
+                    formatted_msg, was_active = coordinator.complete_turn(
+                        turn_id,
+                        command,
+                        response_msg,
+                        success=success,
+                        intent='task_chain_orchestrator',
+                        source='task_chain_orchestrator',
+                        speak=speak_flag,
+                        emit_response=False,
+                    )
+                    if not was_active:
+                        return
+                    final_text = formatted_msg or response_msg
+                    ai_msg_id = None
+                    sess_id = None
+                    boot_id = None
                     try:
-                        from voice_service import safe_emit
-                    except ImportError:
-                        from backend.voice_service import safe_emit
-                    
-                    safe_emit('command_response', {
-                        'success': success,
-                        'response': response_msg,
-                        'command': command,
-                        'source': 'task_chain_orchestrator',
-                        'timestamp': datetime.now().isoformat(),
-                        'skip_tts': False
-                    })
+                        try:
+                            from utils.chat_session_store import get_session_store
+                        except ImportError:
+                            from backend.utils.chat_session_store import get_session_store
+                        store = get_session_store()
+                        ai_msg_id = store.next_message_id('chain_ai')
+                        sess_id = store.get_current_session().get('id')
+                        boot_id = store.get_boot_id()
+                        store.record_message(
+                            'ai',
+                            final_text,
+                            source='task_chain_orchestrator',
+                            is_voice=False,
+                            message_id=ai_msg_id,
+                            intent='task_chain_orchestrator',
+                            success=success,
+                            activity_kind=('action' if success else 'error'),
+                            activity_title=('Action completed' if success else 'Action failed'),
+                            expected_session_id=sess_id,
+                        )
+                    except Exception:
+                        pass
+
+                    sio = coordinator._get_socketio()
+                    if sio is not None:
+                        try:
+                            sio.emit('command_response', {
+                                'success': bool(success),
+                                'response': final_text,
+                                'command': command,
+                                'source': 'task_chain_orchestrator',
+                                'chain_id': chain_id,
+                                'message_id': ai_msg_id,
+                                'session_id': sess_id,
+                                'boot_id': boot_id,
+                                'skip_tts': True,
+                                'timestamp': datetime.now().isoformat(),
+                            })
+                        except Exception:
+                            pass
+                    return
+                except Exception as comp_err:
+                    logger.debug(f"Coordinator complete_turn fallback: {comp_err}")
+
+            # Fallback if lifecycle coordinator unavailable
+            ai_msg_id = None
+            sess_id = None
+            boot_id = None
+            try:
+                try:
+                    from utils.chat_session_store import get_session_store
+                except ImportError:
+                    from backend.utils.chat_session_store import get_session_store
+                store = get_session_store()
+                ai_msg_id = store.next_message_id('chain_ai')
+                sess_id = store.get_current_session().get('id')
+                boot_id = store.get_boot_id()
+                store.record_message(
+                    'ai',
+                    response_msg,
+                    source='task_chain_orchestrator',
+                    is_voice=False,
+                    message_id=ai_msg_id,
+                    intent='task_chain_orchestrator',
+                    success=success,
+                    activity_kind=('action' if success else 'error'),
+                    activity_title=('Action completed' if success else 'Action failed'),
+                    expected_session_id=sess_id,
+                )
+            except Exception:
+                pass
+            try:
+                vs_mod = sys.modules.get('voice_service') or sys.modules.get('backend.voice_service')
+                if vs_mod is not None:
+                    update_ov = getattr(vs_mod, 'update_overlay_state', None)
+                    sched_idle = getattr(vs_mod, '_schedule_overlay_idle', None)
+                    safe_emit = getattr(vs_mod, 'safe_emit', None)
+
+                    if callable(update_ov):
+                        if not success:
+                            snap = update_ov(state='error', error_message=response_msg, source='task_chain_orchestrator')
+                            if callable(sched_idle):
+                                sched_idle(3.5, snap['updated_at'])
+                        else:
+                            update_ov(state='idle', source='task_chain_orchestrator')
+
+                    if callable(safe_emit):
+                        safe_emit('command_response', {
+                            'success': success,
+                            'response': response_msg,
+                            'command': command,
+                            'chain_id': chain_id,
+                            'source': 'task_chain_orchestrator',
+                            'message_id': ai_msg_id,
+                            'session_id': sess_id,
+                            'boot_id': boot_id,
+                            'timestamp': datetime.now().isoformat(),
+                            'skip_tts': True,
+                        })
             except Exception as emit_e:
                 logger.error(f"Failed to emit execution result: {emit_e}")
-                
-            self._state = BrainState.IDLE
-            
-        threading.Thread(target=run_execution, daemon=True).start()
-        
+
+        t = threading.Thread(target=run_execution, daemon=True)
+        managed.thread = t
+        t.start()
+
         return BrainResponse(
             action_taken='executing',
-            message=f"Executing: {command}",
-            success=True
+            message=pre_msg or f"Executing: {command}",
+            chain_id=chain_id,
+            active_chains=[chain_id],
+            success=True,
         )
 
     def _handle_modification(self, command: str, 
