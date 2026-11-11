@@ -3,13 +3,18 @@ Advanced Speech Recognition Engine - Whisper Only
 Uses OpenAI Whisper API or local Whisper for accuracy, with offline fallback options
 """
 
+import io
 import logging
+import os
+import wave
 import asyncio
 from pathlib import Path
 from typing import Optional, Tuple, List, Dict
 from enum import Enum
 import time
 import numpy as np
+
+os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 
 try:
     import openai
@@ -118,16 +123,20 @@ class AdvancedSpeechRecognizer:
         if LOCAL_WHISPER_AVAILABLE:
             try:
                 device = "cuda:0" if torch.cuda.is_available() else "cpu"
-                logger.info("⏳ Loading Local Hinglish Whisper Model (models/whisper-hinglish)...")
+                project_root = Path(__file__).resolve().parents[4]
+                local_model_dir = project_root / "models" / "whisper-hinglish"
+                model_path = str(local_model_dir) if local_model_dir.exists() else "Hhsjsnns/whisper-small-hinglish"
+                logger.info(f"⏳ Loading Local Hinglish Whisper Model ({model_path})...")
                 from transformers import WhisperForConditionalGeneration, WhisperProcessor
-                
-                model_path = "models/whisper-hinglish"
-                if not Path(model_path).exists():
-                    model_path = "Hhsjsnns/whisper-small-hinglish" # Fallback if not moved yet
-                    
-                model = WhisperForConditionalGeneration.from_pretrained(model_path)
-                processor = WhisperProcessor.from_pretrained("openai/whisper-small")
-                
+
+                offline_only = local_model_dir.exists() or os.getenv("HF_HUB_OFFLINE", "").lower() in ("1", "true", "yes")
+                try:
+                    model = WhisperForConditionalGeneration.from_pretrained(model_path, local_files_only=offline_only)
+                    processor = WhisperProcessor.from_pretrained("openai/whisper-small", local_files_only=offline_only)
+                except Exception:
+                    model = WhisperForConditionalGeneration.from_pretrained(model_path)
+                    processor = WhisperProcessor.from_pretrained("openai/whisper-small")
+
                 self.local_hinglish_model = pipeline(
                     "automatic-speech-recognition",
                     model=model,
@@ -138,6 +147,110 @@ class AdvancedSpeechRecognizer:
                 logger.info("✅ Local Hinglish Whisper Model loaded successfully!")
             except Exception as e:
                 logger.warning(f"⚠️ Local Hinglish Whisper setup failed: {e}")
+
+    @staticmethod
+    def _resample_mono_float32(samples: np.ndarray, orig_sr: int, target_sr: int = 16000) -> np.ndarray:
+        """Convert 1D float array to 16kHz float32 without requiring ffmpeg."""
+        arr = np.asarray(samples, dtype=np.float32).reshape(-1)
+        if arr.size == 0 or not orig_sr or orig_sr == target_sr:
+            return arr
+        out_len = max(1, int(round(arr.size * (float(target_sr) / float(orig_sr)))))
+        x_old = np.linspace(0.0, 1.0, num=arr.size, endpoint=False)
+        x_new = np.linspace(0.0, 1.0, num=out_len, endpoint=False)
+        return np.interp(x_new, x_old, arr).astype(np.float32)
+
+    @classmethod
+    def _decode_wav_bytes_or_stream(cls, source) -> Optional[Dict]:
+        """Decode WAV bytes/stream via stdlib wave + numpy (zero ffmpeg dependency)."""
+        try:
+            if isinstance(source, (bytes, bytearray)):
+                stream = io.BytesIO(source)
+            elif isinstance(source, io.BytesIO):
+                stream = source
+                stream.seek(0)
+            else:
+                stream = source
+            with wave.open(stream, "rb") as wf:
+                channels = wf.getnchannels()
+                sampwidth = wf.getsampwidth()
+                sr = wf.getframerate()
+                frames = wf.readframes(wf.getnframes())
+            if sampwidth == 2:
+                pcm = np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32768.0
+            elif sampwidth == 4:
+                pcm = np.frombuffer(frames, dtype=np.int32).astype(np.float32) / 2147483648.0
+            elif sampwidth == 1:
+                pcm = (np.frombuffer(frames, dtype=np.uint8).astype(np.float32) - 128.0) / 128.0
+            else:
+                return None
+            if channels > 1:
+                pcm = pcm.reshape(-1, channels).mean(axis=1)
+            pcm = cls._resample_mono_float32(pcm, sr, 16000)
+            return {"raw": pcm, "sampling_rate": 16000}
+        except Exception:
+            return None
+
+    @classmethod
+    def _decode_with_pyav(cls, source) -> Optional[Dict]:
+        """Decode arbitrary container bytes/path via bundled PyAV if ffmpeg.exe is missing."""
+        try:
+            import av
+
+            if isinstance(source, (bytes, bytearray)):
+                container = av.open(io.BytesIO(source))
+            elif isinstance(source, io.BytesIO):
+                source.seek(0)
+                container = av.open(source)
+            else:
+                container = av.open(str(source))
+
+            resampler = av.AudioResampler(format="flt", layout="mono", rate=16000)
+            chunks: List[np.ndarray] = []
+            with container:
+                for frame in container.decode(audio=0):
+                    for resampled in resampler.resample(frame):
+                        chunks.append(resampled.to_ndarray().reshape(-1))
+            if not chunks:
+                return None
+            pcm = np.concatenate(chunks).astype(np.float32)
+            return {"raw": pcm, "sampling_rate": 16000}
+        except Exception:
+            return None
+
+    def _prepare_pipeline_audio(self, audio_input):
+        """Normalize audio_input to HF pipeline dict {'raw': float32, 'sampling_rate': 16000} without ffmpeg."""
+        if isinstance(audio_input, dict) and "raw" in audio_input:
+            sr = int(audio_input.get("sampling_rate") or 16000)
+            arr = self._resample_mono_float32(np.asarray(audio_input["raw"], dtype=np.float32), sr, 16000)
+            return {"raw": arr, "sampling_rate": 16000}
+
+        if isinstance(audio_input, np.ndarray):
+            arr = audio_input.astype(np.float32).reshape(-1)
+            max_abs = float(np.max(np.abs(arr))) if arr.size else 0.0
+            if max_abs > 1.5:
+                arr = arr / 32768.0
+            return {"raw": arr, "sampling_rate": 16000}
+
+        if isinstance(audio_input, (bytes, bytearray, io.BytesIO)):
+            decoded = self._decode_wav_bytes_or_stream(audio_input)
+            if decoded is not None:
+                return decoded
+            decoded = self._decode_with_pyav(audio_input)
+            if decoded is not None:
+                return decoded
+            return audio_input
+
+        if isinstance(audio_input, (str, Path)):
+            path_str = str(audio_input)
+            if path_str.lower().endswith(".wav"):
+                decoded = self._decode_wav_bytes_or_stream(path_str)
+                if decoded is not None:
+                    return decoded
+            decoded = self._decode_with_pyav(path_str)
+            if decoded is not None:
+                return decoded
+
+        return audio_input
     
     def reduce_noise(self, audio_data, sr: int = 16000) -> np.ndarray:
         """Apply noise reduction to audio data"""
@@ -258,6 +371,8 @@ class AdvancedSpeechRecognizer:
             
             try:
                 if model_name == "whisper_api":
+                    if not isinstance(audio, (str, Path)):
+                        continue
                     try:
                         loop = asyncio.get_event_loop()
                     except RuntimeError:
@@ -265,12 +380,13 @@ class AdvancedSpeechRecognizer:
                         asyncio.set_event_loop(loop)
                     
                     text, conf = loop.run_until_complete(
-                        self.recognize_whisper_api(audio, lang_code, context)
+                        self.recognize_whisper_api(str(audio), lang_code, context)
                     )
                 elif model_name == "local_hinglish_whisper":
                     try:
-                        logger.info(f"🎤 Local Hinglish Whisper: Transcribing...")
-                        result = self.local_hinglish_model(audio)
+                        prepared_audio = self._prepare_pipeline_audio(audio)
+                        logger.info("🎤 Local Hinglish Whisper: Transcribing...")
+                        result = self.local_hinglish_model(prepared_audio)
                         text = result.get("text", "").strip()
                         conf = 0.95 if text else 0.0
                         logger.info(f"✅ Local Whisper recognized: {text}")

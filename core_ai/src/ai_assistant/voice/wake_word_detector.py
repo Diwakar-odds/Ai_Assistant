@@ -73,12 +73,11 @@ class SmartWakeWordDetector:
                 import sys
                 from pathlib import Path
                 sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
-                from settings_manager import get_wake_word
-                ww = get_wake_word().lower()
-                # If they just said "pulsar", maybe allow "hey pulsar" too. We just take whatever they set.
-                self.wake_words = [ww] if ww else ["hey pulsar", "ok pulsar", "pulsar"]
-            except ImportError:
-                self.wake_words = ["hey assistant", "ok assistant", "assistant"]
+                from settings_manager import get_wake_words
+                loaded_words = [str(w).lower().strip() for w in (get_wake_words() or []) if str(w).strip()]
+                self.wake_words = loaded_words if loaded_words else ["hey pulsar", "ok pulsar", "pulsar", "hey assistant"]
+            except Exception:
+                self.wake_words = ["hey pulsar", "ok pulsar", "pulsar", "hey assistant", "ok assistant", "assistant"]
         else:
             self.wake_words = wake_words
         self.threshold = threshold
@@ -257,13 +256,11 @@ class SmartWakeWordDetector:
                             self.decoder = KaldiRecognizer(self.model, self.sample_rate)
                             break
             else:
-                # Fallback: simple energy-based detection
-                audio_array = np.frombuffer(audio_chunk, dtype=np.int16)
-                energy = np.sum(audio_array ** 2) / len(audio_array)
-                
-                # If speech detected (high energy)
-                if energy > 1e6:
-                    if self.on_speech_detected:
+                # Fallback: simple energy-based detection (cast to float64 to avoid int16 square overflow)
+                audio_array = np.frombuffer(audio_chunk, dtype=np.int16).astype(np.float64)
+                if len(audio_array) > 0:
+                    energy = float(np.sum(audio_array ** 2) / len(audio_array))
+                    if energy > 1e6 and self.on_speech_detected:
                         self.on_speech_detected()
         
         finally:
