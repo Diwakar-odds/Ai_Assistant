@@ -10,6 +10,7 @@ from .common import (
 )
 
 from .auth_routes import auth_bp
+from .agent_routes import agent_bp
 from .chain_routes import chain_bp
 from .chat_routes import chat_bp
 from .file_routes import file_bp
@@ -23,6 +24,7 @@ from .web_routes import web_bp
 
 ALL_BLUEPRINTS = [
     (auth_bp, None),
+    (agent_bp, None),
     (chain_bp, None),
     (chat_bp, None),
     (file_bp, None),
@@ -49,6 +51,14 @@ def register_all_routes(app, assistant_instance=None, socketio_instance=None, le
         set_assistant(assistant_instance)
     if socketio_instance:
         set_socketio(socketio_instance)
+        try:
+            try:
+                from websockets import register_socket_events
+            except ImportError:
+                from backend.websockets import register_socket_events
+            register_socket_events(socketio_instance)
+        except Exception as ws_err:
+            logger.warning(f"Failed to register socket events: {ws_err}")
     if learning_router_instance:
         set_learning_router(learning_router_instance)
     if limiter_instance:
@@ -64,4 +74,4 @@ def register_all_routes(app, assistant_instance=None, socketio_instance=None, le
         except Exception as e:
             logger.warning(f"Failed to register blueprint {bp.name}: {e}")
             
-    logger.info("All 11 route blueprints registered successfully")
+    logger.info(f"All {len(ALL_BLUEPRINTS)} route blueprints registered successfully")
