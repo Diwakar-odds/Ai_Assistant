@@ -10,7 +10,7 @@ OUTPUT_FILE = os.path.join(PROJECT_ROOT, "shared", "data", "codebase_graph.json"
 # Directories to ignore
 IGNORE_DIRS = {
     "venv", "node_modules", "__pycache__", ".git", ".vscode", ".gemini", 
-    "frontend", "dist", "build", "outputs", "logs", "test_download", ".pytest_cache"
+    "frontend", "dist", "dist_package", "build", "outputs", "logs", "test_download", ".pytest_cache"
 }
 
 def determine_module_tags(relative_path: Path):

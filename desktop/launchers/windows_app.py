@@ -63,6 +63,34 @@ except ImportError:
     logger.warning("pywebview is not installed. Will fallback to default web browser.")
 
 
+def _post_overlay_visibility(port: int, minimized: bool):
+    """Notify backend overlay coordinator when the native desktop window minimizes or restores."""
+    try:
+        from companion_bridge import post_overlay_visibility
+        post_overlay_visibility(port, minimized, source="windows_app")
+        return
+    except Exception:
+        pass
+
+    def _send():
+        try:
+            import json
+            url = f"http://127.0.0.1:{port}/api/desktop/overlay/state"
+            payload = json.dumps({"app_minimized": bool(minimized), "source": "windows_app"}).encode("utf-8")
+            req = urllib.request.Request(
+                url,
+                data=payload,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=1.5):
+                pass
+        except Exception as e:
+            logger.debug(f"Overlay visibility sync note: {e}")
+
+    threading.Thread(target=_send, daemon=True).start()
+
+
 class CompanionBridge:
     """Native Python bridge for the Floating Companion mascot and Dashboard"""
 
@@ -70,9 +98,10 @@ class CompanionBridge:
         self.app = app
 
     def restore_dashboard(self):
-        """Restore full main dashboard and hide companion"""
+        """Restore full main dashboard and hide minimized overlay"""
         logger.info("Restoring full dashboard window...")
         try:
+            _post_overlay_visibility(self.app.port, False)
             if self.app.companion_window:
                 self.app.companion_window.hide()
             if self.app.main_window:
@@ -82,14 +111,12 @@ class CompanionBridge:
             logger.error(f"Error restoring dashboard: {e}")
 
     def minimize_to_companion(self):
-        """Minimize main dashboard and show floating companion"""
-        logger.info("Minimizing dashboard -> Activating Floating Companion...")
+        """Minimize main dashboard and enable transparent taskbar-adjacent 4D orb overlay"""
+        logger.info("Minimizing dashboard -> Enabling Minimized 4D Orb Overlay...")
         try:
             if self.app.main_window:
                 self.app.main_window.minimize()
-            if self.app.companion_window:
-                self.app.companion_window.restore()
-                self.app.companion_window.show()
+            _post_overlay_visibility(self.app.port, True)
         except Exception as e:
             logger.error(f"Error minimizing to companion: {e}")
 
@@ -196,7 +223,6 @@ class WindowsDesktopApp:
 
         # 3. Open desktop window
         app_url = f'http://127.0.0.1:{self.port}'
-        companion_url = f'{app_url}/companion'
 
         if WEBVIEW_AVAILABLE:
             logger.info("🖥️ Opening Native Desktop Dashboard...")
@@ -213,47 +239,18 @@ class WindowsDesktopApp:
                 js_api=self.bridge
             )
 
-            # Determine initial companion coordinates (bottom-right above taskbar)
-            comp_w = 280
-            comp_h = 340
-            comp_x = None
-            comp_y = None
-            if webview.screens:
-                screen = webview.screens[0]
-                comp_x = screen.width - comp_w - 30
-                comp_y = screen.height - comp_h - 60
-
-            logger.info("🤖 Creating Floating Companion Mascot Window...")
-            self.companion_window = webview.create_window(
-                title='Pulsar Companion Mascot',
-                url=companion_url,
-                width=comp_w,
-                height=comp_h,
-                x=comp_x,
-                y=comp_y,
-                frameless=True,
-                on_top=True,
-                transparent=True,
-                hidden=True,
-                resizable=False,
-                easy_drag=True,
-                js_api=self.bridge
-            )
-
-            # Event hooks: When user minimizes main dashboard -> pop companion mascot!
+            # Event hooks: Sync minimize/restore with transparent click-through 4D Orb overlay
             def on_main_minimized():
-                logger.info("Main window minimized -> Showing floating companion mascot")
-                if self.companion_window:
-                    self.companion_window.restore()
-                    self.companion_window.show()
+                logger.info("Main window minimized -> Notifying 4D Orb Desktop Overlay")
+                _post_overlay_visibility(self.port, True)
 
             def on_main_restored():
-                logger.info("Main window restored -> Hiding floating companion mascot")
-                if self.companion_window:
-                    self.companion_window.hide()
+                logger.info("Main window restored -> Hiding 4D Orb Desktop Overlay")
+                _post_overlay_visibility(self.port, False)
 
             def on_main_closed():
-                logger.info("Main dashboard closed -> Destroying companion")
+                logger.info("Main dashboard closed -> Keeping minimized 4D Orb Desktop Overlay active")
+                _post_overlay_visibility(self.port, True)
                 if self.companion_window:
                     try:
                         self.companion_window.destroy()
