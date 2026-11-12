@@ -864,6 +864,12 @@ def api_tts_speak():
     voice_id = data.get("voice_id")
     engine = data.get("engine")
 
+    try:
+        from ai_assistant.core.speech_text_crisper import record_recent_tts
+        record_recent_tts(text)
+    except Exception:
+        pass
+
     queued = get_tts_service().speak(
         text,
         interrupt=interrupt,
@@ -998,6 +1004,11 @@ def api_wake_ack():
     queued = False
     finished = False
     if speak_flag and message and _is_tts_enabled() and TTS_SERVICE_AVAILABLE and (kind != "startup" or created_startup):
+        try:
+            from ai_assistant.core.speech_text_crisper import record_recent_tts
+            record_recent_tts(message)
+        except Exception:
+            pass
         try:
             tts_svc = get_tts_service()
             queued = bool(
@@ -1752,6 +1763,14 @@ def process_live_stream_buffer(pcm_buffer, config):
         if whisper_lang != "en"
         else "Hey Pulsar, OK Pulsar. Open WhatsApp, Chrome, YouTube Music, VS Code, take a screenshot."
     )
+    try:
+        from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+        kw = get_vocabulary_registry().get_whisper_prompt_keywords()
+        if kw:
+            stream_prompt = f"{stream_prompt} ({kw})"
+    except Exception:
+        pass
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
         # Use Hindi/Hinglish by default for streaming too, with proper beam_size
         future = executor.submit(
@@ -1762,9 +1781,24 @@ def process_live_stream_buffer(pcm_buffer, config):
         )
         segments, _ = future.result()
         text = " ".join([s.text for s in segments]).strip()
-        
+
     if text:
+        try:
+            from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+            text = get_vocabulary_registry().normalize_stt_transcript(text)
+        except Exception:
+            pass
         logger.info(f"[STREAM-VAD] Transcribed: {text}")
+        try:
+            from ai_assistant.core.speech_text_crisper import filter_and_crisp_speech_transcript
+            crisp_res = filter_and_crisp_speech_transcript(text, require_wake_word=False, check_echo=True)
+            if not crisp_res.get("valid"):
+                logger.info(f"[STREAM-VAD] Discarded noise/echo: '{text}' ({crisp_res.get('rejection_reason')})")
+                return
+            text = crisp_res.get("crisped_text") or text
+        except Exception as e:
+            logger.debug(f"[STREAM-VAD] Crisper check: {e}")
+
         stream_msg_id = None
         stream_sess_id = None
         try:
@@ -2048,6 +2082,34 @@ def handle_command(data):
             stream_id = ai_msg_id
         except Exception:
             pass
+
+        is_voice_src = any(t in source.lower() for t in ('voice', 'companion', 'whisper', 'google'))
+        if is_voice_src and command_text:
+            try:
+                from ai_assistant.core.speech_text_crisper import (
+                    is_hallucination_or_garbage,
+                    is_recent_tts_echo,
+                    crisp_speech_transcript,
+                )
+                is_garbage, reason = is_hallucination_or_garbage(command_text)
+                if is_garbage:
+                    logger.info(f"[HANDLE-COMMAND] Ignored voice garbage: '{command_text}' ({reason})")
+                    next_state = 'listening' if get_overlay_state().get('webui_mic_active') else 'idle'
+                    update_overlay_state(state=next_state, transcript='', source='speech_filtered')
+                    return
+
+                is_echo, score, matched_tts = is_recent_tts_echo(command_text)
+                if is_echo:
+                    logger.info(f"[HANDLE-COMMAND] Ignored voice self-echo: '{command_text}' ({score:.2f} of '{matched_tts}')")
+                    next_state = 'listening' if get_overlay_state().get('webui_mic_active') else 'idle'
+                    update_overlay_state(state=next_state, transcript='', source='speech_filtered')
+                    return
+
+                crisped = crisp_speech_transcript(command_text)
+                if crisped:
+                    command_text = crisped
+            except Exception as e:
+                logger.debug(f"[HANDLE-COMMAND] Voice filtering/crisping error: {e}")
 
         if not command_text:
             snap = update_overlay_state(state='error', error_message='No command provided', source=source)
@@ -2561,6 +2623,11 @@ def handle_command(data):
                     if lr:
                         lr.route_conversation(speaker='user', content=command_text, input_mode=source)
                         lr.route_conversation(speaker='assistant', content=response_text, input_mode=source)
+                    try:
+                        from ai_assistant.knowledge.interaction_learner import record_turn_and_learn_async
+                        record_turn_and_learn_async(command_text, response_text, source=source)
+                    except Exception:
+                        pass
                 except Exception as e:
                     print(f"š  Could not log learning: {e}")
                 
@@ -2928,6 +2995,11 @@ def handle_voice_audio(data):
             
             if result.get('success') and result.get('transcript'):
                 transcript = result.get('transcript', '').strip()
+                try:
+                    from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+                    transcript = get_vocabulary_registry().normalize_stt_transcript(transcript)
+                except Exception:
+                    pass
                 logger.info(f"[VOICE] Processed audio. Transcript: '{transcript}'")
 
                 store = None
@@ -2945,11 +3017,16 @@ def handle_voice_audio(data):
                 if require_wake_word is None:
                     require_wake_word = is_wake_word_enabled()
 
-                from ai_assistant.core.local_command_normalizer import match_and_strip_wake_phrase
-                matched_wake, clean_command = match_and_strip_wake_phrase(transcript)
+                from ai_assistant.core.speech_text_crisper import filter_and_crisp_speech_transcript, record_recent_tts
+                crisp_res = filter_and_crisp_speech_transcript(
+                    transcript,
+                    require_wake_word=require_wake_word,
+                    check_echo=True
+                )
 
-                if require_wake_word:
-                    if not matched_wake:
+                if not crisp_res.get("valid"):
+                    reason = crisp_res.get("rejection_reason", "")
+                    if reason == "wake_word_required":
                         logger.info(f"[WAKE-WORD] Speech ignored: '{transcript}' (Wake word required)")
                         next_state = 'listening' if get_overlay_state().get('webui_mic_active') else 'idle'
                         update_overlay_state(state=next_state, transcript='', source='wake_ignored')
@@ -2959,17 +3036,23 @@ def handle_voice_audio(data):
                                 'transcript': transcript,
                                 'message': 'Say "Hey Pulsar" or "Hey Assistant" to activate'
                             })
-                        return
+                    else:
+                        logger.info(f"[SPEECH-FILTER] Discarded noise/echo: '{transcript}' (Reason: {reason})")
+                        next_state = 'listening' if get_overlay_state().get('webui_mic_active') else 'idle'
+                        update_overlay_state(state=next_state, transcript='', source='speech_filtered')
+                    return
 
+                matched_wake = crisp_res.get("matched_wake")
+                clean_command = crisp_res.get("crisped_text", "")
+                is_wake_only = crisp_res.get("is_wake_only", False)
+
+                if matched_wake:
                     logger.info(f"[WAKE-WORD] Detected wake word '{matched_wake}' in '{transcript}'")
                     if _socketio:
                         _socketio.emit('wake_word_status', {'detected': True, 'wake_word': matched_wake})
                         _socketio.emit('wake_word_detected', {'wake_word': matched_wake, 'confidence': 0.95, 'source': 'voice', 'timestamp': time.time()})
-                elif matched_wake and _socketio:
-                    _socketio.emit('wake_word_status', {'detected': True, 'wake_word': matched_wake})
-                    _socketio.emit('wake_word_detected', {'wake_word': matched_wake, 'confidence': 0.95, 'source': 'voice', 'timestamp': time.time()})
 
-                if matched_wake and not clean_command:
+                if is_wake_only or (matched_wake and not clean_command):
                     # User only spoke the wake word — respond with a fresh dynamic acknowledgment
                     logger.info("[WAKE-WORD] User only called wake word with no query")
                     try:
@@ -2992,6 +3075,7 @@ def handle_voice_audio(data):
                     tts_enabled = _is_tts_enabled()
                     spoke = False
                     if reply and tts_enabled and TTS_SERVICE_AVAILABLE:
+                        record_recent_tts(reply)
                         spoke = get_tts_service().speak(reply, interrupt=True, source='wake_greeting')
                     if not spoke:
                         update_overlay_state(state='listening', transcript=matched_wake, source='wake_greeting')

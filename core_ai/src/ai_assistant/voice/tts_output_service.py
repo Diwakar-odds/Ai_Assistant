@@ -40,6 +40,7 @@ from ai_assistant.voice.text_cleaner import (
     clean_text_for_tts,
     devanagari_to_hinglish,
     prepare_text_for_kitten_tts,
+    hinglish_to_devanagari,
 )
 
 for _mod_alias in (
@@ -993,8 +994,12 @@ class TTSOutputService:
         pct = int(round((speed - 1.0) * 100.0))
         rate_str = f"{pct:+d}%"
 
+        tts_text = text
+        if target_voice.startswith("hi-IN-"):
+            tts_text = hinglish_to_devanagari(text) or text
+
         async def _fetch_bytes() -> bytes:
-            comm = edge_tts.Communicate(text, target_voice, rate=rate_str)
+            comm = edge_tts.Communicate(tts_text, target_voice, rate=rate_str)
             buf = bytearray()
             async for chunk in comm.stream():
                 if not self._is_gen_valid(gen):
@@ -1007,7 +1012,7 @@ class TTSOutputService:
 
         try:
             async def _fetch_timed() -> bytes:
-                return await asyncio.wait_for(_fetch_bytes(), timeout=4.0)
+                return await asyncio.wait_for(_fetch_bytes(), timeout=8.0)
 
             try:
                 asyncio.get_running_loop()
@@ -1018,7 +1023,7 @@ class TTSOutputService:
             if loop_running:
                 import concurrent.futures
                 with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                    audio_bytes = pool.submit(lambda: asyncio.run(_fetch_timed())).result(timeout=5.0)
+                    audio_bytes = pool.submit(lambda: asyncio.run(_fetch_timed())).result(timeout=9.0)
             else:
                 audio_bytes = asyncio.run(_fetch_timed())
 

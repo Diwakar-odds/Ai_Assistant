@@ -225,6 +225,12 @@ def clean_text_for_tts(text: Optional[str]) -> str:
     if not re.search(r'[\w\u0900-\u097F]', s):
         return ""
 
+    try:
+        from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+        s = get_vocabulary_registry().enforce_grammar_and_tone(s)
+    except Exception:
+        pass
+
     return s
 
 
@@ -666,3 +672,262 @@ def devanagari_to_hinglish(text: Optional[str]) -> str:
     out = re.sub(r'\s+([,.:;?!])', r'\1', out)
     out = re.sub(r'\s{2,}', ' ', out).strip()
     return out
+
+
+# ── Transparent Roman-Hinglish to Devanagari Mapping for EdgeTTS ─────────────────
+
+_HINGLISH_TO_DEVANAGARI_PHRASES = [
+    (re.compile(r'\bho\s+gaya\s+hai\b', re.IGNORECASE), 'हो गया है'),
+    (re.compile(r'\bho\s+gayi\s+hai\b', re.IGNORECASE), 'हो गई है'),
+    (re.compile(r'\bho\s+gaye\s+hain\b', re.IGNORECASE), 'हो गए हैं'),
+    (re.compile(r'\bho\s+gaya\b', re.IGNORECASE), 'हो गया'),
+    (re.compile(r'\bho\s+gayi\b', re.IGNORECASE), 'हो गई'),
+    (re.compile(r'\bho\s+gaye\b', re.IGNORECASE), 'हो गए'),
+    (re.compile(r'\bkar\s+rahi\s+hoon\b', re.IGNORECASE), 'कर रही हूँ'),
+    (re.compile(r'\bkar\s+raha\s+hoon\b', re.IGNORECASE), 'कर रहा हूँ'),
+    (re.compile(r'\bkar\s+rahi\s+hai\b', re.IGNORECASE), 'कर रही है'),
+    (re.compile(r'\bkar\s+rahe\s+hain\b', re.IGNORECASE), 'कर रहे हैं'),
+    (re.compile(r'\bkar\s+diya\s+hai\b', re.IGNORECASE), 'कर दिया है'),
+    (re.compile(r'\bkar\s+di\s+hai\b', re.IGNORECASE), 'कर दी है'),
+    (re.compile(r'\bkar\s+diya\b', re.IGNORECASE), 'कर दिया'),
+    (re.compile(r'\bkar\s+di\b', re.IGNORECASE), 'कर दी'),
+    (re.compile(r'\bkar\s+deti\s+hoon\b', re.IGNORECASE), 'कर देती हूँ'),
+    (re.compile(r'\bkar\s+deta\s+hoon\b', re.IGNORECASE), 'कर देता हूँ'),
+    (re.compile(r'\bkar\s+sakti\s+hoon\b', re.IGNORECASE), 'कर सकती हूँ'),
+    (re.compile(r'\bkar\s+sakta\s+hoon\b', re.IGNORECASE), 'कर सकता हूँ'),
+    (re.compile(r'\bsun\s+rahi\s+hoon\b', re.IGNORECASE), 'सुन रही हूँ'),
+    (re.compile(r'\bsun\s+raha\s+hoon\b', re.IGNORECASE), 'सुन रहा हूँ'),
+    (re.compile(r'\bsoch\s+kar\b', re.IGNORECASE), 'सोचकर'),
+    (re.compile(r'\bsoch\s+ke\b', re.IGNORECASE), 'सोचकर'),
+    (re.compile(r'\bek\s+second\b', re.IGNORECASE), 'एक सेकंड'),
+    (re.compile(r'\bek\s+pal\b', re.IGNORECASE), 'एक पल'),
+    (re.compile(r'\bopen\s+kar\b', re.IGNORECASE), 'ओपन कर'),
+    (re.compile(r'\bclose\s+kar\b', re.IGNORECASE), 'क्लोज़ कर'),
+    (re.compile(r'\bband\s+kar\b', re.IGNORECASE), 'बंद कर'),
+    (re.compile(r'\bshuru\s+kar\b', re.IGNORECASE), 'शुरू कर'),
+    (re.compile(r'\bchalu\s+kar\b', re.IGNORECASE), 'चालू कर'),
+    (re.compile(r'\bsamajh\s+gayi\b', re.IGNORECASE), 'समझ गई'),
+    (re.compile(r'\bsamajh\s+gaya\b', re.IGNORECASE), 'समझ गया'),
+    (re.compile(r'\bmulti-step\b', re.IGNORECASE), 'मल्टी-स्टेप'),
+    (re.compile(r'\btask\s+chain\b', re.IGNORECASE), 'टास्क चेन'),
+    (re.compile(r'\ball\s+set\b', re.IGNORECASE), 'ऑल सेट'),
+    (re.compile(r'\bright\s+away\b', re.IGNORECASE), 'तुरंत'),
+    (re.compile(r'\bdark\s+mode\b', re.IGNORECASE), 'डार्क मोड'),
+    (re.compile(r'\bnight\s+light\b', re.IGNORECASE), 'नाइट लाइट'),
+    (re.compile(r'\bopened\s+', re.IGNORECASE), 'ओपन हो गया '),
+    (re.compile(r'\bclosed\s+', re.IGNORECASE), 'बंद हो गया '),
+    (re.compile(r'\blaunched\s+', re.IGNORECASE), 'लॉन्च हो गया '),
+    (re.compile(r'\bset\s+to\s+', re.IGNORECASE), 'सेट हो गया '),
+    (re.compile(r'\bswitched\s+to\s+', re.IGNORECASE), 'स्विच हो गया '),
+    (re.compile(r'\bturned\s+on\s+', re.IGNORECASE), 'चालू हो गया '),
+    (re.compile(r'\bturned\s+off\s+', re.IGNORECASE), 'बंद हो गया '),
+    (re.compile(r'\bpaused\b', re.IGNORECASE), 'पॉज़ हो गया'),
+    (re.compile(r'\bresumed\b', re.IGNORECASE), 'रेज़्यूमे हो गया'),
+    (re.compile(r'\bmuted\b', re.IGNORECASE), 'म्यूट हो गया'),
+    (re.compile(r'\bunmuted\b', re.IGNORECASE), 'अनम्यूट हो गया'),
+]
+
+_HINGLISH_TO_DEVANAGARI_WORDS = {
+    'opened': 'ओपन हो गया',
+    'closed': 'बंद हो गया',
+    'launched': 'लॉन्च हो गया',
+    'started': 'स्टार्ट हो गया',
+    'haan': 'हाँ', 'haa': 'हाँ', 'han': 'हाँ', 'ha': 'हाँ',
+    'ji': 'जी', 'jee': 'जी',
+    'main': 'मैं', 'mai': 'मैं', 'meh': 'मैं',
+    'sun': 'सुन', 'soon': 'सुन', 'suno': 'सुनो', 'suniye': 'सुनिए',
+    'bol': 'बोल', 'bolo': 'बोलो', 'boliye': 'बोलिए',
+    'batana': 'बताना', 'batao': 'बताओ', 'bataiye': 'बताइए', 'batayein': 'बताएं',
+    'batata': 'बताता', 'batati': 'बताती', 'batate': 'बताते',
+    'bataunga': 'बताऊँगा', 'bataungi': 'बताऊँगी',
+    'kar': 'कर', 'karo': 'करो', 'kardo': 'कर दो', 'kijiye': 'कीजिए',
+    'karna': 'करना', 'karni': 'करनी', 'karne': 'करने',
+    'karta': 'करता', 'karti': 'करती', 'karte': 'करते',
+    'karunga': 'करूँगा', 'karungi': 'करूँगी', 'karenge': 'करेंगे',
+    'karein': 'करें', 'karen': 'करें',
+    'kiya': 'किया', 'kiye': 'किए', 'kiyi': 'की',
+    'de': 'दे', 'do': 'दो', 'dein': 'दें', 'dijiye': 'दीजिए',
+    'dena': 'देना', 'deni': 'देनी', 'dene': 'देने',
+    'diya': 'दिया', 'diye': 'दिए', 'diyi': 'दी',
+    'le': 'ले', 'lo': 'लो', 'lein': 'लें', 'lijiye': 'लीजिए',
+    'lena': 'लेना', 'leni': 'लेनी', 'lene': 'लेने',
+    'liya': 'लिया', 'liye': 'लिए', 'liyi': 'ली',
+    'khol': 'खोल', 'kholo': 'खोलो', 'kholi': 'खोली', 'kholna': 'खोलना',
+    'kholti': 'खोलती', 'kholta': 'खोलता', 'kholte': 'खोलते',
+    'kholunga': 'खोलूँगा', 'kholungi': 'खोलूँगी',
+    'band': 'बंद', 'rok': 'रोक', 'roko': 'रोको', 'rokiye': 'रोकिए',
+    'chala': 'चला', 'chalao': 'चलाओ', 'chalaiye': 'चलाइए', 'chalana': 'चलाना',
+    'chalti': 'चलती', 'chalta': 'चलता', 'chalte': 'चलते',
+    'chalega': 'चलेगा', 'chalegi': 'चलेगी', 'chalu': 'चालू',
+    'dekh': 'देख', 'dekho': 'देखो', 'dekhiye': 'देखिए', 'dekhna': 'देखना',
+    'dekhti': 'देखती', 'dekhta': 'देखता', 'dekhte': 'देखते',
+    'dekhunga': 'देखूँगा', 'dekhungi': 'देखूँगी',
+    'samajh': 'समझ', 'samajhti': 'समझती', 'samajhta': 'समझता',
+    'gaya': 'गया', 'gayi': 'गई', 'gaye': 'गए',
+    'soch': 'सोच', 'socho': 'सोचो', 'sochiye': 'सोचिए', 'sochna': 'सोचना',
+    'sochti': 'सोचती', 'sochta': 'सोचता', 'sochkar': 'सोचकर',
+    'bhej': 'भेज', 'bhejo': 'भेजो', 'bhejiye': 'भेजिए', 'bhejna': 'भेजना',
+    'padh': 'पढ़', 'padho': 'पढ़ो', 'padhiye': 'पढ़िए', 'padhna': 'पढ़ना',
+    'likh': 'लिख', 'likho': 'लिखो', 'likhiye': 'लिखिए', 'likhna': 'लिखना',
+    'aana': 'आना', 'aao': 'आओ', 'aaiye': 'आइए',
+    'aata': 'आता', 'aati': 'आती', 'aate': 'आते',
+    'ja': 'जा', 'jao': 'जाओ', 'jaiye': 'जाइए', 'jaana': 'जाना',
+    'jata': 'जाता', 'jati': 'जाती', 'jate': 'जाते',
+    'rakh': 'रख', 'rakho': 'रखो', 'rakhiye': 'रखिए', 'rakhna': 'रखना',
+    'uth': 'उठ', 'uthao': 'उठाओ', 'uthaiye': 'उठाइए',
+    'la': 'ला', 'lao': 'लाओ', 'laiye': 'लाइए', 'laana': 'लाना',
+    'lati': 'लाती', 'lata': 'लाता', 'late': 'लाते',
+    'launga': 'लाऊँगा', 'laungi': 'लाऊँगी',
+    'badha': 'बढ़ा', 'badhao': 'बढ़ाओ', 'badhaiye': 'बढ़ाइए', 'badhana': 'बढ़ाना',
+    'ghata': 'घटा', 'ghatao': 'घटाओ',
+    'hai': 'है', 'hain': 'हैं', 'hoon': 'हूँ', 'hun': 'हूँ', 'hu': 'हूँ', 'ho': 'हो',
+    'tha': 'था', 'thi': 'थी', 'the': 'थे',
+    'hoga': 'होगा', 'hogi': 'होगी', 'honge': 'होंगे',
+    'raha': 'रहा', 'rahi': 'रही', 'rahe': 'रहे',
+    'sakta': 'सकता', 'sakti': 'सकती', 'sakte': 'सकते',
+    'sakunga': 'सकूँगा', 'sakungi': 'सकूँगी',
+    'chahiye': 'चाहिए',
+    'kya': 'क्या', 'kaise': 'कैसे', 'kaisa': 'कैसा', 'kaisi': 'कैसी',
+    'kaun': 'कौन', 'kiska': 'किसका', 'kiske': 'किसके', 'kiski': 'किसकी',
+    'kise': 'किसे', 'kisko': 'किसको', 'kis': 'किस',
+    'kab': 'कब', 'kyun': 'क्यों', 'kyu': 'क्यों', 'kitna': 'कितना', 'kitne': 'कितने', 'kitni': 'कितनी',
+    'aaj': 'आज', 'kal': 'कल', 'parso': 'परसों',
+    'subah': 'सुबह', 'dopahar': 'दोपहर', 'shaam': 'शाम', 'raat': 'रात',
+    'ab': 'अब', 'abhi': 'अभी', 'turant': 'तुरंत', 'jaldi': 'जल्दी',
+    'pehle': 'पहले', 'baad': 'बाद',
+    'ek': 'एक', 'do': 'दो', 'teen': 'तीन', 'char': 'चार', 'chaar': 'चार',
+    'paanch': 'पाँच', 'che': 'छह', 'chheh': 'छह', 'saat': 'सात', 'aath': 'आठ', 'nau': 'नौ', 'das': 'दस',
+    'second': 'सेकंड', 'seconds': 'सेकंड', 'minute': 'मिनट', 'minutes': 'मिनट', 'ghanta': 'घंटा',
+    'thoda': 'थोड़ा', 'thodi': 'थोड़ी', 'thode': 'थोड़े',
+    'zyada': 'ज़्यादा', 'jyada': 'ज्यादा', 'bahut': 'बहुत', 'bohot': 'बहुत',
+    'poora': 'पूरा', 'poori': 'पूरी', 'poore': 'पूरे',
+    'aur': 'और', 'ya': 'या', 'lekin': 'लेकिन', 'magar': 'मगर', 'par': 'पर',
+    'kyunki': 'क्योंकि', 'kyonki': 'क्योंकि', 'isliye': 'इसलिए',
+    'toh': 'तो', 'to': 'तो', 'bhi': 'भी', 'hi': 'ही',
+    'bas': 'बस', 'sirf': 'सिर्फ', 'pe': 'पर', 'se': 'से', 'ko': 'को',
+    'ka': 'का', 'ke': 'के', 'ki': 'की', 'mein': 'में', 'me': 'में', 'ne': 'ने',
+    'saath': 'साथ', 'bina': 'बिना',
+    'jaise': 'जैसे', 'waise': 'वैसे', 'aise': 'ऐसे',
+    'yahan': 'यहाँ', 'wahan': 'वहाँ', 'kahan': 'कहाँ', 'jahan': 'जहाँ',
+    'yahin': 'यहीं', 'wahin': 'वहीं', 'kahin': 'कहीं',
+    'andar': 'अंदर', 'baahar': 'बाहर', 'bahar': 'बाहर',
+    'upar': 'ऊपर', 'neeche': 'नीचे', 'aage': 'आगे', 'peeche': 'पीछे',
+    'saamne': 'सामने', 'samne': 'सामने', 'paas': 'पास', 'door': 'दूर',
+    'theek': 'ठीक', 'thik': 'ठीक', 'sahi': 'सही', 'galat': 'गलत',
+    'bilkul': 'बिल्कुल', 'zaroor': 'ज़रूर', 'zarur': 'ज़रूर', 'jaroor': 'जरूर',
+    'badhiya': 'बढ़िया', 'mast': 'मस्त', 'achha': 'अच्छा', 'achhi': 'अच्छी', 'achhe': 'अच्छे',
+    'shandaar': 'शानदार', 'zabardast': 'ज़बरदस्त',
+    'ready': 'रेडी', 'tayyar': 'तैयार', 'taiyar': 'तैयार',
+    'fresh': 'फ्रेश', 'clean': 'क्लीन', 'saaf': 'साफ़',
+    'naya': 'नया', 'nayi': 'नयी', 'naye': 'नये',
+    'purana': 'पुराना', 'purani': 'पुरानी', 'purane': 'पुराने',
+    'chhota': 'छोटा', 'chhoti': 'छोटी', 'chhote': 'छोटे',
+    'bada': 'बड़ा', 'badi': 'बड़ी', 'bade': 'बड़े',
+    'namaste': 'नमस्ते', 'shukriya': 'शुक्रिया', 'dhanyavaad': 'धन्यवाद', 'dhanyavad': 'धन्यवाद',
+    'kaam': 'काम', 'aadesh': 'आदेश', 'intezaar': 'इंतज़ार', 'intezar': 'इंतज़ार',
+    'shuru': 'शुरू', 'shuruat': 'शुरुआत',
+    'sawaal': 'सवाल', 'jawab': 'जवाब', 'baat': 'बात', 'baatchit': 'बातचीत',
+    'aawaz': 'आवाज़', 'awaz': 'आवाज़', 'pata': 'पता',
+    'sab': 'सब', 'sabhi': 'सभी', 'kuch': 'कुछ', 'kuchh': 'कुछ', 'koi': 'कोई',
+    'yeh': 'यह', 'ye': 'यह', 'yah': 'यह', 'woh': 'वह', 'wo': 'वह',
+    'iska': 'इसका', 'iske': 'इसके', 'iski': 'इसकी',
+    'uska': 'उसका', 'uske': 'उसके', 'uski': 'उसकी',
+    'inhe': 'इन्हें', 'unhe': 'उन्हें', 'isse': 'इससे', 'usse': 'उससे',
+    'isme': 'इसमें', 'ismein': 'इसमें', 'usme': 'उसमें', 'usmein': 'उसमें',
+    'aap': 'आप', 'aapka': 'आपका', 'aapke': 'आपके', 'aapki': 'आपकी', 'aapko': 'आपको',
+    'tum': 'तुम', 'tumhara': 'तुम्हारा', 'tumhare': 'तुम्हारे', 'tumhari': 'तुम्हारी', 'tumhe': 'तुम्हें',
+    'mera': 'मेरा', 'mere': 'मेरे', 'meri': 'मेरी', 'mujhe': 'मुझे', 'mujhko': 'मुझको',
+    'hum': 'हम', 'ham': 'हम', 'humein': 'हमें', 'hume': 'हमें',
+    'hamaara': 'हमारा', 'hamaare': 'हमारे', 'hamaari': 'हमारी',
+    'dost': 'दोस्त', 'bhai': 'भाई', 'yaar': 'यार',
+    'boss': 'बॉस', 'sir': 'सर', 'pulsar': 'पल्सर',
+    'system': 'सिस्टम', 'systems': 'सिस्टम्स',
+    'online': 'ऑनलाइन', 'offline': 'ऑफलाइन',
+    'screen': 'स्क्रीन', 'display': 'डिस्प्ले',
+    'app': 'ऐप', 'apps': 'ऐप्स',
+    'window': 'विंडो', 'windows': 'विंडोज़',
+    'chrome': 'क्रोम', 'google': 'गूगल', 'youtube': 'यूट्यूब',
+    'whatsapp': 'व्हाट्सएप', 'spotify': 'स्पॉटिफाई',
+    'notepad': 'नोटपैड', 'calculator': 'कैलकुलेटर',
+    'browser': 'ब्राउज़र', 'settings': 'सेटिंग्स',
+    'volume': 'वॉल्यूम', 'sound': 'साउंड', 'audio': 'ऑडियो',
+    'brightness': 'ब्राइटनेस',
+    'wifi': 'वाई-फाई', 'bluetooth': 'ब्लूटूथ',
+    'music': 'म्यूजिक', 'song': 'गाना', 'gaana': 'गाना',
+    'video': 'वीडियो', 'media': 'मीडिया', 'playback': 'प्लेबैक',
+    'search': 'सर्च', 'lookup': 'लुकअप',
+    'open': 'ओपन', 'launch': 'लॉन्च', 'start': 'स्टार्ट',
+    'close': 'क्लोज़', 'exit': 'एग्ज़िट', 'quit': 'क्विट',
+    'restart': 'रीस्टार्ट', 'shutdown': 'शटडाउन',
+    'mute': 'म्यूट', 'unmute': 'अनम्यूट',
+    'play': 'प्ले', 'pause': 'पॉज़', 'stop': 'स्टॉप',
+    'next': 'नेक्स्ट', 'previous': 'पिछला', 'prev': 'पिछला',
+    'track': 'ट्रैक',
+    'task': 'टास्क', 'tasks': 'टास्क्स',
+    'command': 'कमांड', 'commands': 'कमांड्स',
+    'help': 'हेल्प', 'madad': 'मदद', 'order': 'ऑर्डर',
+    'plan': 'प्लान', 'scene': 'सीन', 'focus': 'फोकस',
+    'done': 'डन', 'complete': 'कम्प्लीट', 'finished': 'फिनिश',
+    'update': 'अपडेट', 'adjust': 'एडजस्ट', 'set': 'सेट', 'level': 'लेवल',
+    'message': 'मैसेज', 'mail': 'मेल', 'email': 'ईमेल',
+    'inbox': 'इनबॉक्स', 'calendar': 'कैलेंडर', 'meeting': 'मीटिंग',
+    'error': 'एरर', 'issue': 'इश्यू', 'problem': 'प्रॉब्लम',
+    'dikkat': 'दिक्कत', 'pareshaani': 'परेशानी', 'pareshani': 'परेशानी',
+    'step': 'स्टेप', 'steps': 'स्टेप्स',
+    'sequence': 'सीक्वेंस', 'chain': 'चेन',
+    'reset': 'रीसेट', 'clear': 'क्लियर',
+    'hello': 'हैलो', 'helo': 'हैलो', 'hey': 'हे', 'hi': 'हाय', 'yo': 'यो',
+    'sorry': 'सॉरी', 'welcome': 'वेलकम',
+    'percent': 'प्रतिशत', 'percentage': 'प्रतिशत',
+}
+
+
+def hinglish_to_devanagari(text: Optional[str]) -> str:
+    """
+    Transparently convert Romanized Hindi / Hinglish phrases and tokens into clean
+    Devanagari script so EdgeTTS hi-IN-* neural voices synthesize crystal-clear,
+    natural human Hindi without any broken American/English phonetic accent.
+    """
+    if not text:
+        return ""
+    raw = str(text)
+
+    # If text has no Latin letters at all, it's already purely Devanagari/punctuation
+    if not re.search(r'[a-zA-Z]', raw):
+        return raw
+
+    s = raw
+
+    # 0. User custom vocabulary & phonetics
+    try:
+        from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+        s = get_vocabulary_registry().apply_tts_phonetics(s)
+    except Exception:
+        pass
+
+    # 1. Apply multi-word Hinglish phrases first
+    for pat, rep in _HINGLISH_TO_DEVANAGARI_PHRASES:
+        s = pat.sub(rep, s)
+
+    # 2. Token-level dictionary transliteration
+    def _word_sub(match: re.Match) -> str:
+        word = match.group(0)
+        low = word.lower()
+        mapped = _HINGLISH_TO_DEVANAGARI_WORDS.get(low)
+        if mapped:
+            return mapped
+        return word
+
+    s = re.sub(r'\b[a-zA-Z]+\b', _word_sub, s)
+
+    # 3. Deterministic grammar and tone check
+    try:
+        from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+        s = get_vocabulary_registry().enforce_grammar_and_tone(s)
+    except Exception:
+        pass
+
+    # 4. Clean up spacing and trailing symbols
+    s = re.sub(r'\s+([,.:;?!।])', r'\1', s)
+    s = re.sub(r'\s{2,}', ' ', s).strip()
+    return s
