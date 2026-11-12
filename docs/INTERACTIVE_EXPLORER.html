@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PULSAR Interactive Multi-Agent Hub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 0.4; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.05); }
+    }
+    .pulse-indicator { animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 antialiased min-h-screen p-4 sm:p-6 select-none font-sans">
+  <div class="max-w-6xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-800 gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-xl shadow-lg shadow-indigo-600/30">
+          🌌
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+            PULSAR Architecture & Agent Portal
+            <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-medium">v4.0.0</span>
+          </h1>
+          <p class="text-xs text-slate-400 mt-0.5">14 Multi-Agent Cores • Subsystem Engines • Security & Breakpoint Audit</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-slate-900 border border-slate-800 text-slate-200">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-indicator"></span>
+          14 Agents Registered & Ready
+        </span>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="flex gap-2 border-b border-slate-800 pb-2 text-xs overflow-x-auto">
+      <button onclick="switchTab('agents')" id="tab-btn-agents" class="px-4 py-2 rounded-lg font-medium transition-colors bg-indigo-600 text-white shadow-sm shadow-indigo-600/20">
+        🤖 14 Multi-Agent Matrix
+      </button>
+      <button onclick="switchTab('simulator')" id="tab-btn-simulator" class="px-4 py-2 rounded-lg font-medium transition-colors bg-slate-900 text-slate-400 hover:text-white border border-slate-800">
+        ⚡ Pipeline Simulator
+      </button>
+      <button onclick="switchTab('security')" id="tab-btn-security" class="px-4 py-2 rounded-lg font-medium transition-colors bg-slate-900 text-slate-400 hover:text-white border border-slate-800">
+        🛡️ Security & Bug Heatmap
+      </button>
+      <button onclick="switchTab('capabilities')" id="tab-btn-capabilities" class="px-4 py-2 rounded-lg font-medium transition-colors bg-slate-900 text-slate-400 hover:text-white border border-slate-800">
+        🧩 Subsystem Capabilities
+      </button>
+    </div>
+
+    <!-- TAB 1: 14 AGENT MATRIX -->
+    <div id="tab-agents" class="space-y-4">
+      <!-- Filter Bar -->
+      <div class="flex items-center justify-between text-xs gap-2">
+        <div class="flex items-center gap-2 overflow-x-auto pb-1">
+          <button onclick="filterAgents('all')" class="cat-pill active px-3 py-1.5 rounded-full bg-indigo-600 text-white font-medium">All (14)</button>
+          <button onclick="filterAgents('productivity')" class="cat-pill px-3 py-1.5 rounded-full bg-slate-900 text-slate-400 border border-slate-800 hover:text-white">Productivity</button>
+          <button onclick="filterAgents('research')" class="cat-pill px-3 py-1.5 rounded-full bg-slate-900 text-slate-400 border border-slate-800 hover:text-white">Research</button>
+          <button onclick="filterAgents('creative')" class="cat-pill px-3 py-1.5 rounded-full bg-slate-900 text-slate-400 border border-slate-800 hover:text-white">Creative & Video</button>
+          <button onclick="filterAgents('data')" class="cat-pill px-3 py-1.5 rounded-full bg-slate-900 text-slate-400 border border-slate-800 hover:text-white">Data & SQL</button>
+          <button onclick="filterAgents('system')" class="cat-pill px-3 py-1.5 rounded-full bg-slate-900 text-slate-400 border border-slate-800 hover:text-white">System & Core</button>
+        </div>
+        <span class="text-slate-400 text-xs hidden sm:inline">Click any agent to inspect live schema</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+        <!-- Agent Cards Grid -->
+        <div id="agents-grid" class="md:col-span-6 grid grid-cols-2 gap-2.5 max-h-[460px] overflow-y-auto pr-1">
+          <!-- Dynamically Rendered by JS -->
+        </div>
+
+        <!-- Selected Agent Live Inspector -->
+        <div class="md:col-span-6 rounded-xl border border-slate-800 bg-slate-900/60 p-5 flex flex-col justify-between text-xs space-y-4 shadow-xl">
+          <div>
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div class="flex items-center gap-3">
+                <span id="insp-icon" class="text-3xl">📄</span>
+                <div>
+                  <h4 id="insp-title" class="font-bold text-base text-white">Productivity Agent</h4>
+                  <p id="insp-id" class="text-xs font-mono text-indigo-400">productivity-001</p>
+                </div>
+              </div>
+              <span id="insp-cat" class="px-2.5 py-1 rounded text-2xs font-semibold uppercase tracking-wider bg-indigo-600/30 text-indigo-300 border border-indigo-500/30">
+                Productivity
+              </span>
+            </div>
+
+            <p id="insp-desc" class="mt-3 text-slate-300 leading-relaxed text-sm">
+              Handles programmatic generation of Word documents (.docx), Excel spreadsheets (.xlsx), PowerPoint decks (.pptx), and PDF reports.
+            </p>
+
+            <div class="mt-4 space-y-2">
+              <span class="font-semibold text-xs text-slate-400 uppercase tracking-wider">Declared Capabilities:</span>
+              <div id="insp-caps" class="flex flex-wrap gap-1.5">
+                <!-- Chips -->
+              </div>
+            </div>
+
+            <div class="mt-4">
+              <div class="flex items-center justify-between text-xs text-slate-400 mb-1.5">
+                <span class="font-semibold uppercase tracking-wider">Executable Python Snippet:</span>
+                <span id="insp-file" class="font-mono text-2xs text-slate-500">productivity_agent.py</span>
+              </div>
+              <pre id="insp-code" class="p-3 rounded-lg bg-slate-950 font-mono text-xs text-indigo-200 overflow-x-auto max-h-[140px] border border-slate-800/80">
+task = Task(description="Create Q3 budget spreadsheet", params={"title": "Q3 Budget"})
+result = await agent.execute(task)
+              </pre>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-slate-800 flex items-center justify-between">
+            <span class="text-xs text-slate-500">Documentation: <code class="text-indigo-400">docs/agents/</code></span>
+            <button onclick="triggerSimForAgent()" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition shadow-md shadow-indigo-600/30">
+              Run in Pipeline Simulator ⚡
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: WORKFLOW SIMULATOR -->
+    <div id="tab-simulator" class="hidden space-y-4">
+      <div class="flex items-center justify-between bg-slate-900/60 p-4 rounded-xl border border-slate-800 text-xs shadow-lg">
+        <div>
+          <span class="font-semibold text-white text-sm">Multi-Agent Chain-of-Actions Simulator</span>
+          <p class="text-xs text-slate-400 mt-0.5">Watch artifacts and context flow sequentially between specialized agents with guardrail checkpoints</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="startSimulation()" id="sim-run-btn" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs transition shadow-lg shadow-emerald-600/30 flex items-center gap-1.5">
+            ▶ Run Simulation
+          </button>
+          <button onclick="resetSimulation()" class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-400 hover:text-white">
+            Reset
+          </button>
+        </div>
+      </div>
+
+      <!-- Pipeline Visualization Blocks -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+        <!-- Stage 1 -->
+        <div id="sim-node-1" class="p-4 rounded-xl border border-slate-800 bg-slate-900/50 transition-all duration-300">
+          <div class="flex items-center justify-between text-2xs font-semibold text-slate-400 mb-1">
+            <span>STEP 1: RECON</span>
+            <span id="sim-badge-1" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400">STANDBY</span>
+          </div>
+          <div class="font-bold text-sm text-white">Deep Research</div>
+          <p class="text-2xs text-slate-400 mt-1">Queries web feeds & synthesizes EV market metrics</p>
+          <div class="mt-3 text-xs font-mono p-2 rounded bg-slate-950 text-slate-400 truncate border border-slate-800/60" id="sim-out-1">
+            Waiting for trigger...
+          </div>
+        </div>
+
+        <!-- Stage 2 -->
+        <div id="sim-node-2" class="p-4 rounded-xl border border-slate-800 bg-slate-900/50 transition-all duration-300">
+          <div class="flex items-center justify-between text-2xs font-semibold text-slate-400 mb-1">
+            <span>STEP 2: ANALYTICS</span>
+            <span id="sim-badge-2" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400">STANDBY</span>
+          </div>
+          <div class="font-bold text-sm text-white">Data Analyst</div>
+          <p class="text-2xs text-slate-400 mt-1">Parses tabular data & renders bar chart PNG</p>
+          <div class="mt-3 text-xs font-mono p-2 rounded bg-slate-950 text-slate-400 truncate border border-slate-800/60" id="sim-out-2">
+            Awaiting upstream input...
+          </div>
+        </div>
+
+        <!-- Stage 3 -->
+        <div id="sim-node-3" class="p-4 rounded-xl border border-slate-800 bg-slate-900/50 transition-all duration-300">
+          <div class="flex items-center justify-between text-2xs font-semibold text-slate-400 mb-1">
+            <span>STEP 3: COMPILATION</span>
+            <span id="sim-badge-3" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400">STANDBY</span>
+          </div>
+          <div class="font-bold text-sm text-white">Productivity Core</div>
+          <p class="text-2xs text-slate-400 mt-1">Embeds chart into executive PDF whitepaper</p>
+          <div class="mt-3 text-xs font-mono p-2 rounded bg-slate-950 text-slate-400 truncate border border-slate-800/60" id="sim-out-3">
+            Awaiting chart artifact...
+          </div>
+        </div>
+
+        <!-- Stage 4 -->
+        <div id="sim-node-4" class="p-4 rounded-xl border border-slate-800 bg-slate-900/50 transition-all duration-300">
+          <div class="flex items-center justify-between text-2xs font-semibold text-slate-400 mb-1">
+            <span>STEP 4: DISPATCH</span>
+            <span id="sim-badge-4" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400">STANDBY</span>
+          </div>
+          <div class="font-bold text-sm text-white">Communication</div>
+          <p class="text-2xs text-slate-400 mt-1">Drafts email with PDF & pauses for human confirmation</p>
+          <div class="mt-3 text-xs font-mono p-2 rounded bg-slate-950 text-slate-400 truncate border border-slate-800/60" id="sim-out-4">
+            Awaiting PDF artifact...
+          </div>
+        </div>
+      </div>
+
+      <!-- Execution Progress Bar -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between text-xs text-slate-400">
+          <span id="sim-status-text" class="font-medium text-slate-300">Pipeline Status: Idle</span>
+          <span id="sim-pct-text" class="font-mono text-indigo-400">0%</span>
+        </div>
+        <div class="w-full h-2.5 rounded-full bg-slate-900 border border-slate-800 overflow-hidden">
+          <div id="sim-progress-bar" class="h-full bg-indigo-600 transition-all duration-500 w-0"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: SECURITY HEATMAP -->
+    <div id="tab-security" class="hidden space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+        <div class="rounded-xl border border-red-500/40 bg-slate-900/60 p-4 space-y-3 relative overflow-hidden shadow-lg">
+          <div class="absolute top-0 right-0 px-2.5 py-0.5 bg-red-600 text-white font-bold text-3xs uppercase rounded-bl">CRITICAL</div>
+          <div class="font-bold text-sm text-white">Silent JWT Auth Bypass</div>
+          <p class="text-slate-400 leading-relaxed">
+            If <code>flask_jwt_extended</code> fails to import, the fallback decorator permits unauthenticated requests to all protected routes.
+          </p>
+          <div class="text-xs font-mono p-2 rounded bg-slate-950 text-red-300 border border-slate-800">
+            backend/routes/common.py:20
+          </div>
+          <div class="text-xs text-emerald-400 font-medium">
+            ✓ Proposed Fix: Reject with HTTP 503 rather than silent bypass
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-red-500/40 bg-slate-900/60 p-4 space-y-3 relative overflow-hidden shadow-lg">
+          <div class="absolute top-0 right-0 px-2.5 py-0.5 bg-red-600 text-white font-bold text-3xs uppercase rounded-bl">CRITICAL</div>
+          <div class="font-bold text-sm text-white">Hardcoded Default Password</div>
+          <p class="text-slate-400 leading-relaxed">
+            Fallback default admin password <code>admin123</code> is used if <code>ADMIN_PASSWORD</code> is omitted in <code>.env</code>.
+          </p>
+          <div class="text-xs font-mono p-2 rounded bg-slate-950 text-red-300 border border-slate-800">
+            backend/routes/common.py:39
+          </div>
+          <div class="text-xs text-emerald-400 font-medium">
+            ✓ Proposed Fix: Auto-generate random secret on first launch
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-amber-500/40 bg-slate-900/60 p-4 space-y-3 relative overflow-hidden shadow-lg">
+          <div class="absolute top-0 right-0 px-2.5 py-0.5 bg-amber-500 text-white font-bold text-3xs uppercase rounded-bl">HIGH</div>
+          <div class="font-bold text-sm text-white">Unsandboxed Directory Traversal</div>
+          <p class="text-slate-400 leading-relaxed">
+            <code>/api/files/organize</code> allows arbitrary Windows directories (e.g. <code>C:\Windows</code>) without sandbox verification.
+          </p>
+          <div class="text-xs font-mono p-2 rounded bg-slate-950 text-amber-300 border border-slate-800">
+            backend/routes/file_routes.py:15
+          </div>
+          <div class="text-xs text-emerald-400 font-medium">
+            ✓ Proposed Fix: Enforce root system folder blacklist
+          </div>
+        </div>
+      </div>
+
+      <div class="p-3 rounded-xl border border-slate-800 bg-slate-900/40 text-xs flex items-center justify-between">
+        <span class="text-slate-400">Complete technical audit report available at:</span>
+        <span class="font-mono text-indigo-400">docs/security/AUDIT_AND_VULNERABILITY_REPORT.md</span>
+      </div>
+    </div>
+
+    <!-- TAB 4: SUBSYSTEM CAPABILITIES -->
+    <div id="tab-capabilities" class="hidden space-y-4">
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+        <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/50">
+          <div class="text-sm font-bold text-white mb-1.5 flex items-center gap-1.5">🎙️ Voice & Speech Engine</div>
+          <p class="text-xs text-slate-400">Vosk Kaldi offline ASR, Whisper, EchoGuard audio loop suppression, VAD, Kitten TTS.</p>
+          <div class="mt-3 text-2xs font-mono text-indigo-400">docs/capabilities/VOICE_AND_SPEECH_ENGINE.md</div>
+        </div>
+        <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/50">
+          <div class="text-sm font-bold text-white mb-1.5 flex items-center gap-1.5">👁️ Vision & OCR System</div>
+          <p class="text-xs text-slate-400">Tesseract & PaddleOCR, Gemini Multimodal, Local VLM, Face biometrics, MediaPipe gestures.</p>
+          <div class="mt-3 text-2xs font-mono text-indigo-400">docs/capabilities/VISION_AND_OCR_SYSTEM.md</div>
+        </div>
+        <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/50">
+          <div class="text-sm font-bold text-white mb-1.5 flex items-center gap-1.5">🖥️ Desktop & GUI Automation</div>
+          <p class="text-xs text-slate-400">Pywinauto Windows UIA, taskbar analyzer, window manager, visual closed-loop verifier.</p>
+          <div class="mt-3 text-2xs font-mono text-indigo-400">docs/capabilities/DESKTOP_AND_GUI_AUTOMATION.md</div>
+        </div>
+        <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/50">
+          <div class="text-sm font-bold text-white mb-1.5 flex items-center gap-1.5">⚡ Smart Workflow Chains</div>
+          <p class="text-xs text-slate-400">Multi-Agent DAG execution, dependency pipelining, self-healing recovery engine.</p>
+          <div class="mt-3 text-2xs font-mono text-indigo-400">docs/capabilities/SMART_WORKFLOWS_AND_CHAINS.md</div>
+        </div>
+        <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/50">
+          <div class="text-sm font-bold text-white mb-1.5 flex items-center gap-1.5">🕸️ Personal Knowledge Graph</div>
+          <p class="text-xs text-slate-400">SQLite entity-relationship memory, temporal decay, edge weight preference adaptation.</p>
+          <div class="mt-3 text-2xs font-mono text-indigo-400">docs/capabilities/PERSONAL_KNOWLEDGE_GRAPH.md</div>
+        </div>
+        <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/50">
+          <div class="text-sm font-bold text-white mb-1.5 flex items-center gap-1.5">🤖 Local AI & Model Switching</div>
+          <p class="text-xs text-slate-400">Ollama / GGUF local model inference with dynamic cloud failover to Gemini/OpenAI.</p>
+          <div class="mt-3 text-2xs font-mono text-indigo-400">docs/capabilities/LOCAL_AI_AND_MODEL_SWITCHING.md</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const AGENTS = [
+      { id: "productivity-001", name: "Productivity", cat: "productivity", icon: "📄", caps: ["create_word", "create_excel", "create_pptx", "create_pdf", "convert"], desc: "Generates Word, Excel, PowerPoint, and PDF files with structured tables and images.", file: "productivity_agent.py", code: 'task = Task(description="Create weekly budget spreadsheet")\nresult = await agent.execute(task)' },
+      { id: "research-001", name: "Research", cat: "research", icon: "🔍", caps: ["web_search", "wikipedia", "scrape_url", "fact_check"], desc: "Asynchronously queries DuckDuckGo, extracts Wikipedia summaries, and sanitizes web text.", file: "research_agent.py", code: 'task = Task(description="Lookup quantum computing wikipedia")\nresult = await agent.execute(task)' },
+      { id: "writer-001", name: "Writer", cat: "creative", icon: "✍️", caps: ["write_article", "summarize", "draft_email", "proofread"], desc: "Crafts essays, formal business emails, proofreading audits, and summaries via LLM.", file: "writer_agent.py", code: 'task = Task(description="Write 500-word essay on edge AI", params={"tone":"tech"})\nresult = await agent.execute(task)' },
+      { id: "video-001", name: "Video", cat: "creative", icon: "🎬", caps: ["trim_video", "transcribe", "subtitles", "control_app"], desc: "Performs video trimming, faster-whisper transcription, subtitles, and external app automation.", file: "video_agent.py", code: 'task = Task(description="Extract audio track from meeting recording")\nresult = await agent.execute(task)' },
+      { id: "creative-001", name: "Creative", cat: "creative", icon: "🎨", caps: ["generate_image", "create_banner", "voiceover", "pillow_filters"], desc: "Generates styled PNG banners, card layouts, image transformations, and voiceovers.", file: "creative_agent.py", code: 'task = Task(description="Generate 1920x1080 neon assistant banner")\nresult = await agent.execute(task)' },
+      { id: "data-001", name: "Data Analyst", cat: "data", icon: "📊", caps: ["analyze_csv", "render_charts", "statistics", "correlations"], desc: "Computes statistical metrics (variance, mean) and creates publication-grade 2D plots.", file: "data_analyst_agent.py", code: 'task = Task(description="Plot bar chart of monthly revenues", params={"chart_type":"bar"})\nresult = await agent.execute(task)' },
+      { id: "database-001", name: "Database", cat: "data", icon: "🗄️", caps: ["sql_query", "schema_inspect", "gated_writes", "migrations"], desc: "Safely manages SQLite/SQL databases; blocks destructive DROP and ALTER operations.", file: "database_agent.py", code: 'task = Task(description="Inspect schema in memory.db", params={"db_name":"memory"})\nresult = await agent.execute(task)' },
+      { id: "comm-001", name: "Communication", cat: "system", icon: "💬", caps: ["send_email", "draft_email", "whatsapp", "calendar"], desc: "Handles Gmail, WhatsApp, and Google Calendar booking with confirmation guardrails.", file: "communication_agent.py", code: 'task = Task(description="Draft status email to supervisor", params={"to":"mgr@co.com"})\nresult = await agent.execute(task)' },
+      { id: "web-001", name: "Web Agent", cat: "research", icon: "🌐", caps: ["browse_web", "fill_form", "monitor_site", "selenium_click"], desc: "Inspects DOMs, fills web forms, and executes dynamic Selenium automation.", file: "web_agent.py", code: 'task = Task(description="Browse python.org and get latest release notes")\nresult = await agent.execute(task)' },
+      { id: "student-001", name: "Student", cat: "system", icon: "🎓", caps: ["sympy_math", "folder_rag", "flashcards", "exam_tutor"], desc: "Solves algebraic equations via SymPy (safe, zero eval), makes flashcards, and queries course notes.", file: "student_agent.py", code: 'task = Task(description="Solve diff(x**3 + 2*x, x)", params={"expression":"diff(x**3+2*x,x)"})\nresult = await agent.execute(task)' },
+      { id: "file-001", name: "File Manager", cat: "system", icon: "📁", caps: ["organize_files", "batch_rename", "backup_zip", "search"], desc: "Cleans cluttered directories by MIME types and performs timestamped zip backups.", file: "file_manager_agent.py", code: 'task = Task(description="Organize Downloads folder into categories")\nresult = await agent.execute(task)' },
+      { id: "audio-001", name: "Audio", cat: "creative", icon: "🎧", caps: ["synth_music", "generate_sfx", "clean_noise", "neural_tts"], desc: "Synthesizes multi-chord procedural Lo-Fi/Ambient music and cleans audio noise.", file: "audio_agent.py", code: 'task = Task(description="Generate 5-second Lo-Fi music track", params={"genre":"lofi"})\nresult = await agent.execute(task)' },
+      { id: "deep-research-001", name: "Deep Research", cat: "research", icon: "🔬", caps: ["query_expansion", "parallel_scrape", "synthesis_report"], desc: "Multi-query decomposition, parallel scraping, and whitepaper synthesis.", file: "deep_research_agent.py", code: 'task = Task(description="Deep research on solid state batteries 2026")\nresult = await agent.execute(task)' },
+      { id: "autonomous-001", name: "Autonomous", cat: "system", icon: "🧠", caps: ["persist_memory", "behavior_learn", "reflection", "skill_synth"], desc: "Observes interactions, persists preferences into knowledge graphs, and synthesizes skills.", file: "autonomous_agent.py", code: 'task = Task(description="Remember preferred IDE is VS Code", params={"importance":5})\nresult = await agent.execute(task)' }
+    ];
+
+    let currentSelectedAgent = AGENTS[0];
+
+    function renderAgents(list) {
+      const grid = document.getElementById("agents-grid");
+      grid.innerHTML = "";
+      list.forEach(a => {
+        const isSelected = a.id === currentSelectedAgent.id;
+        const card = document.createElement("div");
+        card.className = `p-3 rounded-xl border text-xs cursor-pointer transition-all flex items-center justify-between ${
+          isSelected ? "border-indigo-500 bg-indigo-500/15 font-semibold text-white shadow-md shadow-indigo-500/10" : "border-slate-800 bg-slate-900/50 text-slate-300 hover:border-slate-700 hover:bg-slate-900"
+        }`;
+        card.onclick = () => selectAgent(a);
+        card.innerHTML = `
+          <div class="flex items-center gap-2.5 truncate">
+            <span class="text-xl">${a.icon}</span>
+            <div class="truncate">
+              <div class="truncate text-white text-xs">${a.name}</div>
+              <div class="text-2xs text-slate-500 font-mono">${a.id}</div>
+            </div>
+          </div>
+          <span class="w-2.5 h-2.5 rounded-full ${isSelected ? "bg-indigo-400 pulse-indicator" : "bg-slate-700"}"></span>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function selectAgent(a) {
+      currentSelectedAgent = a;
+      document.getElementById("insp-icon").innerText = a.icon;
+      document.getElementById("insp-title").innerText = `${a.name} Agent`;
+      document.getElementById("insp-id").innerText = a.id;
+      document.getElementById("insp-cat").innerText = a.cat;
+      document.getElementById("insp-desc").innerText = a.desc;
+      document.getElementById("insp-file").innerText = a.file;
+      document.getElementById("insp-code").innerText = a.code;
+
+      const capsContainer = document.getElementById("insp-caps");
+      capsContainer.innerHTML = "";
+      a.caps.forEach(c => {
+        const pill = document.createElement("span");
+        pill.className = "px-2.5 py-1 rounded-md text-2xs font-mono bg-slate-950 border border-slate-800 text-indigo-300";
+        pill.innerText = c;
+        capsContainer.appendChild(pill);
+      });
+
+      renderAgents(getActiveList());
+    }
+
+    let activeFilter = 'all';
+    function getActiveList() {
+      if (activeFilter === 'all') return AGENTS;
+      if (activeFilter === 'creative') return AGENTS.filter(a => a.cat === 'creative' || a.name === 'Video');
+      return AGENTS.filter(a => a.cat === activeFilter);
+    }
+
+    function filterAgents(cat) {
+      activeFilter = cat;
+      document.querySelectorAll(".cat-pill").forEach(el => el.classList.remove("bg-indigo-600", "text-white"));
+      event.target.classList.add("bg-indigo-600", "text-white");
+      renderAgents(getActiveList());
+    }
+
+    function switchTab(tab) {
+      ['agents', 'simulator', 'security', 'capabilities'].forEach(t => {
+        document.getElementById(`tab-${t}`).classList.add("hidden");
+        const btn = document.getElementById(`tab-btn-${t}`);
+        btn.classList.remove("bg-indigo-600", "text-white");
+        btn.classList.add("bg-slate-900", "text-slate-400");
+      });
+      document.getElementById(`tab-${tab}`).classList.remove("hidden");
+      const activeBtn = document.getElementById(`tab-btn-${tab}`);
+      activeBtn.classList.remove("bg-slate-900", "text-slate-400");
+      activeBtn.classList.add("bg-indigo-600", "text-white");
+    }
+
+    let simTimer = null;
+    function startSimulation() {
+      resetSimulation();
+      document.getElementById("sim-run-btn").disabled = true;
+      document.getElementById("sim-status-text").innerText = "Pipeline Status: Executing Step 1 (Deep Research)...";
+
+      setStepState(1, "RUNNING", "Querying 3 search feeds...");
+      document.getElementById("sim-progress-bar").style.width = "25%";
+      document.getElementById("sim-pct-text").innerText = "25%";
+
+      simTimer = setTimeout(() => {
+        setStepState(1, "DONE", "✓ Synthesized 840 words & EV metrics");
+        setStepState(2, "RUNNING", "Parsing tabular data & generating PNG...");
+        document.getElementById("sim-progress-bar").style.width = "50%";
+        document.getElementById("sim-pct-text").innerText = "50%";
+        document.getElementById("sim-status-text").innerText = "Pipeline Status: Executing Step 2 (Data Analyst)...";
+
+        simTimer = setTimeout(() => {
+          setStepState(2, "DONE", "✓ Output: outputs/ev_sales_chart.png");
+          setStepState(3, "RUNNING", "Building multi-page PDF with chart...");
+          document.getElementById("sim-progress-bar").style.width = "75%";
+          document.getElementById("sim-pct-text").innerText = "75%";
+          document.getElementById("sim-status-text").innerText = "Pipeline Status: Executing Step 3 (Productivity Core)...";
+
+          simTimer = setTimeout(() => {
+            setStepState(3, "DONE", "✓ Output: outputs/EV_Report_2026.pdf");
+            setStepState(4, "RUNNING", "Drafting Gmail update & waiting confirmation...");
+            document.getElementById("sim-progress-bar").style.width = "100%";
+            document.getElementById("sim-pct-text").innerText = "100%";
+            document.getElementById("sim-status-text").innerText = "Pipeline Status: Complete (Paused at Safety Guardrail)";
+            setStepState(4, "GATED", "⏸️ Email Draft Ready (Confirmation Required)");
+            document.getElementById("sim-run-btn").disabled = false;
+          }, 1000);
+        }, 1000);
+      }, 1000);
+    }
+
+    function setStepState(step, state, msg) {
+      const badge = document.getElementById(`sim-badge-${step}`);
+      const out = document.getElementById(`sim-out-${step}`);
+      const node = document.getElementById(`sim-node-${step}`);
+
+      out.innerText = msg;
+      if (state === "RUNNING") {
+        badge.innerText = "ACTIVE";
+        badge.className = "px-2 py-0.5 rounded bg-amber-500 text-white font-bold pulse-indicator";
+        node.classList.add("border-indigo-500", "bg-indigo-950/20");
+      } else if (state === "DONE") {
+        badge.innerText = "DONE";
+        badge.className = "px-2 py-0.5 rounded bg-emerald-500 text-white font-bold";
+        node.classList.remove("border-indigo-500", "bg-indigo-950/20");
+        node.classList.add("border-emerald-500/50");
+      } else if (state === "GATED") {
+        badge.innerText = "CONFIRM";
+        badge.className = "px-2 py-0.5 rounded bg-purple-500 text-white font-bold pulse-indicator";
+      } else {
+        badge.innerText = "STANDBY";
+        badge.className = "px-2 py-0.5 rounded bg-slate-800 text-slate-400";
+      }
+    }
+
+    function resetSimulation() {
+      if (simTimer) clearTimeout(simTimer);
+      document.getElementById("sim-run-btn").disabled = false;
+      document.getElementById("sim-progress-bar").style.width = "0%";
+      document.getElementById("sim-pct-text").innerText = "0%";
+      document.getElementById("sim-status-text").innerText = "Pipeline Status: Idle";
+      for (let i = 1; i <= 4; i++) {
+        setStepState(i, "STANDBY", "Waiting for trigger...");
+        document.getElementById(`sim-node-${i}`).className = "p-4 rounded-xl border border-slate-800 bg-slate-900/50 transition-all duration-300";
+      }
+    }
+
+    function triggerSimForAgent() {
+      switchTab('simulator');
+      startSimulation();
+    }
+
+    // Initialize
+    selectAgent(AGENTS[0]);
+  </script>
+</body>
+</html>

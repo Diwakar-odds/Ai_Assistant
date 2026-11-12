@@ -2,7 +2,20 @@
   <h1>🌌 PULSAR</h1>
   <p><strong>Native OS Automation via Agentic LLM</strong></p>
   <p><em>An Offline Multi-Modal LLM Assistant for Windows</em></p>
+
+  <p>
+    <a href="frontend/web-app/README.md"><strong>🎨 Frontend Guide</strong></a> •
+    <a href="backend/README.md"><strong>⚙️ Backend Guide</strong></a> •
+    <a href="docs/README.md"><strong>📚 Central Documentation Hub</strong></a> •
+    <a href="docs/security/AUDIT_AND_VULNERABILITY_REPORT.md"><strong>🛡️ Security & Bug Audit</strong></a>
+  </p>
 </div>
+
+---
+
+> ### 🚀 Quick Navigation to Granular Documentation
+> * **14 Dedicated Agent Specs:** [Productivity](docs/agents/01_PRODUCTIVITY_AGENT.md) • [Research](docs/agents/02_RESEARCH_AGENT.md) • [Writer](docs/agents/03_WRITER_AGENT.md) • [Video](docs/agents/04_VIDEO_AGENT.md) • [Creative](docs/agents/05_CREATIVE_AGENT.md) • [Data Analyst](docs/agents/06_DATA_ANALYST_AGENT.md) • [Database](docs/agents/07_DATABASE_AGENT.md) • [Communication](docs/agents/08_COMMUNICATION_AGENT.md) • [Web](docs/agents/09_WEB_AGENT.md) • [Student](docs/agents/10_STUDENT_AGENT.md) • [File Manager](docs/agents/11_FILE_MANAGER_AGENT.md) • [Audio](docs/agents/12_AUDIO_AGENT.md) • [Deep Research](docs/agents/13_DEEP_RESEARCH_AGENT.md) • [Autonomous Learning](docs/agents/14_AUTONOMOUS_LEARNING_AGENT.md)
+> * **Subsystem Engines:** [Voice & Speech](docs/capabilities/VOICE_AND_SPEECH_ENGINE.md) • [Vision & OCR](docs/capabilities/VISION_AND_OCR_SYSTEM.md) • [Desktop & GUI Automation](docs/capabilities/DESKTOP_AND_GUI_AUTOMATION.md) • [Smart Workflows & Chains](docs/capabilities/SMART_WORKFLOWS_AND_CHAINS.md) • [Offline NLP & Intents](docs/capabilities/OFFLINE_NLP_AND_INTENTS.md) • [Personal Knowledge Graph](docs/capabilities/PERSONAL_KNOWLEDGE_GRAPH.md) • [Local AI & Model Switching](docs/capabilities/LOCAL_AI_AND_MODEL_SWITCHING.md) • [Browser Automation](docs/capabilities/BROWSER_AUTOMATION_AND_SCRAPING.md) • [MCP Protocol](docs/capabilities/MCP_AND_EXTERNAL_INTEGRATIONS.md)
 
 ---
 
