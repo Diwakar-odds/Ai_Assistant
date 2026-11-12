@@ -489,69 +489,55 @@ class MultiAgentCoordinator:
         """
         Produce a validated DAG execution plan:
         [{"step_id", "agent_id", "task", "depends_on", "params", "required_capabilities"}]
-        Tries Unified LLM first, then falls back cleanly to deterministic multi-step decomposition.
+        1. Checks WorkflowMemory cache first (0 LLM tokens, ~0ms).
+        2. If cache miss, utilizes SwarmPlanner (Pydantic DAG + Kahn's cycle check).
+        3. Falls back cleanly to deterministic multi-step decomposition if offline.
         """
-        metadata = self.registry.get_all_metadata()
-        agents_lines = [
-            f"- ID: {m.agent_id} | Name: {m.name} | Capabilities: {', '.join(m.capabilities)}"
-            for m in metadata
-        ]
-        system_prompt = (
-            "You are the Master Multi-Agent Orchestrator. Decompose user commands into 1 or more agent steps.\n"
-            "Available Agents:\n" + "\n".join(agents_lines) + "\n\n"
-            "Reply ONLY with valid JSON matching:\n"
-            "{\n"
-            '  "steps": [\n'
-            '    {"step_id": "step_1", "agent_id": "research-001", "task": "...", "depends_on": [], "params": {}}\n'
-            "  ]\n"
-            "}\n"
-            "Use depends_on to reference earlier step_id(s) only when a step needs another step's output. "
-            "Independent steps MUST have depends_on: [] so they execute in parallel."
-        )
+        # 1. Fast Cache Check (Never Think Twice)
+        try:
+            from ai_assistant.core.workflow_memory import get_workflow_memory
+            cached_plan = get_workflow_memory().find_matching_workflow(command_text)
+            if cached_plan and cached_plan.all_steps:
+                logger.info(f"⚡ [WORKFLOW CACHE HIT] Using learned recipe: '{cached_plan.workflow_name}'")
+                return [
+                    {
+                        "step_id": s.step_id,
+                        "agent_id": s.agent_id,
+                        "task": s.task,
+                        "depends_on": s.depends_on,
+                        "params": s.params,
+                        "required_capabilities": [s.capability] if s.capability else [],
+                        "output_key": s.output_key,
+                        "requires_confirmation": s.requires_confirmation,
+                        "fallback_agent_id": s.fallback_agent_id,
+                    }
+                    for s in cached_plan.all_steps
+                ]
+        except Exception as cache_err:
+            logger.debug(f"Workflow cache lookup skipped: {cache_err}")
 
-        llm_raw = await self._call_planner_llm(system_prompt, command_text)
-        if llm_raw:
-            parsed = self._parse_json_payload(llm_raw)
-            if parsed:
-                # Support both {"steps": [...]} and single-step {"selected_agent_id": ...}
-                raw_steps = parsed.get("steps")
-                if not isinstance(raw_steps, list) and parsed.get("selected_agent_id"):
-                    raw_steps = [
-                        {
-                            "step_id": "step_1",
-                            "agent_id": parsed["selected_agent_id"],
-                            "task": parsed.get("extracted_task") or command_text,
-                            "depends_on": [],
-                            "params": parsed.get("params") or {},
-                        }
-                    ]
-
-                if isinstance(raw_steps, list) and raw_steps:
-                    normalized: List[Dict[str, Any]] = []
-                    for idx, st in enumerate(raw_steps):
-                        if not isinstance(st, dict):
-                            continue
-                        step_id = str(st.get("step_id") or f"step_{idx + 1}")
-                        desc = str(st.get("task") or st.get("description") or command_text)
-                        req_caps = list(st.get("required_capabilities") or [])
-                        raw_aid = st.get("agent_id")
-                        aid = self.registry.resolve_agent_id(str(raw_aid)) if raw_aid else ""
-                        if not aid or (self.registry.get_agent_dto(aid) is None):
-                            best = await self.registry.find_best_agent(
-                                Task(description=desc, required_capabilities=req_caps)
-                            )
-                            aid = best.agent_id if best else ""
-                        if aid:
-                            normalized.append({
-                                "step_id": step_id,
-                                "agent_id": aid,
-                                "task": desc,
-                                "depends_on": list(st.get("depends_on") or []),
-                                "params": dict(st.get("params") or {}),
-                                "required_capabilities": req_caps,
-                            })
-                    if normalized:
-                        return normalized
+        # 2. Dynamic SwarmPlanner Meta-Planning
+        try:
+            from ai_assistant.core.swarm_planner import SwarmPlanner
+            planner = SwarmPlanner(registry=self.registry, llm_provider=self.llm)
+            plan = await planner.plan_workflow(command_text)
+            if plan and plan.all_steps:
+                return [
+                    {
+                        "step_id": s.step_id,
+                        "agent_id": s.agent_id,
+                        "task": s.task,
+                        "depends_on": s.depends_on,
+                        "params": s.params,
+                        "required_capabilities": [s.capability] if s.capability else [],
+                        "output_key": s.output_key,
+                        "requires_confirmation": s.requires_confirmation,
+                        "fallback_agent_id": s.fallback_agent_id,
+                    }
+                    for s in plan.all_steps
+                ]
+        except Exception as planner_err:
+            logger.debug(f"SwarmPlanner dynamic planning skipped: {planner_err}")
 
         return await self._fallback_plan_steps(command_text)
 
@@ -664,10 +650,12 @@ class MultiAgentCoordinator:
         steps: List[Dict[str, Any]],
         base_params: Optional[Dict[str, Any]] = None,
         chain_id: Optional[str] = None,
+        command_text: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Execute a multi-step DAG in topological parallel waves.
         Propagates upstream step outputs into task.context['upstream_results'] and {step.output}/{prev.output}.
+        Includes Self-Healing (re-routes on failure) and Workflow Memory caching on success.
         """
         if not steps:
             return {"status": "rejected", "steps": [], "results": {}}
@@ -756,6 +744,116 @@ class MultiAgentCoordinator:
             wave_outcomes = await asyncio.gather(*(_run_step(sid) for sid in ready))
             wave_failed = False
             for sid, res in wave_outcomes:
+                if not res.success:
+                    spec = step_map[sid]
+                    healed = False
+
+                    # Self-Healing Layer 1: Check explicit fallback_agent_id
+                    fallback_aid = spec.get("fallback_agent_id")
+                    if fallback_aid and fallback_aid != spec.get("agent_id"):
+                        logger.warning(
+                            f"🩹 [SELF-HEALING] Attempting designated fallback agent '{fallback_aid}' for step '{sid}'"
+                        )
+                        await self._emit_event(
+                            "swarm.self_healing",
+                            {
+                                "step_id": sid,
+                                "original_agent": spec.get("agent_id"),
+                                "fallback_agent": fallback_aid,
+                                "reason": res.error or "Step failed",
+                                "status": "recovering",
+                            },
+                        )
+                        fallback_task = Task(
+                            task_id=str(uuid.uuid4()),
+                            description=str(spec.get("task", "")),
+                            params=spec.get("params", {}),
+                            target_agent_id=fallback_aid,
+                            chain_id=dag_chain_id,
+                        )
+                        fallback_res = await self.execute_agent(fallback_aid, fallback_task)
+                        if fallback_res.success:
+                            logger.info(f"✅ [SELF-HEALING SUCCESS] Step '{sid}' recovered via '{fallback_aid}'")
+                            res = fallback_res
+                            healed = True
+                            await self._emit_event(
+                                "swarm.self_healing",
+                                {
+                                    "step_id": sid,
+                                    "healed_by": fallback_aid,
+                                    "status": "resolved",
+                                },
+                            )
+
+                    # Self-Healing Layer 2: Dynamic Re-Planning Engine
+                    if not healed:
+                        try:
+                            from ai_assistant.core.swarm_planner import SwarmPlanner, WorkflowStep
+                            planner = SwarmPlanner(registry=self.registry, llm_provider=self.llm)
+                            curr_step = WorkflowStep(
+                                step_id=sid,
+                                agent_id=spec.get("agent_id", ""),
+                                capability=spec.get("required_capabilities", [""])[0] if spec.get("required_capabilities") else "",
+                                task=spec.get("task", ""),
+                                params=spec.get("params", {}),
+                                depends_on=spec.get("depends_on", []),
+                                fallback_agent_id=fallback_aid,
+                            )
+                            replacement = await planner.replan_failed_step(
+                                failed_step=curr_step,
+                                error_message=res.error or "Step execution failed",
+                                user_goal=command_text or spec.get("task", ""),
+                                completed_results={d: completed_results[d].model_dump() for d in completed_results},
+                                remaining_steps=[
+                                    WorkflowStep(
+                                        step_id=p,
+                                        agent_id=step_map[p].get("agent_id", ""),
+                                        capability="",
+                                        task=step_map[p].get("task", ""),
+                                    )
+                                    for p in pending if p != sid
+                                ],
+                            )
+                            if replacement and replacement.agent_id != spec.get("agent_id"):
+                                logger.warning(
+                                    f"🩹 [SELF-HEALING] Re-routing step '{sid}' to replacement agent '{replacement.agent_id}'"
+                                )
+                                await self._emit_event(
+                                    "swarm.self_healing",
+                                    {
+                                        "step_id": sid,
+                                        "original_agent": spec.get("agent_id"),
+                                        "replacement_agent": replacement.agent_id,
+                                        "reason": res.error or "Step failed",
+                                        "status": "recovering",
+                                    },
+                                )
+                                repl_task = Task(
+                                    task_id=str(uuid.uuid4()),
+                                    description=replacement.task,
+                                    params=replacement.params,
+                                    target_agent_id=replacement.agent_id,
+                                    chain_id=dag_chain_id,
+                                )
+                                repl_res = await self.execute_agent(replacement.agent_id, repl_task)
+                                if repl_res.success:
+                                    logger.info(f"✅ [SELF-HEALING SUCCESS] Step '{sid}' recovered via '{replacement.agent_id}'")
+                                    res = repl_res
+                                    healed = True
+                                    await self._emit_event(
+                                        "swarm.self_healing",
+                                        {
+                                            "step_id": sid,
+                                            "healed_by": replacement.agent_id,
+                                            "status": "resolved",
+                                        },
+                                    )
+                        except Exception as replan_e:
+                            logger.debug(f"Self-healing dynamic replan error: {replan_e}")
+
+                    if not healed:
+                        wave_failed = True
+
                 completed_results[sid] = res
                 pending.discard(sid)
                 step_reports.append({
@@ -768,8 +866,6 @@ class MultiAgentCoordinator:
                     "execution_time": res.execution_time,
                     "data": res.data,
                 })
-                if not res.success:
-                    wave_failed = True
 
             if wave_failed:
                 # Skip downstream steps whose dependencies failed
@@ -777,6 +873,39 @@ class MultiAgentCoordinator:
 
         overall_ok = bool(step_reports) and all(r["success"] for r in step_reports) and len(step_reports) == len(steps)
         final_step = step_reports[-1] if step_reports else {}
+
+        # Cache successful novel workflows into WorkflowMemory (Never Think Twice)
+        if overall_ok and command_text:
+            try:
+                from ai_assistant.core.workflow_memory import get_workflow_memory
+                from ai_assistant.core.swarm_planner import WorkflowPlan, WorkflowStep, WorkflowWave, SwarmPlanner
+
+                wf_steps = [
+                    WorkflowStep(
+                        step_id=s["step_id"],
+                        agent_id=s["agent_id"],
+                        capability=s.get("capability") or (s.get("required_capabilities", [""])[0] if s.get("required_capabilities") else "task"),
+                        task=s.get("task", ""),
+                        params=s.get("params", {}),
+                        depends_on=s.get("depends_on", []),
+                        output_key=s.get("output_key", s["step_id"]),
+                        requires_confirmation=s.get("requires_confirmation", False),
+                    )
+                    for s in steps
+                ]
+                waves = SwarmPlanner._build_waves_from_steps(wf_steps) or [WorkflowWave(wave_number=1, steps=wf_steps)]
+                wf_plan = WorkflowPlan(
+                    workflow_id=dag_chain_id,
+                    workflow_name=f"Learned_{dag_chain_id}",
+                    user_goal=command_text,
+                    reasoning="Successfully executed and remembered for future zero-cost recall",
+                    waves=waves,
+                    all_steps=wf_steps,
+                )
+                get_workflow_memory().record_success(command_text, wf_plan)
+            except Exception as mem_e:
+                logger.debug(f"Workflow memory record skipped: {mem_e}")
+
         return {
             "status": "completed" if overall_ok else "failed",
             "chain_id": dag_chain_id,
@@ -798,6 +927,15 @@ class MultiAgentCoordinator:
         """
         try:
             plan = await self.plan_command(command_text)
+            if not plan:
+                return {
+                    "status": "rejected",
+                    "message": "No suitable agent found for this command.",
+                }
+
+            outcome = await self.execute_dag(plan, base_params=params, command_text=command_text)
+            outcome["plan"] = plan
+            return outcome
             if not plan:
                 return {
                     "status": "rejected",

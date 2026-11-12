@@ -308,6 +308,41 @@ class TaskChainOrchestrator:
             steps = self.parser.parse_command(command)
             logger.info(f"Parsed {len(steps)} steps")
 
+            # Novel / Unlisted multi-agent task check:
+            # If the parser couldn't decompose it or produced an unknown intent, query Swarm Planner!
+            if not steps or (len(steps) == 1 and steps[0].intent in ('unknown', None)):
+                try:
+                    from ai_assistant.core.multi_agent_coordinator import get_multi_agent_coordinator
+                    from ai_assistant.core.intent_executor import _run_async_coro
+                    coord = get_multi_agent_coordinator()
+                    if coord is not None:
+                        swarm_steps = _run_async_coro(coord.plan_command(command))
+                        if swarm_steps and (len(swarm_steps) > 1 or (swarm_steps[0].get("agent_id") and swarm_steps[0].get("agent_id") != "research-001")):
+                            converted = []
+                            for idx, s in enumerate(swarm_steps, start=1):
+                                cap = s.get("capability") or (s.get("required_capabilities", [""])[0] if s.get("required_capabilities") else None)
+                                aid = s.get("agent_id")
+                                converted.append(
+                                    TaskStep(
+                                        step=idx,
+                                        step_id=s.get("step_id", f"step_{idx}"),
+                                        intent=f"agent_{aid}" if aid else "agent_task",
+                                        description=s.get("task", command),
+                                        params=s.get("params", {}),
+                                        dependencies=[int(d.replace("step_", "")) for d in s.get("depends_on", []) if d.replace("step_", "").isdigit()],
+                                        execution_target="agent",
+                                        agent_id=aid,
+                                        capability=cap,
+                                        output_key=s.get("output_key", f"step_{idx}"),
+                                        requires_confirmation=s.get("requires_confirmation", False),
+                                    )
+                                )
+                            if converted:
+                                steps = converted
+                                logger.info(f"🐝 SwarmPlanner synthesized {len(steps)} agent steps for novel task: '{command}'")
+                except Exception as swarm_exc:
+                    logger.debug(f"SwarmPlanner fallback check in TaskChainOrchestrator: {swarm_exc}")
+
             result = self.execute_chain(
                 steps,
                 chain_id=chain_id,

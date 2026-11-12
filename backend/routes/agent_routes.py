@@ -850,3 +850,67 @@ def api_cancel_agent_task(task_id: str):
     except Exception as exc:
         logger.error(f"Failed to cancel agent task '{task_id}': {exc}", exc_info=True)
         return jsonify({"success": False, "error": str(exc)}), 500
+
+
+# =============================================================================
+# WORKFLOW MEMORY & DYNAMIC SWARM SYNTHESIZER APIS
+# =============================================================================
+
+@agent_bp.route("/api/agents/workflows", methods=["GET", "OPTIONS"])
+@jwt_required(optional=True)
+def api_list_workflow_recipes():
+    """List all saved macro workflow recipes learned by the swarm."""
+    if request.method == "OPTIONS":
+        return ("", 204)
+    try:
+        from ai_assistant.core.workflow_memory import get_workflow_memory
+        recipes = get_workflow_memory().list_all_recipes()
+        return jsonify({"success": True, "recipes": recipes, "count": len(recipes)})
+    except Exception as exc:
+        logger.error(f"Failed to list workflow recipes: {exc}", exc_info=True)
+        return jsonify({"success": False, "error": str(exc)}), 500
+
+
+@agent_bp.route("/api/agents/workflows/synthesize", methods=["POST", "OPTIONS"])
+@jwt_required(optional=True)
+def api_synthesize_workflow():
+    """
+    Synthesize an execution DAG for an unlisted/novel user goal via SwarmPlanner.
+    Returns the wave breakdown, agent assignments, and reasoning.
+    """
+    if request.method == "OPTIONS":
+        return ("", 204)
+    try:
+        data = request.get_json(silent=True) or {}
+        goal = (data.get("goal") or data.get("command") or data.get("task") or "").strip()
+        if not goal:
+            return jsonify({"success": False, "error": "Field 'goal' is required"}), 400
+
+        from ai_assistant.core.swarm_planner import SwarmPlanner
+        registry, coordinator = get_agent_registry_and_coordinator()
+        planner = SwarmPlanner(registry=registry, llm_provider=getattr(coordinator, "llm", None))
+        
+        plan = run_async(planner.plan_workflow(goal))
+        return jsonify({
+            "success": True,
+            "workflow": plan.to_dict() if plan else None,
+            "cached": False,
+        })
+    except Exception as exc:
+        logger.error(f"Failed to synthesize workflow: {exc}", exc_info=True)
+        return jsonify({"success": False, "error": str(exc)}), 500
+
+
+@agent_bp.route("/api/agents/workflows/clear", methods=["POST", "OPTIONS"])
+@jwt_required(optional=True)
+def api_clear_workflow_memory():
+    """Clear all cached workflow recipes."""
+    if request.method == "OPTIONS":
+        return ("", 204)
+    try:
+        from ai_assistant.core.workflow_memory import get_workflow_memory
+        get_workflow_memory().clear_memory()
+        return jsonify({"success": True, "message": "Workflow memory cleared successfully"})
+    except Exception as exc:
+        logger.error(f"Failed to clear workflow memory: {exc}", exc_info=True)
+        return jsonify({"success": False, "error": str(exc)}), 500

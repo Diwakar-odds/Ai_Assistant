@@ -104,10 +104,16 @@ class UserDNA:
         preferences = []
         work = []
         hobbies = []
+        events = []
+        habits = []
         
         for k, v in profile.items():
             if k == "user_name": continue
-            if "name" in k or "friend" in k or "spouse" in k or "partner" in k:
+            if "upcoming" in k or "exam" in k or "event" in k or "deadline" in k:
+                events.append(f"{k.replace('_', ' ').title()}: {v}")
+            elif "habit" in k or "routine" in k:
+                habits.append(f"{k.replace('_', ' ').title()}: {v}")
+            elif "name" in k or "friend" in k or "spouse" in k or "partner" in k:
                 relationships.append(f"{k.replace('_', ' ').title()}: {v}")
             elif "like" in k or "favorite" in k or "prefer" in k:
                 preferences.append(f"{k.replace('_', ' ').title()}: {v}")
@@ -116,6 +122,8 @@ class UserDNA:
             elif "hobby" in k or "interest" in k or "play" in k:
                 hobbies.append(f"{k.replace('_', ' ').title()}: {v}")
                 
+        if events: context_parts.append("Upcoming Events & Deadlines: " + ", ".join(events))
+        if habits: context_parts.append("Work & Lifestyle Habits: " + ", ".join(habits))
         if work: context_parts.append("Professional: " + ", ".join(work))
         if relationships: context_parts.append("Relationships: " + ", ".join(relationships))
         if preferences: context_parts.append("Preferences: " + ", ".join(preferences))
