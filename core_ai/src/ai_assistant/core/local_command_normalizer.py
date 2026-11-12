@@ -225,13 +225,56 @@ _DEVANAGARI_AND_HINGLISH_PHRASES: Dict[str, str] = {
     "शिफ्ट": "switch",
 
     # --- Media / Playback / Volume ---
+    "ले नेख सों": "next song",
+    "ले नेक्स सों": "next song",
+    "ले नेख सोंग": "next song",
+    "ले नेक्स सोंग": "next song",
+    "नेख सों": "next song",
+    "नेक्स सोंग": "next song",
+    "नेक्स सांग": "next song",
+    "नेक्स्ट सोंग": "next song",
+    "नेक्स्ट सांग": "next song",
     "नेक्स्ट सॉन्ग": "next song",
+    "नेक्स्ट गाना": "next song",
+    "नेक्स्ट ट्रैक": "next song",
+    "प्ले नेक्स्ट सांग": "play next song",
+    "प्ले नेक्स्ट सॉन्ग": "play next song",
+    "प्ले नेक्स्ट गाना": "play next song",
+    "प्ले नेक्स्ट": "play next song",
+    "प्ले नेक्स": "play next song",
+    "प्ले नेख": "play next song",
+    "ले नेख": "next song",
+    "ले नेक्स": "next song",
     "अगला गाना": "next song",
+    "अगला सोंग": "next song",
+    "अगला सांग": "next song",
+    "गाना बदलो": "next song",
     "प्रीवियस सॉन्ग": "previous song",
+    "प्रीवियस सोंग": "previous song",
+    "प्रीवियस सांग": "previous song",
     "पिछला गाना": "previous song",
+    "पिछला सोंग": "previous song",
+    "पिछला सांग": "previous song",
     "स्किप करो": "skip karo",
     "पॉज़ करो": "pause karo",
     "पॉज करो": "pause karo",
+    "पाउज करो": "pause karo",
+    "पाउस करो": "pause karo",
+    "पॉज़ सोंग": "pause song",
+    "पॉज सोंग": "pause song",
+    "पाउज सोंग": "pause song",
+    "पाउस सोंग": "pause song",
+    "पॉज़ गाना": "pause song",
+    "पॉज गाना": "pause song",
+    "गाना रोको": "pause song",
+    "गाना रोक दो": "pause song",
+    "गाना बंद करो": "pause song",
+    "म्यूजिक रोको": "pause song",
+    "म्यूजिक बंद": "pause song",
+    "गाना चालू करो": "resume song",
+    "गाना चलाओ": "resume song",
+    "म्यूजिक चलाओ": "resume song",
+    "म्यूजिक चालू करो": "resume song",
     "गाना": "gaana",
     "गीत": "gaana",
     "सॉन्ग": "song",
@@ -842,6 +885,13 @@ def parse_voice_control_command(text: str) -> Optional[Dict[str, Any]]:
         if any(tok in norm for tok in ("on", "show", "enable", "chalu", "open", "start")):
             return {"action": "toggle_desktop_overlay", "enabled": True, "raw": target_text}
 
+    # 6b. Screen share stealth / capture invisibility (Parakeet AI mode)
+    if ("screen share" in norm or "stealth mode" in norm or "stealth" in norm) and not any(k in norm for k in ("screenshot", "screen shot", "screen padho", "screen check")):
+        if any(tok in norm for tok in ("off", "disable", "band", "show", "visible", "deactivate", "hatao", "dikhao", "dikhaye")):
+            return {"action": "toggle_screen_share_stealth", "enabled": False, "raw": target_text}
+        if any(tok in norm for tok in ("on", "enable", "chalu", "hide", "invisible", "activate", "laga", "karo", "chupao", "chupa")):
+            return {"action": "toggle_screen_share_stealth", "enabled": True, "raw": target_text}
+
     # 7. STT speech recognition language
     if any(tok in norm for tok in ("language", "stt", "speak in", "talk in", "hindi mein suno", "english mein suno")):
         if "hindi" in norm or "hinglish" in norm:
@@ -1119,6 +1169,18 @@ def execute_voice_control_command(
             "success": True,
             "response": f"Desktop 4D orb overlay ab {state_word} hai.",
             "tts": f"Desktop overlay {'shown' if enabled else 'hidden'}.",
+            "execution_meta": {"provider_used": "local_voice_control"},
+        }
+
+    if action == "toggle_screen_share_stealth":
+        enabled = bool(parsed.get("enabled", True))
+        if sm:
+            sm.update_settings_and_sync("system", {"screenShareStealth": enabled}, broadcast_fn=broadcast_fn)
+        state_word = "ON (Screen share mein invisible)" if enabled else "OFF (Screen share mein visible)"
+        return {
+            "success": True,
+            "response": f"Screen share stealth mode ab {state_word} hai.",
+            "tts": f"Screen share stealth mode {'enabled' if enabled else 'disabled'}.",
             "execution_meta": {"provider_used": "local_voice_control"},
         }
 

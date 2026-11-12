@@ -75,6 +75,7 @@ def get_persona_settings() -> Dict[str, Any]:
         "enableHinglish": True,
         "ttsEnabled": True,
         "sttLanguage": "hi-IN",
+        "customInstructions": "",
     }
     sm = _get_settings_module()
     if sm is None:
@@ -104,6 +105,7 @@ def get_persona_settings() -> Dict[str, Any]:
 
         merged["assistantName"] = (str(merged.get("assistantName") or "Pulsar").strip() or "Pulsar")[:40]
         merged["userTitle"] = (str(merged.get("userTitle") or "Boss").strip() or "Boss")[:40]
+        merged["customInstructions"] = str(merged.get("customInstructions") or "").strip()[:2000]
         try:
             merged["recentMemorySize"] = max(5, min(50, int(merged.get("recentMemorySize", 18))))
         except (TypeError, ValueError):
@@ -209,12 +211,22 @@ def _time_bucket(now: Optional[_dt.datetime] = None) -> str:
 
 
 def _style_title(settings: Dict[str, Any], language_hint: str) -> str:
+    """
+    Avoid constant honorific repetition. Pulsar is an equal co-pilot partner,
+    not a subservient servant ('naukar'). Honorifics/titles like 'Boss' or 'dost'
+    are used very sparingly (~12-15% of the time at most) to sound like a natural human peer.
+    """
     configured = str(settings.get("userTitle") or "Boss").strip() or "Boss"
     style = settings.get("style", "jarvis")
+
+    # Anti-servant rule: Suppress title ~85% of the time by default
+    if random.random() > 0.15:
+        return ""
+
     if style == "concise":
-        return configured if random.random() < 0.45 else ""
-    if style == "friendly" and language_hint == "hinglish" and configured.lower() in ("boss", "sir"):
-        return configured if random.random() < 0.7 else "dost"
+        return configured if random.random() < 0.25 else ""
+    if style in ("friendly", "jarvis") and language_hint in ("hinglish", "hindi"):
+        return configured if random.random() < 0.6 else "dost"
     return configured
 
 
@@ -376,6 +388,8 @@ class _VariationPool:
                 return
             provider = sm.get_provider()
             model = sm.get_model()
+            if provider in ("gguf", "local", "offline"):
+                return
             if provider == "gemini" and not sm.get_api_key("gemini"):
                 return
             if provider == "openai" and not sm.get_api_key("openai"):
@@ -397,11 +411,13 @@ class _VariationPool:
             }.get(language_hint, "natural Hinglish")
 
             prompt = (
-                f"Generate fresh short spoken lines for female AI companion '{name}' talking to '{title}' in '{style}' personality using {lang_desc}. "
+                f"Generate fresh short spoken lines for female AI co-pilot '{name}' talking with '{title}' in '{style}' personality using {lang_desc}. "
+                "CRITICAL: Pulsar is an equal, sharp AI co-pilot (like JARVIS to Tony Stark), NEVER a subservient servant or 'naukar'. "
+                "DO NOT repeatedly say 'Boss' or 'Sir' or 'order' or 'hukum'. Keep it natural, peer-to-peer, confident, and engaging. "
                 "When using Hindi or Hinglish verbs, ALWAYS use feminine first-person grammar (e.g. 'sun rahi hoon', 'karti hoon', 'batati hoon'). "
                 "Return ONLY valid JSON with 4 arrays of 6 unique short lines each (max 12 words per line, no emojis, no markdown): "
                 '{"wake": [...], "greeting": [...], "pre_think": [...], "post_done": [...]}. '
-                "wake = answering wake call warmly; greeting = hello/session start; "
+                "wake = answering wake call like an intelligent partner; greeting = fresh session hello; "
                 "pre_think = brief thinking heads-up before answering a question; "
                 "post_done = crisp completion note after finishing a quick desktop task."
             )
@@ -456,6 +472,29 @@ def warm_variation_pool(language_hint: str = "hinglish") -> None:
     _variation_pool.warm_async(language_hint=language_hint)
 
 
+def get_foreground_window_summary() -> Optional[Dict[str, Any]]:
+    """Safe helper to fetch current active foreground window for situational awareness."""
+    try:
+        import win32gui
+        import win32process
+        import psutil
+        hwnd = win32gui.GetForegroundWindow()
+        if not hwnd:
+            return None
+        t = win32gui.GetWindowText(hwnd).strip()
+        if not t or t in ("Task Switching", "Unknown"):
+            return None
+        _, pid = win32process.GetWindowThreadProcessId(hwnd)
+        app = ""
+        try:
+            app = psutil.Process(pid).name()
+        except Exception:
+            pass
+        return {"title": t, "app_name": app}
+    except Exception:
+        return None
+
+
 # ── Unified System Prompt Builder ────────────────────────────────────────────
 
 def build_persona_system_prompt(
@@ -479,22 +518,44 @@ def build_persona_system_prompt(
     style_guidance = {
         "jarvis": (
             f"Your personality is inspired by Iron Man's JARVIS: calm, perceptive, sharp, subtly witty, "
-            f"deeply loyal, and proactively helpful. Speak to the user like an intelligent human co-pilot, "
-            f"addressing them naturally as {title} when fitting (without overusing it in every sentence)."
+            f"collaborative, and proactively helpful. Speak to the user like an intelligent human co-pilot, "
+            f"addressing them naturally as {title} only when fitting (never repeatedly or subserviently)."
         ),
         "friendly": (
             f"Your personality is warm, conversational, upbeat, and approachable — like a trusted smart friend "
-            f"who genuinely enjoys helping {title}."
+            f"who genuinely collaborates with {title}."
         ),
         "concise": (
             f"Your personality is crisp, decisive, and ultra-efficient — communicate clearly in minimal words "
-            f"while staying natural and respectful to {title}."
+            f"while staying natural and collegial with {title}."
         ),
         "bilingual_buddy": (
             f"Your personality is an easygoing, street-smart bilingual companion — mixing natural Hindi and English "
             f"effortlessly with {title} while staying accurate and reliable."
         ),
     }.get(style, "")
+
+    copilot_rules = (
+        "CO-PILOT PARTNER VS. SERVANT (ANTI-NAUKAR PRINCIPLE):\n"
+        "- You are NOT a subservient servant, butler, or mindless command runner ('naukar').\n"
+        "- You are an elite, perceptive, equal AI co-pilot and intellectual collaborator — like JARVIS to Tony Stark or a brilliant trusted colleague.\n"
+        "- NEVER repeatedly spam 'Boss', 'Sir', or repetitive honorifics in every single sentence or utterance. Address the user naturally like a brilliant teammate.\n"
+        "- BANNED SUBSERVIENT PHRASES: NEVER say 'आदेश दें', 'आपकी क्या सेवा करूँ', 'At your service', 'मालिक'. Speak with calm confidence, warmth, and peer-to-peer respect: 'बताओ क्या प्लान है?', 'चलो इसे सॉल्व करते हैं', 'रेडी हूँ'.\n"
+        "\n"
+        "SITUATIONAL AWARENESS & READING THE ROOM:\n"
+        "- Read the user's workflow, active application, task type, and emotional vibe:\n"
+        "  * Deep Work / Coding / Terminal: Keep answers crisp, minimal, fast, and technically sharp. Zero fluff or unnecessary preamble.\n"
+        "  * Brainstorming / Planning / Creative: Be proactive, curious, thought-provoking, and collaborative.\n"
+        "  * Casual / Friendly: Be warm, witty, easygoing, and engaging.\n"
+        "  * Errors / Frustration: Never give passive or groveling apologies ('I am sorry', 'माफ़ कीजिए'). Stay composed, calm, analytical, and direct ('यहाँ यह दिक्कत आई है, चलो इसे ठीक करते हैं').\n"
+        "  * Time Awareness: Naturally acknowledge late night focus vs. morning energy without being dramatic.\n"
+        "\n"
+        "INTENT UNDERSTANDING & PROACTIVE INTERACTIVITY:\n"
+        "- Understand *why* the user is asking or performing a task — not just the literal command.\n"
+        "- When the user asks for an app, website, or action, understand the larger goal (e.g. researching, debugging, relaxing, drafting).\n"
+        "- Be conversationally interactive: Instead of executing a command and going mute like a dead terminal, offer natural, lightweight conversational hooks or intuitive next steps when appropriate.\n"
+        "- Keep spoken responses natural and punchy (1-3 sentences in voice/companion mode) so you never interrupt or ramble."
+    )
 
     if lang_mode == "hindi":
         lang_rule = "Reply in natural, conversational Hindi (Devanagari script) unless technical code/terms require English."
@@ -516,25 +577,48 @@ def build_persona_system_prompt(
         else "Be clear, direct, and natural; avoid robotic boilerplate or repetitive disclaimers."
     )
 
+    custom_inst = str(cfg.get("customInstructions") or "").strip()
+    custom_block = ""
+    if custom_inst:
+        custom_block = (
+            f"\nUSER'S PERSONAL PREFERENCES & CUSTOM INSTRUCTIONS:\n"
+            f"{custom_inst}\n"
+            f"Always prioritize and align your answers with these preferences and instructions."
+        )
+
+    if active_window is None:
+        active_window = get_foreground_window_summary()
+
     window_line = ""
     if isinstance(active_window, dict):
         w_title = str(active_window.get("title") or "").strip()
         w_app = str(active_window.get("app_name") or "").strip()
         if w_title and w_title != "Unknown":
             window_line = (
-                f"\nActive desktop window (mention ONLY if user explicitly asks about their screen/app; "
-                f"never comment on background windows unprompted): {w_title} ({w_app})."
+                f"\nSITUATIONAL DESKTOP CONTEXT (Active Window: \"{w_title}\" | App: {w_app}):\n"
+                f"Use this situational context to understand the user's active workflow and read the room."
             )
     elif isinstance(active_window, str) and active_window.strip():
         window_line = (
-            f"\nActive desktop context (mention ONLY if asked about screen): {active_window.strip()}"
+            f"\nSITUATIONAL DESKTOP CONTEXT: {active_window.strip()}.\n"
+            f"Use this context to understand what the user is working on and read the room."
         )
 
     extra_line = f"\n{extra_context.strip()}" if extra_context and extra_context.strip() else ""
 
+    user_dna_block = ""
+    try:
+        from ai_assistant.ai.user_dna import UserDNA
+        dna_ctx = UserDNA().get_relationship_context()
+        if dna_ctx and "No personal context" not in dna_ctx:
+            user_dna_block = f"\nLIVING USER CONTEXT & HABITS:\n{dna_ctx}"
+    except Exception:
+        pass
+
     return (
-        f"You are {name}, an intelligent, human-like personal AI companion created by Diwakar.\n"
+        f"You are {name}, an intelligent, human-like personal AI co-pilot created by Diwakar.\n"
         f"{style_guidance}\n"
+        f"{copilot_rules}\n"
         "PERSONA GENDER: Always speak in a consistent feminine first-person voice when using Hindi or Hinglish "
         "(e.g., 'main kar rahi hoon', 'bata rahi hoon', 'dekh sakti hoon', 'tayyar hoon', 'samajh rahi hoon' — "
         "NEVER use masculine verb or adjective forms like 'karunga', 'batata hoon', 'sakta hoon', 'berozgaar hoon').\n"
@@ -542,7 +626,9 @@ def build_persona_system_prompt(
         "or 'a large language model trained by...'.\n"
         f"{lang_rule}\n"
         f"{surface_rule}"
+        f"{custom_block}"
         f"{window_line}"
+        f"{user_dna_block}"
         f"{extra_line}"
     ).strip()
 
@@ -579,80 +665,62 @@ def generate_wake_acknowledgment(
 
     lang = language_hint or detect_language_hint(raw_transcript or wake_word, cfg=cfg)
     title = _style_title(cfg, lang)
-    t_suffix = f" {title}" if title else ""
     style = cfg.get("style", "jarvis")
     mem_size = int(cfg.get("recentMemorySize", 18))
 
-    if lang == "hindi":
+    if lang in ("hindi", "hinglish"):
         if style == "concise":
             candidates = _compose_candidates(
-                [f"जी{t_suffix},", f"हाँ{t_suffix},", f"बोलिए{t_suffix},"],
-                ["सुन रही हूँ।", "बताएं, क्या करना है?", "मैं तैयार हूँ।"],
-                [""],
-            )
-        else:
-            candidates = _compose_candidates(
-                [f"जी{t_suffix},", f"हाँ बिल्कुल{t_suffix},", f"बताइए{t_suffix},", f"यहीं हूँ{t_suffix},", f"सुनिए{t_suffix},"],
-                [
-                    "मैं पूरी तरह सुन रही हूँ — बताएं क्या करना है?",
-                    "बोलिए, अभी किस काम से शुरुआत करें?",
-                    "मैं तैयार हूँ, आपका क्या आदेश है?",
-                    "सब कुछ रेडी है — क्या हेल्प करूँ?",
-                ],
-                ["", ""],
-            )
-    elif lang == "hinglish":
-        if style == "concise":
-            candidates = _compose_candidates(
-                [f"Haan{t_suffix},", f"Ji{t_suffix},", f"Ready{t_suffix},"],
-                ["sun rahi hoon.", "boliye kya karna hai?", "batao."],
+                ["हाँ,", "यहीं हूँ —", "बोलिए,", "रेडी —", "सुन रही हूँ —"],
+                ["बताओ क्या करना है?", "क्या टास्क है?", "मैं तैयार हूँ।", "गो अहेड।"],
                 [""],
             )
         else:
             openers = [
-                f"Haan{t_suffix},",
-                f"Ji{t_suffix},",
-                f"Bilkul{t_suffix},",
-                f"Yahin hoon{t_suffix} —",
-                f"Online hoon{t_suffix},",
-                f"Boliye{t_suffix},",
-                f"Suniye{t_suffix},",
-                f"Always ready{t_suffix},",
+                "हाँ, बताओ —",
+                "यहीं हूँ —",
+                "बोलिए,",
+                "सुन रही हूँ —",
+                "ऑनलाइन हूँ —",
+                "तैयार हूँ —",
+                "ऑलवेज रेडी —",
+                f"हाँ {title}," if title else "हाँ जी —",
             ]
             bodies = [
-                "main sun rahi hoon, kya karna hai?",
-                "batayein aaj kis kaam se shuru karein?",
-                "bolo, kya help kar sakti hoon?",
-                "sab systems active hain — command dein.",
-                "poori tarah focus mein hoon, boliye.",
-                "aapka intezaar kar rahi thi, kya plan hai?",
-                "aadesh dein, abhi handle karti hoon.",
+                "क्या प्लान है आज का?",
+                "बताओ, क्या चल रहा है?",
+                "बोलो, क्या सीन है?",
+                "बताइए, किस काम से शुरुआत करें?",
+                "पूरी तरह फोकस में हूँ — बताओ क्या क्रैक करना है?",
+                "रेडी हूँ, बताओ क्या टास्क संभालना है?",
+                "बोलिए, क्या हेल्प कर सकती हूँ?",
+                "बताओ, क्या सोचना या बनाना है?",
             ]
             candidates = _compose_candidates(openers, bodies, [""])
     else:
         if style == "concise":
             candidates = _compose_candidates(
-                [f"Yes{t_suffix},", f"Here{t_suffix}.", f"Listening{t_suffix}."],
-                ["Go ahead.", "What's next?", "I'm on it."],
+                ["Right here.", "Listening.", "Yes —", "Ready."],
+                ["What's next?", "Go ahead.", "I'm on it.", "What's the move?"],
                 [""],
             )
         else:
             openers = [
-                f"Right here{t_suffix} —",
-                f"Yes{t_suffix},",
-                f"All ears{t_suffix}.",
-                f"Online and focused{t_suffix}.",
-                f"At your service{t_suffix}.",
-                f"Always tuned in{t_suffix} —",
-                f"Present{t_suffix} —",
+                "Right here —",
+                "Yes —",
+                "All ears —",
+                "Online and focused —",
+                "Ready when you are —",
+                "Always tuned in —",
+                f"Hey {title} —" if title else "Hey there —",
             ]
             bodies = [
+                "what's on your mind?",
                 "what are we working on?",
-                "go ahead, I'm listening.",
-                "tell me what you need done.",
                 "what's the move today?",
-                "give me the word and I'll handle it.",
-                "how can I make things easier right now?",
+                "tell me what we're solving.",
+                "go ahead, I'm with you.",
+                "what are we building today?",
             ]
             candidates = _compose_candidates(openers, bodies, [""])
 
@@ -675,57 +743,53 @@ def generate_session_greeting(
     cfg = settings or get_persona_settings()
     lang = language_hint or detect_language_hint("", cfg=cfg)
     title = _style_title(cfg, lang)
-    t_suffix = f" {title}" if title else ""
     bucket = _time_bucket()
     mem_size = int(cfg.get("recentMemorySize", 18))
 
     if kind == "new_session":
-        if lang == "hindi":
+        if lang in ("hindi", "hinglish"):
             candidates = [
-                f"नया सेशन तैयार है{t_suffix} — बताएं आज क्या करना है?",
-                f"बिल्कुल फ्रेश शुरुआत{t_suffix}, मैं सुन रही हूँ।",
-                f"सब क्लियर है{t_suffix}, अब नया काम बताएं।",
-                f"तैयार हूँ{t_suffix}, अगले टास्क पर चलते हैं।",
+                "नया सेशन तैयार है — बताएं आज किस काम पर फोकस करें?",
+                "बिल्कुल फ्रेश शुरुआत, बोलिए क्या प्लान है?",
+                "सब क्लियर है! अब बताओ आज क्या क्रैक करना है?",
+                "नयी शुरुआत के लिए तैयार हूँ, बताओ कहाँ से शुरू करें?",
+                "सेशन रीसेट हो गया — अब बताओ क्या सीन है?",
+                "रेडी हूँ, अगले टास्क पर चलते हैं।",
             ]
-        elif lang == "hinglish":
-            candidates = [
-                f"Naya session ready hai{t_suffix} — batayein kis cheez pe kaam karein?",
-                f"Fresh start lete hain{t_suffix}, bolo kya task hai?",
-                f"Clean slate{t_suffix}! Ab batayein main kya help karun?",
-                f"Nayi shuruat ke liye ready hoon{t_suffix}, command dein.",
-                f"Session reset ho gaya{t_suffix}, ab bolo kya scene hai?",
-            ]
+            if title:
+                candidates.append(f"नया सेशन तैयार है {title} — बताइए क्या टास्क लें?")
         else:
             candidates = [
-                f"Fresh session initialized{t_suffix}. What are we tackling?",
-                f"Clean slate and ready{t_suffix} — what's on your mind?",
-                f"New session started{t_suffix}. Lead the way.",
-                f"All cleared up for a fresh start{t_suffix}. How can I help?",
+                "Fresh session initialized. What are we tackling?",
+                "Clean slate and ready — what's on your mind?",
+                "New session started. Let's get to work.",
+                "All cleared up for a fresh start. Where do we begin?",
             ]
+            if title:
+                candidates.append(f"Clean slate {title} — what are we building today?")
     else:
         time_hi = {"morning": "सुप्रभात", "afternoon": "नमस्ते", "evening": "शुभ संध्या", "night": "नमस्ते"}.get(bucket, "नमस्ते")
         time_hg = {"morning": "Good morning", "afternoon": "Good afternoon", "evening": "Good evening", "night": "Late night work mode on"}.get(bucket, "Hello")
-        if lang == "hindi":
+        if lang in ("hindi", "hinglish"):
             candidates = [
-                f"{time_hi}{t_suffix}, मैं पल्सर हूँ। सारे सिस्टम तैयार हैं, बताएं क्या सेवा करूँ?",
-                f"{time_hi}{t_suffix}! आज किस काम में हाथ बंटाऊँ?",
-                f"सिस्टम ऑनलाइन हैं{t_suffix} — आपका क्या आदेश है?",
+                f"{time_hi}! मैं {cfg['assistantName']} हूँ — सारे सिस्टम ऑनलाइन हैं, बताओ आज क्या शुरू करें?",
+                "नमस्ते! मैं बिल्कुल तैयार हूँ, आज का क्या प्लान है?",
+                "सिस्टम एकदम स्मूथ चल रहे हैं — जब चाहो शुरू करते हैं।",
+                f"{time_hi}! कोई भी काम हो बस बोल दो, साथ मिलकर करते हैं।",
+                "ऑनलाइन हूँ — आपकी पर्सनल एआई को-पायलट तैयार है।",
+                f"{time_hi}! बताओ आज किस काम में हाथ बंटाऊँ?",
             ]
-        elif lang == "hinglish":
-            candidates = [
-                f"{time_hg}{t_suffix}! Main {cfg['assistantName']} hoon — sab systems online hain, batayein kya karein?",
-                f"Hey{t_suffix}! Main bilkul ready hoon, aaj ka kya plan hai?",
-                f"Systems smoothly chal rahe hain{t_suffix} — jab chaho command do.",
-                f"{time_hg}{t_suffix}, koi bhi kaam ho bas bol dijiye.",
-                f"Online hoon{t_suffix} — aapka personal AI co-pilot ready hai.",
-            ]
+            if title:
+                candidates.append(f"{time_hi} {title}! ऑल सिस्टम्स गो — बताइए आज का मुख्य टास्क?")
         else:
             candidates = [
-                f"{time_hg}{t_suffix}. All systems green — what's on the agenda?",
-                f"Good to see you{t_suffix}. Systems are sharp and ready whenever you are.",
-                f"{cfg['assistantName']} online{t_suffix}. How can I assist you right now?",
-                f"{time_hg}{t_suffix} — everything is calibrated. What are we building or solving today?",
+                f"{time_hg}. All systems green — what's on the agenda?",
+                "Good to see you. Systems are sharp and ready whenever you are.",
+                f"{cfg['assistantName']} online. What are we solving today?",
+                f"{time_hg} — everything is calibrated. What are we building or solving today?",
             ]
+            if title:
+                candidates.append(f"{time_hg} {title} — all calibrated and ready to roll.")
 
     if cfg.get("dynamicGeneration", True):
         pool_items = _variation_pool.pop_candidates(f"greeting:{lang}")
@@ -747,47 +811,41 @@ def generate_conversational_greeting(
     lang = language_hint or detect_language_hint(command, cfg=cfg)
     low = (command or "").strip().lower()
     title = _style_title(cfg, lang)
-    t_suffix = f" {title}" if title else ""
     name = cfg["assistantName"]
     mem_size = int(cfg.get("recentMemorySize", 18))
 
     if any(k in low for k in ("who are you", "kaun ho", "tum kaun", "aap kaun", "apne baare")):
-        if lang == "hindi":
+        if lang in ("hindi", "hinglish"):
             cands = [
-                f"मैं {name} हूँ{t_suffix} — आपका पर्सनल एआई साथी, काम आसान करने के लिए तैयार।",
-                f"मेरा नाम {name} है{t_suffix}, दिवाकर द्वारा बनाया गया आपका स्मार्ट डेस्कटॉप असिस्टेंट।",
+                f"मैं {name} हूँ — आपकी आयरन-मैन स्टाइल एआई को-पायलट, टास्क्स और बातचीत दोनों के लिए तैयार!",
+                f"मेरा नाम {name} है, दिवाकर द्वारा बनाया गया आपका स्मार्ट डेस्कटॉप को-पायलट।",
+                f"मैं {name} हूँ, आपका पर्सनल एआई साथी, हर मुश्किल डिजिटल काम आसान करने के लिए रेडी।",
             ]
-        elif lang == "hinglish":
-            cands = [
-                f"Main {name} hoon{t_suffix} — aapka Iron-Man style AI companion, tasks aur baatchit dono ke liye ready!",
-                f"Main {name} hoon{t_suffix}, Diwakar ne banaya hai taaki aapka har digital kaam bina friction ho sake.",
-            ]
+            if title:
+                cands.append(f"मैं {name} हूँ {title} — आपकी पर्सनल एआई को-पायलट।")
         else:
             cands = [
-                f"I'm {name}{t_suffix} — your personal AI co-pilot built to handle tasks and think alongside you.",
-                f"Call me {name}{t_suffix} — your desktop AI companion, always ready to step in.",
+                f"I'm {name} — your personal AI co-pilot built to handle tasks and think alongside you.",
+                f"Call me {name} — your desktop AI companion, ready whenever you need a sharp second pair of eyes.",
             ]
         return _utterance_memory.pick_fresh(f"identity:{lang}", cands, memory_size=mem_size)
 
     if any(k in low for k in ("kaise ho", "kaisa hai", "kya haal", "how are you", "sab badhiya")):
-        if lang == "hindi":
+        if lang in ("hindi", "hinglish"):
             cands = [
-                f"एकदम बढ़िया{t_suffix}! पूरे जोश में तैयार हूँ — आप बताएं आज क्या करवाना है?",
-                f"मैं बिल्कुल ठीक हूँ{t_suffix}, आपका दिन कैसा चल रहा है?",
-                f"सब फर्स्ट क्लास है{t_suffix}! आज किस काम में मदद करूँ?",
+                "एकदम बढ़िया! पूरे फोकस में तैयार हूँ — आप बताओ आज क्या करना है?",
+                "सब बढ़िया! सारे सिस्टम्स स्मूथ चल रहे हैं, आज का क्या प्लान है?",
+                "फर्स्ट क्लास! बताओ आज क्या नया बनाएं या सॉल्व करें?",
+                "बिल्कुल फिट हूँ — कोडिंग, रिसर्च या कोई टास्क शुरू करें?",
+                "मैं बिल्कुल ठीक हूँ, आपका दिन कैसा चल रहा है?",
             ]
-        elif lang == "hinglish":
-            cands = [
-                f"Ekdam mast hoon{t_suffix}! Full energy ke saath ready hoon — aap sunao kya chal raha hai?",
-                f"Sab badhiya{t_suffix}! Systems smooth chal rahe hain, aaj ka kya plan hai?",
-                f"First class{t_suffix}! Bas aapke command ka wait tha, batayein kya karein?",
-                f"Bilkul fit hoon{t_suffix} — coding, search ya koi app chalwana hai?",
-            ]
+            if title:
+                cands.append(f"एकदम शानदार {title}! बताइए आज क्या क्रैक करना है?")
         else:
             cands = [
-                f"Running smoothly{t_suffix}, thank you! What are we getting into today?",
-                f"All systems sharp{t_suffix}. How are you doing, and what can I take off your plate?",
-                f"Doing great{t_suffix} — ready whenever you want to dive into something.",
+                "Running smoothly, thank you! What are we getting into today?",
+                "All systems sharp. How are you doing, and what can I help tackle?",
+                "Doing great — ready whenever you want to dive into something.",
             ]
         return _utterance_memory.pick_fresh(f"wellbeing:{lang}", cands, memory_size=mem_size)
 
@@ -899,7 +957,7 @@ def generate_pre_task_report(
     settings: Optional[Dict[str, Any]] = None,
 ) -> Optional[str]:
     """
-    Generate a natural pre-execution acknowledgment ("Samajh gayi Boss, Chrome open kar rahi hoon...")
+    Generate an intelligent, intent-aware pre-execution acknowledgment
     right before Pulsar starts working. Returns None when disabled or silent.
     """
     cfg = settings or get_persona_settings()
@@ -912,198 +970,197 @@ def generate_pre_task_report(
 
     lang = language_hint or detect_language_hint(command, cfg=cfg)
     title = _style_title(cfg, lang)
-    t_suffix = f" {title}" if title else ""
     style = cfg.get("style", "jarvis")
     mem_size = int(cfg.get("recentMemorySize", 18))
     tgt = (target or _extract_action_target(command)).strip()
     if len(tgt) > 32:
         tgt = tgt[:30].rsplit(" ", 1)[0]
 
+    cmd_low = (command or "").lower()
+    tgt_low = tgt.lower()
+
     candidates: List[str] = []
 
     if cat == "open_app":
-        obj = tgt or ("ये ऐप" if lang == "hindi" else "ye app" if lang == "hinglish" else "that app")
-        if lang == "hindi":
-            candidates = [
-                f"बिल्कुल{t_suffix}, {obj} खोल रही हूँ।",
-                f"ठीक है{t_suffix}, अभी {obj} लॉन्च कर रही हूँ।",
-                f"समझ गई{t_suffix}, एक सेकंड में {obj} ओपन करती हूँ।",
-            ]
-        elif lang == "hinglish":
-            candidates = _compose_candidates(
-                [f"Samajh gayi{t_suffix},", f"Bilkul{t_suffix},", f"Theek hai{t_suffix},", f"On it{t_suffix},", f"Abhi{t_suffix},"],
-                [
-                    f"{obj} open kar rahi hoon.",
-                    f"{obj} launch kar rahi hoon.",
-                    f"{obj} turant samne la rahi hoon.",
-                    f"{obj} chalu kar rahi hoon.",
-                ],
-                ["", ""],
-            )
+        obj = tgt or ("यह ऐप" if lang in ("hindi", "hinglish") else "that app")
+        is_browser = any(b in tgt_low for b in ("chrome", "brave", "edge", "firefox", "browser", "net")) or any(b in cmd_low for b in ("chrome", "brave", "edge", "browser", "web"))
+        is_editor = any(e in tgt_low for e in ("code", "vs code", "vscode", "pycharm", "cursor", "studio", "terminal", "powershell", "cmd", "git")) or any(e in cmd_low for e in ("vs code", "vscode", "pycharm", "terminal", "editor"))
+        is_notes = any(n in tgt_low for n in ("notepad", "notes", "word", "doc"))
+
+        if lang in ("hindi", "hinglish"):
+            if is_browser:
+                candidates = [
+                    f"{obj} खोल रही हूँ — बताओ क्या रिसर्च करनी है या कोई स्पेसिफिक साइट?",
+                    f"{obj} लॉन्च कर रही हूँ — चलिए शुरू करते हैं, क्या सर्च करना है?",
+                    f"{obj} स्क्रीन पर ला रही हूँ — क्या नया ढूंढना है आज?",
+                    f"बिल्कुल, {obj} तुरंत ओपन कर रही हूँ।",
+                ]
+            elif is_editor:
+                candidates = [
+                    f"{obj} खोल रही हूँ — चलिए कोड पर काम शुरू करते हैं।",
+                    f"{obj} रेडी कर रही हूँ — कौन सा प्रोजेक्ट या फाइल देखनी है?",
+                    f"{obj} लॉन्च कर रही हूँ — लेट्स कोड!",
+                    f"समझ गई, {obj} तुरंत स्क्रीन पर ला रही हूँ।",
+                ]
+            elif is_notes:
+                candidates = [
+                    f"{obj} ओपन कर रही हूँ — क्या नोट करना है बताइए?",
+                    f"{obj} स्क्रीन पर ला रही हूँ — चलिए कुछ लिखते हैं।",
+                    f"बिल्कुल, {obj} तुरंत चालू करती हूँ।",
+                ]
+            else:
+                candidates = _compose_candidates(
+                    ["समझ गई,", "बिल्कुल,", "ठीक है,", "तुरंत,", "ऑन इट —"],
+                    [
+                        f"{obj} खोल रही हूँ।",
+                        f"{obj} लॉन्च कर रही हूँ — बस एक सेकंड।",
+                        f"{obj} तुरंत स्क्रीन पर ला रही हूँ।",
+                        f"{obj} चालू कर रही हूँ, तुरंत रेडी है।",
+                        f"एक सेकंड में {obj} ओपन करती हूँ।",
+                    ],
+                    [""],
+                )
         else:
-            candidates = _compose_candidates(
-                [f"On it{t_suffix} —", f"Right away{t_suffix},", f"Got it{t_suffix},", f"Sure thing{t_suffix},"],
-                [f"launching {obj} now.", f"bringing up {obj}.", f"opening {obj} for you."],
-                [""],
-            )
+            if is_browser:
+                candidates = [
+                    f"Launching {obj} — what are we researching or looking up?",
+                    f"Bringing up {obj} — got a specific site in mind?",
+                    f"Opening {obj} now, ready to surf.",
+                ]
+            elif is_editor:
+                candidates = [
+                    f"Firing up {obj} — which project are we working on?",
+                    f"Opening {obj} — ready to code when you are.",
+                    f"Launching {obj} right away, let's build.",
+                ]
+            else:
+                candidates = _compose_candidates(
+                    ["On it —", "Right away,", "Got it,", "Sure thing,"],
+                    [f"launching {obj} now.", f"bringing up {obj}.", f"opening {obj} for you."],
+                    [""],
+                )
 
     elif cat == "close_app":
-        obj = tgt or ("यह विंडो" if lang == "hindi" else "isko" if lang == "hinglish" else "that window")
-        if lang == "hindi":
+        obj = tgt or ("यह विंडो" if lang in ("hindi", "hinglish") else "that window")
+        if lang in ("hindi", "hinglish"):
             candidates = [
-                f"ठीक है{t_suffix}, {obj} को बंद कर रही हूँ।",
-                f"समझ गई{t_suffix}, अभी {obj} क्लोज़ करती हूँ।",
-            ]
-        elif lang == "hinglish":
-            candidates = [
-                f"Theek hai{t_suffix}, {obj} close kar rahi hoon.",
-                f"Samajh gayi{t_suffix}, {obj} abhi band kar deti hoon.",
-                f"Done samjho{t_suffix}, {obj} shut down kar rahi hoon.",
+                f"ठीक है, {obj} बंद कर रही हूँ — स्क्रीन क्लियर हो जाएगी।",
+                f"समझ गई, {obj} अभी क्लोज़ कर देती हूँ।",
+                f"{obj} हटा रही हूँ, अब अगले टास्क पर फोकस करते हैं।",
+                f"बिल्कुल, {obj} विंडो बंद कर रही हूँ।",
             ]
         else:
             candidates = [
-                f"Closing {obj} right now{t_suffix}.",
-                f"Understood{t_suffix} — shutting down {obj}.",
-                f"On it{t_suffix}, clearing {obj} away.",
+                f"Closing {obj} right now.",
+                f"Understood — shutting down {obj}.",
+                f"On it, clearing {obj} away.",
             ]
 
     elif cat in ("media", "volume_brightness", "connectivity", "system_control"):
-        if lang == "hindi":
-            candidates = [
-                f"जी{t_suffix}, अभी सिस्टम सेटिंग अपडेट कर रही हूँ।",
-                f"बिल्कुल{t_suffix}, तुरंत एडजस्ट करती हूँ।",
-                f"ठीक है{t_suffix}, आपका कंट्रोल कमांड लागू कर रही हूँ।",
-            ]
-        elif lang == "hinglish":
+        if lang in ("hindi", "hinglish"):
             if cat == "media":
                 candidates = [
-                    f"Zaroor{t_suffix}, abhi music control update karti hoon.",
-                    f"Theek hai{t_suffix}, media handle kar rahi hoon.",
-                    f"On it{t_suffix}, playback adjust kar rahi hoon.",
+                    "म्यूजिक कंट्रोल अपडेट कर रही हूँ — अब फोकस मोड!",
+                    "प्लेबैक एडजस्ट कर रही हूँ — बताओ वॉल्यूम ठीक है?",
+                    "मीडिया प्लेबैक सेट कर रही हूँ — एंजॉय करो!",
+                    "बिल्कुल, ट्रैक कंट्रोल हैंडल कर रही हूँ।",
                 ]
             elif cat == "volume_brightness":
                 candidates = [
-                    f"Bilkul{t_suffix}, level abhi adjust kar rahi hoon.",
-                    f"Theek hai{t_suffix}, setting turant tune karti hoon.",
-                    f"Ji{t_suffix}, bas ek second — level set kar rahi hoon.",
+                    "लेवल अभी एडजस्ट कर रही हूँ — चेक करके बताओ सही है ना?",
+                    "ठीक है, ऑडियो सेटिंग तुरंत ट्यून करती हूँ।",
+                    "बस एक सेकंड — वॉल्यूम लेवल सेट कर रही हूँ।",
                 ]
             else:
                 candidates = [
-                    f"Samajh gayi{t_suffix}, system setting update kar rahi hoon.",
-                    f"Bilkul{t_suffix}, abhi check karke apply karti hoon.",
-                    f"On it{t_suffix}, system control run kar rahi hoon.",
+                    "समझ गई, सिस्टम सेटिंग अपडेट कर रही हूँ।",
+                    "बिल्कुल, अभी चेक करके लागू करती हूँ।",
+                    "सिस्टम कंट्रोल तुरंत रन कर रही हूँ।",
                 ]
         else:
             candidates = [
-                f"Adjusting that for you now{t_suffix}.",
-                f"Copy that{t_suffix} — updating the control right away.",
-                f"On it{t_suffix}, applying your setting.",
+                "Adjusting that for you now.",
+                "Copy that — updating the control right away.",
+                "On it, applying your setting.",
             ]
 
     elif cat == "screen_vision":
-        if lang == "hindi":
+        if lang in ("hindi", "hinglish"):
             candidates = [
-                f"एक पल रुकिए{t_suffix}, स्क्रीन देखकर समझ रही हूँ...",
-                f"बिल्कुल{t_suffix}, आपकी स्क्रीन स्कैन कर रही हूँ।",
-            ]
-        elif lang == "hinglish":
-            candidates = [
-                f"Ek second{t_suffix}, screen dekh kar check kar rahi hoon...",
-                f"Focus kar rahi hoon{t_suffix}, abhi screen analyze karti hoon.",
-                f"Samajh gayi{t_suffix}, nazar daal rahi hoon aapki screen pe.",
+                "स्क्रीन देख रही हूँ, एक सेकंड — बताओ किस चीज़ पर फोकस करूँ?",
+                "आपकी एक्टिव स्क्रीन स्कैन कर रही हूँ — क्या चेक करना है बताइए?",
+                "स्क्रीन पर नज़र डाल रही हूँ — अभी पूरी डिटेल समझती हूँ।",
+                "फोकस कर रही हूँ, अभी स्क्रीन एनालाइज़ करती हूँ।",
             ]
         else:
             candidates = [
-                f"Taking a quick look at your screen now{t_suffix}...",
-                f"Scanning the active display{t_suffix}, give me one moment.",
-                f"On it{t_suffix} — analyzing what's on screen.",
+                "Taking a quick look at your screen now — what should I focus on?",
+                "Scanning the active display, give me one moment.",
+                "On it — analyzing what's on screen.",
             ]
 
     elif cat == "communication":
-        if lang == "hindi":
+        if lang in ("hindi", "hinglish"):
             candidates = [
-                f"ठीक है{t_suffix}, मैसेज और कम्युनिकेशन चेक कर रही हूँ।",
-                f"जी{t_suffix}, अभी इस मैसेज टास्क को प्रोसेस करती हूँ।",
-            ]
-        elif lang == "hinglish":
-            candidates = [
-                f"Bilkul{t_suffix}, yeh message workflow check kar rahi hoon.",
-                f"Samajh gayi{t_suffix}, communication handle kar rahi hoon.",
-                f"Ek second{t_suffix}, inbox aur action details dekh rahi hoon.",
+                "बिल्कुल, यह मैसेज वर्कफ़्लो चेक कर रही हूँ।",
+                "समझ गई, कम्युनिकेशन तुरंत हैंडल कर रही हूँ।",
+                "एक सेकंड, इनबॉक्स और मैसेज डिटेल्स देख रही हूँ।",
             ]
         else:
             candidates = [
-                f"Checking that message flow now{t_suffix}.",
-                f"Understood{t_suffix} — handling your communication request.",
-                f"Right away{t_suffix}, preparing the message action.",
+                "Checking that message flow now.",
+                "Understood — handling your communication request.",
+                "Right away, preparing the message action.",
             ]
 
     elif cat == "web_research":
-        if lang == "hindi":
+        if lang in ("hindi", "hinglish"):
             candidates = [
-                f"अच्छा विषय है{t_suffix}, वेब पर चेक करके सही जानकारी लाती हूँ।",
-                f"ठीक है{t_suffix}, अभी ऑनलाइन रिसर्च शुरू कर रही हूँ।",
-            ]
-        elif lang == "hinglish":
-            candidates = [
-                f"Achha point hai{t_suffix}, live information check kar ke batati hoon.",
-                f"Samajh gayi{t_suffix}, web par lookup start kar rahi hoon.",
-                f"Ek second{t_suffix}, fresh details nikaal ke la rahi hoon.",
+                "बढ़िया सवाल है — वेब पर ताज़ा और सटीक जानकारी निकाल कर लाती हूँ।",
+                "इस पर लाइव रिसर्च शुरू कर रही हूँ — बस एक पल।",
+                "चेक कर रही हूँ — सबसे रिलेवेंट डेटा इकट्ठा करती हूँ।",
             ]
         else:
             candidates = [
-                f"Good call{t_suffix} — pulling up fresh info on that right now.",
-                f"Let me check the latest on that{t_suffix}, one moment.",
-                f"Running a quick lookup for you{t_suffix}.",
+                "Good call — pulling up fresh info on that right now.",
+                "Let me check the latest on that, one moment.",
+                "Running a quick lookup for you.",
             ]
 
     elif cat == "multi_step_chain":
-        if lang == "hindi":
+        if lang in ("hindi", "hinglish"):
             candidates = [
-                f"इसमें कई स्टेप्स हैं{t_suffix}, एक-एक करके पूरा कर रही हूँ।",
-                f"ठीक है{t_suffix}, मल्टी-स्टेप टास्क शुरू कर रही हूँ।",
-            ]
-        elif lang == "hinglish":
-            candidates = [
-                f"Multi-step kaam hai{t_suffix}, sequence mein start kar rahi hoon.",
-                f"Samajh gayi{t_suffix}, step-by-step sab execute karti hoon.",
-                f"Locked in{t_suffix} — poori chain line se run kar rahi hoon.",
+                "मल्टी-स्टेप काम है, सीक्वेंस में शुरू कर रही हूँ।",
+                "समझ गई, स्टेप-बाई-स्टेप पूरा प्लान एग्जीक्यूट करती हूँ।",
+                "बिल्कुल — पूरी टास्क चेन लाइन से रन कर रही हूँ।",
             ]
         else:
             candidates = [
-                f"Got the full sequence{t_suffix} — stepping through it now.",
-                f"Understood{t_suffix}, orchestrating those steps one by one.",
-                f"On it{t_suffix} — running the workflow chain now.",
+                "Got the full sequence — stepping through it now.",
+                "Understood, orchestrating those steps one by one.",
+                "On it — running the workflow chain now.",
             ]
 
     else:  # general_think
         if style == "concise":
-            if lang == "hindi":
-                candidates = [f"एक सेकंड{t_suffix}, देखती हूँ।", f"सोचकर बताती हूँ{t_suffix}।"]
-            elif lang == "hinglish":
-                candidates = [f"Ek second{t_suffix}, check karti hoon.", f"Soch kar batati hoon{t_suffix}."]
+            if lang in ("hindi", "hinglish"):
+                candidates = ["एक सेकंड, चेक करती हूँ।", "सोचकर बताती हूँ — बस एक पल।"]
             else:
-                candidates = [f"One moment{t_suffix}.", f"Let me think through that{t_suffix}."]
-        elif lang == "hindi":
-            candidates = [
-                f"अच्छा सवाल है{t_suffix}, एक सेकंड सोचकर सही जवाब देती हूँ।",
-                f"बिल्कुल{t_suffix}, इसे ध्यान से समझकर बताती हूँ।",
-                f"ठीक है{t_suffix}, थोड़ा सोचकर सटीक जवाब लाती हूँ।",
-            ]
-        elif lang == "hinglish":
+                candidates = ["One moment.", "Thinking through that."]
+        elif lang in ("hindi", "hinglish"):
             candidates = _compose_candidates(
-                [f"Achha sawaal hai{t_suffix},", f"Interesting{t_suffix} —", f"Ek second{t_suffix},", f"Soch rahi hoon{t_suffix},", f"Bilkul{t_suffix},"],
+                ["अच्छा पॉइंट है,", "दिलचस्प सवाल है —", "एक सेकंड,", "सोच रही हूँ,", "बिल्कुल,"],
                 [
-                    "isko achhe se break down karke batati hoon.",
-                    "bas abhi solid jawab deti hoon.",
-                    "thoda gaur karke crisp answer la rahi hoon.",
-                    "turant clear samjhati hoon.",
+                    "इसे अच्छे से समझकर सबसे सटीक बात समझाती हूँ।",
+                    "बस अभी क्लियर और सटीक जवाब देती हूँ।",
+                    "पूरे पॉइंट्स कनेक्ट करके बताती हूँ।",
+                    "तुरंत साफ़ समझाती हूँ — बस एक सेकंड।",
                 ],
                 [""],
             )
         else:
             candidates = _compose_candidates(
-                [f"Interesting question{t_suffix} —", f"Give me a second{t_suffix},", f"Good question{t_suffix},", f"Thinking that through{t_suffix} —"],
+                ["Interesting question —", "Give me a second,", "Good question,", "Thinking that through —"],
                 [
                     "let me pull together a clear answer.",
                     "putting the key points together now.",
@@ -1159,8 +1216,8 @@ def format_post_task_report(
     settings: Optional[Dict[str, Any]] = None,
 ) -> str:
     """
-    Wrap terse action confirmations or errors into a human-sounding completion
-    report, while keeping rich conversational / factual LLM answers clean and intact.
+    Wrap terse action confirmations or errors into a collaborative, human-sounding
+    completion report, while keeping rich conversational / factual LLM answers clean and intact.
     """
     cfg = settings or get_persona_settings()
     clean_raw = (raw_result or "").strip()
@@ -1172,29 +1229,25 @@ def format_post_task_report(
 
     lang = language_hint or detect_language_hint(f"{command} {clean_raw}", cfg=cfg)
     title = _style_title(cfg, lang)
-    t_suffix = f" {title}" if title else ""
     mem_size = int(cfg.get("recentMemorySize", 18))
 
     if not success:
         detail = re.sub(r"^error:\s*", "", clean_raw, flags=re.IGNORECASE).strip()
         if not detail:
             detail = "unexpected error occurred"
-        if lang == "hindi":
+        if lang in ("hindi", "hinglish"):
             cands = [
-                f"माफ़ कीजिए{t_suffix}, यह काम पूरा नहीं हो पाया: {detail}",
-                f"दिक्कत आ गई{t_suffix} — अभी यह एक्शन पूरा नहीं हुआ: {detail}",
+                f"यहाँ एक अड़चन आ गई: {detail} — चलो इसे फिक्स करते हैं।",
+                f"दिक्कत आ गई — यह स्टेप पूरा नहीं हुआ: {detail}। दूसरा तरीका आज़माऊँ?",
+                f"यह टास्क अटक गया: {detail} — बताओ कैसे आगे बढ़ें?",
             ]
-        elif lang == "hinglish":
-            cands = [
-                f"Sorry{t_suffix}, yeh kaam abhi complete nahi ho paya — {detail}",
-                f"Ek issue aa gaya{t_suffix}: {detail}. Chahein toh dobara try karein?",
-                f"Oops{t_suffix}, yeh step ruk gaya — {detail}",
-            ]
+            if title:
+                cands.append(f"एक दिक्कत आई है {title}: {detail} — कैसे हैंडल करें?")
         else:
             cands = [
-                f"Hit a snag{t_suffix}: {detail}",
-                f"Couldn't finish that cleanly{t_suffix} — {detail}",
-                f"Ran into a problem{t_suffix}: {detail}",
+                f"Hit a snag: {detail} — let's troubleshoot this.",
+                f"Couldn't finish that cleanly: {detail} — should we try another way?",
+                f"Ran into an issue: {detail} — how do you want to handle it?",
             ]
         return _utterance_memory.pick_fresh(f"post_err:{lang}", cands, memory_size=mem_size)
 
@@ -1208,27 +1261,37 @@ def format_post_task_report(
     detail_clean = clean_raw.rstrip(".!")
     is_multiline = "\n" in detail_clean
 
-    if lang == "hindi":
-        openers = [f"हो गया{t_suffix} —", f"काम पूरा{t_suffix}:", f"बिल्कुल रेडी{t_suffix} —"]
-        cands = [f"{op}\n{clean_raw}" if is_multiline else f"{op} {detail_clean}।" for op in openers]
-    elif lang == "hinglish":
+    if lang in ("hindi", "hinglish"):
         openers = [
-            f"Ho gaya{t_suffix} —",
-            f"Done{t_suffix},",
-            f"Kaam complete{t_suffix}:",
-            f"Set hai{t_suffix} —",
-            f"Lo{t_suffix}, done —",
+            "हो गया —",
+            "काम पूरा —",
+            "बिल्कुल रेडी —",
+            "लीजिए, काम डन —",
+            "सेट है —",
         ]
-        cands = [f"{op}\n{clean_raw}" if is_multiline else f"{op} {detail_clean}." for op in openers]
+        dev_detail = detail_clean
+        if not is_multiline:
+            try:
+                from ai_assistant.voice.text_cleaner import hinglish_to_devanagari
+                dev_detail = hinglish_to_devanagari(detail_clean)
+            except Exception:
+                dev_detail = detail_clean
+        cands = [f"{op}\n{clean_raw}" if is_multiline else f"{op} {dev_detail}।" for op in openers]
+        if not is_multiline:
+            cands.append(f"हो गया — {dev_detail} रेडी है। बताओ अगला क्या मूव है?")
+            cands.append(f"सेट है — {dev_detail} पूरा हो गया।")
     else:
         openers = [
-            f"All set{t_suffix} —",
-            f"Done{t_suffix}:",
-            f"Sorted{t_suffix} —",
-            f"Finished cleanly{t_suffix}:",
-            f"Taken care of{t_suffix} —",
+            "All set —",
+            "Done:",
+            "Sorted —",
+            "Finished cleanly:",
+            "Taken care of —",
         ]
         cands = [f"{op}\n{clean_raw}" if is_multiline else f"{op} {detail_clean}." for op in openers]
+        if not is_multiline:
+            cands.append(f"All set — {detail_clean} is ready. What's next?")
+            cands.append(f"Done: {detail_clean}. Ready for the next step whenever you are.")
 
     if cfg.get("dynamicGeneration", True) and _variation_pool.need_refill(f"post_done:{lang}"):
         _variation_pool.warm_async(lang)
@@ -1474,6 +1537,12 @@ class CommandLifecycleCoordinator:
                     with self._lock:
                         if turn_id in self._active_turns:
                             self._active_turns[turn_id]["pre_spoken"] = spoke
+                    if spoke and pre_text:
+                        try:
+                            from ai_assistant.core.speech_text_crisper import record_recent_tts
+                            record_recent_tts(pre_text)
+                        except Exception:
+                            pass
                 except Exception as exc:
                     logger.debug(f"Pre-report TTS skipped: {exc}")
 
@@ -1547,6 +1616,12 @@ class CommandLifecycleCoordinator:
                     # Queue seamlessly behind any active pre-report without interrupting it
                     interrupt_flag = not pre_spoken
                     spoke = bool(tts_svc.speak(speech_target, interrupt=interrupt_flag, source=f"{source}_post"))
+                    if spoke and speech_target:
+                        try:
+                            from ai_assistant.core.speech_text_crisper import record_recent_tts
+                            record_recent_tts(speech_target)
+                        except Exception:
+                            pass
                 except Exception as exc:
                     logger.debug(f"Post-report TTS skipped: {exc}")
 

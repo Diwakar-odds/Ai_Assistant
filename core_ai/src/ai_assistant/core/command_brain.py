@@ -138,6 +138,16 @@ class ExecutiveBrain:
         self._active_turn_speak = bool(speak)
         self._request_provider_override = provider_preference
         self._request_offline_override = offline_mode
+
+        if source in ('voice', 'companion', 'whisper', 'webui_voice'):
+            try:
+                from ai_assistant.core.speech_text_crisper import crisp_speech_transcript
+                crisped_cmd = crisp_speech_transcript(command)
+                if crisped_cmd:
+                    command = crisped_cmd
+            except Exception:
+                pass
+
         source_enum = CommandSource(source) if source in [s.value for s in CommandSource] else CommandSource.CHAT
         priority = CommandPriority.VOICE if source_enum == CommandSource.VOICE else CommandPriority.CHAT
         
@@ -152,29 +162,38 @@ class ExecutiveBrain:
 
         # Step 0: Check Executive Stop / Pause / Resume first!
         cmd_strip = command.strip().lower()
-        if (
-            cmd_strip in ("stop", "emergency stop", "halt", "cancel chain", "abort", "halt all actions")
-            or any(kw == cmd_strip or cmd_strip.startswith(f"{kw} ") for kw in EXECUTIVE_STOP_KEYWORDS)
-        ):
-            res = self._cancel_all_active(command)
-            res.action_taken = 'stop'
-            return res
+        media_indicators = {
+            "song", "songs", "music", "playback", "audio", "video", "videos",
+            "track", "tracks", "gaana", "gana", "player", "spotify", "youtube"
+        }
+        has_media_target = any(re.search(rf'\b{w}\b', cmd_strip) for w in media_indicators)
 
-        if (
-            cmd_strip in ("pause", "pause chain", "hold on", "pause all")
-            or any(kw == cmd_strip or cmd_strip.startswith(f"{kw} ") for kw in EXECUTIVE_PAUSE_KEYWORDS)
-        ):
-            res = self._pause_all_active()
-            res.action_taken = 'pause'
-            return res
+        if not has_media_target:
+            if (
+                cmd_strip in ("stop", "emergency stop", "halt", "cancel chain", "abort", "halt all actions")
+                or any(kw == cmd_strip or cmd_strip.startswith(f"{kw} ") for kw in EXECUTIVE_STOP_KEYWORDS)
+            ):
+                res = self._cancel_all_active(command)
+                res.action_taken = 'stop'
+                return res
 
-        if (
-            cmd_strip in ("resume", "resume chain", "continue chain", "resume all")
-            or any(kw == cmd_strip or cmd_strip.startswith(f"{kw} ") for kw in EXECUTIVE_RESUME_KEYWORDS)
-        ):
-            res = self._resume_all_active()
-            res.action_taken = 'resume'
-            return res
+            if (
+                cmd_strip in ("pause", "pause chain", "hold on", "pause all")
+                or any(kw == cmd_strip or cmd_strip.startswith(f"{kw} ") for kw in EXECUTIVE_PAUSE_KEYWORDS)
+            ):
+                if self._active_chains:
+                    res = self._pause_all_active()
+                    res.action_taken = 'pause'
+                    return res
+
+            if (
+                cmd_strip in ("resume", "resume chain", "continue chain", "resume all")
+                or any(kw == cmd_strip or cmd_strip.startswith(f"{kw} ") for kw in EXECUTIVE_RESUME_KEYWORDS)
+            ):
+                if self._active_chains:
+                    res = self._resume_all_active()
+                    res.action_taken = 'resume'
+                    return res
 
         # Fast Voice / Mode Control interception (Zero LLM calls)
         try:
@@ -341,7 +360,7 @@ class ExecutiveBrain:
 
     @classmethod
     def handle_executive(cls, classification: CommandClassification = CommandClassification.EXECUTIVE_STOP,
-                         command: str = 'stop') -> BrainResponse:
+                         command: str = 'stop', emit_notice: bool = True) -> BrainResponse:
         """
         Universal class and instance entry point for executive commands.
         Can be invoked directly:
@@ -349,14 +368,14 @@ class ExecutiveBrain:
             get_executive_brain().handle_executive(CommandClassification.EXECUTIVE_STOP)
         """
         brain = get_executive_brain()
-        return brain._handle_executive(classification, command)
+        return brain._handle_executive(classification, command, emit_notice=emit_notice)
 
     def _handle_executive(self, classification: CommandClassification, 
-                          command: str) -> BrainResponse:
+                          command: str, emit_notice: bool = True) -> BrainResponse:
         """Handle executive commands (stop/pause/resume)"""
         
         if classification == CommandClassification.EXECUTIVE_STOP:
-            return self._cancel_all_active(command)
+            return self._cancel_all_active(command, emit_notice=emit_notice)
         
         elif classification == CommandClassification.EXECUTIVE_PAUSE:
             return self._pause_all_active()

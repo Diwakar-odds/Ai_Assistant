@@ -612,7 +612,7 @@ class IntentRouter:
             examples=["play video", "video play करो", "play video python tutorial"]
         ))
 
-        # 19b. Media Control (playback navigation: next/prev/pause/resume)
+        # 19b. Media Control (playback navigation: next/prev/pause/resume/play_pause)
         self.register_intent(IntentDefinition(
             name="media_control",
             description="Control media playback: next track, previous track, pause song, resume music",
@@ -620,15 +620,35 @@ class IntentRouter:
                 "action": {"type": "string", "description": "Action (next, previous, pause, resume, play_pause)", "required": True}
             },
             tier1_patterns=[
-                r'^\s*(?P<action>next)\s+(?:song|track|music)\s*$',
-                r'^\s*(?P<action>previous|prev)\s+(?:song|track|music)\s*$',
-                r'^\s*(?P<action>pause)\s+(?:the\s+)?(?:song|music|playback|audio)\s*$',
-                r'^\s*(?P<action>resume)\s+(?:the\s+)?(?:song|music|playback|audio)\s*$',
-                r'^\s*gaana\s+(?P<action>pause|resume)(?:\s+karo|\s+kar\s+do)?\s*$',
-                r'^\s*(?:अगला\s+गाना|agla\s+gaana)\s*$',
-                r'^\s*(?:पिछला\s+गाना|pichla\s+gaana)\s*$',
+                # Next track patterns
+                r'^\s*(?:play\s+)?(?P<action>next)(?:\s+(?:song|track|music|audio|item))?\s*$',
+                r'^\s*(?:skip|forward)(?:\s+(?:this|the)?\s*(?:song|track|music|audio))?\s*$',
+                r'^\s*(?:अगला\s+गाना|agla\s+gaana|अगला\s+ट्रैक|नेक्स्ट\s+(?:सॉन्ग|सांग|गाना|ट्रैक))\s*$',
+                r'^\s*(?:gaana|gana|गाना|music|song)\s+(?P<action>बदलो|badlo|skip\s*karo|next\s*karo|skip|next)\s*$',
+
+                # Previous track patterns
+                r'^\s*(?:play\s+)?(?P<action>previous|prev)(?:\s+(?:song|track|music|audio|item))?\s*$',
+                r'^\s*(?:last\s+song|last\s+track|पिछला\s+गाना|pichla\s+gaana|pichhla\s+gaana|पिछला\s+ट्रैक)\s*$',
+                r'^\s*(?:gaana|gana|गाना|music|song)\s+(?P<action>pichhe\s*karo|previous\s*karo|previous|prev)\s*$',
+
+                # Pause patterns
+                r'^\s*(?P<action>pause)\s+(?:the\s+)?(?:song|music|playback|audio|video|track|media)\s*$',
+                r'^\s*(?:pause\s+the\s+song|pause\s+song|pause\s+music|pause\s+video|pause\s+playback|pause\s+audio)\s*$',
+                r'^\s*(?P<action>stop)\s+(?:the\s+)?(?:music|song|playback|audio)\s*$',
+                r'^\s*(?:gaana|gana|गाना|music|song)\s+(?P<action>pause|rok\s*do|roko|band\s*karo)(?:\s+karo|\s+kar\s+do)?\s*$',
+                r'^\s*(?:म्यूजिक|गाना)\s+(?:रोक\s*दो|बंद\s*करो|पॉज़\s*करो|पॉज\s*करो)\s*$',
+
+                # Resume patterns
+                r'^\s*(?P<action>resume)\s+(?:the\s+)?(?:song|music|playback|audio|video|track|media)\s*$',
+                r'^\s*(?:resume\s+the\s+song|resume\s+song|resume\s+music|resume\s+playback)\s*$',
+                r'^\s*(?:gaana|gana|गाना|music|song)\s+(?P<action>resume|chalao|chalu\s*karo)(?:\s+karo|\s+kar\s+do)?\s*$',
+                r'^\s*(?:म्यूजिक|गाना)\s+(?:चालू\s*करो|चलाओ|शुरू\s*करो)\s*$',
+
+                # Play/Pause toggle
+                r'^\s*(?:play\s+song|play\s+music)\s*$',
+                r'^\s*(?:toggle\s+(?:playback|media|music|song)|play\s+pause)\s*$',
             ],
-            examples=["next song", "previous song", "pause song", "resume music", "अगला गाना", "पिछला गाना"]
+            examples=["play next song", "next song", "previous song", "pause song", "resume music", "अगला गाना", "पिछला गाना", "pause the song"]
         ))
 
         # 20. Play Media (music / audio)
@@ -863,8 +883,8 @@ class IntentRouter:
                 "target": {"type": "string", "description": "Name of the app, website, or program to open", "required": True}
             },
             tier1_patterns=[
-                r'^\s*(?:open|launch|start|run)\s+(?!writing\b|working\b|analyzing\b|researching\b|creating\b|generating\b|typing\b|a\s+query\b|sql\b)(?P<target>.+)',
-                r'^\s*(?:khol|kholo|kholna|chalo|chalu\s+kar|chalu\s+karo)\s+(?P<target>.+)',
+                r'^\s*(?:open|launch|start|run)\s+(?!writing\b|working\b|analyzing\b|researching\b|creating\b|generating\b|typing\b|a\s+query\b|sql\b)(?!(?:.*?)\b(?:and\s+then|aur\s+phir|and\s+(?:search|play|type|write|open|close|send|check|read)|aur\s+(?:chalao|likho|khojo|bhejo))\b)(?P<target>.+?)\s*$',
+                r'^\s*(?:khol|kholo|kholna|chalo|chalu\s+kar|chalu\s+karo)\s+(?!(?:.*?)\b(?:and\s+then|aur\s+phir|aur\s+fir|and\s+(?:search|play|type|write|open|close|send|check|read))\b)(?P<target>.+?)\s*$',
                 r'^\s*(?!(?:which|what|tell\s+me)\b)(?P<target>.+?)\s+(?:khol\s+do|khol\s+de|kholo|kholna|khol|open\s+karo|open\s+kar\s+do|open|launch\s+karo|launch|start\s+karo|start|chalu\s+karo|chalu\s+kar)\s*$',
             ],
             examples=["open chrome", "open youtube music", "youtube music khol do", "chrome khol do", "start notepad"]
@@ -982,14 +1002,17 @@ class IntentRouter:
 
                         elif intent_name == "media_control":
                             act = str(params.get("action") or "").lower().strip()
-                            if act in ("prev", "previous") or any(w in candidate.lower() for w in ("pichla", "पिछला")):
+                            c_lower = candidate.lower()
+                            if act in ("prev", "previous") or any(w in c_lower for w in ("pichla", "पिछला", "previous", "prev", "last song")):
                                 params["action"] = "previous"
-                            elif act in ("next", "skip") or any(w in candidate.lower() for w in ("agla", "अगला")):
+                            elif act in ("next", "skip", "forward", "badlo", "बदलो") or any(w in c_lower for w in ("agla", "अगला", "next", "skip", "badlo", "बदलो")):
                                 params["action"] = "next"
-                            elif act == "pause" or "pause" in candidate.lower():
+                            elif act in ("pause", "stop") or any(w in c_lower for w in ("pause", "rok", "रोक", "बंद", "stop music", "stop song", "stop the music")):
                                 params["action"] = "pause"
-                            elif act == "resume" or "resume" in candidate.lower():
+                            elif act == "resume" or any(w in c_lower for w in ("resume", "chalu", "चालू", "chalao")):
                                 params["action"] = "resume"
+                            elif any(w in c_lower for w in ("play song", "play music", "play_pause", "toggle")):
+                                params["action"] = "play_pause"
                             else:
                                 params["action"] = "play_pause"
 

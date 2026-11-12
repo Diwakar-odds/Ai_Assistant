@@ -346,6 +346,13 @@ class AgentBrain:
 
             if isinstance(res, dict):
                 res.setdefault("intent", intent)
+                resp_text = str(res.get("response") or "")
+                if resp_text:
+                    try:
+                        from ai_assistant.knowledge.interaction_learner import record_turn_and_learn_async
+                        record_turn_and_learn_async(command, resp_text, source=source, active_window=window_info)
+                    except Exception:
+                        pass
             lat = (time.time() - start_time) * 1000
             telemetry.log_compute(lat, status="OK" if res.get("success", True) else "FAILED")
             telemetry.log_dispatch(["Desktop Screen", "Companion UI", "TTS"], res.get("response"))
@@ -373,6 +380,14 @@ class AgentBrain:
 
             matched_wake, cleaned_cmd = match_and_strip_wake_phrase(command)
             cmd_to_run = cleaned_cmd if matched_wake else command.strip()
+
+            try:
+                from ai_assistant.core.speech_text_crisper import crisp_speech_transcript
+                crisped_cmd = crisp_speech_transcript(cmd_to_run)
+                if crisped_cmd:
+                    cmd_to_run = crisped_cmd
+            except Exception:
+                pass
 
             if matched_wake and not cmd_to_run:
                 try:
@@ -482,16 +497,20 @@ class AgentBrain:
         c = command.lower()
 
         # Media Control: Previous
-        if any(w in c for w in ["previous song", "prev song", "previous track", "last song", "pichla gaana", "pichhla gaana"]):
+        if any(w in c for w in ["previous song", "prev song", "play previous song", "play prev song", "previous track", "last song", "pichla gaana", "pichhla gaana", "पिछला गाना"]):
             return self.execute_media_control("previous", {})
 
         # Media Control: Skip / Next
-        if any(w in c for w in ["skip song", "next song", "gaana skip", "next track", "skip track", "skip karo", "agla gaana"]):
+        if any(w in c for w in ["skip song", "next song", "play next song", "play next", "gaana skip", "next track", "skip track", "skip karo", "agla gaana", "अगला गाना"]):
             return self.execute_media_control("next", {})
 
-        # Media Control: Pause / Play
-        if any(w in c for w in ["pause video", "play video", "pause song", "play song", "pause music", "resume music", "resume song", "gaana pause", "gaana roko", "pause karo"]):
-            return self.execute_media_control("play_pause", {})
+        # Media Control: Pause
+        if any(w in c for w in ["pause song", "pause the song", "pause music", "pause playback", "pause video", "stop the music", "stop music", "gaana pause", "gaana roko", "pause karo", "गाना रोको", "पॉज़ करो"]):
+            return self.execute_media_control("pause", {})
+
+        # Media Control: Resume / Play
+        if any(w in c for w in ["resume song", "resume the song", "resume music", "resume playback", "gaana chalao", "gaana chalu", "गाना चलाओ", "play song", "play music"]):
+            return self.execute_media_control("resume", {})
 
         # Volume Controls
         if any(w in c for w in ["mute", "awaaz band", "awaaz mute"]):

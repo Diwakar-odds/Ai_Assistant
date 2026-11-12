@@ -110,7 +110,7 @@ _FALLBACK_CONNECTORS = [
 _SEQUENTIAL_STRONG_CONNECTORS = [
     "and then", "after that", "followed by", "aur phir", "aur fir",
     "uske baad", "iske baad", "फिर से", "और फिर", "उसके बाद", "इसके बाद",
-    "के बाद", "बाद में", "afterwards", "then", "next", "phir", "fir",
+    "के बाद", "बाद में", "afterwards", "then", "and next", "next up", "phir", "fir",
     "फिर", "तथा", "एवं",
 ]
 
@@ -137,7 +137,7 @@ class MultiStepCommandParser:
             'और फिर', 'aur phir', 'aur fir', 'and then',
             'के बाद', 'ke baad', 'uske baad', 'iske baad', 'after that', 'followed by',
             'फिर से', 'phir se', 'again',
-            'बाद में', 'baad me', 'later', 'next', 'afterwards',
+            'बाद में', 'baad me', 'later', 'and next', 'next up', 'afterwards',
             'तथा', 'एवं', 'और', 'aur', 'and',
         ]
         self.parallel_keywords = list(_PARALLEL_CONNECTORS)
@@ -490,6 +490,21 @@ class MultiStepCommandParser:
         """
         if not command or not command.strip():
             return False
+
+        # Fast path: Dedicated atomic Tier-1 control intents are NEVER multi-step!
+        atomic_intents = {
+            'media_control', 'volume_control', 'check_taskbar', 'battery_status',
+            'wifi_toggle', 'bluetooth_toggle', 'dark_mode_toggle', 'system_control',
+            'executive_stop', 'executive_pause', 'executive_resume',
+        }
+        if getattr(self, 'intent_router', None):
+            try:
+                res = self.intent_router._fast_match(command)
+                if res and res.tier == 1 and res.intent_name in atomic_intents:
+                    return False
+            except Exception:
+                pass
+
         segments = self.split_with_relations(command)
         return len(segments) > 1
 
@@ -693,6 +708,14 @@ class MultiStepCommandParser:
         Parse a command into TaskStep DAG with dependencies, parallel groups, and agent hints.
         """
         logger.info(f"Parsing command: {command}")
+        if not command or not command.strip():
+            return []
+
+        # If atomic / not multi-step, parse directly as a single step (zero multi-step splitting)
+        if not self.is_multi_step(command):
+            step = self.parse_single_step(command.strip(), 1)
+            step = self.enhance_step_params(step, command.strip(), step_index=0, all_steps=[step])
+            return [step]
 
         segments = self.split_with_relations(command)
         if not segments:

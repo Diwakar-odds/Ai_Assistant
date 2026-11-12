@@ -33,6 +33,9 @@ _esc_threshold_seconds: float = 0.45  # double Esc window
 
 # Extra callbacks to invoke on emergency stop
 _emergency_callbacks: List[Callable[[str], None]] = []
+_last_stop_trigger_time: float = 0.0
+_last_stop_result: dict = {}
+_stop_trigger_lock = threading.Lock()
 
 
 def register_emergency_callback(callback: Callable[[str], None]):
@@ -64,78 +67,96 @@ def trigger_emergency_stop(reason: str = "Global Emergency Stop Activated") -> d
     """
     Primary programmatic trigger for the Emergency Stop system.
     Immediately halts execution chains, notifies CommandBrain, and releases OS inputs.
+    Includes 1000ms debouncing to prevent duplicate REST and WebSocket event storms.
     """
-    logger.warning(f"🚨 ========================================================")
-    logger.warning(f"🚨 [EMERGENCY STOP TRIGGERED]: {reason}")
-    logger.warning(f"🚨 ========================================================")
+    global _last_stop_trigger_time, _last_stop_result
+    with _stop_trigger_lock:
+        now = time.time()
+        if now - _last_stop_trigger_time < 1.0 and _last_stop_result:
+            logger.info(f"🛑 [EMERGENCY STOP] Debouncing rapid duplicate trigger within 1000ms: '{reason}'")
+            return dict(_last_stop_result)
+        _last_stop_trigger_time = now
 
-    # 1. Forcibly release mouse & keyboard control
-    release_system_inputs()
+        logger.warning(f"🚨 ========================================================")
+        logger.warning(f"🚨 [EMERGENCY STOP TRIGGERED]: {reason}")
+        logger.warning(f"🚨 ========================================================")
 
-    # 2. Halt TaskChainOrchestrator
-    try:
-        from ai_assistant.core.task_chain_orchestrator import get_orchestrator
-        orchestrator = get_orchestrator()
-        orchestrator.emergency_stop(reason=reason)
-    except Exception as orch_e:
-        logger.error(f"Failed to halt orchestrator: {orch_e}")
-
-    # 3. Halt CommandBrain & Active Chains
-    try:
-        from ai_assistant.core.command_brain import get_executive_brain, CommandClassification
-        brain = get_executive_brain()
-        brain.handle_executive(CommandClassification.EXECUTIVE_STOP, reason)
-    except Exception as brain_e:
-        logger.error(f"Failed to signal Executive Brain: {brain_e}")
-
-    # 4. Clear context execution state
-    try:
-        from ai_assistant.core.conversation_context import get_context_manager, ExecutionState
-        ctx = get_context_manager()
-        ctx.clear_task_chain()
-        ctx.set_state(ExecutionState.IDLE)
-        ctx.set_var('emergency_stopped_at', time.time())
-    except Exception:
-        pass
-
-    # 5. Notify registered callbacks
-    for cb in _emergency_callbacks:
+        # 0. Cut off active TTS speech immediately
         try:
-            cb(reason)
-        except Exception as cb_e:
-            logger.error(f"Emergency callback error: {cb_e}")
+            from ai_assistant.voice.tts_output_service import get_tts_service
+            get_tts_service().stop(reason=reason)
+        except Exception:
+            pass
 
-    # 6. Broadcast via Socket.IO if available
-    try:
-        import sys
-        from datetime import datetime
-        if 'backend.voice_service' in sys.modules or 'voice_service' in sys.modules:
+        # 1. Forcibly release mouse & keyboard control
+        release_system_inputs()
+
+        # 2. Halt TaskChainOrchestrator
+        try:
+            from ai_assistant.core.task_chain_orchestrator import get_orchestrator
+            orchestrator = get_orchestrator()
+            orchestrator.emergency_stop(reason=reason)
+        except Exception as orch_e:
+            logger.error(f"Failed to halt orchestrator: {orch_e}")
+
+        # 3. Halt CommandBrain & Active Chains (emit_notice=False to prevent duplicate chat items)
+        try:
+            from ai_assistant.core.command_brain import get_executive_brain, CommandClassification
+            brain = get_executive_brain()
+            brain.handle_executive(CommandClassification.EXECUTIVE_STOP, reason, emit_notice=False)
+        except Exception as brain_e:
+            logger.error(f"Failed to signal Executive Brain: {brain_e}")
+
+        # 4. Clear context execution state
+        try:
+            from ai_assistant.core.conversation_context import get_context_manager, ExecutionState
+            ctx = get_context_manager()
+            ctx.clear_task_chain()
+            ctx.set_state(ExecutionState.IDLE)
+            ctx.set_var('emergency_stopped_at', time.time())
+        except Exception:
+            pass
+
+        # 5. Notify registered callbacks
+        for cb in _emergency_callbacks:
             try:
-                from voice_service import safe_emit
-            except ImportError:
-                from backend.voice_service import safe_emit
-            
-            safe_emit('emergency_stop', {
-                'active': True,
-                'reason': reason,
-                'timestamp': datetime.now().isoformat()
-            })
-            safe_emit('command_response', {
-                'success': False,
-                'response': f"🛑 Emergency Stop: Live automation halted immediately. ({reason})",
-                'command': 'emergency_stop',
-                'source': 'emergency_stop_system',
-                'timestamp': datetime.now().isoformat(),
-                'skip_tts': False
-            })
-    except Exception as emit_e:
-        logger.debug(f"SocketIO broadcast notice: {emit_e}")
+                cb(reason)
+            except Exception as cb_e:
+                logger.error(f"Emergency callback error: {cb_e}")
 
-    return {
-        'status': 'stopped',
-        'reason': reason,
-        'timestamp': time.time()
-    }
+        # 6. Canonical single broadcast via Socket.IO
+        try:
+            import sys
+            from datetime import datetime
+            if 'backend.voice_service' in sys.modules or 'voice_service' in sys.modules:
+                try:
+                    from voice_service import safe_emit
+                except ImportError:
+                    from backend.voice_service import safe_emit
+                
+                safe_emit('emergency_stop', {
+                    'active': True,
+                    'reason': reason,
+                    'timestamp': datetime.now().isoformat()
+                })
+                safe_emit('command_response', {
+                    'success': False,
+                    'response': f"🛑 Emergency Stop: Live automation halted immediately. ({reason})",
+                    'command': 'emergency_stop',
+                    'source': 'emergency_stop_system',
+                    'timestamp': datetime.now().isoformat(),
+                    'skip_tts': True
+                })
+        except Exception as emit_e:
+            logger.debug(f"SocketIO broadcast notice: {emit_e}")
+
+        res = {
+            'status': 'stopped',
+            'reason': reason,
+            'timestamp': time.time()
+        }
+        _last_stop_result = res
+        return res
 
 
 def _pynput_listener_worker():
