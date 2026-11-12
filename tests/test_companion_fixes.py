@@ -261,5 +261,69 @@ class TestCompactTransparentOrbRenderer(unittest.TestCase):
         self.assertGreaterEqual(y, 0)
 
 
+class TestScreenShareStealthAffinity(unittest.TestCase):
+    def test_stealth_constants_and_win32_affinity(self):
+        import ctypes
+        import ctypes.wintypes as wt
+        import win32gui
+        import win32con
+        from companion_app import WDA_EXCLUDEFROMCAPTURE, WDA_NONE, WDA_MONITOR
+
+        self.assertEqual(WDA_EXCLUDEFROMCAPTURE, 0x00000011)
+        self.assertEqual(WDA_NONE, 0x00000000)
+        self.assertEqual(WDA_MONITOR, 0x00000001)
+
+        user32 = ctypes.windll.user32
+        self.assertTrue(hasattr(user32, "SetWindowDisplayAffinity"))
+
+        # Create temporary layered test window to verify OS accepts WDA_EXCLUDEFROMCAPTURE
+        hwnd = win32gui.CreateWindowEx(
+            win32con.WS_EX_LAYERED,
+            "STATIC",
+            "PulsarStealthTest",
+            win32con.WS_POPUP,
+            0,
+            0,
+            16,
+            16,
+            0,
+            0,
+            0,
+            None,
+        )
+        try:
+            ok = user32.SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE)
+            self.assertTrue(bool(ok))
+            if hasattr(user32, "GetWindowDisplayAffinity"):
+                val = wt.DWORD()
+                get_ok = user32.GetWindowDisplayAffinity(hwnd, ctypes.byref(val))
+                if get_ok:
+                    self.assertEqual(val.value, WDA_EXCLUDEFROMCAPTURE)
+        finally:
+            win32gui.DestroyWindow(hwnd)
+
+    def test_settings_and_voice_stealth_commands(self):
+        from settings_manager import is_screen_share_stealth_enabled
+
+        # Default is stealth enabled (True) like Parakeet AI
+        self.assertTrue(is_screen_share_stealth_enabled())
+
+        # Voice command parsing for stealth toggle
+        for phrase, expected in (
+            ("screen share stealth on", True),
+            ("stealth mode on", True),
+            ("screen share me chupao", True),
+            ("hide in screen share", True),
+            ("screen share stealth off", False),
+            ("stealth mode off", False),
+            ("screen share me visible karo", False),
+        ):
+            with self.subTest(phrase=phrase):
+                res = parse_voice_control_command(phrase)
+                self.assertIsNotNone(res)
+                self.assertEqual(res["action"], "toggle_screen_share_stealth")
+                self.assertEqual(res["enabled"], expected)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -3,7 +3,7 @@
 PULSAR AI ASSISTANT - NATIVE WINDOWS DESKTOP APP
 ================================================
 Native Windows Desktop Application powered by Microsoft Edge WebView2,
-complete with System Tray integration, Floating Companion Mascot,
+complete with System Tray integration, Floating 4D Glowing Orb,
 Single-Instance Mutex, WebView2 pre-flight runtime validation, dynamic port
 resolution, and full offline/online AI Chatbot features.
 """
@@ -385,6 +385,14 @@ class PulsarDesktopApp:
                 except Exception as e:
                     print(f"[TRAY] Error launching mascot: {e}")
 
+            def on_toggle_stealth(icon, item):
+                try:
+                    from settings_manager import is_screen_share_stealth_enabled, update_settings_and_sync
+                    cur = is_screen_share_stealth_enabled()
+                    update_settings_and_sync("system", {"screenShareStealth": not cur})
+                except Exception as e:
+                    print(f"[TRAY] Error toggling screen share stealth: {e}")
+
             def on_quit_clicked(icon, item):
                 self.is_quitting = True
                 if self.tray_icon:
@@ -404,7 +412,8 @@ class PulsarDesktopApp:
             menu = pystray.Menu(
                 pystray.MenuItem("🌌 Show Pulsar Dashboard", on_show_clicked, default=True),
                 pystray.MenuItem("🙈 Minimize to Tray", on_hide_clicked),
-                pystray.MenuItem("🤖 Floating Companion Mascot", on_mascot_clicked),
+                pystray.MenuItem("🔮 Floating Glowing Orb", on_mascot_clicked),
+                pystray.MenuItem("🛡️ Screen Share Stealth", on_toggle_stealth),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("✕ Quit Pulsar AI", on_quit_clicked),
             )
@@ -414,6 +423,46 @@ class PulsarDesktopApp:
             print("[DESKTOP] System Tray initialized successfully.")
         except Exception as e:
             print(f"[DESKTOP] Note: System tray icon could not be loaded: {e}")
+
+    def setup_global_hotkey(self):
+        """Register global Windows hotkey to summon Pulsar to the foreground."""
+        def toggle_window():
+            if not self.main_window:
+                return
+            try:
+                _notify_overlay_visibility(self.port, False, source="hotkey")
+                self.main_window.restore()
+                self.main_window.show()
+            except Exception as e:
+                print(f"[HOTKEY] Summon toggle error: {e}")
+
+        def _hotkey_listener():
+            try:
+                import keyboard
+            except ImportError:
+                print("[HOTKEY] 'keyboard' package not installed, global hotkey unavailable.")
+                return
+
+            try:
+                hotkey = "alt+space"
+                try:
+                    from settings_manager import get_general_settings
+                    gen = get_general_settings()
+                    if not gen.get("hotkeyEnabled", True):
+                        print("[HOTKEY] Global summon hotkey is disabled in settings.")
+                        return
+                    configured = gen.get("hotkey", "Alt+Space")
+                    if configured and configured.strip():
+                        hotkey = configured.strip().lower()
+                except Exception:
+                    pass
+
+                keyboard.add_hotkey(hotkey, toggle_window)
+                print(f"[HOTKEY] Global desktop summon hotkey [{hotkey}] active.")
+            except Exception as exc:
+                print(f"[HOTKEY] Failed to register global hotkey: {exc}")
+
+        threading.Thread(target=_hotkey_listener, daemon=True, name="PulsarGlobalHotkey").start()
 
     def run(self):
         # 0. Pre-flight OS checks (WebView2 & single instance)
@@ -494,6 +543,7 @@ class PulsarDesktopApp:
 
         # 5. Start System Tray in background thread
         self.setup_tray()
+        self.setup_global_hotkey()
 
         # 6. Start GUI loop in main thread
         webview.start(private_mode=False)

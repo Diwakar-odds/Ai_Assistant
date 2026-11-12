@@ -720,6 +720,14 @@ class CompanionVoiceListener:
                 "VS Code खोलो, स्क्रीनशॉट लो, बताओ क्या करना है?"
             )
 
+        try:
+            from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+            kw = get_vocabulary_registry().get_whisper_prompt_keywords()
+            if kw:
+                init_prompt = f"{init_prompt} ({kw})"
+        except Exception:
+            pass
+
         if self._fast_whisper is not None:
             try:
                 with self._fw_lock:
@@ -765,6 +773,11 @@ class CompanionVoiceListener:
                             min_avg_logprob=min_seg_lp,
                         )
                 if text:
+                    try:
+                        from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+                        text = get_vocabulary_registry().normalize_stt_transcript(text)
+                    except Exception:
+                        pass
                     return text
             except Exception as e:
                 logger.debug(f"faster-whisper wake transcribe note: {e}")
@@ -777,7 +790,13 @@ class CompanionVoiceListener:
                     language=asr_lang,
                 )
                 if text and text.strip():
-                    return text.strip()
+                    cleaned = text.strip()
+                    try:
+                        from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+                        cleaned = get_vocabulary_registry().normalize_stt_transcript(cleaned)
+                    except Exception:
+                        pass
+                    return cleaned
             except Exception as e:
                 logger.debug(f"Local Whisper failed, trying Google STT: {e}")
 
@@ -792,7 +811,13 @@ class CompanionVoiceListener:
                 try:
                     text = r.recognize_google(audio, language=lang) if lang else r.recognize_google(audio)
                     if text and text.strip():
-                        return text.strip()
+                        cleaned = text.strip()
+                        try:
+                            from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+                            cleaned = get_vocabulary_registry().normalize_stt_transcript(cleaned)
+                        except Exception:
+                            pass
+                        return cleaned
                 except Exception:
                     continue
         except Exception as e:

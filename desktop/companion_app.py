@@ -79,7 +79,7 @@ except Exception:
     sio_lib = None
     SOCKETIO_CLIENT_AVAILABLE = False
 
-MUTEX_NAME = "Global\\Pulsar_Ambient_Mascot_Robot_Mutex"
+MUTEX_NAME = "Local\\Pulsar_Ambient_Mascot_Robot_Mutex"
 APP_LAUNCHER_MUTEX_NAME = "Local\\Pulsar_AI_Desktop_App_Mutex"
 WINDOW_TITLE = "Pulsar 4D Orb Overlay"
 try:
@@ -142,6 +142,11 @@ def command_requests_screen(command: str) -> bool:
 WS_EX_NOACTIVATE = getattr(win32con, "WS_EX_NOACTIVATE", 0x08000000)
 SPI_GETWORKAREA = 0x0030
 DWMWA_CLOAKED = 14
+
+# Windows Display Affinity flags for screen sharing invisibility (Parakeet AI mode)
+WDA_NONE = 0x00000000
+WDA_MONITOR = 0x00000001
+WDA_EXCLUDEFROMCAPTURE = 0x00000011
 _EXCLUDED_WINDOW_HINTS = (
     "pulsar 4d orb overlay",
     "visual studio code",
@@ -337,7 +342,7 @@ def detect_webui_window_open() -> bool:
     return bool(found[0])
 
 
-def apply_layered_image(hwnd, pil_img: Image.Image, x: int, y: int) -> bool:
+def apply_layered_image(hwnd, pil_img: Image.Image, x: int, y: int, constant_alpha: int = 255) -> bool:
     """Update Win32 layered window with vectorized premultiplied 32-bit BGRA buffer."""
     w, h = pil_img.size
     rgba = np.asarray(pil_img.convert("RGBA"), dtype=np.uint8)
@@ -373,7 +378,8 @@ def apply_layered_image(hwnd, pil_img: Image.Image, x: int, y: int) -> bool:
     pt_src = POINT(0, 0)
     pt_dst = POINT(int(x), int(y))
     sz = SIZE(w, h)
-    blend = BLENDFUNCTION(0, 0, 255, 1)  # AC_SRC_OVER, 0, 255, AC_SRC_ALPHA
+    clamped_alpha = max(25, min(255, int(constant_alpha)))
+    blend = BLENDFUNCTION(0, 0, clamped_alpha, 1)  # AC_SRC_OVER, 0, clamped_alpha, AC_SRC_ALPHA
 
     res = user32.UpdateLayeredWindow(
         hwnd,
@@ -660,6 +666,12 @@ class AmbientMascotApp:
         self.overlay_enabled = True
         self.app_minimized = not detect_webui_window_open()
         self.always_wake_enabled = True
+        self.screen_share_stealth = True
+        try:
+            from settings_manager import is_screen_share_stealth_enabled
+            self.screen_share_stealth = is_screen_share_stealth_enabled()
+        except Exception:
+            pass
         try:
             from settings_manager import get_tts_config
             _init_tts = get_tts_config()
@@ -667,6 +679,9 @@ class AmbientMascotApp:
             _init_tts = {}
         self.tts_enabled = bool(_init_tts.get("enabled", True))
         self.tts_voice_id = str(_init_tts.get("voice_id") or "hi-IN-SwaraNeural").strip() or "hi-IN-SwaraNeural"
+        self.constant_alpha = 230
+        self.always_on_top = True
+        self.auto_hide_on_dashboard = True
         self.orb_state = "idle"
         self.audio_level = 0.0
         self.webui_mic_active = False
@@ -737,7 +752,8 @@ class AmbientMascotApp:
 
     def _acquire_single_instance(self):
         self._mutex = kernel32.CreateMutexW(None, True, MUTEX_NAME)
-        if kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+        err = kernel32.GetLastError()
+        if err in (183, 5) or not self._mutex:  # ERROR_ALREADY_EXISTS or ERROR_ACCESS_DENIED
             print("[OVERLAY] Minimized 4D Orb overlay is already running. Exiting duplicate.")
             sys.exit(0)
 
@@ -790,6 +806,38 @@ class AmbientMascotApp:
                         new_val = not self.overlay_enabled
                         self.overlay_enabled = new_val
                     self._emit_orb_update(state=self.orb_state, audio_level=self.audio_level, source="companion_tray")
+                    if self.hwnd:
+                        try:
+                            if not new_val:
+                                win32gui.ShowWindow(self.hwnd, win32con.SW_HIDE)
+                                self._currently_visible = False
+                            else:
+                                win32gui.ShowWindow(self.hwnd, win32con.SW_SHOWNA)
+                                self._currently_visible = True
+                        except Exception:
+                            pass
+                    try:
+                        self.bridge.session.post(
+                            f"{self.bridge.base_url}/api/settings/system",
+                            json={"desktopOverlay": new_val},
+                            timeout=2.0,
+                        )
+                    except Exception:
+                        pass
+
+                def on_toggle_stealth(icon, item):
+                    with self._state_lock:
+                        new_val = not self.screen_share_stealth
+                        self.screen_share_stealth = new_val
+                    self._apply_capture_affinity()
+                    try:
+                        self.bridge.session.post(
+                            f"{self.bridge.base_url}/api/settings/system",
+                            json={"screenShareStealth": new_val},
+                            timeout=2.0,
+                        )
+                    except Exception:
+                        pass
 
                 def on_stop_speaking(icon, item):
                     self._on_barge_in("tray_stop")
@@ -808,6 +856,10 @@ class AmbientMascotApp:
                     pystray.MenuItem(
                         lambda item: "Hide Floating Orb" if self.overlay_enabled else "Show Floating Orb",
                         on_toggle_overlay,
+                    ),
+                    pystray.MenuItem(
+                        lambda item: "Screen Share Stealth: ON (Invisible)" if self.screen_share_stealth else "Screen Share Stealth: OFF (Visible)",
+                        on_toggle_stealth,
                     ),
                     pystray.Menu.SEPARATOR,
                     pystray.MenuItem("Quit Pulsar Companion", on_quit),
@@ -872,6 +924,9 @@ class AmbientMascotApp:
             None,
         )
 
+        # Apply screen-share stealth (WDA_EXCLUDEFROMCAPTURE) just like Parakeet AI
+        self._apply_capture_affinity()
+
         # Synchronized to visibility gate (overlay_enabled & app_minimized) on first 33ms tick
         win32gui.ShowWindow(self.hwnd, win32con.SW_HIDE)
         self._currently_visible = False
@@ -879,6 +934,22 @@ class AmbientMascotApp:
         # 33 ms (~30 FPS) animation + visibility check timer
         user32.SetTimer(self.hwnd, 1, 33, None)
         print(f"[OVERLAY] Transparent click-through 4D Orb ready at ({self.x}, {self.y}) [size={self.w}px].")
+
+    def _apply_capture_affinity(self) -> bool:
+        """
+        Exclude orb window from screen sharing, screenshots, and recording (Zoom, Meet, Teams, Discord, OBS).
+        Uses Windows 10/11 WDA_EXCLUDEFROMCAPTURE (0x00000011) just like Parakeet AI.
+        """
+        if not hasattr(self, "hwnd") or not self.hwnd:
+            return False
+        try:
+            affinity = WDA_EXCLUDEFROMCAPTURE if self.screen_share_stealth else WDA_NONE
+            res = user32.SetWindowDisplayAffinity(self.hwnd, affinity)
+            if not res and self.screen_share_stealth:
+                res = user32.SetWindowDisplayAffinity(self.hwnd, WDA_MONITOR)
+            return bool(res)
+        except Exception as e:
+            return False
 
     def _start_window_autodetect(self):
         """Edge-triggered Win32 monitor that hides orb when WebUI/desktop app opens and shows on minimize/close."""
@@ -913,9 +984,31 @@ class AmbientMascotApp:
         if not isinstance(all_settings, dict):
             return
         sys_cfg = all_settings.get("system")
-        if isinstance(sys_cfg, dict) and isinstance(sys_cfg.get("desktopOverlay"), bool):
-            with self._state_lock:
-                self.overlay_enabled = sys_cfg["desktopOverlay"]
+        if isinstance(sys_cfg, dict):
+            if isinstance(sys_cfg.get("desktopOverlay"), bool):
+                with self._state_lock:
+                    self.overlay_enabled = sys_cfg["desktopOverlay"]
+            if isinstance(sys_cfg.get("screenShareStealth"), bool):
+                with self._state_lock:
+                    self.screen_share_stealth = sys_cfg["screenShareStealth"]
+                self._apply_capture_affinity()
+            comp_cfg = sys_cfg.get("companion")
+            if isinstance(comp_cfg, dict):
+                if isinstance(comp_cfg.get("screenShareStealth"), bool):
+                    with self._state_lock:
+                        self.screen_share_stealth = comp_cfg["screenShareStealth"]
+                    self._apply_capture_affinity()
+                with self._state_lock:
+                    if "opacity" in comp_cfg:
+                        try:
+                            op = max(50, min(100, int(comp_cfg["opacity"])))
+                            self.constant_alpha = int(255 * (op / 100.0))
+                        except (TypeError, ValueError):
+                            pass
+                    if "alwaysOnTop" in comp_cfg:
+                        self.always_on_top = bool(comp_cfg["alwaysOnTop"])
+                    if "autoHide" in comp_cfg:
+                        self.auto_hide_on_dashboard = bool(comp_cfg["autoHide"])
         voice_cfg = all_settings.get("voice")
         if isinstance(voice_cfg, dict):
             stt_cfg = voice_cfg.get("stt")
@@ -990,9 +1083,14 @@ class AmbientMascotApp:
                 return
             cat = data.get("category")
             cfg = data.get("settings") or {}
-            if cat == "system" and isinstance(cfg.get("desktopOverlay"), bool):
-                with self._state_lock:
-                    self.overlay_enabled = bool(cfg["desktopOverlay"])
+            if cat == "system":
+                if isinstance(cfg.get("desktopOverlay"), bool):
+                    with self._state_lock:
+                        self.overlay_enabled = bool(cfg["desktopOverlay"])
+                if isinstance(cfg.get("screenShareStealth"), bool):
+                    with self._state_lock:
+                        self.screen_share_stealth = bool(cfg["screenShareStealth"])
+                    self._apply_capture_affinity()
             elif cat == "voice":
                 stt_cfg = cfg.get("stt")
                 if isinstance(stt_cfg, dict) and isinstance(stt_cfg.get("continuous"), bool):
@@ -1388,21 +1486,33 @@ class AmbientMascotApp:
 
             should_show = compute_overlay_visibility(enabled, minimized, state)
             if not should_show:
-                if self._currently_visible:
+                try:
                     win32gui.ShowWindow(hwnd, win32con.SW_HIDE)
-                    self._currently_visible = False
+                    win32gui.SetWindowPos(
+                        hwnd,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        win32con.SWP_HIDEWINDOW | win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE,
+                    )
+                except Exception:
+                    pass
+                self._currently_visible = False
                 return 0
 
             # Keep aligned cleanly above taskbar on work area bottom-center
             self.x, self.y = get_workarea_bottom_center_coords(self.w, self.h)
             frame = self.renderer.render_frame(state=state, audio_level=level, dt=0.033)
-            apply_layered_image(hwnd, frame, self.x, self.y)
+            apply_layered_image(hwnd, frame, self.x, self.y, constant_alpha=self.constant_alpha)
 
             if not self._currently_visible:
                 win32gui.ShowWindow(hwnd, win32con.SW_SHOWNA)
+                top_flag = win32con.HWND_TOPMOST if self.always_on_top else win32con.HWND_NOTOPMOST
                 win32gui.SetWindowPos(
                     hwnd,
-                    win32con.HWND_TOPMOST,
+                    top_flag,
                     self.x,
                     self.y,
                     self.w,
