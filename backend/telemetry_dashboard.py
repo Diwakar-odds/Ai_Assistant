@@ -179,7 +179,7 @@ def render_developer_matrix(port: int = 5000):
     safe_print(f"   ├── {C.GREEN}[OK] Flask Core Backend{C.RESET}    --> {C.WHITE}http://127.0.0.1:{d['flask_port']}{C.RESET}  (REST APIs + Socket.IO WebSockets)")
     safe_print(f"   ├── {C.GREEN}[OK] Socket.IO Transports{C.RESET}  --> {C.WHITE}CORS Enabled: {d['cors_origins']}{C.RESET}")
     safe_print(f"   ├── {C.GREEN}[OK] Modular API Routes{C.RESET}    --> {C.WHITE}{d['blueprints_count']}{C.RESET}")
-    safe_print(f"   ├── {C.GREEN}[OK] Companion Mascot Robot{C.RESET}--> {C.WHITE}Layered Win32 Window (PID: {d['companion_pid']} | FPS: 60 | Mutex: Locked){C.RESET}")
+    safe_print(f"   ├── {C.GREEN}[OK] Desktop Glowing Orb{C.RESET}    --> {C.WHITE}Layered Win32 Window (PID: {d['companion_pid']} | FPS: 60 | Mutex: Locked){C.RESET}")
     safe_print(f"   └── {C.GREEN}[OK] Speech WS Bridge{C.RESET}      --> {C.WHITE}Google Speech Recognition WebSocket Handlers Registered{C.RESET}")
 
     # Section 2: AI ENGINE, REASONING & MEMORY PIPELINE
@@ -242,7 +242,7 @@ def render_developer_matrix(port: int = 5000):
 
     safe_print(f"{C.CYAN}{sep_double}{C.RESET}")
     safe_print(f"  {C.GREEN}{C.BOLD}🟢 PULSAR IS FULLY ARMED & LISTENING.{C.RESET}")
-    safe_print(f"  {C.WHITE}👉 Type any command below & press ENTER (or speak \"Hey Pulsar\", or use Web UI / Companion Mascot):{C.RESET}")
+    safe_print(f"  {C.WHITE}👉 Type any command below & press ENTER (or speak \"Hey Pulsar\", or use Web UI / Glowing Orb):{C.RESET}")
     safe_print(f"{C.CYAN}{sep_double}{C.RESET}\n")
 
 

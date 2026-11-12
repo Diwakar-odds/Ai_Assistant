@@ -62,7 +62,7 @@ export const VoiceSection: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           voice_id: tts.voice_id || 'hi-IN-SwaraNeural',
-          text: 'Namaste! Main Pulsar AI Assistant hoon. Main aapki kya madad kar sakta hoon?',
+          text: 'Namaste! Main Pulsar AI Assistant hoon. Main aapki kya madad kar sakti hoon?',
         }),
       });
 

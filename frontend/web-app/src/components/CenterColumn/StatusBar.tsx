@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Wifi, Bell, Terminal, PanelLeft, PanelRight, Bot, Layers } from 'lucide-react';
+import { Wifi, Bell, Terminal, PanelLeft, PanelRight, Sparkles, Layers } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { apiUrl } from '../../lib/api';
@@ -230,7 +230,7 @@ const StatusBar = () => {
           </div>
         </div>
 
-        {/* Floating Mini Robot Mascot Mode */}
+        {/* Floating 4D Glowing Orb Mode */}
         <motion.div
           className="relative cursor-pointer ml-1"
           whileHover={{ scale: 1.15 }}
@@ -244,13 +244,13 @@ const StatusBar = () => {
               try {
                 await fetch(apiUrl('/api/desktop/companion/toggle'), { method: 'POST' });
               } catch (e) {
-                console.error('Failed to toggle floating companion:', e);
+                console.error('Failed to toggle floating orb:', e);
               }
             }
           }}
-          title={isFloatingActive ? 'Floating Robot Launched on Screen!' : 'Float Mini Robot on Screen'}
+          title={isFloatingActive ? 'Desktop Glowing Orb Active! (Minimize browser to see orb)' : 'Floating 4D Glowing Orb (Active when minimized)'}
         >
-          <Bot className={`w-5 h-5 transition-all ${isFloatingActive ? 'text-[#00f3ff] drop-shadow-[0_0_8px_#00f3ff] animate-pulse' : 'text-[#9CA3AF] hover:text-[#00f3ff]'}`} strokeWidth={1.5} />
+          <Sparkles className={`w-5 h-5 transition-all ${isFloatingActive ? 'text-[#00f3ff] drop-shadow-[0_0_8px_#00f3ff] animate-pulse' : 'text-[#9CA3AF] hover:text-[#00f3ff]'}`} strokeWidth={1.5} />
         </motion.div>
 
         {/* Right Sidebar Toggle */}

@@ -9,6 +9,8 @@ export interface GeneralSettings {
   theme: string;
   animations: boolean;
   startOnBoot: boolean;
+  hotkey?: string;
+  hotkeyEnabled?: boolean;
 }
 
 export interface SecuritySettings {
@@ -92,6 +94,7 @@ export interface VoiceSettings {
     postTaskReports: boolean;
     dynamicGeneration: boolean;
     recentMemorySize: number;
+    customInstructions?: string;
   };
 }
 
@@ -110,6 +113,13 @@ export interface SystemSettings {
   maxLogSizeMb: number;
   minimizeToTray: boolean;
   desktopOverlay: boolean;
+  screenShareStealth?: boolean;
+  companion?: {
+    alwaysOnTop: boolean;
+    size: 'small' | 'medium' | 'large';
+    opacity: number;
+    autoHide: boolean;
+  };
   notifications: {
     desktop: boolean;
     sound: boolean;
@@ -185,6 +195,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const loaded = allRes.settings as AppSettings;
         if (loaded.system && typeof loaded.system.desktopOverlay !== 'boolean') {
           loaded.system.desktopOverlay = true;
+        }
+        if (loaded.system && typeof loaded.system.screenShareStealth !== 'boolean') {
+          loaded.system.screenShareStealth = true;
         }
         setSettings(loaded);
         if (typeof loaded.system?.desktopOverlay === 'boolean') {

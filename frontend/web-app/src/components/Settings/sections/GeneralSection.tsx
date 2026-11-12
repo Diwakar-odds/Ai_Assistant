@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Globe, Palette, Sparkles, Power, Download, Upload, RotateCcw, Info } from 'lucide-react';
+import { Globe, Palette, Sparkles, Power, Download, Upload, RotateCcw, Info, Keyboard } from 'lucide-react';
 import { useSettings } from '../SettingsContext';
 import { SectionCard, SettingRow, ToggleSwitch, SelectDropdown } from '../shared';
 
@@ -16,6 +16,14 @@ const THEME_OPTIONS = [
   { value: 'dark', label: 'Dark Mode (Default)' },
   { value: 'light', label: 'Light Mode' },
   { value: 'system', label: 'System Theme' },
+];
+
+const HOTKEY_OPTIONS = [
+  { value: 'Alt+Space', label: 'Alt + Space (Recommended & Default)' },
+  { value: 'Ctrl+Space', label: 'Ctrl + Space' },
+  { value: 'Ctrl+Shift+P', label: 'Ctrl + Shift + P' },
+  { value: 'F1', label: 'F1 Key' },
+  { value: 'Win+Alt+P', label: 'Win + Alt + P' },
 ];
 
 export const GeneralSection: React.FC = () => {
@@ -108,6 +116,35 @@ export const GeneralSection: React.FC = () => {
           <ToggleSwitch
             checked={Boolean(general.startOnBoot)}
             onChange={(val) => updateSetting('general', ['startOnBoot'], val)}
+          />
+        </SettingRow>
+      </SectionCard>
+
+      {/* Global Desktop Summon Hotkey */}
+      <SectionCard
+        title="Global Desktop Shortcut"
+        description="Summon or restore Pulsar from any application across Windows with a hotkey"
+        icon={Keyboard}
+      >
+        <SettingRow
+          label="Enable Global Summon Hotkey"
+          description="Pressing the shortcut immediately brings Pulsar to the foreground or unhides it"
+          badge="Global"
+        >
+          <ToggleSwitch
+            checked={general.hotkeyEnabled !== false}
+            onChange={(val) => updateSetting('general', ['hotkeyEnabled'], val)}
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Summon Shortcut Key"
+          description="Keyboard combination to toggle Pulsar dashboard"
+        >
+          <SelectDropdown
+            value={general.hotkey || 'Alt+Space'}
+            options={HOTKEY_OPTIONS}
+            onChange={(val) => updateSetting('general', ['hotkey'], val)}
           />
         </SettingRow>
       </SectionCard>

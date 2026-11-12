@@ -753,3 +753,214 @@ def api_get_providers():
     except Exception as e:
         logger.error(f"Get providers error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
+# Storage & Cache Maintenance Endpoints
+# ============================================================================
+
+@settings_bp.route('/api/settings/clean_voice_cache', methods=['POST', 'OPTIONS'])
+@jwt_required(optional=True)
+def api_clean_voice_cache():
+    """Delete synthesized voice cache audio files (.mp3, .wav, .cache) to free disk space."""
+    if request.method == 'OPTIONS':
+        return ('', 204)
+    try:
+        from settings_manager import get_writable_root, get_bundle_root
+
+        target_dirs = set()
+        for base in [
+            get_writable_root() / 'data' / 'voice_cache',
+            get_bundle_root() / 'data' / 'voice_cache',
+            Path(__file__).resolve().parent.parent / 'data' / 'voice_cache',
+            Path(__file__).resolve().parent.parent.parent / 'data' / 'voice_cache',
+            Path(__file__).resolve().parent.parent.parent / 'core_ai' / 'src' / 'data' / 'voice_cache',
+        ]:
+            if base.exists() and base.is_dir():
+                target_dirs.add(base.resolve())
+
+        total_bytes = 0
+        files_count = 0
+
+        for d in target_dirs:
+            try:
+                for f in d.iterdir():
+                    if f.is_file() and (f.suffix.lower() in ('.mp3', '.wav', '.ogg', '.cache', '.tmp') or 'edge_' in f.name):
+                        try:
+                            f_size = f.stat().st_size
+                            f.unlink(missing_ok=True)
+                            total_bytes += f_size
+                            files_count += 1
+                        except Exception as e:
+                            logger.debug(f"Could not remove audio cache file {f}: {e}")
+            except Exception as d_err:
+                logger.debug(f"Error scanning dir {d}: {d_err}")
+
+        # Also purge in-memory preview cache
+        try:
+            try:
+                import voice_service
+            except ImportError:
+                import backend.voice_service as voice_service
+            if hasattr(voice_service, 'preview_cache') and hasattr(voice_service.preview_cache, 'cache'):
+                voice_service.preview_cache.cache.clear()
+        except Exception:
+            pass
+
+        freed_mb = round(total_bytes / (1024 * 1024), 2)
+        return jsonify({
+            'success': True,
+            'files_removed': files_count,
+            'freed_mb': freed_mb,
+            'message': f"Voice audio cache cleaned: {files_count} files removed ({freed_mb} MB freed)"
+        }), 200
+    except Exception as e:
+        logger.error(f"Clean voice cache failed: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@settings_bp.route('/api/settings/clean_chat_history', methods=['POST', 'OPTIONS'])
+@jwt_required(optional=True)
+def api_clean_chat_history():
+    """Reset chat sessions and clear cached conversation context files."""
+    if request.method == 'OPTIONS':
+        return ('', 204)
+    try:
+        from settings_manager import get_writable_root, get_bundle_root
+
+        # 1. Reset unified chat session store
+        cleared_sessions = 0
+        try:
+            try:
+                from utils.chat_session_store import get_session_store
+            except ImportError:
+                from backend.utils.chat_session_store import get_session_store
+            store = get_session_store()
+            cleared_sessions = store.clear_history()
+            store.start_new_session(reason="user_storage_cleanup")
+        except Exception as store_err:
+            logger.warning(f"Session store reset error: {store_err}")
+
+        # 2. Clean temporary conversation_context_*.json files
+        search_dirs = set()
+        for base in [
+            get_writable_root() / 'data',
+            get_bundle_root() / 'data',
+            Path(__file__).resolve().parent.parent / 'data',
+            Path(__file__).resolve().parent.parent.parent / 'data',
+            Path(__file__).resolve().parent.parent / 'data' / 'sessions',
+        ]:
+            if base.exists() and base.is_dir():
+                search_dirs.add(base.resolve())
+
+        total_bytes = 0
+        files_count = 0
+
+        for d in search_dirs:
+            try:
+                for f in d.glob('conversation_context_*.json'):
+                    try:
+                        f_size = f.stat().st_size
+                        f.unlink(missing_ok=True)
+                        total_bytes += f_size
+                        files_count += 1
+                    except Exception as e:
+                        logger.debug(f"Could not remove conversation context file {f}: {e}")
+            except Exception as d_err:
+                logger.debug(f"Error scanning dir {d}: {d_err}")
+
+        freed_mb = round(total_bytes / (1024 * 1024), 2)
+        return jsonify({
+            'success': True,
+            'sessions_cleared': cleared_sessions,
+            'files_removed': files_count,
+            'freed_mb': freed_mb,
+            'message': f"Chat history and conversation contexts cleared ({freed_mb} MB freed)"
+        }), 200
+    except Exception as e:
+        logger.error(f"Clean chat history failed: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@settings_bp.route('/api/settings/clean_logs', methods=['POST', 'OPTIONS'])
+@jwt_required(optional=True)
+def api_clean_logs():
+    """Truncate or remove log files in logs directory to recover disk space."""
+    if request.method == 'OPTIONS':
+        return ('', 204)
+    try:
+        from settings_manager import get_logs_root, get_bundle_root
+
+        log_dirs = set()
+        for base in [
+            get_logs_root(),
+            get_bundle_root() / 'logs',
+            Path(__file__).resolve().parent.parent.parent / 'logs',
+        ]:
+            if base.exists() and base.is_dir():
+                log_dirs.add(base.resolve())
+
+        total_bytes = 0
+        files_count = 0
+
+        for d in log_dirs:
+            try:
+                for f in d.iterdir():
+                    if not f.is_file():
+                        continue
+                    fname = f.name.lower()
+                    if '.log' in fname or fname.endswith(('.old', '.bak', '.txt')):
+                        try:
+                            f_size = f.stat().st_size
+                            # If rotated/backup log, delete file
+                            if any(part in fname for part in ('.old', '.bak', '.log.')):
+                                f.unlink(missing_ok=True)
+                            else:
+                                # For active log file, truncate to 0 bytes without breaking file handles
+                                with open(f, 'w', encoding='utf-8') as truncate_target:
+                                    truncate_target.write('')
+                            total_bytes += f_size
+                            files_count += 1
+                        except Exception as e:
+                            logger.debug(f"Could not clean log file {f}: {e}")
+            except Exception as d_err:
+                logger.debug(f"Error scanning log dir {d}: {d_err}")
+
+        freed_mb = round(total_bytes / (1024 * 1024), 2)
+        return jsonify({
+            'success': True,
+            'files_cleaned': files_count,
+            'freed_mb': freed_mb,
+            'message': f"Application logs cleaned: {files_count} files cleared ({freed_mb} MB freed)"
+        }), 200
+    except Exception as e:
+        logger.error(f"Clean logs failed: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@settings_bp.route('/api/voice/dictionary', methods=['GET', 'POST', 'OPTIONS'])
+def api_voice_dictionary():
+    """Retrieve or update user-defined phonetic vocabulary & grammar dictionary."""
+    if request.method == 'OPTIONS':
+        return ('', 204)
+
+    try:
+        from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+        reg = get_vocabulary_registry()
+
+        if request.method == 'POST':
+            payload = request.get_json() or {}
+            updated = reg.update_dictionary_data(payload)
+            sio = get_socketio()
+            if sio:
+                try:
+                    sio.emit('dictionary_updated', updated)
+                except Exception:
+                    pass
+            return jsonify({'success': True, 'dictionary': updated}), 200
+
+        # GET request
+        return jsonify({'success': True, 'dictionary': reg.get_dictionary_data()}), 200
+    except Exception as exc:
+        logger.error(f"Voice dictionary endpoint error: {exc}")
+        return jsonify({'success': False, 'error': str(exc)}), 500

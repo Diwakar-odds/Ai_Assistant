@@ -157,7 +157,9 @@ DEFAULTS = {
         "language": "en-US",
         "secondaryLanguage": "hi-IN",
         "startOnBoot": True,
-        "theme": "dark"
+        "theme": "dark",
+        "hotkey": "Alt+Space",
+        "hotkeyEnabled": True
     },
     "security": {
         "apiKeys": {
@@ -229,7 +231,8 @@ DEFAULTS = {
             "preTaskReports": True,
             "postTaskReports": True,
             "dynamicGeneration": True,
-            "recentMemorySize": 18
+            "recentMemorySize": 18,
+            "customInstructions": ""
         }
     },
     "automation": {
@@ -246,6 +249,13 @@ DEFAULTS = {
         "maxLogSizeMb": 10,
         "minimizeToTray": True,
         "desktopOverlay": True,
+        "screenShareStealth": True,
+        "companion": {
+            "alwaysOnTop": True,
+            "size": "medium",
+            "opacity": 90,
+            "autoHide": True
+        },
         "notifications": {
             "desktop": True,
             "sound": True
@@ -516,6 +526,22 @@ def is_desktop_overlay_enabled() -> bool:
     """Check if minimized transparent desktop orb overlay is enabled."""
     sys_cfg = get_system_settings()
     return bool(sys_cfg.get('desktopOverlay', True))
+
+
+def is_screen_share_stealth_enabled() -> bool:
+    """Check if desktop orb is hidden from screen capture/sharing (WDA_EXCLUDEFROMCAPTURE)."""
+    sys_cfg = get_system_settings()
+    return bool(sys_cfg.get('screenShareStealth', True))
+
+
+def get_companion_settings() -> dict:
+    """Get desktop companion mascot configuration."""
+    sys_cfg = get_system_settings()
+    base = copy.deepcopy(DEFAULTS['system']['companion'])
+    comp = sys_cfg.get('companion')
+    if isinstance(comp, dict):
+        base.update(comp)
+    return base
 
 
 # ─── Getters: API Keys ───────────────────────────────────────────────────────

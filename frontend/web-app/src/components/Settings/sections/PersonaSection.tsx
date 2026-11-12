@@ -86,7 +86,39 @@ export const PersonaSection: React.FC = () => {
         </SettingRow>
       </SectionCard>
 
-      {/* 2. Interactive Feedback & Feedback Loops */}
+      {/* 2. Custom User Instructions / About You */}
+      <SectionCard
+        title="About You & Personal Instructions"
+        description="Tell Pulsar about yourself, your role, and how you want it to format its answers"
+        icon={User}
+      >
+        <div className="py-2 space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-white uppercase tracking-wider">
+              Custom Prompt Instructions (Apne Baare Mein Batayein)
+            </label>
+            <span className="text-[11px] text-[#9CA3AF]">
+              {(persona.customInstructions || '').length} / 2000 chars
+            </span>
+          </div>
+
+          <textarea
+            value={persona.customInstructions || ''}
+            onChange={(e) =>
+              updateSetting('voice', ['persona', 'customInstructions'], e.target.value.slice(0, 2000))
+            }
+            placeholder="e.g. Main student hoon, computer science padhta hoon. Mere sawalon ke jawab crisp Hinglish mein do. Jab code pucho toh modern TypeScript ya Python use karo aur bullet points do."
+            rows={4}
+            className="w-full bg-[#13151A] border border-[#2A2D35] focus:border-[#3B82F6] rounded-xl p-3.5 text-sm text-white placeholder-[#6B7280] outline-none transition-colors resize-y leading-relaxed font-sans"
+          />
+
+          <p className="text-xs text-[#9CA3AF]">
+            These instructions are automatically injected into Pulsar's core system prompt and remembered across Voice, Web Chat, Floating Orb, and Agents.
+          </p>
+        </div>
+      </SectionCard>
+
+      {/* 3. Interactive Feedback & Feedback Loops */}
       <SectionCard
         title="Execution Feedback & Acknowledgments"
         description="Verbal announcements before and after carrying out PC actions"
