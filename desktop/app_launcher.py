@@ -53,14 +53,18 @@ project_root = get_base_path()
 paths_to_add = [
     str(project_root),
     str(project_root / "backend"),
-    str(project_root / "core_ai" / "src"),
-    str(project_root / "core_ai" / "src" / "ai_assistant"),
-    str(project_root / "shared"),
+    str(project_root / "core_ai"),
     str(project_root / "desktop"),
 ]
 for p in paths_to_add:
     if p not in sys.path:
         sys.path.insert(0, p)
+
+try:
+    from core_ai.utils.crash_handler import install_crash_handler
+    install_crash_handler()
+except Exception:
+    pass
 
 
 def _extract_companion_port(argv) -> int:
@@ -347,7 +351,8 @@ class PulsarDesktopApp:
             from PIL import Image
 
             icon_candidates = [
-                project_root / "assets" / "icon.ico",
+                project_root / "desktop" / "assets" / "icon.ico",
+                project_root / "frontend" / "web-app" / "public" / "icon.ico",
                 Path(sys.executable).parent / "icon.ico",
                 Path(sys.executable).parent / "assets" / "icon.ico",
             ]

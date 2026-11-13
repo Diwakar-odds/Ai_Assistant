@@ -1,6 +1,6 @@
 @echo off
 title Pulsar AI Assistant - Debug Mode
-cd /d "%~dp0"
+cd /d "%~dp0\..\.."
 
 echo ========================================================
 echo   Starting Pulsar AI Assistant (Debug Console Mode)

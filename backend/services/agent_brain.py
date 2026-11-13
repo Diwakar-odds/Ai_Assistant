@@ -72,6 +72,21 @@ except Exception:
 from utils.logging_config import get_logger
 logger = get_logger(__name__, log_category="app")
 
+def _run_in_tpool(func, *args, **kwargs):
+    """
+    Execute CPU-bound or blocking native C++ operations (e.g. GGUF llama-cpp generation)
+    via eventlet.tpool on a background OS worker thread.
+    This prevents C++ CPU inference from blocking the Eventlet socket hub, keeping
+    WebSocket heartbeats, ping/pongs, and UI updates alive.
+    """
+    try:
+        if "eventlet" in sys.modules:
+            import eventlet.tpool
+            return eventlet.tpool.execute(func, *args, **kwargs)
+    except Exception as tpool_err:
+        logger.debug(f"Eventlet tpool execution bypassed: {tpool_err}")
+    return func(*args, **kwargs)
+
 # Win32 APIs for window & media key automation
 try:
     import win32gui
@@ -1364,7 +1379,7 @@ CORRECTED VERSION:
                 target_m = LLMFactory.sanitize_model_for_provider('gguf', active_model)
                 chat_iface = UnifiedChatInterface(provider='gguf', model=target_m, use_fallback=False)
                 chat_iface.set_system_message(system_context)
-                res_txt = str(chat_iface.chat(command, stream=False, max_tokens=64)).strip()
+                res_txt = str(_run_in_tpool(chat_iface.chat, command, stream=False, max_tokens=64)).strip()
                 if res_txt.startswith("Error:"):
                     raise RuntimeError(res_txt)
                 reply = res_txt
@@ -1402,7 +1417,7 @@ CORRECTED VERSION:
                 logger.info("Falling back to local GGUF model after cloud provider failure...")
                 chat_iface = UnifiedChatInterface(provider='gguf', model='pulsar-final-q4_k_m', use_fallback=False)
                 chat_iface.set_system_message(system_context)
-                res_txt = str(chat_iface.chat(command, stream=False, max_tokens=64)).strip()
+                res_txt = str(_run_in_tpool(chat_iface.chat, command, stream=False, max_tokens=64)).strip()
                 if res_txt and not res_txt.startswith("Error:"):
                     reply = res_txt
                     actual_provider = 'gguf'

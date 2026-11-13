@@ -108,6 +108,32 @@ def get_db_path_str(db_name: str) -> str:
     """
     return str(get_db_path(db_name))
 
+
+def get_db_connection(db_name: str, timeout: float = 30.0):
+    """
+    Open an enterprise-grade SQLite connection with WAL mode and busy timeout.
+    Prevents 'database is locked' errors across background threads in production.
+    
+    Args:
+        db_name: Name of the database
+        timeout: Lock acquisition timeout in seconds (default: 30.0s)
+        
+    Returns:
+        sqlite3.Connection configured for high-concurrency production usage.
+    """
+    import sqlite3
+    path = get_db_path(db_name)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(path), timeout=timeout, check_same_thread=False)
+    try:
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
+        conn.execute("PRAGMA busy_timeout=5000")
+        conn.execute("PRAGMA foreign_keys=ON")
+    except Exception:
+        pass
+    return conn
+
 def list_databases() -> dict:
     """
     List all configured databases and their paths.

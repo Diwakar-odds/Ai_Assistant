@@ -2147,9 +2147,17 @@ Just speak naturally - I understand context! """
             
             # Use bilingual Hinglish initial_prompt to preserve wake words + English app names in Hindi
             if whisper_lang == 'en':
-                initial_prompt = "Hey Pulsar, OK Pulsar. Open WhatsApp, Chrome, YouTube Music, VS Code, take a screenshot."
+                initial_prompt = "Hey Pulsar, OK Pulsar. Open WhatsApp, Chrome, YouTube Music, Spotify, VS Code, take a screenshot, increase volume."
             else:
-                initial_prompt = "Hey Pulsar, OK Pulsar, नमस्ते! WhatsApp, YouTube Music, Chrome, VS Code खोलो, स्क्रीनशॉट लो, बताओ क्या करना है?"
+                initial_prompt = "Hey Pulsar, OK Pulsar, नमस्ते! WhatsApp, Chrome, YouTube, Spotify, VS Code खोलो, बंद करो, गाना चलाओ, आवाज़ बढ़ाओ, स्क्रीनशॉट लो, बताओ क्या करना है?"
+
+            try:
+                from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+                kw = get_vocabulary_registry().get_whisper_prompt_keywords(limit=32)
+                if kw:
+                    initial_prompt = f"{initial_prompt} ({kw})"
+            except Exception:
+                pass
 
             try:
                 # Transcribe using Faster-Whisper

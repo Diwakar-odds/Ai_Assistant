@@ -1602,33 +1602,47 @@ class IntentVectorMatcher:
             return None
 
         norm_query = normalize_hinglish_devanagari(clean_query).strip() or clean_query
-        q_vec = encode_text(norm_query, normalize=True)
-        if q_vec is None:
-            return None
+        candidates = [clean_query]
+        if norm_query and norm_query != clean_query:
+            candidates.append(norm_query)
 
-        scores = np.dot(self.matrix, q_vec)
-        best_idx = int(np.argmax(scores))
-        best_score = float(scores[best_idx])
-        best_intent = str(self.intent_names[best_idx])
-        best_phrase = str(self.phrases[best_idx])
+        best_score = -1.0
+        best_intent = ""
+        best_phrase = ""
+        best_margin = 0.0
 
-        other_scores = [
-            scores[i]
-            for i in range(len(scores))
-            if self.intent_names[i] != best_intent
-        ]
-        second_best = float(max(other_scores)) if other_scores else 0.0
-        score_margin = best_score - second_best
+        for cand in candidates:
+            q_vec = encode_text(cand, normalize=True)
+            if q_vec is None:
+                continue
+
+            scores = np.dot(self.matrix, q_vec)
+            idx = int(np.argmax(scores))
+            score = float(scores[idx])
+            intent = str(self.intent_names[idx])
+            other_scores = [
+                scores[i]
+                for i in range(len(scores))
+                if self.intent_names[i] != intent
+            ]
+            second_best = float(max(other_scores)) if other_scores else 0.0
+            margin_val = score - second_best
+
+            if score > best_score:
+                best_score = score
+                best_intent = intent
+                best_phrase = str(self.phrases[idx])
+                best_margin = margin_val
 
         is_confident = (
-            best_score >= 0.85 or
-            (best_score >= threshold and score_margin >= margin)
+            best_score >= 0.82 or
+            (best_score >= threshold and best_margin >= margin)
         )
 
-        if not is_confident:
+        if not is_confident or not best_intent:
             logger.debug(
                 f"Tier 1.5 vector match rejected: '{clean_query}' -> {best_intent} "
-                f"(score: {best_score:.3f}, margin: {score_margin:.3f}, threshold: {threshold})"
+                f"(score: {best_score:.3f}, margin: {best_margin:.3f}, threshold: {threshold})"
             )
             return None
 
@@ -1641,22 +1655,23 @@ class IntentVectorMatcher:
             intent_name=best_intent,
             confidence=best_score,
             matched_phrase=best_phrase,
-            margin=score_margin,
+            margin=best_margin,
             parameters=params,
         )
 
     def _extract_parameters(self, intent_name: str, raw_query: str, norm_query: str) -> Dict[str, Any]:
         params: Dict[str, Any] = {}
         q = norm_query.lower()
+        raw_l = raw_query.lower()
 
         if intent_name == "volume_control":
-            if any(w in q for w in ["mute", "silent", "awaaz band"]):
+            if any(w in q or w in raw_l for w in ["mute", "silent", "awaaz band", "म्यूट", "साइलेंट", "आवाज़ बंद", "आवाज बंद"]):
                 params["action"] = "mute"
-            elif any(w in q for w in ["unmute", "awaaz kholo"]):
+            elif any(w in q or w in raw_l for w in ["unmute", "awaaz kholo", "अनम्यूट", "आवाज़ खोलो", "आवाज खोलो"]):
                 params["action"] = "unmute"
-            elif any(w in q for w in ["badhao", "badha", "increase", "up", "raise", "tez"]):
+            elif any(w in q or w in raw_l for w in ["badhao", "badha", "increase", "up", "raise", "tez", "बढ़ाओ", "बढ़ा", "तेज़", "तेज"]):
                 params["action"] = "up"
-            elif any(w in q for w in ["kam", "ghatao", "decrease", "down", "lower", "dheema"]):
+            elif any(w in q or w in raw_l for w in ["kam", "ghatao", "decrease", "down", "lower", "dheema", "कम", "घटाओ", "धीमा", "धीमी"]):
                 params["action"] = "down"
             m = re.search(r'\b(\d{1,3})\b', q)
             if m:
@@ -1666,33 +1681,41 @@ class IntentVectorMatcher:
                     params["level"] = lvl
 
         elif intent_name in ("wifi_toggle", "bluetooth_toggle"):
-            if any(w in q for w in ["on", "chalu", "start", "enable", "activate"]):
+            if any(w in q or w in raw_l for w in ["on", "chalu", "start", "enable", "activate", "चालू", "ऑन"]):
                 params["enable"] = True
-            elif any(w in q for w in ["off", "band", "stop", "disable", "deactivate"]):
+            elif any(w in q or w in raw_l for w in ["off", "band", "stop", "disable", "deactivate", "बंद", "ऑफ"]):
                 params["enable"] = False
 
         elif intent_name == "open_app":
-            clean = re.sub(r'^(?:kholo|open|launch|run|start|chalao)\s+', '', q)
-            clean = re.sub(r'\s+(?:kholo|open|karo|chalao|start|launch)$', '', clean).strip()
-            if clean:
-                params["target"] = clean
-                params["app_name"] = clean
+            clean = re.sub(r'^(?:kholo|open|launch|run|start|chalao|खोलो|खोल\s+दो|खोल\s+दे|खोल|ओपन\s+करो|ओपन|चालू\s+करो|चालू|प्वलो|पोलो)\s+', '', q)
+            clean = re.sub(r'\s+(?:kholo|open\s+karo|open\s+kar\s+do|open|karo|chalao|start|launch|खोलो|खोल\s+दो|खोल\s+दे|खोल|ओपन\s+करो|ओपन|चालू\s+करो|चालू|प्वलो|पोलो|कलो)$', '', clean).strip()
+            norm_target = normalize_hinglish_devanagari(clean) or clean
+            if norm_target:
+                params["target"] = norm_target
+                params["app_name"] = norm_target
 
         elif intent_name == "close_app":
-            clean = re.sub(r'^(?:band\s+karo|close|quit|exit|kill|shutdown)\s+', '', q)
-            clean = re.sub(r'\s+(?:band\s+karo|close|kar\s+do|quit)$', '', clean).strip()
-            if clean:
-                params["target"] = clean
-                params["app_name"] = clean
+            clean = re.sub(r'^(?:band\s+karo|close|quit|exit|kill|shutdown|बंद\s+करो|बंद\s+कर\s+दो|बंद|क्लोज\s+करो|हटाओ)\s+', '', q)
+            clean = re.sub(r'\s+(?:band\s+karo|close\s+kar\s+do|close\s+karo|close|kar\s+do|quit|बंद\s+करो|बंद\s+कर\s+दो|बंद|क्लोज\s+करो|हटाओ)$', '', clean).strip()
+            norm_target = normalize_hinglish_devanagari(clean) or clean
+            if norm_target:
+                params["target"] = norm_target
+                params["app_name"] = norm_target
+
+        elif intent_name == "play_media":
+            clean = re.sub(r'^(?:play|play\s+song|play\s+music|chalao|bajao|lagao|गाना\s+चलाओ|म्यूजिक\s+चलाओ|गाना\s+बजाओ|सुनाओ|गाना\s+सुनाओ|गाना\s+लगाओ|प्ले\s+करो)\s+', '', q)
+            clean = re.sub(r'\s+(?:gaana\s+chalao|music\s+chalao|gaana\s+bajao|play|chalao|bajao|lagao|sunao|play\s+karo|गाना\s+चलाओ|म्यूजिक\s+चलाओ|गाना\s+बजाओ|गाना\s+लगाओ|गाना\s+सुनाओ|सुनाओ|चलाओ|बजाओ|लगाओ|प्ले\s+करो)$', '', clean).strip()
+            clean = re.sub(r'\s+(?:gaana|song|music|गाने|गाना|सॉन्ग|म्यूजिक)$', '', clean).strip()
+            params["query"] = clean or raw_query
 
         elif intent_name == "media_control":
-            if any(w in q for w in ["next", "agla", "skip"]):
+            if any(w in q or w in raw_l for w in ["next", "agla", "skip", "अगला", "नेक्स्ट"]):
                 params["action"] = "next"
-            elif any(w in q for w in ["prev", "previous", "pichla"]):
+            elif any(w in q or w in raw_l for w in ["prev", "previous", "pichla", "पिछला", "प्रीवियस"]):
                 params["action"] = "previous"
-            elif any(w in q for w in ["pause", "roko", "ruk"]):
+            elif any(w in q or w in raw_l for w in ["pause", "roko", "ruk", "पॉज़", "रोको"]):
                 params["action"] = "pause"
-            elif any(w in q for w in ["play", "resume", "chalao"]):
+            elif any(w in q or w in raw_l for w in ["play", "resume", "chalao", "रिज्यूमे", "चलाओ"]):
                 params["action"] = "resume"
 
         elif intent_name == "send_message":

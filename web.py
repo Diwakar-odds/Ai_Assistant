@@ -32,9 +32,14 @@ def _get_backend_module():
     if _backend_app is None:
         root_dir = os.path.dirname(os.path.abspath(__file__))
         backend_dir = os.path.join(root_dir, 'backend')
-        for p in (root_dir, backend_dir, os.path.join(root_dir, 'core_ai', 'src')):
+        for p in (root_dir, backend_dir, os.path.join(root_dir, 'core_ai')):
             if p not in sys.path:
                 sys.path.insert(0, p)
+        try:
+            from core_ai.utils.crash_handler import install_crash_handler
+            install_crash_handler()
+        except Exception:
+            pass
         if os.path.exists(backend_dir):
             os.chdir(backend_dir)
         from backend import modern_web_backend as backend_app
@@ -82,7 +87,7 @@ def main():
     root_dir = os.path.dirname(os.path.abspath(__file__))
     backend_dir = os.path.join(root_dir, 'backend')
     
-    for p in (root_dir, backend_dir, os.path.join(root_dir, 'core_ai', 'src')):
+    for p in (root_dir, backend_dir, os.path.join(root_dir, 'core_ai')):
         if p not in sys.path:
             sys.path.insert(0, p)
             

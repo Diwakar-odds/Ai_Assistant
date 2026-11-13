@@ -59,7 +59,8 @@ dev = [
 ]
 
 [project.scripts]
-ai-assistant = "ai_assistant.__main__:main"
+ai-assistant = "core_ai.__main__:main"
+pulsar = "core_ai.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

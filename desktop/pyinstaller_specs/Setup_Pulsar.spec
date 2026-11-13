@@ -6,7 +6,7 @@ ROOT = os.path.abspath(os.path.join(SPECPATH, '..', '..'))
 datas = [
     (os.path.join(ROOT, 'dist_package', 'Pulsar_AI_Assistant'), 'Pulsar_AI_Assistant'),
     (os.path.join(ROOT, 'dist_package', 'Uninstall_Pulsar.exe'), '.'),
-    (os.path.join(ROOT, 'assets', 'icon.ico'), '.'),
+    (os.path.join(ROOT, 'desktop', 'assets', 'icon.ico'), '.'),
     (os.path.join(ROOT, 'docs', 'LICENSE.txt'), 'docs'),
 ]
 
@@ -44,5 +44,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=[os.path.join(ROOT, 'assets', 'icon.ico')],
+    icon=[os.path.join(ROOT, 'desktop', 'assets', 'icon.ico')],
 )

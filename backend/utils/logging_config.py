@@ -18,6 +18,7 @@ from datetime import datetime
 from typing import Optional
 import uuid
 import os
+import re
 
 # Fix Windows console encoding for emojis and non-standard shell streams
 if sys.platform == 'win32':
@@ -264,6 +265,9 @@ class LoggingConfig(metaclass=LoggingConfigMeta):
         if not readme_path.exists():
             with open(readme_path, 'w', encoding='utf-8') as f:
                 f.write(cls._generate_readme())
+
+        # Production Log Retention: Automatically prune logs older than 7 days
+        cls.prune_old_logs(max_days=7)
         
         cls._initialized = True
         
@@ -280,6 +284,29 @@ class LoggingConfig(metaclass=LoggingConfigMeta):
         console_handler.setFormatter(cls.get_formatter('simple'))
         root_logger.addHandler(console_handler)
     
+    @classmethod
+    def prune_old_logs(cls, max_days: int = 7):
+        """
+        Production Log Retention: Prune dated log directories older than `max_days`.
+        Prevents logs from accumulating thousands of files and consuming user disk space.
+        """
+        try:
+            from datetime import datetime, timedelta
+            import shutil
+            cutoff_date = datetime.now() - timedelta(days=max_days)
+            if not cls.BASE_LOG_DIR.exists():
+                return
+            for entry in cls.BASE_LOG_DIR.iterdir():
+                if entry.is_dir() and re.match(r"^\d{4}-\d{2}-\d{2}$", entry.name):
+                    try:
+                        folder_date = datetime.strptime(entry.name, "%Y-%m-%d")
+                        if folder_date < cutoff_date:
+                            shutil.rmtree(entry, ignore_errors=True)
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
     @classmethod
     def _generate_readme(cls) -> str:
         """Generate README for logs directory"""

@@ -7,10 +7,10 @@ ROOT = os.path.abspath(os.path.join(SPECPATH, '..', '..'))
 datas = [
     (os.path.join(ROOT, 'backend'), 'backend'),
     (os.path.join(ROOT, 'core_ai'), 'core_ai'),
-    (os.path.join(ROOT, 'shared'), 'shared'),
-    (os.path.join(ROOT, 'assets'), 'assets'),
+    (os.path.join(ROOT, 'config'), 'config'),
+    (os.path.join(ROOT, 'bin'), 'bin'),
     (os.path.join(ROOT, 'desktop'), 'desktop'),
-    (os.path.join(ROOT, 'docs', 'LICENSE.txt'), 'docs'),
+    (os.path.join(ROOT, 'docs', 'LICENSE.txt'), 'docs') if os.path.exists(os.path.join(ROOT, 'docs', 'LICENSE.txt')) else (os.path.join(ROOT, 'README.md'), 'docs'),
     (os.path.join(ROOT, 'frontend', 'web-app', 'dist'), os.path.join('frontend', 'web-app', 'dist')),
 ]
 
@@ -60,8 +60,7 @@ a = Analysis(
     pathex=[
         ROOT,
         os.path.join(ROOT, 'backend'),
-        os.path.join(ROOT, 'core_ai', 'src'),
-        os.path.join(ROOT, 'shared'),
+        os.path.join(ROOT, 'core_ai'),
         os.path.join(ROOT, 'desktop'),
     ],
     binaries=binaries,
@@ -156,6 +155,17 @@ a = Analysis(
         'voice_service',
         'telemetry_dashboard',
         'telemetry_tracer',
+        'core_ai',
+        'core_ai.config.paths',
+        'core_ai.core.database_config',
+        'core_ai.utils.logging_config',
+        'core_ai.utils.crash_handler',
+        'core_ai.voice.tts_output_service',
+        'core_ai.voice.text_cleaner',
+        'core_ai.voice.echo_guard',
+        'core_ai.voice.voice_settings_manager',
+        'core_ai.core.jarvis_persona',
+        'core_ai.core.local_command_normalizer',
         'ai_assistant.voice.tts_output_service',
         'ai_assistant.voice.text_cleaner',
         'ai_assistant.voice.echo_guard',
@@ -200,7 +210,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=[os.path.join(ROOT, 'assets', 'icon.ico')],
+    icon=[os.path.join(ROOT, 'desktop', 'assets', 'icon.ico')],
 )
 coll = COLLECT(
     exe,

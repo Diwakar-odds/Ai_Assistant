@@ -46,8 +46,7 @@ else:
 for p in (
     project_root,
     project_root / "backend",
-    project_root / "core_ai" / "src",
-    project_root / "shared",
+    project_root / "core_ai",
     project_root / "desktop",
 ):
     sp = str(p)

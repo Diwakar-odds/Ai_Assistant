@@ -3624,7 +3624,14 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                             }
                             setInterimTranscript('Hearing you...');
                         } else { // Silence
-                            const timeoutMs = hasSpoken ? 1500 : 7000;
+                            // Hybrid Endpointing: Check for trailing connectives ("और", "फिर", "aur", "and then", "ki", "toh")
+                            const trailingConnectiveRegex = /(?:\b(aur|aur\s+phir|and|and\s+then|then|toh|ki|ya|lekin|par|or|also)\b|और|और\s+फिर|फिर|तो|कि|या|लेकिन|पर)\s*$/i;
+                            const text = (interimTranscriptRef.current || '').trim();
+                            const hasTrailingConnective = hasSpoken && trailingConnectiveRegex.test(text);
+                            const timeoutMs = hasSpoken ? (hasTrailingConnective ? 2600 : 1500) : 7000;
+                            if (hasTrailingConnective && interimTranscript !== 'Hearing you (waiting for you to continue...)...') {
+                                setInterimTranscript('Hearing you (waiting for you to continue...)...');
+                            }
                             if (!silenceTimerRef.current) {
                                 silenceTimerRef.current = setTimeout(() => {
                                     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {

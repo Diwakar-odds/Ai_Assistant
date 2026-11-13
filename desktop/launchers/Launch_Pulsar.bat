@@ -1,6 +1,6 @@
 @echo off
 title Pulsar AI Assistant Launcher
-cd /d "%~dp0"
+cd /d "%~dp0\..\.."
 
 echo ========================================================
 echo   Starting Pulsar AI Assistant (Native Windows App)

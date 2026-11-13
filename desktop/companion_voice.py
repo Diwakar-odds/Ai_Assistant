@@ -35,8 +35,7 @@ else:
 for _sp in (
     str(project_root),
     str(project_root / "backend"),
-    str(project_root / "core_ai" / "src"),
-    str(project_root / "shared"),
+    str(project_root / "core_ai"),
     str(project_root / "desktop"),
 ):
     if _sp not in sys.path:
