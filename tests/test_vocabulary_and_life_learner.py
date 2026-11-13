@@ -19,6 +19,16 @@ class TestVocabularyAndLifeLearner(unittest.TestCase):
     def setUp(self):
         self.reg = get_vocabulary_registry()
 
+    def tearDown(self):
+        import sqlite3
+        try:
+            dna = UserDNA()
+            with sqlite3.connect(dna.db_path) as conn:
+                conn.execute("DELETE FROM user_dna WHERE key IN ('user_name', 'upcoming_exam', 'upcoming_interview', 'friend_name', 'user_location')")
+                conn.commit()
+        except Exception:
+            pass
+
     def test_vocabulary_whisper_prompt_keywords(self):
         kw = self.reg.get_whisper_prompt_keywords()
         self.assertIsInstance(kw, str)
@@ -79,11 +89,39 @@ class TestVocabularyAndLifeLearner(unittest.TestCase):
         self.assertIn("Friday", str(profile["upcoming_interview"]))
 
     def test_persona_system_prompt_includes_living_context(self):
+        UserDNA().update_trait("upcoming_interview", "Friday")
         prompt = build_persona_system_prompt()
         self.assertIn("LIVING USER CONTEXT", prompt)
         self.assertIn("Upcoming Events", prompt)
         # Ensure strict gender rule remains
         self.assertIn("PERSONA GENDER", prompt)
+
+    def test_tts_pipeline_wiring(self):
+        from ai_assistant.voice.text_cleaner import prepare_text_for_kitten_tts, clean_text_for_tts, hinglish_to_devanagari
+
+        input_text = "Main vs code open kar raha hoon for diwakar"
+        cleaned = clean_text_for_tts(input_text)
+        self.assertIn("kar rahi hoon", cleaned)
+        self.assertIn("VS Code", cleaned)
+        self.assertIn("Diwakar", cleaned)
+
+        # EdgeTTS hi-IN Devanagari conversion
+        edge_text = hinglish_to_devanagari(input_text)
+        self.assertIn("कर रही हूँ", edge_text)
+        self.assertIn("वीएस कोड", edge_text)
+        self.assertIn("दिवाकर", edge_text)
+
+        # KittenTTS offline conversion
+        kitten_text = prepare_text_for_kitten_tts(input_text)
+        self.assertIn("V S Code", kitten_text)
+        self.assertIn("Dih-wah-kur", kitten_text)
+
+        # Anti-servant across pipeline
+        servant_input = "saare system online hain, aadesh den."
+        clean_servant = clean_text_for_tts(servant_input)
+        self.assertNotIn("aadesh den", clean_servant.lower())
+        kitten_servant = prepare_text_for_kitten_tts(servant_input)
+        self.assertNotIn("aadesh den", kitten_servant.lower())
 
 
 if __name__ == '__main__':

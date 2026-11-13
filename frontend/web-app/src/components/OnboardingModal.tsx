@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, ArrowRight, Shield, Mic, Wand2, Cpu, KeyRound } from 'lucide-react';
+import { Check, ArrowRight, Shield, Mic, Wand2, Cpu, KeyRound, X, Loader2 } from 'lucide-react';
 import { apiUrl } from '../lib/api';
 
 type ProviderChoice = 'gemini' | 'openai' | 'gguf';
+
+const TOTAL_STEPS = 4;
 
 export default function OnboardingModal({ onComplete }: { onComplete: () => void }) {
   const [step, setStep] = useState(1);
@@ -12,13 +14,17 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
   const [geminiKey, setGeminiKey] = useState('');
   const [openAIKey, setOpenAIKey] = useState('');
   const [micGranted, setMicGranted] = useState<boolean | null>(null);
+  const [requestingMic, setRequestingMic] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [loading, setLoading] = useState(false);
 
-  const handleNext = () => setStep((s) => s + 1);
+  const effectiveStep = Math.min(TOTAL_STEPS, Math.max(1, step));
+
+  const handleNext = () => setStep((s) => Math.min(TOTAL_STEPS, s + 1));
   const handleBack = () => setStep((s) => Math.max(1, s - 1));
 
   const handleFinish = async () => {
+    if (loading) return;
     setLoading(true);
     try {
       const apiKeys: Record<string, string> = {};
@@ -45,6 +51,8 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
   };
 
   const requestMic = async () => {
+    if (requestingMic) return;
+    setRequestingMic(true);
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
       setMicGranted(true);
@@ -52,6 +60,8 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
     } catch {
       setMicGranted(false);
       alert('Microphone permission was not granted. You can enable voice commands later from Windows Privacy Settings.');
+    } finally {
+      setRequestingMic(false);
     }
   };
 
@@ -64,23 +74,36 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
       >
         {/* Step Progress Header */}
         <div className="px-8 pt-6 pb-2 flex items-center justify-between border-b border-[#2A2D35]/70">
-          <span className="text-xs font-semibold uppercase tracking-wider text-blue-400">
-            Pulsar AI Setup — Step {step} of 4
-          </span>
-          <div className="flex gap-1.5">
-            {[1, 2, 3, 4].map((idx) => (
-              <div
-                key={idx}
-                className={`h-1.5 w-8 rounded-full transition-colors ${
-                  idx <= step ? 'bg-blue-500' : 'bg-[#2A2D35]'
-                }`}
-              />
-            ))}
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold uppercase tracking-wider text-blue-400">
+              Pulsar AI Setup — Step {effectiveStep} of {TOTAL_STEPS}
+            </span>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex gap-1.5">
+              {[1, 2, 3, 4].map((idx) => (
+                <div
+                  key={idx}
+                  className={`h-1.5 w-8 rounded-full transition-colors ${
+                    idx <= effectiveStep ? 'bg-blue-500' : 'bg-[#2A2D35]'
+                  }`}
+                />
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={handleFinish}
+              disabled={loading}
+              title="Skip setup and go to dashboard"
+              className="text-gray-400 hover:text-white p-1 rounded hover:bg-[#2A2D35] transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
         <AnimatePresence mode="wait">
-          {step === 1 && (
+          {effectiveStep === 1 && (
             <motion.div key="step1" exit={{ opacity: 0, x: -20 }} className="p-8">
               <div className="flex items-center gap-3 mb-5">
                 <Shield className="w-8 h-8 text-blue-500" />
@@ -118,6 +141,7 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
 
               <div className="flex justify-end">
                 <button
+                  type="button"
                   disabled={!agreed}
                   onClick={handleNext}
                   className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium flex items-center gap-2 transition-colors"
@@ -128,7 +152,7 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
             </motion.div>
           )}
 
-          {step === 2 && (
+          {effectiveStep === 2 && (
             <motion.div
               key="step2"
               initial={{ opacity: 0, x: 20 }}
@@ -189,12 +213,14 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
 
               <div className="flex justify-between">
                 <button
+                  type="button"
                   onClick={handleBack}
                   className="px-5 py-2.5 bg-[#2A2D35] hover:bg-[#343842] text-gray-200 rounded-lg font-medium transition-colors"
                 >
                   Back
                 </button>
                 <button
+                  type="button"
                   onClick={handleNext}
                   className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium flex items-center gap-2 transition-colors"
                 >
@@ -204,7 +230,7 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
             </motion.div>
           )}
 
-          {step === 3 && (
+          {effectiveStep === 3 && (
             <motion.div
               key="step3"
               initial={{ opacity: 0, x: 20 }}
@@ -221,31 +247,38 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
               </p>
               <div className="flex justify-center gap-4">
                 <button
+                  type="button"
+                  disabled={requestingMic}
                   onClick={handleBack}
                   className="px-5 py-2.5 bg-[#2A2D35] hover:bg-[#343842] text-gray-200 rounded-lg font-medium transition-colors"
                 >
                   Back
                 </button>
                 <button
+                  type="button"
+                  disabled={requestingMic}
                   onClick={() => {
                     setMicGranted(false);
                     handleNext();
                   }}
-                  className="px-6 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
+                  className="px-6 py-2.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white rounded-lg font-medium transition-colors"
                 >
                   Skip for now
                 </button>
                 <button
+                  type="button"
+                  disabled={requestingMic}
                   onClick={requestMic}
-                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition-colors"
+                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-lg font-medium flex items-center gap-2 transition-colors"
                 >
+                  {requestingMic ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                   Grant Access
                 </button>
               </div>
             </motion.div>
           )}
 
-          {step === 4 && (
+          {effectiveStep === 4 && (
             <motion.div
               key="step4"
               initial={{ opacity: 0, x: 20 }}
@@ -257,7 +290,7 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
               </div>
               <h2 className="text-2xl font-bold text-white mb-3">You&apos;re All Set!</h2>
               <p className="text-gray-300 mb-6 max-w-md mx-auto text-sm">
-                Choose your preferred appearance theme and start a quick guided tour of Pulsar AI.
+                Choose your preferred appearance theme and start using Pulsar AI.
               </p>
 
               <div className="flex justify-center gap-3 mb-7">
@@ -279,17 +312,21 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
 
               <div className="flex justify-center gap-3">
                 <button
+                  type="button"
+                  disabled={loading}
                   onClick={handleBack}
                   className="px-5 py-2.5 bg-[#2A2D35] hover:bg-[#343842] text-gray-200 rounded-lg font-medium transition-colors"
                 >
                   Back
                 </button>
                 <button
+                  type="button"
                   onClick={handleFinish}
                   disabled={loading}
-                  className="px-8 py-2.5 bg-green-600 hover:bg-green-500 text-white rounded-lg font-bold flex items-center gap-2 transition-colors"
+                  className="px-8 py-2.5 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white rounded-lg font-bold flex items-center gap-2 transition-colors"
                 >
-                  {loading ? 'Saving...' : 'Start Tour'} <ArrowRight className="w-5 h-5" />
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  {loading ? 'Saving...' : 'Start Using Pulsar'} <ArrowRight className="w-5 h-5" />
                 </button>
               </div>
             </motion.div>

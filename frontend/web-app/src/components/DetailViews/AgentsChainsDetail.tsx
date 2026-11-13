@@ -2,22 +2,27 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
     Activity,
+    ArrowRight,
     Bot,
     CheckCircle2,
     Cpu,
+    Database,
     GitBranch,
     Layers,
     Loader2,
+    Lock,
     Play,
     RefreshCw,
     Search,
     Send,
     Sparkles,
     Square,
+    Trash2,
     XCircle,
     Zap,
 } from 'lucide-react';
 import { useDashboard } from '../../contexts/DashboardContext';
+import { API_ENDPOINTS, WorkflowRecipeDTO, apiFetchJson } from '../../lib/api';
 import { analyzeCommandInput } from '../../lib/commandUtils';
 import ChainMonitor from '../ChainMonitor';
 
@@ -32,13 +37,15 @@ const AgentsChainsDetail = () => {
         refreshChains,
         refreshAgents,
         createAndRunChain,
+        deleteChain,
+        clearAllChains,
         emergencyStop,
         loadAgent,
         dispatchAgentTask,
         cancelAgentTask,
     } = useDashboard();
 
-    const [activeTab, setActiveTab] = useState<'chains' | 'agents'>('chains');
+    const [activeTab, setActiveTab] = useState<'chains' | 'agents' | 'workflows'>('chains');
     const [refreshing, setRefreshing] = useState(false);
 
     // Chain launcher state
@@ -54,9 +61,39 @@ const AgentsChainsDetail = () => {
     const [dispatchingAgent, setDispatchingAgent] = useState(false);
     const [dispatchFeedback, setDispatchFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+    // Swarm Synthesizer & Learned Recipes state
+    const [recipes, setRecipes] = useState<WorkflowRecipeDTO[]>([]);
+    const [loadingRecipes, setLoadingRecipes] = useState(false);
+    const [clearingRecipes, setClearingRecipes] = useState(false);
+    const [synthGoal, setSynthGoal] = useState('');
+    const [synthesizing, setSynthesizing] = useState(false);
+    const [synthesizedPlan, setSynthesizedPlan] = useState<any | null>(null);
+    const [synthError, setSynthError] = useState<string | null>(null);
+
+    const fetchRecipes = async () => {
+        setLoadingRecipes(true);
+        try {
+            const res = await apiFetchJson<{ success: boolean; recipes: WorkflowRecipeDTO[] }>(
+                API_ENDPOINTS.agents.workflows
+            );
+            if (res && res.success && Array.isArray(res.recipes)) {
+                setRecipes(res.recipes);
+            }
+        } catch (e) {
+            console.error('Failed to fetch recipes:', e);
+        } finally {
+            setLoadingRecipes(false);
+        }
+    };
+
     useEffect(() => {
         refreshChains();
         refreshAgents();
+        fetchRecipes();
+        const interval = setInterval(() => {
+            refreshChains();
+        }, 3000);
+        return () => clearInterval(interval);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -141,6 +178,57 @@ const AgentsChainsDetail = () => {
                 text: 'Failed to dispatch task. Verify backend agent service is running.',
             });
         }
+    };
+
+    const handleClearRecipes = async () => {
+        if (!window.confirm('Clear all learned workflow recipes from memory?')) return;
+        setClearingRecipes(true);
+        try {
+            await apiFetchJson(API_ENDPOINTS.agents.clearWorkflows, { method: 'POST' });
+            await fetchRecipes();
+        } catch (e) {
+            console.error('Failed to clear recipes:', e);
+        } finally {
+            setClearingRecipes(false);
+        }
+    };
+
+    const handleSynthesizeWorkflow = async (e?: React.FormEvent) => {
+        e?.preventDefault();
+        const g = synthGoal.trim();
+        if (!g || synthesizing) return;
+        setSynthesizing(true);
+        setSynthError(null);
+        setSynthesizedPlan(null);
+        try {
+            const res = await apiFetchJson<{ success: boolean; workflow?: any; error?: string }>(
+                API_ENDPOINTS.agents.synthesizeWorkflow,
+                {
+                    method: 'POST',
+                    body: JSON.stringify({ goal: g }),
+                }
+            );
+            if (res && res.success && res.workflow) {
+                setSynthesizedPlan(res.workflow);
+            } else {
+                setSynthError(res?.error || 'Failed to synthesize DAG workflow plan.');
+            }
+        } catch (err: any) {
+            setSynthError(err?.message || 'Error communicating with SwarmPlanner backend.');
+        } finally {
+            setSynthesizing(false);
+        }
+    };
+
+    const handleExecuteSynthesized = async () => {
+        if (!synthGoal.trim()) return;
+        setActiveTab('chains');
+        await createAndRunChain(synthGoal.trim(), { autoExecute: true });
+    };
+
+    const handleRunRecipe = async (pattern: string) => {
+        setActiveTab('chains');
+        await createAndRunChain(pattern, { autoExecute: true });
     };
 
     return (
@@ -252,9 +340,27 @@ const AgentsChainsDetail = () => {
                         {agents.length}
                     </span>
                 </button>
+                <button
+                    type="button"
+                    onClick={() => {
+                        setActiveTab('workflows');
+                        fetchRecipes();
+                    }}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all ${
+                        activeTab === 'workflows'
+                            ? 'bg-amber-500/20 text-white border border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.2)]'
+                            : 'text-[#9CA3AF] hover:text-white hover:bg-[#1F2228]'
+                    }`}
+                >
+                    <Sparkles className="w-4 h-4 text-amber-400" />
+                    <span>Learned Recipes & Swarm</span>
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-[#0D1017] text-[#9CA3AF]">
+                        {recipes.length}
+                    </span>
+                </button>
             </div>
 
-            {activeTab === 'chains' ? (
+            {activeTab === 'chains' && (
                 <div className="space-y-5">
                     {/* Multi-Command Chain Launcher */}
                     <form
@@ -300,6 +406,21 @@ const AgentsChainsDetail = () => {
                                 <h4 className="text-xs font-semibold uppercase tracking-wider text-[#9CA3AF]">
                                     Active & Recent Chains
                                 </h4>
+                                {allChains.length > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            if (window.confirm('Clear all chain records?')) {
+                                                await clearAllChains();
+                                            }
+                                        }}
+                                        className="inline-flex items-center gap-1.5 text-xs text-[#EF4444] hover:text-[#DC2626] transition-colors px-2 py-1 rounded bg-[#EF4444]/10 hover:bg-[#EF4444]/20 border border-[#EF4444]/20"
+                                        title="Clear all chain records"
+                                    >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                        <span>Clear All</span>
+                                    </button>
+                                )}
                             </div>
 
                             {allChains.length === 0 ? (
@@ -312,11 +433,17 @@ const AgentsChainsDetail = () => {
                                         const isSelected = c.chain_id === effectiveChainId;
                                         const isActive = !['completed', 'failed', 'cancelled'].includes(c.status);
                                         return (
-                                            <button
+                                            <div
                                                 key={c.chain_id}
-                                                type="button"
+                                                role="button"
+                                                tabIndex={0}
                                                 onClick={() => setSelectedChainId(c.chain_id)}
-                                                className={`w-full text-left p-3.5 rounded-xl border transition-all ${
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' || e.key === ' ') {
+                                                        setSelectedChainId(c.chain_id);
+                                                    }
+                                                }}
+                                                className={`w-full text-left p-3.5 rounded-xl border transition-all cursor-pointer ${
                                                     isSelected
                                                         ? 'bg-[#1F2228] border-[#00f3ff]/60 shadow-[0_0_15px_rgba(0,243,255,0.12)]'
                                                         : 'bg-[#16181D] border-[#2A2D35] hover:border-[#3B82F6]/40'
@@ -326,22 +453,35 @@ const AgentsChainsDetail = () => {
                                                     <span className="text-[10px] font-mono text-[#6B7280] truncate">
                                                         {c.chain_id}
                                                     </span>
-                                                    <span
-                                                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase ${
-                                                            c.status === 'completed'
-                                                                ? 'bg-emerald-500/15 text-emerald-300'
-                                                                : c.status === 'failed'
-                                                                ? 'bg-red-500/15 text-red-300'
-                                                                : c.status === 'cancelled'
-                                                                ? 'bg-slate-500/15 text-slate-300'
-                                                                : c.status === 'paused'
-                                                                ? 'bg-amber-500/15 text-amber-300'
-                                                                : 'bg-cyan-500/15 text-cyan-300'
-                                                        }`}
-                                                    >
-                                                        {isActive && '● '}
-                                                        {c.status}
-                                                    </span>
+                                                    <div className="flex items-center gap-1.5 shrink-0">
+                                                        <span
+                                                            className={`text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase ${
+                                                                c.status === 'completed'
+                                                                    ? 'bg-emerald-500/15 text-emerald-300'
+                                                                    : c.status === 'failed'
+                                                                    ? 'bg-red-500/15 text-red-300'
+                                                                    : c.status === 'cancelled'
+                                                                    ? 'bg-slate-500/15 text-slate-300'
+                                                                    : c.status === 'paused'
+                                                                    ? 'bg-amber-500/15 text-amber-300'
+                                                                    : 'bg-cyan-500/15 text-cyan-300'
+                                                            }`}
+                                                        >
+                                                            {isActive && '● '}
+                                                            {c.status}
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            title="Delete this chain"
+                                                            onClick={async (e) => {
+                                                                e.stopPropagation();
+                                                                await deleteChain(c.chain_id);
+                                                            }}
+                                                            className="text-[#9CA3AF] hover:text-[#EF4444] p-1 rounded hover:bg-[#2A2D35] transition-colors"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
                                                 </div>
                                                 <p className="text-sm font-medium text-white line-clamp-2 mb-2">
                                                     {c.command || 'Orchestrated Command'}
@@ -364,7 +504,7 @@ const AgentsChainsDetail = () => {
                                                         style={{ width: `${c.progress_percentage}%` }}
                                                     />
                                                 </div>
-                                            </button>
+                                            </div>
                                         );
                                     })}
                                 </div>
@@ -376,7 +516,9 @@ const AgentsChainsDetail = () => {
                         </div>
                     </div>
                 </div>
-            ) : (
+            )}
+
+            {activeTab === 'agents' && (
                 <div className="space-y-5">
                     {/* Auto-Dispatch & Filter Controls */}
                     <div className="bg-[#1F2228] border border-[#2A2D35] rounded-xl p-4 space-y-3">
@@ -625,6 +767,249 @@ const AgentsChainsDetail = () => {
                             </div>
                         </div>
                     )}
+                </div>
+            )}
+
+            {activeTab === 'workflows' && (
+                <div className="space-y-6">
+                    {/* Swarm Meta-Architect Synthesizer */}
+                    <div className="bg-[#1F2228] border border-[#2A2D35] rounded-xl p-5 space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div>
+                                <h4 className="text-base font-bold text-white flex items-center gap-2">
+                                    <Sparkles className="w-4 h-4 text-amber-400" />
+                                    <span>Dynamic Multi-Agent Swarm Synthesizer</span>
+                                </h4>
+                                <p className="text-xs text-[#9CA3AF] mt-0.5">
+                                    Describe any complex, unlisted goal. The Swarm Architect analyzes the 14-agent capability manifest, resolves topological dependencies, and constructs parallel execution waves.
+                                </p>
+                            </div>
+                        </div>
+
+                        <form onSubmit={handleSynthesizeWorkflow} className="space-y-3">
+                            <div className="flex flex-col sm:flex-row gap-2">
+                                <input
+                                    type="text"
+                                    value={synthGoal}
+                                    onChange={(e) => setSynthGoal(e.target.value)}
+                                    placeholder="e.g. Scrape the latest AI research papers, extract benchmark scores to CSV, and email a summary briefing"
+                                    className="flex-1 bg-[#0D1017] border border-[#2A2D35] focus:border-amber-400/50 rounded-lg px-3.5 py-2.5 text-sm text-white placeholder-[#6B7280] focus:outline-none"
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={!synthGoal.trim() || synthesizing}
+                                    className="px-5 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black text-sm font-semibold flex items-center justify-center gap-2 transition-colors shrink-0 shadow-[0_0_12px_rgba(245,158,11,0.3)]"
+                                >
+                                    {synthesizing ? <Loader2 className="w-4 h-4 animate-spin text-black" /> : <Sparkles className="w-4 h-4 text-black" />}
+                                    <span>Synthesize DAG</span>
+                                </button>
+                            </div>
+
+                            {/* Example Quick-Pick Prompts */}
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-[11px] text-[#6B7280]">Try examples:</span>
+                                {[
+                                    'Search quantum computing breakthroughs, extract citations, and draft report',
+                                    'Scrape e-commerce top sellers, format tabular CSV, and verify integrity',
+                                    'Analyze system performance logs, summarize bottlenecks, and notify team',
+                                ].map((example, i) => (
+                                    <button
+                                        key={i}
+                                        type="button"
+                                        onClick={() => setSynthGoal(example)}
+                                        className="text-[11px] px-2.5 py-1 rounded bg-[#0D1017] hover:bg-[#16181D] text-[#9CA3AF] hover:text-amber-300 border border-[#2A2D35] transition-colors"
+                                    >
+                                        {example}
+                                    </button>
+                                ))}
+                            </div>
+                        </form>
+
+                        {synthError && (
+                            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-300 font-mono">
+                                {synthError}
+                            </div>
+                        )}
+
+                        {/* Synthesized Plan Wave Preview */}
+                        {synthesizedPlan && (
+                            <div className="mt-4 p-4 rounded-xl bg-[#16181D] border border-amber-500/30 space-y-4">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#2A2D35]">
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-semibold uppercase tracking-wider text-amber-400">
+                                                Synthesized Swarm DAG
+                                            </span>
+                                            <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-mono">
+                                                {synthesizedPlan.steps?.length || 0} Steps in {synthesizedPlan.waves?.length || 1} Waves
+                                            </span>
+                                        </div>
+                                        <p className="text-sm font-medium text-white mt-1">{synthesizedPlan.goal}</p>
+                                        {synthesizedPlan.strategy && (
+                                            <p className="text-xs text-[#9CA3AF] mt-0.5 italic">{synthesizedPlan.strategy}</p>
+                                        )}
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={handleExecuteSynthesized}
+                                        className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-[0_0_12px_rgba(16,185,129,0.3)] shrink-0"
+                                    >
+                                        <Play className="w-3.5 h-3.5 fill-black" />
+                                        <span>Run This Swarm Now</span>
+                                    </button>
+                                </div>
+
+                                {/* Waves Breakdown */}
+                                <div className="space-y-3">
+                                    {(synthesizedPlan.waves || []).map((wave: any, wIdx: number) => (
+                                        <div key={wIdx} className="p-3 rounded-lg bg-[#0D1017] border border-[#2A2D35]">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-xs font-bold text-cyan-400 uppercase tracking-wide flex items-center gap-1.5">
+                                                    <GitBranch className="w-3.5 h-3.5" />
+                                                    Wave {wIdx + 1} ({wave.steps?.length || 0} Parallel Steps)
+                                                </span>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                {(wave.steps || []).map((step: any, sIdx: number) => (
+                                                    <div
+                                                        key={step.step_id || sIdx}
+                                                        className="p-2.5 rounded bg-[#1F2228] border border-[#2A2D35] flex items-start gap-2 text-xs"
+                                                    >
+                                                        <div className="p-1.5 rounded bg-violet-500/15 text-violet-300 shrink-0">
+                                                            <Bot className="w-3.5 h-3.5" />
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="flex items-center gap-1.5 mb-0.5">
+                                                                <span className="font-mono text-[10px] text-slate-400">#{step.step_id}</span>
+                                                                <span className="px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-200 text-[10px] font-semibold">
+                                                                    {step.agent_id}
+                                                                </span>
+                                                                {step.requires_confirmation && (
+                                                                    <span className="inline-flex items-center gap-0.5 text-[9px] px-1 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                                                                        <Lock className="w-2.5 h-2.5" />
+                                                                        Gate
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-slate-200 break-words">{step.description}</p>
+                                                            {step.dependencies && step.dependencies.length > 0 && (
+                                                                <p className="text-[10px] text-[#6B7280] mt-1 font-mono">
+                                                                    Depends on: {step.dependencies.join(', ')}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Learned Recipes (Persistent SQLite Memory Cache) */}
+                    <div className="bg-[#1F2228] border border-[#2A2D35] rounded-xl p-5 space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div>
+                                <h4 className="text-base font-bold text-white flex items-center gap-2">
+                                    <Database className="w-4 h-4 text-emerald-400" />
+                                    <span>Learned Workflow Recipes (0ms / 0-Token Recall)</span>
+                                </h4>
+                                <p className="text-xs text-[#9CA3AF] mt-0.5">
+                                    Whenever the Swarm executes a multi-agent plan successfully, it auto-abstracts entities into generalized tokens (&lt;FILE_PATH&gt;, &lt;URL&gt;, &lt;TOPIC&gt;) and stores the recipe in SQLite. Subsequent matching commands bypass LLM reasoning entirely.
+                                </p>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={fetchRecipes}
+                                    disabled={loadingRecipes}
+                                    className="px-3 py-1.5 rounded-lg bg-[#0D1017] hover:bg-[#16181D] border border-[#2A2D35] text-xs text-[#9CA3AF] hover:text-white flex items-center gap-1.5 transition-colors"
+                                >
+                                    <RefreshCw className={`w-3.5 h-3.5 ${loadingRecipes ? 'animate-spin' : ''}`} />
+                                    <span>Refresh</span>
+                                </button>
+                                {recipes.length > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={handleClearRecipes}
+                                        disabled={clearingRecipes}
+                                        className="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-xs text-red-300 flex items-center gap-1.5 transition-colors"
+                                    >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                        <span>Clear Memory</span>
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {loadingRecipes ? (
+                            <div className="py-12 flex flex-col items-center justify-center text-slate-400">
+                                <Loader2 className="w-6 h-6 animate-spin text-amber-400 mb-2" />
+                                <p className="text-xs">Loading learned recipes from workflow memory...</p>
+                            </div>
+                        ) : recipes.length === 0 ? (
+                            <div className="py-10 rounded-lg bg-[#0D1017] border border-[#2A2D35] text-center p-6">
+                                <Sparkles className="w-8 h-8 text-amber-400/50 mx-auto mb-2" />
+                                <p className="text-sm font-semibold text-white">No Learned Recipes Yet</p>
+                                <p className="text-xs text-[#9CA3AF] max-w-md mx-auto mt-1">
+                                    Run a novel multi-agent chain or synthesize one above. Once completed with high quality, the coordinator caches the execution pattern here automatically.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {recipes.map((recipe) => (
+                                    <div
+                                        key={recipe.id}
+                                        className="p-4 rounded-xl bg-[#0D1017] border border-[#2A2D35] hover:border-amber-500/40 transition-colors flex flex-col justify-between gap-3"
+                                    >
+                                        <div>
+                                            <div className="flex items-center justify-between gap-2 mb-2">
+                                                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/25">
+                                                    Recipe #{recipe.id.slice(0, 8)}
+                                                </span>
+                                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                                                    <span>🏆</span>
+                                                    {recipe.success_count} runs
+                                                </span>
+                                            </div>
+                                            <h5 className="text-sm font-semibold text-white break-words">
+                                                {recipe.workflow_name || 'Workflow Pattern'}
+                                            </h5>
+                                            <div className="mt-1 p-2 rounded bg-[#16181D] border border-[#2A2D35] font-mono text-[11px] text-slate-300 break-words">
+                                                {recipe.normalized_pattern}
+                                            </div>
+                                            {recipe.tags && (
+                                                <div className="flex flex-wrap gap-1 mt-2">
+                                                    {recipe.tags.split(',').map((tag: string, tIdx: number) => (
+                                                        <span
+                                                            key={tIdx}
+                                                            className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300"
+                                                        >
+                                                            #{tag.trim()}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRunRecipe(recipe.normalized_pattern)}
+                                            className="w-full mt-2 py-1.5 rounded-lg bg-[#1F2228] hover:bg-amber-500 hover:text-black border border-[#2A2D35] hover:border-amber-400 text-xs font-semibold text-slate-200 flex items-center justify-center gap-1.5 transition-all"
+                                        >
+                                            <Play className="w-3 h-3" />
+                                            <span>Run Recipe</span>
+                                            <ArrowRight className="w-3 h-3 ml-auto" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
         </div>

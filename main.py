@@ -19,10 +19,14 @@ from pathlib import Path
 
 # Fix Windows console encoding for emojis using the new bootstrap
 try:
-    from core_ai.src.ai_assistant.utils.utf8_bootstrap import configure_utf8_stdout
+    from ai_assistant.utils.utf8_bootstrap import configure_utf8_stdout
     configure_utf8_stdout()
 except Exception:
-    pass
+    try:
+        from core_ai.src.ai_assistant.utils.utf8_bootstrap import configure_utf8_stdout
+        configure_utf8_stdout()
+    except Exception:
+        pass
 
 # Setup basic logging first
 logging.basicConfig(
@@ -83,7 +87,8 @@ def main():
     # 1.5 Improve Startup Experience - Remember the last interface
     try:
         import json
-        settings_path = project_root / 'config' / 'user_settings.json'
+        from core_ai.config.paths import CONFIG_DIR
+        settings_path = CONFIG_DIR / 'user_settings.json'
         
         # Load settings
         settings_data = {}
@@ -151,13 +156,18 @@ def main():
             print(f"Starting web interface on port {args.port}...")
             # Start the web backend
             try:
-                from ai_assistant.services.modern_web_backend import app, socketio
-                print("🌐 Starting Pulsar Assistant Web Backend...")
+                from ai_assistant.api.app import app, socketio
+                print("🌐 Starting AI Assistant Web Backend...")
                 socketio.run(app, host='0.0.0.0', port=args.port, debug=args.verbose)
             except ImportError as e:
-                print(f"❌ Web backend import failed: {e}")
-                print("Please check your installation and dependencies.")
-                sys.exit(1)
+                try:
+                    from ai_assistant.services.modern_web_backend import app, socketio
+                    print("🌐 Starting AI Assistant Web Backend (legacy fallback)...")
+                    socketio.run(app, host='0.0.0.0', port=args.port, debug=args.verbose)
+                except ImportError as e2:
+                    print(f"❌ Web backend import failed: {e2}")
+                    print("Please check your installation and dependencies.")
+                    sys.exit(1)
                     
         elif args.interface == "cli":
             # Try multiple possible locations for CLI

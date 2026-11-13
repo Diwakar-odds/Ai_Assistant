@@ -4,7 +4,7 @@
 The **Pulsar Backend** is a high-performance Python application providing REST endpoints, Server-Sent Events (SSE) streaming, WebSocket telemetry, multi-agent dispatching, and hardware-accelerated local AI management.
 
 * **Primary Runner:** [`backend/modern_web_backend.py`](file:///d:/Projects/Ai_Assistant/backend/modern_web_backend.py)
-* **Root Orchestrator:** [`modern_web_backend.py`](file:///d:/Projects/Ai_Assistant/modern_web_backend.py)
+* **Root Orchestrator:** [`web.py`](file:///d:/Projects/Ai_Assistant/web.py) (legacy alias: [`modern_web_backend.py`](file:///d:/Projects/Ai_Assistant/modern_web_backend.py))
 * **CLI Entrypoint:** [`main.py`](file:///d:/Projects/Ai_Assistant/main.py)
 * **Port:** `http://localhost:5000` (Default REST & WebSocket Gateway)
 
@@ -53,9 +53,9 @@ pip install -r config/requirements/requirements.txt
 ```powershell
 python backend/modern_web_backend.py
 ```
-* Or use the root launcher which runs both backend and frontend concurrently:
+* Or use the fast root launcher:
 ```powershell
-python modern_web_backend.py
+python web.py
 ```
 
 ---

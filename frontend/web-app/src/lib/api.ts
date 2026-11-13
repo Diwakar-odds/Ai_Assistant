@@ -124,6 +124,8 @@ export const API_ENDPOINTS = {
         pause: (chainId: string) => `/api/chains/${encodeURIComponent(chainId)}/pause`,
         resume: (chainId: string) => `/api/chains/${encodeURIComponent(chainId)}/resume`,
         cancel: (chainId: string) => `/api/chains/${encodeURIComponent(chainId)}/cancel`,
+        delete: (chainId: string) => `/api/chains/${encodeURIComponent(chainId)}`,
+        clear: '/api/chains/clear',
         optimize: '/api/chains/optimize',
         executiveStop: '/api/executive/stop',
         emergencyStop: '/api/emergency/stop',
@@ -138,6 +140,11 @@ export const API_ENDPOINTS = {
         tasks: '/api/agents/tasks',
         taskDetail: (taskId: string) => `/api/agents/tasks/${encodeURIComponent(taskId)}`,
         cancelTask: (taskId: string) => `/api/agents/tasks/${encodeURIComponent(taskId)}/cancel`,
+        workflows: '/api/agents/workflows',
+        synthesizeWorkflow: '/api/agents/workflows/synthesize',
+        clearWorkflows: '/api/agents/workflows/clear',
+        pendingCheckpoints: '/api/agents/checkpoints/pending',
+        respondCheckpoint: '/api/agents/checkpoint/respond',
     },
     auth: {
         login: '/api/auth/login',
@@ -199,6 +206,8 @@ export interface ChainActionDTO {
     verified?: boolean;
     verification_result?: VerificationResultDTO | null;
     requires_confirmation?: boolean;
+    healed_by?: string | null;
+    critic_review?: CriticReviewDTO | null;
     duration_seconds?: number;
     started_at?: string;
     completed_at?: string;
@@ -262,6 +271,36 @@ export interface AgentTaskDTO {
     error?: string | null;
     output_path?: string | null;
     artifacts?: string[];
+}
+
+export interface WorkflowRecipeDTO {
+    id: string;
+    normalized_pattern: string;
+    workflow_name: string;
+    tags?: string;
+    success_count: number;
+    last_used?: number;
+    plan?: any;
+}
+
+export interface CheckpointDTO {
+    checkpoint_id: string;
+    step_id: string;
+    agent_id: string;
+    description: string;
+    params?: Record<string, any>;
+    chain_id?: string;
+    status: 'pending' | 'confirmed' | 'rejected';
+    created_at?: number;
+}
+
+export interface CriticReviewDTO {
+    step_id: string;
+    creator_agent: string;
+    critic_agent: string;
+    score: number;
+    approved: boolean;
+    critique?: string;
 }
 
 export interface SystemDetailsDTO {
@@ -354,6 +393,8 @@ export const normalizeChainActionDTO = (raw: any, index = 0): ChainActionDTO => 
         verified: verifiedFlag,
         verification_result: verificationObj,
         requires_confirmation: Boolean(raw?.requires_confirmation),
+        healed_by: raw?.healed_by ?? raw?.params?.healed_by ?? null,
+        critic_review: raw?.critic_review ?? raw?.params?.critic_review ?? null,
         duration_seconds: typeof raw?.duration_seconds === 'number' ? raw.duration_seconds : undefined,
         started_at: raw?.started_at,
         completed_at: raw?.completed_at,

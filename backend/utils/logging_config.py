@@ -19,16 +19,17 @@ from typing import Optional
 import uuid
 import os
 
-# Fix Windows console encoding for emojis (safe in GUI/windowed mode where stdout is None)
+# Fix Windows console encoding for emojis and non-standard shell streams
 if sys.platform == 'win32':
+    os.environ['PYTHONIOENCODING'] = 'utf-8:replace'
     if sys.stdout is not None and hasattr(sys.stdout, 'reconfigure'):
         try:
-            sys.stdout.reconfigure(encoding='utf-8')
+            sys.stdout.reconfigure(encoding='utf-8', errors='replace')
         except Exception:
             pass
     if sys.stderr is not None and hasattr(sys.stderr, 'reconfigure'):
         try:
-            sys.stderr.reconfigure(encoding='utf-8')
+            sys.stderr.reconfigure(encoding='utf-8', errors='replace')
         except Exception:
             pass
 
@@ -155,6 +156,37 @@ class TerminalConsoleFilter(logging.Filter):
             if kw in msg:
                 return False
         return True
+
+class SafeConsoleHandler(logging.StreamHandler):
+    """
+    Console StreamHandler resilient to Windows console quirks:
+    1. WinError 1 (Incorrect function) when console handle is redirected or in non-standard shell
+    2. Encoding errors (cp1252 charmap unable to encode emojis like ✅)
+    3. Prevents secondary crashes from terminating caller threads or Socket.IO handlers
+    """
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            stream = self.stream
+            if stream is None or getattr(stream, 'closed', False):
+                return
+            try:
+                stream.write(msg + self.terminator)
+                stream.flush()
+            except UnicodeEncodeError:
+                target_enc = getattr(stream, 'encoding', 'ascii') or 'ascii'
+                safe_msg = msg.encode(target_enc, errors='replace').decode(target_enc)
+                stream.write(safe_msg + self.terminator)
+                stream.flush()
+            except (OSError, IOError):
+                pass
+        except Exception:
+            pass
+
+    def handleError(self, record):
+        # Prevent cascading crash into caller if stream writing or traceback printing fails
+        pass
+
 
 class LoggingConfigMeta(type):
     @property
@@ -397,7 +429,7 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         """Create console handler (returns NullHandler when stdout is unavailable in GUI mode)"""
         if sys.stdout is None:
             return logging.NullHandler()
-        handler = logging.StreamHandler(sys.stdout)
+        handler = SafeConsoleHandler(sys.stdout)
         handler.setLevel(cls.CONSOLE_LEVEL)
         handler.addFilter(TerminalConsoleFilter())
         return handler

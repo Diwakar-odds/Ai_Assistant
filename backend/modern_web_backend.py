@@ -1655,14 +1655,6 @@ def start_server(host=None, port=None):
         except Exception as e:
             logger.warning(f"⚠️ Could not start AI background thread: {e}")
 
-        # Start Ambient Floating Mascot on Windows Desktop
-        try:
-            from routes.system_routes import spawn_companion_process
-            spawn_companion_process(port=port)
-            logger.info("✅ Ambient Mascot Robot active on desktop screen")
-        except Exception as e:
-            logger.warning(f"⚠️ Could not spawn companion: {e}")
-
         # Start Autonomous Notification Monitor
         try:
             from notification_monitor import get_notification_monitor
@@ -1670,6 +1662,30 @@ def start_server(host=None, port=None):
             logger.info("✅ Notification Monitor active")
         except Exception as e:
             logger.warning(f"⚠️ Could not start notification monitor: {e}")
+
+        # Start Ambient Floating Orb on Windows Desktop if enabled
+        companion_active = False
+        if os.environ.get('PULSAR_DISABLE_COMPANION') != '1':
+            try:
+                from routes.system_routes import spawn_companion_process
+                ok, _ = spawn_companion_process(port=port)
+                if ok:
+                    companion_active = True
+                    logger.info("✅ Ambient Floating Orb active on desktop screen")
+            except Exception as e:
+                logger.warning(f"⚠️ Could not spawn companion: {e}")
+
+        # Start in-process voice listener when standalone / companion disabled
+        if not companion_active:
+            try:
+                try:
+                    from voice_service import start_inprocess_voice_listener
+                except ImportError:
+                    from backend.voice_service import start_inprocess_voice_listener
+                start_inprocess_voice_listener(socketio)
+                logger.info("✅ In-process wake-word voice listener started (single-process active)")
+            except Exception as e:
+                logger.warning(f"⚠️ Could not start in-process voice listener: {e}")
 
         # Disable console banners that might crash when sys.stdout is None
         try:

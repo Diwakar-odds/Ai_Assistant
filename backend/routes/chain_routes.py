@@ -175,6 +175,18 @@ def _normalize_action_item(act: Any, idx: int = 0) -> Dict[str, Any]:
     if hasattr(atype, "value"):
         atype = atype.value
     raw_status = _coerce_lower_status(d.get("status"), "pending")
+    v_res = d.get("verification_result") or d.get("verification")
+    raw_v = d.get("verified")
+    if raw_v is None:
+        if isinstance(v_res, dict) and "verified" in v_res:
+            raw_v = bool(v_res["verified"])
+        elif isinstance(v_res, dict) and "success" in v_res:
+            raw_v = bool(v_res["success"])
+        else:
+            raw_v = None
+    else:
+        raw_v = bool(raw_v)
+
     return {
         "id": str(d.get("id") or d.get("step_id") or f"action_{idx + 1}"),
         "type": str(atype),
@@ -185,8 +197,8 @@ def _normalize_action_item(act: Any, idx: int = 0) -> Dict[str, Any]:
         "dependencies": list(d.get("dependencies") or []),
         "result": d.get("result") or d.get("result_json"),
         "error": d.get("error"),
-        "verified": bool(d.get("verified", False)),
-        "verification_result": d.get("verification_result") or d.get("verification"),
+        "verified": raw_v,
+        "verification_result": v_res,
     }
 
 
@@ -489,6 +501,16 @@ def _cancel_chain_everywhere(chain_id: str) -> tuple[bool, Optional[Dict[str, An
     except Exception as exc:
         logger.warning(f"ExecutiveBrain cancel failed for {chain_id}: {exc}")
 
+    # Also check and cancel inside persistent DB directly
+    try:
+        tracker = get_progress_tracker()
+        details = tracker.get_chain_details(chain_id)
+        if details:
+            found = True
+            tracker.save_chain_result(chain_id, "cancelled", {"cancelled": True}, "Cancelled by user")
+    except Exception as exc:
+        logger.warning(f"Tracker cancel failed for {chain_id}: {exc}")
+
     if not found:
         snap = resolve_chain_snapshot(chain_id)
         if snap and snap.get("status") == "cancelled":
@@ -759,6 +781,75 @@ def cancel_chain(chain_id: str):
         return jsonify({"success": True, "status": "cancelled", "chain_id": chain_id, "id": chain_id, **(snap or {})})
     except Exception as e:
         logger.error(f"Error cancelling chain '{chain_id}': {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@chain_bp.route("/api/chains/clear", methods=["POST", "DELETE", "OPTIONS"])
+@jwt_required(optional=True)
+def clear_chains():
+    """Wipe all chain history and stale action records from DB and in-memory caches."""
+    if request.method == "OPTIONS":
+        return ("", 204)
+    try:
+        if MULTI_AGENT_AVAILABLE:
+            get_progress_tracker().clear_all_chains()
+            try:
+                mgr = get_chain_manager()
+                mgr.active_chains.clear()
+                mgr.completed_chains.clear()
+            except Exception:
+                pass
+        try:
+            from ai_assistant.core.command_brain import get_executive_brain
+            brain = get_executive_brain()
+            if hasattr(brain, "_active_chains"):
+                brain._active_chains.clear()
+            if hasattr(brain, "_completed_chains"):
+                brain._completed_chains.clear()
+        except Exception:
+            pass
+
+        sio = get_socketio()
+        if sio:
+            try:
+                sio.emit("chains_cleared", {"success": True}, namespace="/")
+            except Exception:
+                pass
+        return jsonify({"success": True, "message": "All chain records cleared successfully"}), 200
+    except Exception as e:
+        logger.error(f"Error clearing chains: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@chain_bp.route("/api/chains/<chain_id>", methods=["DELETE"])
+@chain_bp.route("/api/chains/<chain_id>/delete", methods=["POST", "DELETE", "OPTIONS"])
+@jwt_required(optional=True)
+def delete_single_chain(chain_id: str):
+    """Delete a single chain from persistent DB and memory."""
+    if request.method == "OPTIONS":
+        return ("", 204)
+    try:
+        if MULTI_AGENT_AVAILABLE:
+            get_progress_tracker().delete_chain(chain_id)
+            try:
+                mgr = get_chain_manager()
+                mgr.active_chains.pop(chain_id, None)
+                mgr.completed_chains.pop(chain_id, None)
+            except Exception:
+                pass
+        try:
+            from ai_assistant.core.command_brain import get_executive_brain
+            brain = get_executive_brain()
+            if hasattr(brain, "_active_chains"):
+                brain._active_chains.pop(chain_id, None)
+            if hasattr(brain, "_completed_chains"):
+                brain._completed_chains.pop(chain_id, None)
+        except Exception:
+            pass
+
+        return jsonify({"success": True, "chain_id": chain_id, "message": "Chain deleted"}), 200
+    except Exception as e:
+        logger.error(f"Error deleting chain '{chain_id}': {e}", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
 
 

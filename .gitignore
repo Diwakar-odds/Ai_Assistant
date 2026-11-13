@@ -46,11 +46,17 @@ token.pickle
 
 # App Integration Security
 config/secure/
+core_ai/config/secure/
 core_ai/src/config/secure/
 config/app_integration.env
+core_ai/config/app_integration.env
 config/backend.env
+core_ai/config/backend.env*
+!core_ai/config/backend.env.example
 config/*_credentials.json
+core_ai/config/*_credentials.json
 config/encryption.key
+core_ai/config/encryption.key
 *_credentials.json
 *.credentials
 api_keys/
@@ -72,17 +78,25 @@ data/
 
 # User-Specific Configuration (Auto-Generated)
 config/discovered_apps.json
+core_ai/config/discovered_apps.json
 config/app_usage.db
 config/user_settings.json
+core_ai/config/user_settings.json
 config/multimodal_config.json
+core_ai/config/multimodal_config.json
 ai_assistant/config/contacts.json
+core_ai/config/contacts.json
 
 # Config files that may contain secrets
 config/*.env
+core_ai/config/*.env
 !config/*.env.example
+!core_ai/config/*.env.example
 
 # Logs
 logs/
+backend/logs/
+core_ai/logs/
 *.log
 *.log.*
 desktop_app.log

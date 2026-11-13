@@ -1188,28 +1188,35 @@ class AmbientMascotApp:
         self._emit_orb_update(state="listening", audio_level=18.0, source="companion_wake")
 
     def _on_wake_ack(self, wake_word: Optional[str] = None):
-        """Immediate crisp dynamic verbal + visual confirmation via unified persona & TTS."""
+        """Immediate crisp dynamic verbal + visual confirmation via unified persona & TTS without blocking mic."""
         with self._state_lock:
             tts_on = getattr(self, "tts_enabled", True)
+            self.orb_state = "listening"
+            self.audio_level = 18.0
+        self._emit_orb_update(state="listening", audio_level=18.0, source="companion_wake")
+
         if tts_on:
-            ack_res = self.bridge.request_wake_ack(
-                wake_word=wake_word or "",
-                raw_transcript=wake_word or "",
-                kind="wake",
-                speak=True,
-                wait=True,
-                source="companion_wake",
-            )
-            ack_text = str((ack_res or {}).get("text") or "").strip()
-            spoken_remote = bool((ack_res or {}).get("spoken") or (ack_res or {}).get("queued"))
-            is_fallback = bool((ack_res or {}).get("_local_fallback"))
-            if spoken_remote:
-                # Allow speaker reverb tail to decay before opening mic for follow-up command
-                time.sleep(0.25)
-            elif is_fallback and ack_text:
-                self._speak_sync(ack_text, rate=188)
+            def _async_ack():
+                try:
+                    ack_res = self.bridge.request_wake_ack(
+                        wake_word=wake_word or "",
+                        raw_transcript=wake_word or "",
+                        kind="wake",
+                        speak=True,
+                        wait=False,
+                        source="companion_wake",
+                    )
+                    ack_text = str((ack_res or {}).get("text") or "").strip()
+                    is_fallback = bool((ack_res or {}).get("_local_fallback"))
+                    if is_fallback and ack_text:
+                        self._speak_sync(ack_text, rate=188)
+                except Exception as exc:
+                    print(f"[OVERLAY] Async wake ack note: {exc}")
+
+            threading.Thread(target=_async_ack, daemon=True).start()
+
         with self._state_lock:
-            self._suppress_cooldown_until = time.time() + 1.5
+            self._suppress_cooldown_until = time.time() + 1.2
             self.remote_tts_speaking = False
             self._remote_tts_cooldown_until = 0.0
             self.orb_state = "listening"
@@ -1355,9 +1362,14 @@ class AmbientMascotApp:
 
     def _speak_sync(self, text: str, rate: int = 175):
         """Local offline fallback TTS (KittenTTS mini-0.8 via sounddevice -> COM pyttsx3) when backend is down."""
-        clean_text = (text or "").strip()
-        if not clean_text or self.remote_tts_speaking:
+        raw_text = (text or "").strip()
+        if not raw_text or self.remote_tts_speaking:
             return
+        try:
+            from ai_assistant.voice.text_cleaner import clean_text_for_tts
+            clean_text = clean_text_for_tts(raw_text) or raw_text
+        except Exception:
+            clean_text = raw_text
         with self._speak_sync_lock:
             with self._state_lock:
                 tts_on = getattr(self, "tts_enabled", True)

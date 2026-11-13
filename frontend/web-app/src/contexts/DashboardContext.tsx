@@ -173,6 +173,8 @@ interface DashboardContextType {
     pauseChain: (chainId: string) => Promise<boolean>;
     resumeChain: (chainId: string, userInput?: string) => Promise<boolean>;
     cancelChain: (chainId: string) => Promise<boolean>;
+    deleteChain: (chainId: string) => Promise<boolean>;
+    clearAllChains: () => Promise<boolean>;
     emergencyStop: () => Promise<boolean>;
     loadAgent: (agentId: string) => Promise<AgentDTO | null>;
     dispatchAgentTask: (command: string, opts?: { agentId?: string; asyncRun?: boolean }) => Promise<AgentTaskDTO | null>;
@@ -1363,12 +1365,32 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
     const cancelChain = async (chainId: string): Promise<boolean> => {
         const res = await apiFetchJson<any>(API_ENDPOINTS.chains.cancel(chainId), { method: 'POST', body: '{}' });
-        if (res.ok) {
-            applyChainEventDelta('chain.cancelled', res.data?.chain || { chain_id: chainId, status: 'cancelled' });
-            addSystemLog('warning', `Cancelled chain ${chainId}`);
-            return true;
-        }
-        return false;
+        applyChainEventDelta('chain.cancelled', res.data?.chain || { chain_id: chainId, status: 'cancelled' });
+        addSystemLog('warning', `Cancelled chain ${chainId}`);
+        await refreshChains();
+        return true;
+    };
+
+    const deleteChain = async (chainId: string): Promise<boolean> => {
+        const res = await apiFetchJson<any>(API_ENDPOINTS.chains.delete(chainId), { method: 'DELETE' });
+        activeChainsRef.current = activeChainsRef.current.filter((c) => c.chain_id !== chainId);
+        setActiveChains([...activeChainsRef.current]);
+        chainHistoryRef.current = chainHistoryRef.current.filter((c) => c.chain_id !== chainId);
+        setChainHistory([...chainHistoryRef.current]);
+        addSystemLog('info', `Deleted chain ${chainId}`);
+        await refreshChains();
+        return res.ok;
+    };
+
+    const clearAllChains = async (): Promise<boolean> => {
+        const res = await apiFetchJson<any>(API_ENDPOINTS.chains.clear, { method: 'POST', body: '{}' });
+        activeChainsRef.current = [];
+        setActiveChains([]);
+        chainHistoryRef.current = [];
+        setChainHistory([]);
+        addSystemLog('info', 'All chains cleared');
+        await refreshChains();
+        return res.ok;
     };
 
     const emergencyStop = async (): Promise<boolean> => {
@@ -3423,7 +3445,12 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 silenceTimerRef.current = null;
             }
             if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-                try { mediaRecorderRef.current.stop(); } catch { /* empty */ }
+                try {
+                    if (typeof mediaRecorderRef.current.requestData === 'function') {
+                        mediaRecorderRef.current.requestData();
+                    }
+                    mediaRecorderRef.current.stop();
+                } catch { /* empty */ }
             }
             if (microphoneStreamRef.current) {
                 try {
@@ -3474,7 +3501,13 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                     source.connect(analyser);
                     analyserRef.current = analyser;
 
-                    mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                    let mimeType = '';
+                    if (typeof MediaRecorder !== 'undefined' && typeof MediaRecorder.isTypeSupported === 'function') {
+                        const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4', 'audio/wav'];
+                        mimeType = candidates.find(t => MediaRecorder.isTypeSupported(t)) || '';
+                    }
+                    const recorderOptions: MediaRecorderOptions = mimeType ? { mimeType } : {};
+                    mediaRecorderRef.current = new MediaRecorder(stream, recorderOptions);
                     audioChunksRef.current = [];
                     let autoStoppedSilent = false;
 
@@ -3490,16 +3523,23 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                         }
 
                         // Don't send audio if TTS started playing while we were recording (echo prevention)
-                        if (ttsSpeakingRef.current || autoStoppedSilent) {
-                            console.log('🔇 Discarding recorded audio (TTS active or silent timeout)');
+                        if (ttsSpeakingRef.current) {
+                            console.log('🔇 Discarding recorded audio (TTS active)');
                             return;
                         }
 
-                        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                        if (audioChunksRef.current.length === 0) {
+                            console.log('⚠️ No audio data captured');
+                            setInterimTranscript('');
+                            return;
+                        }
+
+                        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType || 'audio/webm' });
                         const reader = new FileReader();
                         reader.readAsDataURL(audioBlob);
                         reader.onloadend = () => {
-                            if (socket && socket.connected) {
+                            const activeSocket = socketRef.current || socket;
+                            if (activeSocket && activeSocket.connected) {
                                 console.log('📡 Sending audio to Faster-Whisper backend');
                                 setIsTranscribingVoice(true);
                                 if (transcribeTimeoutRef.current) {
@@ -3520,20 +3560,25 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                                     syncWithBackendSession({ triggerStartupGreetingIfEmpty: false });
                                 }
                                 streamingMessageIdRef.current = null;
-                                socket.emit('voice_audio_data', {
+                                activeSocket.emit('voice_audio_data', {
                                     audio_data: reader.result,
                                     client_message_id: makeClientMessageId('voice_user'),
                                     language: voiceLanguage,
-                                    require_wake_word: requireWakeWordRef.current,
+                                    require_wake_word: false,
+                                    manual_click: true,
+                                    always_active: !!alwaysActiveRef.current,
                                     provider: aiProviderRef.current,
                                     model: aiModelRef.current,
                                     offline_mode: aiModeRef.current === 'offline' || aiProviderRef.current === 'gguf',
                                 });
+                            } else {
+                                console.warn('⚠️ Cannot send voice audio: socket disconnected');
+                                setInterimTranscript('Backend disconnected');
                             }
                         };
                     };
 
-                    mediaRecorderRef.current.start();
+                    mediaRecorderRef.current.start(200);
                     setIsVoiceActive(true);
                     isVoiceActiveRef.current = true;
                     _setIsRecognitionStarted(true);
@@ -3577,7 +3622,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                             setAudioLevel(Math.round(smoothedLevel));
                         }
 
-                        if (average > 12 || tdRms > 0.032) { // Voice detected
+                        if (average > 2 || tdRms > 0.005) { // Voice detected
                             hasSpoken = true;
                             if (silenceTimerRef.current) {
                                 clearTimeout(silenceTimerRef.current);
@@ -3585,18 +3630,18 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                             }
                             setInterimTranscript('Hearing you...');
                         } else { // Silence
-                            const timeoutMs = hasSpoken ? 1800 : 7000;
+                            const timeoutMs = hasSpoken ? 1500 : 7000;
                             if (!silenceTimerRef.current) {
                                 silenceTimerRef.current = setTimeout(() => {
                                     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-                                        console.log(hasSpoken ? '⏳ Speech pause detected, processing...' : '⏳ Max wait time reached with no speech, stopping...');
+                                        console.log(hasSpoken ? '⏳ Speech pause detected, processing...' : '⏳ Speech timeout, sending audio to Faster-Whisper...');
                                         autoStoppedSilent = !hasSpoken;
                                         mediaRecorderRef.current.stop();
                                         setIsVoiceActive(false);
                                         isVoiceActiveRef.current = false;
                                         _setIsRecognitionStarted(false);
                                         setAudioLevel(0);
-                                        setInterimTranscript(hasSpoken ? 'Processing with Whisper...' : '');
+                                        setInterimTranscript('Processing with Whisper...');
                                     }
                                     silenceTimerRef.current = null;
                                 }, timeoutMs);
@@ -4481,6 +4526,8 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         pauseChain,
         resumeChain,
         cancelChain,
+        deleteChain,
+        clearAllChains,
         emergencyStop,
         loadAgent,
         dispatchAgentTask,

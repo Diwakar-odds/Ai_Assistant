@@ -48,6 +48,7 @@ from ai_assistant.core.local_command_normalizer import (
     ensure_project_ffmpeg_in_path,
     get_merged_wake_phrases,
     is_barge_in_stop_command,
+    is_noise_fragment,
     match_and_strip_wake_phrase,
 )
 
@@ -169,8 +170,8 @@ class CompanionVoiceListener:
         if tts_now:
             return max(0.022, noise_floor * 2.8)
         sens = max(0.1, min(1.0, float(sensitivity)))
-        mult = max(1.55, min(2.8, 2.2 - (sens - 0.5) * 1.15))
-        floor_min = max(0.0065, min(0.015, 0.010 - (sens - 0.5) * 0.0083))
+        mult = max(1.45, min(2.6, 2.0 - (sens - 0.5) * 1.15))
+        floor_min = max(0.0035, min(0.012, 0.007 - (sens - 0.5) * 0.006))
         return max(floor_min, noise_floor * mult)
 
     def _preprocess_pcm(self, pcm_f32: np.ndarray, noise_reduction: bool = True) -> np.ndarray:
@@ -355,7 +356,7 @@ class CompanionVoiceListener:
             return
 
         pre_roll = collections.deque(maxlen=12)  # ~600 ms pre-roll
-        noise_floor = 0.007
+        noise_floor = 0.0025
 
         while self.is_running:
             if self._is_paused():
@@ -428,8 +429,8 @@ class CompanionVoiceListener:
                                 silent_blocks += 1
 
                             duration_s = len(speech_frames) * (self.BLOCK_SIZE / self.SAMPLE_RATE)
-                            silence_limit = 6 if tts_during_utterance else 14
-                            max_dur = 2.8 if tts_during_utterance else 6.5
+                            silence_limit = 5 if tts_during_utterance else 7
+                            max_dur = 2.5 if tts_during_utterance else 4.0
                             if silent_blocks >= silence_limit or duration_s >= max_dur:
                                 stream.stop()
                                 stream.close()
@@ -478,6 +479,9 @@ class CompanionVoiceListener:
         if inline_cmd:
             if is_barge_in_stop_command(inline_cmd):
                 return
+            if is_noise_fragment(inline_cmd):
+                logger.info(f"Dropped inline wake noise fragment: '{inline_cmd}'")
+                return
             if self.on_command:
                 self.on_command(inline_cmd)
             return
@@ -498,6 +502,7 @@ class CompanionVoiceListener:
         transcript = self._transcribe_pcm(pcm)
         if not transcript:
             return
+        logger.debug(f"[CompanionVoice] Candidate heard: '{transcript}'")
         if self._is_paused():
             return
 
@@ -520,24 +525,32 @@ class CompanionVoiceListener:
                 if self.on_wake_ignored:
                     self.on_wake_ignored()
                 return
+            if is_noise_fragment(inline_cmd):
+                logger.info(f"Dropped inline wake noise fragment: '{inline_cmd}'")
+                if self.on_wake_ignored:
+                    self.on_wake_ignored()
+                return
             logger.info(f"Executing inline wake command: '{inline_cmd}'")
             if self.on_command:
                 self.on_command(inline_cmd)
             return
 
-        # Wake word only: give a brief response without stalling mic capture
+        # Wake word only: fire non-blocking acknowledgment in background so mic opens immediately
         if self.on_wake_ack:
             try:
-                self.on_wake_ack(matched_wake)
+                threading.Thread(
+                    target=self.on_wake_ack,
+                    args=(matched_wake,),
+                    daemon=True,
+                ).start()
             except Exception as e:
-                logger.debug(f"Wake acknowledgment callback note: {e}")
-            time.sleep(0.10)
+                logger.debug(f"Wake acknowledgment thread note: {e}")
 
         self._capture_and_dispatch_command(
             sd_module,
             pre_roll=None,
             noise_floor=noise_floor,
-            timeout_s=8.5,
+            timeout_s=6.0,
             announce_wake=False,
         )
 
@@ -592,6 +605,11 @@ class CompanionVoiceListener:
                         self.on_wake_ignored()
                     return
                 final_cmd = cleaned if matched_wake else cmd.strip()
+                if is_noise_fragment(final_cmd):
+                    logger.info(f"Companion dropped noise/hallucination fragment: '{final_cmd}'")
+                    if self.on_wake_ignored:
+                        self.on_wake_ignored()
+                    return
                 logger.info(f"Companion captured command: '{final_cmd}'")
                 if self.on_command:
                     self.on_command(final_cmd)
@@ -609,17 +627,17 @@ class CompanionVoiceListener:
     def _record_with_levels(
         self,
         sd_module,
-        timeout_s: float = 8.5,
+        timeout_s: float = 6.0,
         noise_floor: float = 0.010,
-        max_utterance_s: float = 16.0,
+        max_utterance_s: float = 14.0,
     ) -> Optional[np.ndarray]:
         """Record active voice command while streaming live RMS amplitude (0-100)."""
-        # Allow any trailing wake-ack audio tail to finish before counting the user's reply window
-        tts_wait_deadline = time.time() + 1.8
+        # Allow brief trailing wake-ack audio tail without stalling mic start
+        tts_wait_deadline = time.time() + 0.45
         while self.is_running and self._is_tts_speaking() and time.time() < tts_wait_deadline:
             if self._is_capture_aborted():
                 return None
-            time.sleep(0.05)
+            time.sleep(0.04)
 
         frames: List[np.ndarray] = []
         speech_blocks = 0
@@ -664,8 +682,8 @@ class CompanionVoiceListener:
                         silent_blocks = 0
                     elif speech_blocks >= 2:
                         silent_blocks += 1
-                        # 1.1s trailing silence ends command utterance without clipping mid-sentence pauses
-                        if silent_blocks >= 22:
+                        # ~800ms trailing silence ends command utterance cleanly without clipping
+                        if silent_blocks >= 8:
                             break
         except Exception as e:
             logger.error(f"Active command recording error: {e}")
@@ -700,7 +718,7 @@ class CompanionVoiceListener:
             return None
         peak = float(np.max(np.abs(pcm_f32)))
         rms = float(np.sqrt(np.mean(pcm_f32 * pcm_f32)))
-        if peak < 0.012 or rms < 0.0035:
+        if peak < 0.006 or rms < 0.0012:
             return None
 
         _, lang_short, noise_reduction, _ = self._get_live_stt_settings()
@@ -735,11 +753,11 @@ class CompanionVoiceListener:
                     try:
                         segments, _info = self._fast_whisper.transcribe(
                             proc_pcm,
-                            beam_size=5,
+                            beam_size=1,
                             language=lang_short,
                             initial_prompt=init_prompt,
                             vad_filter=True,
-                            vad_parameters=dict(min_silence_duration_ms=250, min_speech_duration_ms=100),
+                            vad_parameters=dict(min_silence_duration_ms=200, min_speech_duration_ms=80),
                             condition_on_previous_text=False,
                             without_timestamps=True,
                             no_speech_threshold=no_speech_thr,
@@ -751,27 +769,9 @@ class CompanionVoiceListener:
                             max_no_speech_prob=no_speech_thr,
                             min_avg_logprob=min_seg_lp,
                         )
-                    except Exception:
+                    except Exception as e:
+                        logger.debug(f"Fast-whisper transcribe error: {e}")
                         text = ""
-
-                    if not text and not strict:
-                        segments, _info = self._fast_whisper.transcribe(
-                            proc_pcm,
-                            beam_size=5,
-                            language=lang_short,
-                            initial_prompt=init_prompt,
-                            vad_filter=False,
-                            condition_on_previous_text=False,
-                            without_timestamps=True,
-                            no_speech_threshold=no_speech_thr,
-                            log_prob_threshold=log_prob_thr,
-                            compression_ratio_threshold=2.2,
-                        )
-                        text = filter_whisper_segments(
-                            segments,
-                            max_no_speech_prob=no_speech_thr,
-                            min_avg_logprob=min_seg_lp,
-                        )
                 if text:
                     try:
                         from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry

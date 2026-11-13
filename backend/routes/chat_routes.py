@@ -187,6 +187,69 @@ def api_chat():
             except Exception as vc_err:
                 logger.debug(f"Voice control check skipped in api_chat: {vc_err}")
 
+        # === Pending Task Chain Recovery Check (Zero LLM calls) ===
+        if message and not image_data:
+            try:
+                from ai_assistant.core.task_chain_orchestrator import get_chain_recovery_manager
+                recovery_mgr = get_chain_recovery_manager()
+                if recovery_mgr.has_pending_recovery():
+                    if recovery_mgr.is_affirmative(message):
+                        rec_res = recovery_mgr.execute_recovery()
+                        rec_ok = bool(rec_res.get("success", False))
+                        rec_msg = rec_res.get("response", "")
+                        store.record_message(
+                            'ai',
+                            rec_msg,
+                            source='chain_recovery',
+                            is_voice=False,
+                            message_id=ai_msg_id,
+                            intent='chain_recovery',
+                            success=rec_ok,
+                            activity_kind='action',
+                            activity_title='Alternative execution completed',
+                            expected_session_id=sess_id,
+                        )
+                        return jsonify({
+                            "success": rec_ok,
+                            "message": raw_user_message,
+                            "response": rec_msg,
+                            "recovered": True,
+                            "features_used": ["chain_recovery"],
+                            "user": current_user,
+                            "session_id": sess_id,
+                            "message_id": ai_msg_id,
+                            "user_message_id": user_msg_id,
+                            "boot_id": boot_id,
+                            "timestamp": datetime.now().isoformat()
+                        })
+                    elif recovery_mgr.is_negative(message):
+                        recovery_mgr.clear()
+                        cancel_msg = "ठीक है, वैकल्पिक टास्क रद्द कर दिया गया है।"
+                        store.record_message(
+                            'ai',
+                            cancel_msg,
+                            source='chain_recovery',
+                            is_voice=False,
+                            message_id=ai_msg_id,
+                            intent='chain_recovery_cancel',
+                            success=True,
+                            expected_session_id=sess_id,
+                        )
+                        return jsonify({
+                            "success": True,
+                            "message": raw_user_message,
+                            "response": cancel_msg,
+                            "recovered": False,
+                            "user": current_user,
+                            "session_id": sess_id,
+                            "message_id": ai_msg_id,
+                            "user_message_id": user_msg_id,
+                            "boot_id": boot_id,
+                            "timestamp": datetime.now().isoformat()
+                        })
+            except Exception as rec_chk_err:
+                logger.debug(f"Pending recovery check skipped in api_chat: {rec_chk_err}")
+
         # === NEW: Multi-step Task Chain Orchestration ===
         try:
             from ai_assistant.integrations.orchestrator_integration import should_use_orchestrator, process_with_orchestrator
@@ -345,6 +408,11 @@ def api_chat():
                 pass
             
             resp_text = str(response.get("response", ""))
+            try:
+                from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+                resp_text = get_vocabulary_registry().enforce_grammar_and_tone(resp_text)
+            except Exception:
+                pass
             resp_ok = not resp_text.strip().startswith("Error:")
             resp_prov = response.get("provider") or provider_preference or get_provider()
             resp_model = response.get("model") or model_preference or get_model()
@@ -504,6 +572,69 @@ def api_command():
                 })
         except Exception as vc_err:
             logger.debug(f"Voice control check skipped in api_command: {vc_err}")
+
+        # === Pending Task Chain Recovery Check (Zero LLM calls) ===
+        try:
+            from ai_assistant.core.task_chain_orchestrator import get_chain_recovery_manager
+            recovery_mgr = get_chain_recovery_manager()
+            if recovery_mgr.has_pending_recovery():
+                if recovery_mgr.is_affirmative(command):
+                    rec_res = recovery_mgr.execute_recovery()
+                    rec_ok = bool(rec_res.get("success", False))
+                    rec_msg = rec_res.get("response", "")
+                    _maybe_speak_http_command(data, rec_msg, success=rec_ok)
+                    store.record_message(
+                        'ai',
+                        rec_msg,
+                        source='chain_recovery',
+                        is_voice=False,
+                        message_id=ai_msg_id,
+                        intent='chain_recovery',
+                        success=rec_ok,
+                        activity_kind='action',
+                        activity_title='Alternative execution completed',
+                        expected_session_id=sess_id,
+                    )
+                    return jsonify({
+                        "success": rec_ok,
+                        "command": command,
+                        "response": rec_msg,
+                        "recovered": True,
+                        "features_used": ["chain_recovery"],
+                        "session_id": sess_id,
+                        "message_id": ai_msg_id,
+                        "user_message_id": user_msg_id,
+                        "boot_id": boot_id,
+                        "skip_tts": True,
+                        "timestamp": datetime.now().isoformat()
+                    })
+                elif recovery_mgr.is_negative(command):
+                    recovery_mgr.clear()
+                    cancel_msg = "ठीक है, वैकल्पिक टास्क रद्द कर दिया गया है।"
+                    store.record_message(
+                        'ai',
+                        cancel_msg,
+                        source='chain_recovery',
+                        is_voice=False,
+                        message_id=ai_msg_id,
+                        intent='chain_recovery_cancel',
+                        success=True,
+                        expected_session_id=sess_id,
+                    )
+                    return jsonify({
+                        "success": True,
+                        "command": command,
+                        "response": cancel_msg,
+                        "recovered": False,
+                        "session_id": sess_id,
+                        "message_id": ai_msg_id,
+                        "user_message_id": user_msg_id,
+                        "boot_id": boot_id,
+                        "skip_tts": True,
+                        "timestamp": datetime.now().isoformat()
+                    })
+        except Exception as rec_chk_err:
+            logger.debug(f"Pending recovery check skipped in api_command: {rec_chk_err}")
 
         # === NEW: Multi-step Task Chain Orchestration ===
         try:
@@ -1136,6 +1267,11 @@ def api_chat_stream():
 
                 # Send completion stats
                 if full_response.strip():
+                    try:
+                        from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+                        full_response = get_vocabulary_registry().enforce_grammar_and_tone(full_response)
+                    except Exception:
+                        pass
                     store.record_message(
                         'ai',
                         full_response,

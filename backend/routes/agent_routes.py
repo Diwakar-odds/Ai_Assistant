@@ -914,3 +914,57 @@ def api_clear_workflow_memory():
     except Exception as exc:
         logger.error(f"Failed to clear workflow memory: {exc}", exc_info=True)
         return jsonify({"success": False, "error": str(exc)}), 500
+
+
+# =============================================================================
+# HUMAN-IN-THE-LOOP CHECKPOINT GATE APIS
+# =============================================================================
+
+@agent_bp.route("/api/agents/checkpoints/pending", methods=["GET", "OPTIONS"])
+@jwt_required(optional=True)
+def api_get_pending_checkpoints():
+    """Get all active checkpoint gates awaiting user confirmation."""
+    if request.method == "OPTIONS":
+        return ("", 204)
+    try:
+        _, coordinator = get_agent_registry_and_coordinator()
+        checkpoints = []
+        if hasattr(coordinator, "get_pending_checkpoints"):
+            checkpoints = coordinator.get_pending_checkpoints()
+        return jsonify({"success": True, "checkpoints": checkpoints, "count": len(checkpoints)})
+    except Exception as exc:
+        logger.error(f"Failed to get pending checkpoints: {exc}", exc_info=True)
+        return jsonify({"success": False, "error": str(exc)}), 500
+
+
+@agent_bp.route("/api/agents/checkpoint/respond", methods=["POST", "OPTIONS"])
+@jwt_required(optional=True)
+def api_respond_checkpoint():
+    """Approve or reject a human-in-the-loop checkpoint gate."""
+    if request.method == "OPTIONS":
+        return ("", 204)
+    try:
+        data = request.get_json(silent=True) or {}
+        checkpoint_id = data.get("checkpoint_id")
+        confirmed = bool(data.get("confirmed", False))
+
+        if not checkpoint_id:
+            return jsonify({"success": False, "error": "Field 'checkpoint_id' is required"}), 400
+
+        _, coordinator = get_agent_registry_and_coordinator()
+        if hasattr(coordinator, "respond_checkpoint"):
+            ok = coordinator.respond_checkpoint(checkpoint_id, confirmed)
+            if ok:
+                _emit_agent_event("swarm.checkpoint_resolved", {
+                    "checkpoint_id": checkpoint_id,
+                    "status": "confirmed" if confirmed else "rejected",
+                })
+                return jsonify({
+                    "success": True,
+                    "checkpoint_id": checkpoint_id,
+                    "status": "confirmed" if confirmed else "rejected",
+                })
+        return jsonify({"success": False, "error": f"Checkpoint '{checkpoint_id}' not found or resolved"}), 404
+    except Exception as exc:
+        logger.error(f"Failed to respond to checkpoint: {exc}", exc_info=True)
+        return jsonify({"success": False, "error": str(exc)}), 500

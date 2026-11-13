@@ -82,7 +82,8 @@ def main():
         print(f"\n⚠️  Error: {e}")
         print("\nTrying full backend server...")
         try:
-            subprocess.run([sys.executable, "modern_web_backend.py"])
+            target_script = "web.py" if os.path.exists("web.py") else "modern_web_backend.py"
+            subprocess.run([sys.executable, target_script])
         except Exception as e2:
             print(f"\n❌ Backend server also failed: {e2}")
             print("\nPlease check:")

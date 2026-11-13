@@ -11,12 +11,14 @@ import {
     Clock,
     GitBranch,
     Layers,
+    Lock,
     Pause,
     Play,
     RefreshCw,
     ShieldAlert,
     ShieldCheck,
     Square,
+    Trash2,
     XCircle,
 } from 'lucide-react';
 import { useDashboard } from '../contexts/DashboardContext';
@@ -177,6 +179,7 @@ const ChainMonitor: React.FC<ChainMonitorProps> = ({
         pauseChain,
         resumeChain,
         cancelChain,
+        deleteChain,
         emergencyStop,
     } = useDashboard();
 
@@ -396,7 +399,7 @@ const ChainMonitor: React.FC<ChainMonitorProps> = ({
     const isPending = String(chain.status).toLowerCase() === 'pending';
     const isTerminal = ['completed', 'failed', 'cancelled'].includes(String(chain.status).toLowerCase());
 
-    const handleControl = async (action: 'pause' | 'resume' | 'cancel' | 'execute' | 'authorize' | 'stop_all') => {
+    const handleControl = async (action: 'pause' | 'resume' | 'cancel' | 'execute' | 'authorize' | 'stop_all' | 'delete') => {
         setBusyAction(action);
         try {
             if (action === 'pause') {
@@ -407,6 +410,10 @@ const ChainMonitor: React.FC<ChainMonitorProps> = ({
                 await resumeChain(chain.chain_id, 'yes');
             } else if (action === 'cancel') {
                 await cancelChain(chain.chain_id);
+            } else if (action === 'delete') {
+                await deleteChain(chain.chain_id);
+                setFetchedChain(null);
+                return;
             } else if (action === 'execute') {
                 const res = await apiFetchJson<any>(API_ENDPOINTS.chains.execute(chain.chain_id), {
                     method: 'POST',
@@ -538,6 +545,16 @@ const ChainMonitor: React.FC<ChainMonitorProps> = ({
                             </button>
                         </>
                     )}
+
+                    <button
+                        type="button"
+                        onClick={() => handleControl('delete')}
+                        disabled={busyAction !== null}
+                        title="Delete Chain Record"
+                        className="px-2 py-1.5 rounded-lg text-xs font-medium bg-[#1F2228] hover:bg-red-500/20 text-[#9CA3AF] hover:text-red-300 border border-[#2A2D35] hover:border-red-500/30 flex items-center gap-1 transition-colors"
+                    >
+                        <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                 </div>
             </div>
 
@@ -566,6 +583,44 @@ const ChainMonitor: React.FC<ChainMonitorProps> = ({
                 </div>
             </div>
 
+            {/* Checkpoint Gate Confirmation Banner */}
+            {isWaitingConfirm && (
+                <div className="p-4 rounded-xl bg-gradient-to-r from-orange-500/15 to-amber-500/10 border border-orange-500/40 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-orange-300">
+                            <ShieldAlert className="w-5 h-5 text-orange-400 shrink-0" />
+                            <h5 className="text-sm font-semibold">Human-in-the-Loop Checkpoint Gate</h5>
+                        </div>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-orange-500/20 text-orange-200 border border-orange-500/30">
+                            Action Paused for Confirmation
+                        </span>
+                    </div>
+                    <p className="text-xs text-orange-200/90 leading-relaxed">
+                        A sensitive multi-agent action (such as sending an external email, altering files, or executing system control) requires your explicit authorization.
+                    </p>
+                    <div className="flex items-center gap-2 pt-1">
+                        <button
+                            type="button"
+                            onClick={() => handleControl('authorize')}
+                            disabled={busyAction !== null}
+                            className="px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5 shadow-[0_0_12px_rgba(16,185,129,0.3)] transition-colors"
+                        >
+                            <ShieldCheck className="w-4 h-4" />
+                            Approve & Execute
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => handleControl('cancel')}
+                            disabled={busyAction !== null}
+                            className="px-4 py-2 rounded-lg text-xs font-semibold bg-red-600/80 hover:bg-red-600 text-white flex items-center gap-1.5 transition-colors"
+                        >
+                            <XCircle className="w-4 h-4" />
+                            Reject & Abort
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Step / Action Timeline */}
             <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
@@ -589,7 +644,7 @@ const ChainMonitor: React.FC<ChainMonitorProps> = ({
                                     ? true
                                     : step.output !== undefined && step.output !== null
                                     ? true
-                                    : step.error || step.verification_result
+                                    : step.error || step.verification_result || step.critic_review
                             );
                             const isExpanded = Boolean(expandedSteps[step.id] ?? (step.status === 'failed'));
 
@@ -620,6 +675,30 @@ const ChainMonitor: React.FC<ChainMonitorProps> = ({
                                                     {step.parallel_group && (
                                                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
                                                             parallel: {step.parallel_group}
+                                                        </span>
+                                                    )}
+                                                    {step.healed_by && (
+                                                        <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                                                            <span>🩹</span>
+                                                            Auto-Recovered ({step.healed_by})
+                                                        </span>
+                                                    )}
+                                                    {step.critic_review && (
+                                                        <span
+                                                            className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded border ${
+                                                                step.critic_review.approved
+                                                                    ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                                                                    : 'bg-yellow-500/15 text-yellow-300 border-yellow-500/30'
+                                                            }`}
+                                                        >
+                                                            <span>🧐</span>
+                                                            Critic: {step.critic_review.score}/10
+                                                        </span>
+                                                    )}
+                                                    {step.requires_confirmation && (
+                                                        <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-300 border border-rose-500/30">
+                                                            <Lock className="w-2.5 h-2.5" />
+                                                            Checkpoint Gate
                                                         </span>
                                                     )}
                                                 </div>
@@ -661,6 +740,30 @@ const ChainMonitor: React.FC<ChainMonitorProps> = ({
                                             )}
                                         </div>
                                     </div>
+
+                                    {/* Creator-Critic Peer Review Summary */}
+                                    {step.critic_review && (
+                                        <div className="mt-2 pt-2 border-t border-[#2A2D35] flex flex-col gap-1 text-xs">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1">
+                                                    <span>🧐</span>
+                                                    Critic Peer Review ({step.critic_review.critic_agent})
+                                                </span>
+                                                <span
+                                                    className={`text-[11px] font-mono font-medium ${
+                                                        step.critic_review.approved ? 'text-emerald-400' : 'text-amber-400'
+                                                    }`}
+                                                >
+                                                    Score: {step.critic_review.score}/10 ({step.critic_review.approved ? 'Approved' : 'Revised'})
+                                                </span>
+                                            </div>
+                                            {step.critic_review.critique && (
+                                                <p className="text-[11px] text-slate-400 italic bg-[#0D1017] p-2 rounded border border-[#2A2D35]/50 break-words">
+                                                    "{step.critic_review.critique}"
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
 
                                     {/* Verification Badge */}
                                     {(typeof step.verified === 'boolean' || step.verification_result) && (

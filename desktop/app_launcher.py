@@ -225,6 +225,14 @@ def start_backend_server(port: int = 5000):
     print(f"[DESKTOP] Starting Pulsar AI Backend Server on port {port}...")
     try:
         try:
+            import web
+            if hasattr(web, 'start_server'):
+                web.start_server(host="127.0.0.1", port=port)
+                return
+        except ImportError:
+            pass
+
+        try:
             import modern_web_backend
             modern_web_backend.start_server(host="127.0.0.1", port=port)
             return
@@ -253,27 +261,8 @@ def wait_for_server(port: int = 5000, timeout: int = 60) -> bool:
 
 
 def _spawn_companion(port: int):
-    """Spawn the Win32 floating 4D orb overlay in both frozen and dev environments."""
-    env = os.environ.copy()
-    env["PULSAR_PORT"] = str(port)
-    env["PULSAR_DASHBOARD_URL"] = f"http://127.0.0.1:{port}"
-    creationflags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
-
-    if is_frozen():
-        subprocess.Popen(
-            [sys.executable, "--companion", str(port)],
-            cwd=str(Path(sys.executable).parent),
-            env=env,
-            creationflags=creationflags,
-        )
-    else:
-        mascot_script = project_root / "desktop" / "companion_app.py"
-        subprocess.Popen(
-            [sys.executable, str(mascot_script), str(port)],
-            cwd=str(project_root),
-            env=env,
-            creationflags=creationflags,
-        )
+    """Subprocess spawning disabled: single-process mode guarantees 1 PID and 1 Port."""
+    return True
 
 
 def _notify_overlay_visibility(port: int, minimized: bool, source: str = "windows_app"):

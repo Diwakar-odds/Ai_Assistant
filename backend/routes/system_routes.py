@@ -689,10 +689,11 @@ def api_sessions_clear():
 # ============================================================
 COMPANION_PROCESS = None
 
+
 def spawn_companion_process(port=5000):
     global COMPANION_PROCESS
     if os.environ.get('PULSAR_DISABLE_COMPANION') == '1':
-        return True, "Companion disabled via PULSAR_DISABLE_COMPANION"
+        return False, "Companion disabled via PULSAR_DISABLE_COMPANION"
     if COMPANION_PROCESS is not None and COMPANION_PROCESS.poll() is None:
         logger.info("[COMPANION] Companion process is already running (PID %s)", COMPANION_PROCESS.pid)
         return True, "Companion already active"
@@ -735,6 +736,20 @@ def spawn_companion_process(port=5000):
         return False, str(e)
 
 
+def stop_companion_process():
+    global COMPANION_PROCESS
+    if COMPANION_PROCESS is not None:
+        try:
+            COMPANION_PROCESS.terminate()
+            COMPANION_PROCESS.wait(timeout=2.0)
+        except Exception:
+            try:
+                COMPANION_PROCESS.kill()
+            except Exception:
+                pass
+        COMPANION_PROCESS = None
+
+
 @system_bp.route('/api/desktop/companion/toggle', methods=['GET', 'POST', 'OPTIONS'])
 @system_bp.route('/api/desktop/companion/minimize', methods=['GET', 'POST', 'OPTIONS'])
 @system_bp.route('/api/desktop/companion/spawn', methods=['GET', 'POST', 'OPTIONS'])
@@ -753,18 +768,22 @@ def api_desktop_companion_toggle():
     port = int(os.environ.get('PORT', 5000))
     success, msg = spawn_companion_process(port=port)
 
-    # Do NOT steal focus from minimized overlay (WS_EX_TRANSPARENT / NOACTIVATE), just nudge activity
     try:
-        from backend.voice_service import update_overlay_state
+        from voice_service import update_overlay_state
     except ImportError:
         try:
-            from voice_service import update_overlay_state
+            from backend.voice_service import update_overlay_state
         except ImportError:
             update_overlay_state = None
+
     if update_overlay_state:
-        req_data = request.get_json(force=True, silent=True) or {}
-        if req_data.get('activate'):
-            update_overlay_state(state='listening', source='toggle')
+        try:
+            update_overlay_state(app_minimized=True, source="system_route")
+            req_data = request.get_json(force=True, silent=True) or {}
+            if req_data.get('activate'):
+                update_overlay_state(state='listening', source='toggle')
+        except Exception:
+            pass
 
     return jsonify({"success": success, "message": msg, "mode": "spawn"})
 
@@ -825,10 +844,8 @@ def api_desktop_overlay_state():
 # ============================================================
 # Agent Brain & Notification Endpoints (Companion Mascot API)
 # ============================================================
-@system_bp.route('/api/agent/command', methods=['POST', 'OPTIONS'])
-def api_agent_command():
-    if request.method == 'OPTIONS':
-        return ('', 204)
+def execute_companion_voice_command(data: dict) -> dict:
+    """Execute a companion / in-process voice command through Agent Brain and Unified Persona."""
     try:
         from agent_brain import get_agent_brain
         from ai_assistant.core.jarvis_persona import (
@@ -840,10 +857,14 @@ def api_agent_command():
         except ImportError:
             from backend.voice_service import get_overlay_state, update_overlay_state, _schedule_overlay_idle, _socketio
 
-        data = request.get_json(force=True, silent=True) or {}
         command = data.get('command', '')
         include_screen = data.get('include_screen', False)
         source = str(data.get('source', 'COMPANION_MASCOT') or 'COMPANION_MASCOT')
+
+        from ai_assistant.core.local_command_normalizer import is_noise_fragment
+        if is_noise_fragment(command):
+            logger.info(f"Dropped noise/hallucination fragment in companion command: '{command}'")
+            return {'success': True, 'response': '', 'tts': '', 'silent': True, 'dropped_noise': True}
 
         store = _get_store()
         sess_id = store.get_current_session().get('id')
@@ -1019,9 +1040,9 @@ def api_agent_command():
             except Exception:
                 pass
 
-        return jsonify(res)
+        return res if isinstance(res, dict) else {'success': is_ok, 'response': str(res)}
     except Exception as e:
-        logger.error(f'api_agent_command failed: {e}', exc_info=True)
+        logger.error(f'execute_companion_voice_command failed: {e}', exc_info=True)
         err_msg = f'Error executing command: {str(e)}'
         try:
             store = _get_store()
@@ -1060,7 +1081,18 @@ def api_agent_command():
                 })
             except Exception:
                 pass
-        return jsonify({'success': False, 'response': err_msg, 'message_id': err_id, 'session_id': sess_id, 'boot_id': boot_id}), 500
+        return {'success': False, 'response': err_msg, 'error': str(e), 'message_id': err_id, 'session_id': sess_id, 'boot_id': boot_id}
+
+
+@system_bp.route('/api/agent/command', methods=['POST', 'OPTIONS'])
+@system_bp.route('/api/companion/command', methods=['POST', 'OPTIONS'])
+def api_agent_command():
+    if request.method == 'OPTIONS':
+        return ('', 204)
+    data = request.get_json(force=True, silent=True) or {}
+    res = execute_companion_voice_command(data)
+    status_code = 500 if (not res.get('success', True) and res.get('error')) else 200
+    return jsonify(res), status_code
 
 
 @system_bp.route('/api/agent/notifications', methods=['GET', 'OPTIONS'])

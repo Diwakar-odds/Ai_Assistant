@@ -167,12 +167,22 @@ class WindowsDesktopApp:
         """Start the backend in background thread"""
         try:
             logger.info("🚀 Launching AI Assistant Backend...")
-            import modern_web_backend
-            if hasattr(modern_web_backend, 'start_server'):
-                modern_web_backend.start_server(host='127.0.0.1', port=self.port)
-            elif hasattr(modern_web_backend, 'socketio') and hasattr(modern_web_backend, 'app'):
-                modern_web_backend.socketio.run(
-                    modern_web_backend.app,
+            backend_mod = None
+            try:
+                import web
+                if hasattr(web, 'start_server'):
+                    backend_mod = web
+            except ImportError:
+                pass
+            if backend_mod is None:
+                import modern_web_backend
+                backend_mod = modern_web_backend
+
+            if hasattr(backend_mod, 'start_server'):
+                backend_mod.start_server(host='127.0.0.1', port=self.port)
+            elif hasattr(backend_mod, 'socketio') and hasattr(backend_mod, 'app'):
+                backend_mod.socketio.run(
+                    backend_mod.app,
                     host='127.0.0.1',
                     port=self.port,
                     debug=False,
