@@ -104,7 +104,7 @@ numpy<2.0.0
 # =========================================
 # VECTOR SEARCH & RAG
 # =========================================
-faiss-cpu>=1.7.4
+faiss-cpu>=1.16.0
 chromadb>=0.4.22
 langchain>=0.1.0
 langchain-community>=0.0.10
