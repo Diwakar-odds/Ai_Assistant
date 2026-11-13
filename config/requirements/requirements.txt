@@ -131,7 +131,7 @@ win32-setctime==1.1.0; platform_system=='Windows'
 # MUSIC INTEGRATION
 # =========================================
 spotipy==2.24.0
-ytmusicapi==1.8.1
+ytmusicapi==1.12.3
 
 # =========================================
 # WEB SCRAPING & AUTOMATION
