@@ -50,7 +50,13 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-CONTACTS_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config', 'contacts.json')
+try:
+    from core_ai.config.paths import CONFIG_DIR
+    CONTACTS_FILE = str(CONFIG_DIR / 'contacts.json')
+except Exception:
+    CONTACTS_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'config', 'contacts.json')
+    if not os.path.exists(CONTACTS_FILE):
+        CONTACTS_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config', 'contacts.json')
 
 
 def load_contacts() -> Dict[str, Any]:

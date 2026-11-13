@@ -84,6 +84,7 @@ config/user_settings.json
 core_ai/config/user_settings.json
 config/multimodal_config.json
 core_ai/config/multimodal_config.json
+config/contacts.json
 ai_assistant/config/contacts.json
 core_ai/config/contacts.json
 

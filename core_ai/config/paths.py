@@ -9,7 +9,8 @@ CORE_AI_DIR = Path(__file__).resolve().parent.parent
 PROJECT_ROOT = CORE_AI_DIR.parent
 
 # Standard Directories
-CONFIG_DIR = CORE_AI_DIR / "config"
+CONFIG_DIR = PROJECT_ROOT / "config"
+CORE_AI_CONFIG_DIR = CORE_AI_DIR / "config"
 DATA_DIR = PROJECT_ROOT / "data"
 MODELS_DIR = PROJECT_ROOT / "models"
 LOGS_DIR = PROJECT_ROOT / "logs"

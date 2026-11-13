@@ -1543,12 +1543,19 @@ class IntentVectorMatcher:
             return
 
         if npz_path is None:
-            base_dir = Path(__file__).resolve().parents[4]  # core_ai/src/ai_assistant/ai -> root
-            npz_path = str(base_dir / "data" / "core" / "intent_embeddings.npz")
-            if not Path(npz_path).exists():
-                alt = Path(__file__).resolve().parents[3] / "data" / "core" / "intent_embeddings.npz"
-                if alt.exists():
-                    npz_path = str(alt)
+            try:
+                from core_ai.config.paths import DATA_DIR
+                npz_candidate = DATA_DIR / "core" / "intent_embeddings.npz"
+                if npz_candidate.exists():
+                    npz_path = str(npz_candidate)
+            except Exception:
+                pass
+            if npz_path is None:
+                for p in [Path(__file__).resolve().parents[2], Path(__file__).resolve().parents[3], Path(__file__).resolve().parents[4]]:
+                    candidate = p / "data" / "core" / "intent_embeddings.npz"
+                    if candidate.exists():
+                        npz_path = str(candidate)
+                        break
 
         self.npz_path = npz_path
         self.matrix: Optional[np.ndarray] = None
