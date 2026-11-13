@@ -40,14 +40,15 @@ def _get_settings_mod():
     mod = sys.modules.get("settings_manager") or sys.modules.get("backend.settings_manager")
     if mod is not None:
         return mod
-    backend_dir = str(Path(__file__).resolve().parents[4] / "backend")
-    if backend_dir not in sys.path:
-        sys.path.insert(0, backend_dir)
     try:
-        import settings_manager as sm  # type: ignore
-        return sm
-    except Exception:
-        return None
+        from backend.services import settings_manager
+        return settings_manager
+    except ImportError:
+        try:
+            import settings_manager
+            return settings_manager
+        except ImportError:
+            return None
 
 
 class GGUFModelManager:
@@ -70,29 +71,24 @@ class GGUFModelManager:
         self._loaded_signature: Optional[Tuple[str, int, int]] = None
         self._loaded_request_sig: Optional[Tuple[str, int, int]] = None
         self._infer_lock = threading.Lock()
-        self.base_dir = Path(__file__).resolve().parents[4]
+        try:
+            from core_ai.config.paths import PROJECT_ROOT
+            self.base_dir = PROJECT_ROOT
+        except Exception:
+            self.base_dir = Path(__file__).resolve().parent.parent.parent
         self.model_filename = "pulsar-final-q4_k_m.gguf"
         self._initialized = True
 
     def _candidate_model_dirs(self) -> List[Path]:
-        dirs: List[Optional[Path]] = [
-            self.base_dir / "models",
-            Path(os.getcwd()) / "models",
-            Path(sys.executable).parent / "models",
-            Path(sys.executable).parent / "_internal" / "models",
-            (Path(getattr(sys, "_MEIPASS", "")) / "models") if getattr(sys, "_MEIPASS", None) else None,
-            Path(__file__).resolve().parents[4] / "models",
-        ]
-        sm = _get_settings_mod()
-        if sm is not None:
-            try:
-                dirs.insert(0, Path(sm.get_bundle_root()) / "models")
-                dirs.insert(0, Path(sm.get_writable_root()) / "models")
-            except Exception:
-                pass
-
-        unique_dirs: List[Path] = []
-        seen = set()
+        try:
+            from core_ai.config.paths import get_candidate_model_dirs
+            return get_candidate_model_dirs()
+        except Exception:
+            dirs: List[Path] = [
+                self.base_dir / "models",
+                Path(os.getcwd()) / "models",
+            ]
+            return [d for d in dirs if d]
         for d in dirs:
             if d is None:
                 continue

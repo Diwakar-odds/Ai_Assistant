@@ -185,7 +185,11 @@ def generate_enterprise_dataset(total_samples=2500000, batch_size=50000):
     Generates a massive dataset in streaming batches to prevent memory overflow.
     2,500,000 samples will take roughly 2-5 minutes to generate and write to disk.
     """
-    out_dir = Path("d:/Projects/Ai_Assistant/data/training")
+    try:
+        from core_ai.config.paths import DATA_DIR
+        out_dir = DATA_DIR / "training"
+    except Exception:
+        out_dir = Path(__file__).resolve().parent.parent.parent / "data" / "training"
     out_dir.mkdir(parents=True, exist_ok=True)
     out_file = out_dir / "ultimate_windows_dataset_v3.jsonl"
     

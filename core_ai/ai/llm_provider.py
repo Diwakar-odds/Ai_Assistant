@@ -36,18 +36,28 @@ def is_local_provider(provider: Optional[str]) -> bool:
     return str(provider).strip().lower() in LOCAL_PROVIDERS
 
 
+def _get_settings_manager():
+    """Retrieve the central settings_manager without brittle relative paths."""
+    try:
+        from backend.services import settings_manager
+        return settings_manager
+    except ImportError:
+        try:
+            import settings_manager
+            return settings_manager
+        except ImportError:
+            return None
+
+
 def _read_generation_defaults() -> tuple[float, int]:
     """Read temperature & max_tokens from central settings_manager safely."""
-    import sys
-    from pathlib import Path
-    try:
-        backend_dir = str(Path(__file__).resolve().parents[4] / 'backend')
-        if backend_dir not in sys.path:
-            sys.path.insert(0, backend_dir)
-        from settings_manager import get_temperature, get_max_tokens
-        return float(get_temperature()), int(get_max_tokens())
-    except Exception:
-        return 0.7, 1024
+    sm = _get_settings_manager()
+    if sm is not None:
+        try:
+            return float(sm.get_temperature()), int(sm.get_max_tokens())
+        except Exception:
+            pass
+    return 0.7, 1024
 
 
 class LLMProvider(ABC):
@@ -75,16 +85,12 @@ class OpenAIProvider(LLMProvider):
     def __init__(self, api_key: Optional[str] = None, model: str = "gpt-3.5-turbo", base_url: Optional[str] = None):
         """Initialize OpenAI provider."""
         if not api_key:
-            try:
-                import sys
-                from pathlib import Path
-                backend_dir = str(Path(__file__).resolve().parents[4] / 'backend')
-                if backend_dir not in sys.path:
-                    sys.path.insert(0, backend_dir)
-                from settings_manager import get_api_key
-                api_key = get_api_key("openai")
-            except Exception:
-                api_key = None
+            sm = _get_settings_manager()
+            if sm is not None:
+                try:
+                    api_key = sm.get_api_key("openai")
+                except Exception:
+                    pass
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         self.base_url = base_url or os.getenv("OPENAI_BASE_URL")
         self.model = model
@@ -112,16 +118,7 @@ class OpenAIProvider(LLMProvider):
     def generate_response(self, messages: List[Dict[str, str]], **kwargs) -> str:
         """Generate a complete response from OpenAI."""
         try:
-            import sys
-            from pathlib import Path
-            try:
-                sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
-                from settings_manager import get_temperature, get_max_tokens
-                default_temp = get_temperature()
-                default_max = get_max_tokens()
-            except ImportError:
-                default_temp = 0.7
-                default_max = 2000
+            default_temp, default_max = _read_generation_defaults()
 
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -184,16 +181,12 @@ class GeminiProvider(LLMProvider):
     def __init__(self, api_key: Optional[str] = None, model: str = "gemini-2.5-flash"):
         """Initialize Gemini provider."""
         if not api_key:
-            try:
-                import sys
-                from pathlib import Path
-                backend_dir = str(Path(__file__).resolve().parents[4] / 'backend')
-                if backend_dir not in sys.path:
-                    sys.path.insert(0, backend_dir)
-                from settings_manager import get_api_key
-                api_key = get_api_key("gemini")
-            except Exception:
-                api_key = None
+            sm = _get_settings_manager()
+            if sm is not None:
+                try:
+                    api_key = sm.get_api_key("gemini")
+                except Exception:
+                    pass
         self.api_key = api_key or os.getenv("GEMINI_API_KEY")
         self.model = model
         
@@ -237,17 +230,7 @@ class GeminiProvider(LLMProvider):
             # Send last message with generation config
             last_message = non_system[-1]["content"]
             
-            # Create generation config
-            import sys
-            from pathlib import Path
-            try:
-                sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
-                from settings_manager import get_temperature, get_max_tokens
-                default_temp = get_temperature()
-                default_max = get_max_tokens()
-            except ImportError:
-                default_temp = 0.7
-                default_max = 2048
+            default_temp, default_max = _read_generation_defaults()
 
             generation_config = {
                 'temperature': kwargs.get("temperature", default_temp),
@@ -607,20 +590,15 @@ class LLMFactory:
     @classmethod
     def detect_provider(cls) -> tuple[str, str]:
         """Detect provider from user settings (single source of truth)."""
-        try:
-            from settings_manager import get_provider, get_model
-            return (get_provider(), get_model())
-        except ImportError:
-            import sys
-            from pathlib import Path
+        sm = _get_settings_manager()
+        if sm is not None:
             try:
-                sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
-                from settings_manager import get_provider, get_model
-                return (get_provider(), get_model())
-            except ImportError:
-                if os.getenv("GEMINI_API_KEY"):
-                    return ("gemini", "gemini-2.5-flash")
-                return ("gguf", "pulsar-final-q4_k_m")
+                return (sm.get_provider(), sm.get_model())
+            except Exception:
+                pass
+        if os.getenv("GEMINI_API_KEY"):
+            return ("gemini", "gemini-2.5-flash")
+        return ("gguf", "pulsar-final-q4_k_m")
 
     @classmethod
     def create_with_fallback(cls, preferred_provider: Optional[str] = None, **kwargs) -> LLMProvider:

@@ -10,17 +10,15 @@ logger = logging.getLogger(__name__)
 
 def _default_onboarding_settings_path() -> Path:
     try:
-        from settings_manager import get_settings_file
+        from backend.services.settings_manager import get_settings_file
         return get_settings_file()
     except Exception:
         pass
-    override = os.environ.get('PULSAR_DATA_DIR')
-    if override and override.strip():
-        return Path(override.strip()).expanduser().resolve() / 'data' / 'user_preferences' / 'settings.json'
-    if getattr(sys, 'frozen', False):
-        appdata = os.environ.get('LOCALAPPDATA', os.path.expanduser('~/.pulsar_ai'))
-        return Path(appdata) / 'PulsarAI' / 'data' / 'user_preferences' / 'settings.json'
-    return Path(__file__).resolve().parents[4] / 'data' / 'user_preferences' / 'settings.json'
+    try:
+        from core_ai.config.paths import DATA_DIR
+        return DATA_DIR / 'user_preferences' / 'settings.json'
+    except Exception:
+        return Path(__file__).resolve().parent.parent.parent / 'data' / 'user_preferences' / 'settings.json'
 
 
 class OnboardingManager:

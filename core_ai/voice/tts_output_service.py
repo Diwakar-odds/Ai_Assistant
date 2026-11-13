@@ -206,9 +206,10 @@ def ensure_espeak_environment() -> Tuple[Optional[str], Optional[str]]:
                 lib_candidates.append(root / "espeakng_loader" / "espeak-ng.dll")
                 data_candidates.append(root / "espeakng_loader" / "espeak-ng-data")
 
-        # Legacy system install fallback
-        lib_candidates.append(Path(r"C:\Program Files\eSpeak NG\libespeak-ng.dll"))
-        data_candidates.append(Path(r"C:\Program Files\eSpeak NG\espeak-ng-data"))
+        # System install fallback
+        prog_files = Path(os.environ.get("ProgramFiles", r"C:\Program Files"))
+        lib_candidates.append(prog_files / "eSpeak NG" / "libespeak-ng.dll")
+        data_candidates.append(prog_files / "eSpeak NG" / "espeak-ng-data")
 
         chosen_lib = next((str(p) for p in lib_candidates if p and p.exists()), None)
         chosen_data = next((str(p) for p in data_candidates if p and p.exists()), None)
@@ -253,10 +254,10 @@ def resolve_kitten_mini_dir() -> Optional[Path]:
         candidates.append(exe_parent / "_internal" / rel)
         candidates.append(exe_parent / rel)
 
-    # Repo root: core_ai/src/ai_assistant/voice/tts_output_service.py -> parents[4]
     try:
-        repo_root = Path(__file__).resolve().parents[4]
-        candidates.append(repo_root / rel)
+        from core_ai.config.paths import MODELS_DIR, PROJECT_ROOT
+        candidates.append(MODELS_DIR / "tts" / "kitten-tts-mini-0.8")
+        candidates.append(PROJECT_ROOT / rel)
     except Exception:
         pass
     candidates.append(Path.cwd() / rel)

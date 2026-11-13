@@ -41,6 +41,7 @@ class AppDiscovery:
         
         # Load cache first for fast startup
         self.load_cache()
+        self._init_usage_database()
         
         # Comprehensive app aliases and protocol schemes
         self.aliases = {

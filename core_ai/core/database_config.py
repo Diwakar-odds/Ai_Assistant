@@ -13,26 +13,12 @@ import os
 import sys
 from pathlib import Path
 
+from core_ai.config.paths import DATA_DIR, PROJECT_ROOT, IS_PRODUCTION
+
 # Smart Data Root Detection
 def get_data_root() -> Path:
-    override = os.environ.get('PULSAR_DATA_DIR')
-    if override and override.strip():
-        return Path(override.strip()).expanduser().resolve() / 'data'
-
-    if getattr(sys, 'frozen', False):
-        # PyInstaller/packaged app -> user's AppData
-        # Fallback to local APPDATA if not on Windows, though this is a Windows app
-        appdata = os.environ.get('LOCALAPPDATA', os.path.expanduser('~/.pulsar_ai'))
-        data_root = Path(appdata) / 'PulsarAI' / 'data'
-    else:
-        # Development -> project folder (4 levels up from this file)
-        # __file__ is core_ai/src/ai_assistant/core/database_config.py
-        data_root = Path(__file__).resolve().parents[4] / "data"
-    
-    return data_root
-
-DATA_DIR = get_data_root()
-PROJECT_ROOT = DATA_DIR.parent
+    """Return the centralized runtime data directory from core_ai.config.paths."""
+    return DATA_DIR
 
 # Ensure essential data subdirectories exist
 (DATA_DIR / "core").mkdir(parents=True, exist_ok=True)

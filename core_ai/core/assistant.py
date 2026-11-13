@@ -672,15 +672,14 @@ class ModernAssistant:
     def _get_configured_provider_model(self):
         """Read active (provider, model) from central settings_manager if available."""
         try:
-            import sys
-            from pathlib import Path
-            backend_dir = str(Path(__file__).resolve().parents[4] / 'backend')
-            if backend_dir not in sys.path:
-                sys.path.insert(0, backend_dir)
-            from settings_manager import get_provider, get_model
+            from backend.services.settings_manager import get_provider, get_model
             return get_provider(), get_model()
         except Exception:
-            return None, None
+            try:
+                import settings_manager
+                return settings_manager.get_provider(), settings_manager.get_model()
+            except Exception:
+                return None, None
 
     def reset_llm_session(self):
         """Reset cached LLM chat interface so subsequent turns use updated settings."""
@@ -1090,7 +1089,7 @@ class ModernAssistant:
                 stats.update({
                     "cpu_usage": psutil.cpu_percent(interval=0),  # Non-blocking
                     "memory_usage": psutil.virtual_memory().percent,
-                    "disk_usage": psutil.disk_usage('C:\\' if os.name == 'nt' else '/').percent,
+                    "disk_usage": psutil.disk_usage((os.environ.get("SystemDrive", "C:") + "\\") if os.name == 'nt' else '/').percent,
                     "active_tasks": len(psutil.pids()),
                 })
                 
@@ -1665,8 +1664,8 @@ Just speak naturally - I understand context! """
                             and not is_local_provider(actual_provider)
                         ):
                             try:
-                                from pathlib import Path
-                                gguf_file = Path(__file__).resolve().parents[4] / "models" / "pulsar-final-q4_k_m.gguf"
+                                from core_ai.config.paths import MODELS_DIR
+                                gguf_file = MODELS_DIR / "pulsar-final-q4_k_m.gguf"
                                 if gguf_file.exists():
                                     gguf_chat = UnifiedChatInterface(
                                         provider="gguf",
@@ -2135,14 +2134,14 @@ Just speak naturally - I understand context! """
             # Default to Hindi when 'auto' or unset — user primarily speaks Hindi/Hinglish
             if whisper_lang is None:
                 try:
-                    import sys
-                    from pathlib import Path
-                    sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
-                    from settings_manager import get_stt_language_short
+                    try:
+                        from backend.services.settings_manager import get_stt_language_short
+                    except ImportError:
+                        from settings_manager import get_stt_language_short
                     raw_stt = str(get_stt_language_short() or '').strip().lower()
                     whisper_lang = None if raw_stt in ('', 'auto') else raw_stt
                     logger.info(f"[WHISPER] Language from settings: '{whisper_lang or 'auto'}'")
-                except ImportError:
+                except Exception:
                     whisper_lang = 'hi'
                     logger.info(f"[WHISPER] Language auto/unset → defaulting to Hindi ('hi')")
             

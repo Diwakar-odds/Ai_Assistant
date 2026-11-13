@@ -3522,12 +3522,6 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                             microphoneStreamRef.current = null;
                         }
 
-                        // Don't send audio if TTS started playing while we were recording (echo prevention)
-                        if (ttsSpeakingRef.current) {
-                            console.log('🔇 Discarding recorded audio (TTS active)');
-                            return;
-                        }
-
                         if (audioChunksRef.current.length === 0) {
                             console.log('⚠️ No audio data captured');
                             setInterimTranscript('');

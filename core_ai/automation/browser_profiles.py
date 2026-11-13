@@ -49,13 +49,16 @@ def _match_academic_profile(discovered: Dict[str, Dict]) -> Optional[str]:
     return None
 
 def get_chrome_executable() -> Optional[str]:
+    prog_files = os.environ.get("ProgramFiles", r"C:\Program Files")
+    prog_files_x86 = os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")
+    local_app_data = os.environ.get("LOCALAPPDATA", "")
     candidates = [
-        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
-        os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe")
+        os.path.join(prog_files, "Google", "Chrome", "Application", "chrome.exe"),
+        os.path.join(prog_files_x86, "Google", "Chrome", "Application", "chrome.exe"),
+        os.path.join(local_app_data, "Google", "Chrome", "Application", "chrome.exe") if local_app_data else "",
     ]
     for c in candidates:
-        if os.path.exists(c):
+        if c and os.path.exists(c):
             return c
     return None
 

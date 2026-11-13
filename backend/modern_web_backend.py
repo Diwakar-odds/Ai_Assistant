@@ -360,11 +360,24 @@ static_dir = web_assets_dir
 
 app = Flask(__name__, template_folder=template_dir, static_folder=static_dir, static_url_path='/')
 
+@app.after_request
+def add_cache_control_headers(response):
+    """Ensure HTML pages (especially SPA index.html) are never cached by browsers to avoid stale bundles."""
+    if response.content_type and 'text/html' in response.content_type:
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    return response
+
 # Serve Frontend SPA
 @app.route('/')
 def serve_root():
-    """Serve the React app index.html for root path"""
-    return send_from_directory(static_dir, 'index.html')
+    """Serve the React app index.html for root path with no-cache headers"""
+    resp = send_from_directory(static_dir, 'index.html')
+    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+    resp.headers['Pragma'] = 'no-cache'
+    resp.headers['Expires'] = '0'
+    return resp
 
 # Serve Floating Desktop Companion
 @app.route('/companion')
@@ -1102,7 +1115,7 @@ if not AUTOMATION_AVAILABLE:
             return {
                 "cpu_percent": psutil.cpu_percent(interval=1),
                 "memory_percent": psutil.virtual_memory().percent,
-                "disk_percent": psutil.disk_usage('C:\\' if os.name == 'nt' else '/').percent
+                "disk_percent": psutil.disk_usage((os.environ.get("SystemDrive", "C:") + "\\") if os.name == 'nt' else '/').percent
             }
         return {"cpu_percent": 0, "memory_percent": 0, "disk_percent": 0}
     def get_running_processes(*args, **kwargs): return []

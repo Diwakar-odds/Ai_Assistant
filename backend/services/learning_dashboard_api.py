@@ -16,13 +16,20 @@ import json
 class LearningDashboardAPI:
     """Provides data for the learning dashboard"""
     
-    def __init__(self, data_dir: str = "data"):
-        self.data_dir = Path(data_dir)
+    def __init__(self, data_dir=None):
+        if data_dir is not None:
+            self.data_dir = Path(data_dir)
+        else:
+            try:
+                from core_ai.config.paths import DATA_DIR
+                self.data_dir = DATA_DIR
+            except Exception:
+                self.data_dir = Path("data")
         self.databases = self._get_all_databases()
     
     def _get_all_databases(self) -> List[Dict]:
-        """Get list of all learning databases"""
-        db_files = list(self.data_dir.glob("*.db"))
+        """Get list of all learning databases (recursively scans data/ subdirectories)"""
+        db_files = list(self.data_dir.rglob("*.db"))
         
         databases = []
         for db_path in db_files:

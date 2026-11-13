@@ -31,14 +31,14 @@ class ChainOptimizer:
             try:
                 from ai_assistant.ai.llm_provider import UnifiedChatInterface
                 try:
-                    import sys
-                    backend_dir = str(Path(__file__).resolve().parents[4] / 'backend')
-                    if backend_dir not in sys.path:
-                        sys.path.insert(0, backend_dir)
-                    from settings_manager import get_provider, get_model
+                    from backend.services.settings_manager import get_provider, get_model
                     _sm_provider, _sm_model = get_provider(), get_model()
                 except Exception:
-                    _sm_provider, _sm_model = None, None
+                    try:
+                        from settings_manager import get_provider, get_model
+                        _sm_provider, _sm_model = get_provider(), get_model()
+                    except Exception:
+                        _sm_provider, _sm_model = None, None
                 self._llm = UnifiedChatInterface(provider=_sm_provider, model=_sm_model, use_fallback=True)
                 self._llm.add_system_message(
                     "You are an AI planner optimization engine. "

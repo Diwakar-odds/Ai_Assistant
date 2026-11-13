@@ -145,10 +145,10 @@ class IntentRouter:
         model_name = "gemini-2.5-flash"
         api_key = None
         try:
-            backend_dir = str(Path(__file__).resolve().parents[4] / 'backend')
-            if backend_dir not in sys.path:
-                sys.path.insert(0, backend_dir)
-            from settings_manager import get_provider, get_model, get_api_key
+            try:
+                from backend.services.settings_manager import get_provider, get_model, get_api_key
+            except ImportError:
+                from settings_manager import get_provider, get_model, get_api_key
             provider = (get_provider() or "gemini").lower()
             sm_model = get_model() or model_name
             if "gemini" in sm_model.lower():
@@ -172,12 +172,10 @@ class IntentRouter:
             if req_prov:
                 return str(req_prov).strip().lower()
         try:
-            import sys
-            from pathlib import Path
-            backend_dir = str(Path(__file__).resolve().parents[4] / 'backend')
-            if backend_dir not in sys.path:
-                sys.path.insert(0, backend_dir)
-            from settings_manager import get_provider
+            try:
+                from backend.services.settings_manager import get_provider
+            except ImportError:
+                from settings_manager import get_provider
             return (get_provider() or "gemini").lower()
         except Exception:
             return "gemini"

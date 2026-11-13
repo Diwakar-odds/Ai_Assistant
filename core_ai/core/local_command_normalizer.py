@@ -26,8 +26,11 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 logger = logging.getLogger(__name__)
 
-_PROJECT_ROOT = Path(__file__).resolve().parents[4]
-_BACKEND_DIR = _PROJECT_ROOT / "backend"
+try:
+    from core_ai.config.paths import PROJECT_ROOT as _PROJECT_ROOT, BACKEND_DIR as _BACKEND_DIR
+except Exception:
+    _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+    _BACKEND_DIR = _PROJECT_ROOT / "backend"
 
 
 def ensure_project_ffmpeg_in_path(project_root: Optional[Path] = None) -> Optional[Path]:

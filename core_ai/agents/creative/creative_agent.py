@@ -175,11 +175,12 @@ class CreativeAgent(BaseAgent):
                 font_sub = None
                 title_px = max(22, width // 24)
                 sub_px = max(14, width // 42)
+                win_fonts = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "Fonts"
                 for candidate in (
                     "arial.ttf",
                     "segoeui.ttf",
-                    r"C:\Windows\Fonts\arial.ttf",
-                    r"C:\Windows\Fonts\segoeui.ttf",
+                    str(win_fonts / "arial.ttf"),
+                    str(win_fonts / "segoeui.ttf"),
                     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
                 ):
                     try:

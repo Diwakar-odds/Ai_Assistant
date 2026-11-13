@@ -9,6 +9,7 @@ Handles file system operations for the AI Assistant:
 """
 
 import os
+import sys
 import re
 import shutil
 import subprocess
@@ -187,19 +188,26 @@ class FileAutomation:
 
         if clean_name:
             user_home = Path.home()
-            candidates = [
-                os.path.join("D:\\", clean_name),
-                os.path.join("C:\\", clean_name),
-                str(user_home / clean_name),
-                str(user_home / "Documents" / clean_name),
-                str(user_home / "Desktop" / clean_name),
-                str(user_home / "Downloads" / clean_name),
-            ]
+            # Dynamically detect all available Windows drive partitions
+            available_drives = []
+            if sys.platform == "win32":
+                import string
+                for letter in string.ascii_uppercase:
+                    d_root = f"{letter}:\\"
+                    if os.path.exists(d_root):
+                        available_drives.append(d_root)
+            else:
+                available_drives = ["/"]
+
+            candidates = [str(user_home / clean_name), str(user_home / "Documents" / clean_name), str(user_home / "Desktop" / clean_name), str(user_home / "Downloads" / clean_name)]
+            for d_root in available_drives:
+                candidates.insert(0, os.path.join(d_root, clean_name))
+
             for cand in candidates:
                 if os.path.exists(cand) and os.path.isdir(cand):
                     return os.path.normpath(cand)
 
-            for drive in ["D:\\", "C:\\"]:
+            for drive in available_drives:
                 if os.path.exists(drive):
                     try:
                         for entry in os.scandir(drive):

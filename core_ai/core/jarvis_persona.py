@@ -872,11 +872,20 @@ def _extract_action_target(command: str) -> str:
     # Strip common English & Hindi polite/action wrappers
     cleaned = raw
     for pat in (
-        r"^(?:hey|ok|hi|please|pls|bhai|yaar|boss|sir|pulsar)\b[\s,]*",
-        r"^(?:open|launch|start|run|close|quit|exit|kill|stop|play|search|find|check|show|explain)\s+",
-        r"\s+(?:karo|kardo|kar do|kholo|khol do|band karo|band kardo|chalao|chala do|batao|bata do|nikalo|please|pls|abhi|jaldi|pe|mein)$",
+        r"^(?:hey|ok|hi|please|pls|bhai|yaar|boss|sir|pulsar|अरे|सुनो|हे)\b[\s,]*",
+        r"^(?:open|launch|start|run|close|quit|exit|kill|stop|play|search|find|check|show|explain|खोलो|खोल\s+दो|खोल\s+दे|खोलिये|खोलिए|खोल|ओपन\s+करो|ओपन\s+कर\s+दो|ओपन|चालू\s+करो|चालू\s+कर|बंद\s+करो|बंद\s+कर\s+दो|बंद|चलाओ|बजाओ|सुनाओ|प्ले\s+करो|प्वलो|पोलो)\s+",
+        r"\s+(?:karo|kardo|kar do|kholo|khol do|khol de|khol|band karo|band kardo|band kar do|band kar|band|chalao|chala do|chala de|bajao|bajado|suno|sunao|batao|bata do|nikalo|please|pls|abhi|jaldi|pe|mein|खोलो|खोल\s+दो|खोल\s+दे|खोलिये|खोलिए|खोल|ओपन\s+करो|ओपन\s+कर\s+दो|ओपन|चालू\s+करो|चालू\s+कर|बंद\s+करो|बंद\s+कर\s+दो|बंद\s+कर|बंद|चलाओ|चला\s+दो|बजाओ|बजा\s+दो|सुनाओ|प्ले\s+करो|प्वलो|पोलो|कलो)$",
     ):
         cleaned = re.sub(pat, "", cleaned, flags=re.IGNORECASE).strip()
+
+    # Normalize Hinglish/Devanagari app name if possible
+    try:
+        from ai_assistant.core.local_command_normalizer import normalize_hinglish_devanagari
+        normalized = normalize_hinglish_devanagari(cleaned)
+        if normalized and normalized != cleaned:
+            cleaned = normalized
+    except Exception:
+        pass
 
     # Keep short readable phrase
     words = cleaned.split()

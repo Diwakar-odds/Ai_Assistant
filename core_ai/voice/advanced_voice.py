@@ -157,13 +157,13 @@ class AdvancedWakeWordDetector:
     def __init__(self, wake_words: List[str] = None):
         if not wake_words:
             try:
-                import sys
-                from pathlib import Path
-                sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
-                from settings_manager import get_wake_word
+                try:
+                    from backend.services.settings_manager import get_wake_word
+                except ImportError:
+                    from settings_manager import get_wake_word
                 ww = get_wake_word().lower()
                 self.wake_words = [ww] if ww else ["hey pulsar", "ok pulsar", "pulsar"]
-            except ImportError:
+            except Exception:
                 self.wake_words = [
                     "hey assistant", "your daddy", "daddy", "assistant",
                     "help me", "listen", "computer", "ai assistant"

@@ -20,10 +20,14 @@ logger = logging.getLogger(__name__)
 def _resolve_default_db_path() -> str:
     """Resolve persistent DB path inside project data/core directory regardless of CWD."""
     try:
-        from ai_assistant.core.database_config import PROJECT_ROOT
-        return str((PROJECT_ROOT / "data" / "core" / "chain_history.db").resolve())
+        from core_ai.config.paths import DATA_DIR
+        return str((DATA_DIR / "core" / "chain_history.db").resolve())
     except Exception:
-        return str((Path(__file__).resolve().parents[4] / "data" / "core" / "chain_history.db").resolve())
+        try:
+            from ai_assistant.core.database_config import DATA_DIR
+            return str((DATA_DIR / "core" / "chain_history.db").resolve())
+        except Exception:
+            return str((Path(__file__).resolve().parent.parent.parent / "data" / "core" / "chain_history.db").resolve())
 
 
 DB_PATH = _resolve_default_db_path()

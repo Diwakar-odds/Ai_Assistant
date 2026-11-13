@@ -46,9 +46,15 @@ class MultiModalAI:
             try:
                 from dotenv import load_dotenv
                 from pathlib import Path
-                env_path = Path(__file__).resolve().parents[4] / '.env'
-                if env_path.exists():
-                    load_dotenv(dotenv_path=env_path)
+                try:
+                    from core_ai.config.paths import CONFIG_DIR, PROJECT_ROOT
+                    env_candidates = [CONFIG_DIR / '.env', PROJECT_ROOT / '.env']
+                except Exception:
+                    env_candidates = [Path(__file__).resolve().parent.parent.parent / '.env']
+                for candidate in env_candidates:
+                    if candidate.exists():
+                        load_dotenv(dotenv_path=candidate)
+                        break
                 else:
                     load_dotenv()
                 self.api_key = os.environ.get("GEMINI_API_KEY")
@@ -71,12 +77,12 @@ class MultiModalAI:
         # Initialize models
         try:
             try:
-                import sys
-                from pathlib import Path
-                sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
-                from settings_manager import get_model
+                try:
+                    from backend.services.settings_manager import get_model
+                except ImportError:
+                    from settings_manager import get_model
                 _sm_model = get_model()
-            except ImportError:
+            except Exception:
                 _sm_model = 'gemini-2.5-flash'
             self.vision_model = genai.GenerativeModel(_sm_model)
             self.text_model = genai.GenerativeModel(_sm_model)

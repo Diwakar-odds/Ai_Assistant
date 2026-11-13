@@ -70,10 +70,10 @@ class SmartWakeWordDetector:
         """
         if not wake_words:
             try:
-                import sys
-                from pathlib import Path
-                sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
-                from settings_manager import get_wake_words
+                try:
+                    from backend.services.settings_manager import get_wake_words
+                except ImportError:
+                    from settings_manager import get_wake_words
                 loaded_words = [str(w).lower().strip() for w in (get_wake_words() or []) if str(w).strip()]
                 self.wake_words = loaded_words if loaded_words else ["hey pulsar", "ok pulsar", "pulsar", "hey assistant"]
             except Exception:

@@ -113,12 +113,10 @@ class OnlineLLMConfig:
             Tuple of (provider_name, model_name)
         """
         try:
-            import sys
-            from pathlib import Path
-            backend_dir = str(Path(__file__).resolve().parents[4] / "backend")
-            if backend_dir not in sys.path:
-                sys.path.insert(0, backend_dir)
-            from settings_manager import get_provider, get_model
+            try:
+                from backend.services.settings_manager import get_provider, get_model
+            except ImportError:
+                from settings_manager import get_provider, get_model
 
             sm_provider = get_provider()
             sm_model = get_model()

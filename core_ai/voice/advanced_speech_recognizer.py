@@ -123,8 +123,11 @@ class AdvancedSpeechRecognizer:
         if LOCAL_WHISPER_AVAILABLE:
             try:
                 device = "cuda:0" if torch.cuda.is_available() else "cpu"
-                project_root = Path(__file__).resolve().parents[4]
-                local_model_dir = project_root / "models" / "whisper-hinglish"
+                try:
+                    from core_ai.config.paths import MODELS_DIR
+                    local_model_dir = MODELS_DIR / "whisper-hinglish"
+                except Exception:
+                    local_model_dir = Path(__file__).resolve().parent.parent.parent / "models" / "whisper-hinglish"
                 model_path = str(local_model_dir) if local_model_dir.exists() else "Hhsjsnns/whisper-small-hinglish"
                 logger.info(f"⏳ Loading Local Hinglish Whisper Model ({model_path})...")
                 from transformers import WhisperForConditionalGeneration, WhisperProcessor

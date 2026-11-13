@@ -1788,9 +1788,9 @@ class AdvancedIntegrationManager:
     
     def setup_system_hooks(self):
         """Setup basic system monitoring hooks"""
-        # File system monitoring
+        win_sys32 = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32")
         self.hook_manager.register_hook("fs_monitor", HookType.FILE_SYSTEM, {
-            "paths": [os.path.expanduser("~"), "C:\\Windows\\System32" if platform.system() == "Windows" else "/var/log"],
+            "paths": [os.path.expanduser("~"), win_sys32 if platform.system() == "Windows" else "/var/log"],
             "interval": 2
         })
         

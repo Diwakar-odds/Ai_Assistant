@@ -35,13 +35,17 @@ if sys.platform == 'win32':
 
 
 def _resolve_base_log_dir() -> Path:
-    override = os.environ.get('PULSAR_DATA_DIR')
-    if override and override.strip():
-        return Path(override.strip()).expanduser().resolve() / 'logs'
-    if getattr(sys, 'frozen', False):
-        appdata = os.environ.get('LOCALAPPDATA', os.path.expanduser('~/.pulsar_ai'))
-        return Path(appdata) / 'PulsarAI' / 'logs'
-    return Path("logs")
+    try:
+        from core_ai.config.paths import LOGS_DIR
+        return LOGS_DIR
+    except Exception:
+        override = os.environ.get('PULSAR_LOGS_DIR') or os.environ.get('PULSAR_DATA_DIR')
+        if override and override.strip():
+            return Path(override.strip()).expanduser().resolve() / 'logs'
+        if getattr(sys, 'frozen', False):
+            appdata = os.environ.get('LOCALAPPDATA', os.path.expanduser('~/.pulsar_ai'))
+            return Path(appdata) / 'PulsarAI' / 'logs'
+        return Path(__file__).resolve().parent.parent.parent / "logs"
 
 
 class SessionManager:

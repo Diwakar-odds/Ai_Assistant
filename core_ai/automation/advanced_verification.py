@@ -51,9 +51,11 @@ class MultiModalVerifier:
         if log_dir:
             self.log_dir = Path(log_dir)
         else:
-            # Default to repo root / logs
-            repo_root = Path(__file__).resolve().parents[4]
-            self.log_dir = repo_root / "logs"
+            try:
+                from core_ai.config.paths import LOGS_DIR
+                self.log_dir = LOGS_DIR
+            except Exception:
+                self.log_dir = Path(__file__).resolve().parent.parent.parent / "logs"
 
     # ===== 1. PRE-FLIGHT NETWORK CONNECTIVITY =====
 

@@ -30,44 +30,43 @@ if _this_sm is not None:
     sys.modules.setdefault('backend.settings_manager', _this_sm)
 
 
+try:
+    from core_ai.config.paths import PROJECT_ROOT, DATA_DIR, CONFIG_DIR, IS_FROZEN, IS_PRODUCTION
+except ImportError:
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+    DATA_DIR = PROJECT_ROOT / "data"
+    CONFIG_DIR = PROJECT_ROOT / "config"
+    IS_FROZEN = bool(getattr(sys, 'frozen', False))
+    IS_PRODUCTION = IS_FROZEN
+
+
 def is_frozen() -> bool:
     """Return True when running inside a packaged PyInstaller executable."""
-    return bool(getattr(sys, 'frozen', False))
+    return IS_FROZEN
 
 
 def get_bundle_root() -> Path:
     """Return the read-only root directory where bundled code/assets live."""
-    if is_frozen():
-        return Path(getattr(sys, '_MEIPASS', Path(sys.executable).parent)).resolve()
-    return Path(__file__).resolve().parent.parent
+    return PROJECT_ROOT
 
 
 def get_writable_root() -> Path:
     """Return writable per-user data root (%LOCALAPPDATA%\\PulsarAI when packaged)."""
-    override = os.environ.get('PULSAR_DATA_DIR')
-    if override and override.strip():
-        root = Path(override.strip()).expanduser().resolve()
-        root.mkdir(parents=True, exist_ok=True)
-        return root
-    if is_frozen():
-        appdata = os.environ.get('LOCALAPPDATA', os.path.expanduser('~/.pulsar_ai'))
-        root = Path(appdata) / 'PulsarAI'
-        root.mkdir(parents=True, exist_ok=True)
-        return root
-    return Path(__file__).resolve().parent.parent
+    return DATA_DIR.parent
 
 
 def get_settings_file() -> Path:
     """Single canonical writable path for settings.json."""
-    return get_writable_root() / 'data' / 'user_preferences' / 'settings.json'
+    return DATA_DIR / 'user_preferences' / 'settings.json'
 
 
 def get_env_file() -> Path:
     """Single canonical writable path for .env secrets."""
-    writable_env = get_writable_root() / '.env'
-    if writable_env.exists() or is_frozen() or bool(os.environ.get('PULSAR_DATA_DIR', '').strip()):
-        return writable_env
-    return get_bundle_root() / '.env'
+    # Check config dir first, then project root
+    for candidate in [CONFIG_DIR / '.env', PROJECT_ROOT / '.env']:
+        if candidate.exists():
+            return candidate
+    return CONFIG_DIR / '.env'
 
 
 def get_logs_root() -> Path:

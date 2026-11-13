@@ -522,7 +522,14 @@ class AgentBrain:
                             or iparams.get("setting")
                             or ""
                         )
-                        persona_tts = format_post_task_report(iname, target_entity, ok)
+                        is_hindi_cmd = any("\u0900" <= ch <= "\u097f" for ch in command)
+                        persona_tts = format_post_task_report(
+                            command=command,
+                            raw_result=msg,
+                            success=ok,
+                            intent=iname,
+                            language_hint="hindi" if is_hindi_cmd else None,
+                        )
                         if persona_tts:
                             tts_speech = persona_tts
                     except Exception:

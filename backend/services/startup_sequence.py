@@ -249,7 +249,7 @@ class StartupSequence:
         
         if PSUTIL_AVAILABLE:
             try:
-                disk = psutil.disk_usage('C:\\' if os.name == 'nt' else '/')
+                disk = psutil.disk_usage((os.environ.get("SystemDrive", "C:") + "\\") if os.name == 'nt' else '/')
                 percent_used = disk.percent
                 
                 status["details"]["percent_used"] = percent_used

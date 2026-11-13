@@ -247,7 +247,7 @@ def api_system_details():
                 pass
 
             try:
-                du = psutil.disk_usage('C:\\' if os.name == 'nt' else '/')
+                du = psutil.disk_usage((os.environ.get("SystemDrive", "C:") + "\\") if os.name == 'nt' else '/')
                 gb = 1024 ** 3
                 disk_info = {
                     "total_gb": round(du.total / gb, 2),

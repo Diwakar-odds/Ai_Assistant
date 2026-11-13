@@ -54,12 +54,10 @@ def _get_multi_agent_coordinator():
 def _is_gemini_active_and_configured() -> bool:
     """Only allow cloud Gemini VLM calls when active provider is Gemini and API key is configured."""
     try:
-        import sys
-        from pathlib import Path
-        backend_dir = str(Path(__file__).resolve().parents[4] / 'backend')
-        if backend_dir not in sys.path:
-            sys.path.insert(0, backend_dir)
-        from settings_manager import get_provider, get_api_key
+        try:
+            from backend.services.settings_manager import get_provider, get_api_key
+        except ImportError:
+            from settings_manager import get_provider, get_api_key
         return (get_provider() or "").lower() == "gemini" and bool(get_api_key("gemini"))
     except Exception:
         return bool(os.getenv("GEMINI_API_KEY"))
@@ -69,13 +67,8 @@ def _check_security_permission(getter_name: str, default: bool = True) -> bool:
     """Check runtime security permission flags from unified settings_manager."""
     try:
         try:
-            import settings_manager
+            from backend.services import settings_manager
         except ImportError:
-            import sys
-            from pathlib import Path
-            backend_dir = str(Path(__file__).resolve().parents[4] / 'backend')
-            if backend_dir not in sys.path:
-                sys.path.insert(0, backend_dir)
             import settings_manager
         getter = getattr(settings_manager, getter_name, None)
         if callable(getter):

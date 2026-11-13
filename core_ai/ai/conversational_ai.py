@@ -260,13 +260,14 @@ class AdvancedConversationalAI:
             from ai_assistant.ai.llm_provider import UnifiedChatInterface, LLMFactory, is_local_provider
             
             try:
-                import sys
-                from pathlib import Path
-                sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'backend'))
-                from settings_manager import get_provider, get_model
+                from backend.services.settings_manager import get_provider, get_model
                 _sm_provider, _sm_model = get_provider(), get_model()
-            except ImportError:
-                _sm_provider, _sm_model = None, None
+            except Exception:
+                try:
+                    from settings_manager import get_provider, get_model
+                    _sm_provider, _sm_model = get_provider(), get_model()
+                except Exception:
+                    _sm_provider, _sm_model = None, None
 
             if _sm_provider:
                 _sm_provider = LLMFactory.normalize_provider(_sm_provider)

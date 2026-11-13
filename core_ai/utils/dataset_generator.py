@@ -194,7 +194,11 @@ def generate_dataset(num_samples=1000):
     return dataset
 
 if __name__ == "__main__":
-    out_dir = Path("d:/Projects/Ai_Assistant/data/training")
+    try:
+        from core_ai.config.paths import DATA_DIR
+        out_dir = DATA_DIR / "training"
+    except Exception:
+        out_dir = Path(__file__).resolve().parent.parent.parent / "data" / "training"
     out_dir.mkdir(parents=True, exist_ok=True)
     
     out_file = out_dir / "automation_finetune_v2.jsonl"
