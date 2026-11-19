@@ -29,7 +29,7 @@ import json
 
 # Import biometric encryption
 try:
-    from ai_assistant.core.biometric_encryption import get_biometric_encryptor, BiometricEncryptionError
+    from core_ai.core.biometric_encryption import get_biometric_encryptor, BiometricEncryptionError
     ENCRYPTION_AVAILABLE = True
 except ImportError:
     ENCRYPTION_AVAILABLE = False

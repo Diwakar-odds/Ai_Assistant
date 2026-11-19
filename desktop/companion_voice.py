@@ -41,15 +41,26 @@ for _sp in (
     if _sp not in sys.path:
         sys.path.insert(0, _sp)
 
-from ai_assistant.core.local_command_normalizer import (
-    DEFAULT_WAKE_PHRASES,
-    _IMPOSSIBLE_DEVANAGARI_NUKTA_RE,
-    ensure_project_ffmpeg_in_path,
-    get_merged_wake_phrases,
-    is_barge_in_stop_command,
-    is_noise_fragment,
-    match_and_strip_wake_phrase,
-)
+try:
+    from core_ai.core.local_command_normalizer import (
+        DEFAULT_WAKE_PHRASES,
+        _IMPOSSIBLE_DEVANAGARI_NUKTA_RE,
+        ensure_project_ffmpeg_in_path,
+        get_merged_wake_phrases,
+        is_barge_in_stop_command,
+        is_noise_fragment,
+        match_and_strip_wake_phrase,
+    )
+except ImportError:
+    from core_ai.core.local_command_normalizer import (
+        DEFAULT_WAKE_PHRASES,
+        _IMPOSSIBLE_DEVANAGARI_NUKTA_RE,
+        ensure_project_ffmpeg_in_path,
+        get_merged_wake_phrases,
+        is_barge_in_stop_command,
+        is_noise_fragment,
+        match_and_strip_wake_phrase,
+    )
 
 ensure_project_ffmpeg_in_path(project_root)
 
@@ -132,12 +143,79 @@ class CompanionVoiceListener:
         self.is_listening_for_command = False
         self._manual_listen_event = threading.Event()
         self._lock = threading.Lock()
+        self._chosen_input_device: Optional[int] = None
 
         self._fast_whisper = None
         self._fw_lock = threading.Lock()
         self.speech_recognizer = None
         self._init_thread = threading.Thread(target=self._init_models, daemon=True)
         self._init_thread.start()
+
+    def _select_working_input_device(self, sd) -> Optional[int]:
+        """
+        Select the best available physical microphone input device.
+        Avoids disconnected virtual audio devices (GlideX, Cast Audio, Stereo Mix, etc.)
+        that output pure digital silence.
+        """
+        try:
+            env_dev = os.environ.get("PULSAR_MIC_DEVICE")
+            if env_dev is not None:
+                try:
+                    return int(env_dev)
+                except ValueError:
+                    pass
+
+            devices = sd.query_devices()
+            default_in = sd.default.device[0] if getattr(sd, "default", None) and sd.default.device else -1
+
+            # Check if default device is a known virtual/silent driver
+            def_name = ""
+            if 0 <= default_in < len(devices):
+                def_name = str(devices[default_in].get("name", "")).lower()
+
+            is_virtual = any(bad in def_name for bad in ("glidex", "cast audio", "stereo mix", "virtual", "cable"))
+            if not is_virtual and default_in >= 0:
+                try:
+                    with sd.InputStream(device=default_in, samplerate=self.SAMPLE_RATE, channels=1, blocksize=256):
+                        return default_in
+                except Exception:
+                    pass
+
+            # Search candidate physical devices
+            candidates = []
+            for i, d in enumerate(devices):
+                if d.get("max_input_channels", 0) > 0:
+                    name = str(d.get("name", "")).lower()
+                    hostapi = d.get("hostapi", 0)
+                    if any(bad in name for bad in ("glidex", "cast audio", "stereo mix", "virtual", "cable", "mapper")):
+                        continue
+                    priority = 0
+                    if "intel" in name: priority += 10
+                    if "realtek" in name: priority += 10
+                    if "array" in name: priority += 5
+                    if "microphone" in name or "mic" in name: priority += 5
+                    if "headset" in name: priority += 3
+                    if hostapi in (0, 1): priority += 2  # MME or DirectSound
+                    candidates.append((priority, i, d.get("name", "")))
+
+            candidates.sort(key=lambda x: x[0], reverse=True)
+            for prio, idx, cname in candidates:
+                try:
+                    with sd.InputStream(device=idx, samplerate=self.SAMPLE_RATE, channels=1, blocksize=256):
+                        logger.info(f"[CompanionVoice] Selected physical input microphone [{idx}]: {cname}")
+                        return idx
+                except Exception:
+                    continue
+
+            return default_in if default_in >= 0 else None
+        except Exception as exc:
+            logger.warning(f"[CompanionVoice] Error selecting input device: {exc}")
+            return None
+
+    def _get_input_device(self, sd) -> Optional[int]:
+        if self._chosen_input_device is None:
+            self._chosen_input_device = self._select_working_input_device(sd)
+        return self._chosen_input_device
 
     def _get_live_stt_settings(self) -> Tuple[str, Optional[str], bool, float]:
         """Read canonical STT settings (`model`, `language`, `noise_reduction`, `sensitivity`)."""
@@ -235,7 +313,7 @@ class CompanionVoiceListener:
             logger.debug(f"faster-whisper import unavailable: {e}")
 
         try:
-            from ai_assistant.voice.advanced_speech_recognizer import AdvancedSpeechRecognizer
+            from core_ai.voice.advanced_speech_recognizer import AdvancedSpeechRecognizer
 
             self.speech_recognizer = AdvancedSpeechRecognizer()
             logger.info("Companion voice: AdvancedSpeechRecognizer loaded")
@@ -369,12 +447,17 @@ class CompanionVoiceListener:
                 continue
 
             try:
-                with sd.InputStream(
-                    samplerate=self.SAMPLE_RATE,
-                    channels=1,
-                    dtype="float32",
-                    blocksize=self.BLOCK_SIZE,
-                ) as stream:
+                stream_dev = self._get_input_device(sd)
+                stream_kw = {
+                    "samplerate": self.SAMPLE_RATE,
+                    "channels": 1,
+                    "dtype": "float32",
+                    "blocksize": self.BLOCK_SIZE,
+                }
+                if stream_dev is not None:
+                    stream_kw["device"] = stream_dev
+
+                with sd.InputStream(**stream_kw) as stream:
                     speech_frames: List[np.ndarray] = []
                     speaking = False
                     silent_blocks = 0
@@ -525,14 +608,13 @@ class CompanionVoiceListener:
                     self.on_wake_ignored()
                 return
             if is_noise_fragment(inline_cmd):
-                logger.info(f"Dropped inline wake noise fragment: '{inline_cmd}'")
-                if self.on_wake_ignored:
-                    self.on_wake_ignored()
+                logger.info(f"Dropped inline wake noise fragment: '{inline_cmd}'; treating as wake-word only.")
+                inline_cmd = ""
+            else:
+                logger.info(f"Executing inline wake command: '{inline_cmd}'")
+                if self.on_command:
+                    self.on_command(inline_cmd)
                 return
-            logger.info(f"Executing inline wake command: '{inline_cmd}'")
-            if self.on_command:
-                self.on_command(inline_cmd)
-            return
 
         # Wake word only: fire non-blocking acknowledgment in background so mic opens immediately
         if self.on_wake_ack:
@@ -648,12 +730,17 @@ class CompanionVoiceListener:
         _, _, _, stt_sens = self._get_live_stt_settings()
 
         try:
-            with sd_module.InputStream(
-                samplerate=self.SAMPLE_RATE,
-                channels=1,
-                dtype="float32",
-                blocksize=self.BLOCK_SIZE,
-            ) as stream:
+            rec_dev = self._get_input_device(sd_module)
+            rec_kw = {
+                "samplerate": self.SAMPLE_RATE,
+                "channels": 1,
+                "dtype": "float32",
+                "blocksize": self.BLOCK_SIZE,
+            }
+            if rec_dev is not None:
+                rec_kw["device"] = rec_dev
+
+            with sd_module.InputStream(**rec_kw) as stream:
                 while self.is_running:
                     now = time.time()
                     if speech_blocks < 2 and (now - start_time) >= timeout_s:
@@ -738,7 +825,7 @@ class CompanionVoiceListener:
             )
 
         try:
-            from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+            from core_ai.voice.vocabulary_registry import get_vocabulary_registry
             kw = get_vocabulary_registry().get_whisper_prompt_keywords()
             if kw:
                 init_prompt = f"{init_prompt} ({kw})"
@@ -773,7 +860,7 @@ class CompanionVoiceListener:
                         text = ""
                 if text:
                     try:
-                        from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+                        from core_ai.voice.vocabulary_registry import get_vocabulary_registry
                         text = get_vocabulary_registry().normalize_stt_transcript(text)
                     except Exception:
                         pass
@@ -791,7 +878,7 @@ class CompanionVoiceListener:
                 if text and text.strip():
                     cleaned = text.strip()
                     try:
-                        from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+                        from core_ai.voice.vocabulary_registry import get_vocabulary_registry
                         cleaned = get_vocabulary_registry().normalize_stt_transcript(cleaned)
                     except Exception:
                         pass
@@ -812,7 +899,7 @@ class CompanionVoiceListener:
                     if text and text.strip():
                         cleaned = text.strip()
                         try:
-                            from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+                            from core_ai.voice.vocabulary_registry import get_vocabulary_registry
                             cleaned = get_vocabulary_registry().normalize_stt_transcript(cleaned)
                         except Exception:
                             pass

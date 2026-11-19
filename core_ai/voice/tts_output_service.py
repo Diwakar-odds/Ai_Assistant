@@ -36,7 +36,7 @@ try:
 except Exception:
     logger = logging.getLogger(__name__)
 
-from ai_assistant.voice.text_cleaner import (
+from core_ai.voice.text_cleaner import (
     clean_text_for_tts,
     devanagari_to_hinglish,
     prepare_text_for_kitten_tts,
@@ -781,6 +781,11 @@ class TTSOutputService:
         if was_active:
             logger.info(f"[TTS] Interrupted playback ({reason})")
             self._emit_state(False, 0.0, "backend_tts", force=True)
+            try:
+                from core_ai.voice.audio_ducking import unduck_audio
+                unduck_audio()
+            except Exception:
+                pass
 
     def wait_until_idle(self, timeout: Optional[float] = None) -> bool:
         return self._idle_event.wait(timeout=timeout)
@@ -898,6 +903,13 @@ class TTSOutputService:
             volume = 0.9
         speed = max(0.5, min(2.0, speed))
         volume = max(0.0, min(1.5, volume))
+
+        # Adaptive Late-Night / Quiet Hours Tone (11:00 PM - 7:00 AM)
+        now_hour = time.localtime().tm_hour
+        is_late_night = (now_hour >= 23 or now_hour < 7)
+        if is_late_night and job.source != "manual_test":
+            volume = min(volume, 0.65)
+            speed = min(speed, 0.95)
 
         force_kitten = (
             engine == "kittentts"
@@ -1027,8 +1039,12 @@ class TTSOutputService:
         if target_voice.startswith("hi-IN-"):
             tts_text = hinglish_to_devanagari(text) or text
 
+        now_hour = time.localtime().tm_hour
+        is_late_night = (now_hour >= 23 or now_hour < 7)
+        pitch_str = "-3Hz" if is_late_night else "+0Hz"
+
         async def _fetch_bytes() -> bytes:
-            comm = edge_tts.Communicate(tts_text, target_voice, rate=rate_str)
+            comm = edge_tts.Communicate(tts_text, target_voice, rate=rate_str, pitch=pitch_str)
             buf = bytearray()
             async for chunk in comm.stream():
                 if not self._is_gen_valid(gen):
@@ -1113,6 +1129,8 @@ class TTSOutputService:
         configured_voice: Optional[str] = None,
     ) -> Optional[np.ndarray]:
         """Synthesize via Windows SAPI5 into a temporary WAV and load as 24 kHz float32 PCM."""
+        if text and any('\u0900' <= ch <= '\u097F' for ch in text):
+            text = devanagari_to_hinglish(text) or text
         coinit_done = False
         tmp_path: Optional[str] = None
         try:
@@ -1228,10 +1246,19 @@ class TTSOutputService:
                     _close_stream()
                     continue
 
+                was_already_speaking = False
                 with self._lock:
+                    was_already_speaking = self._is_speaking
                     self._is_speaking = True
                     self._active_engine = item.engine_used
                     self._idle_event.clear()
+
+                if not was_already_speaking:
+                    try:
+                        from core_ai.voice.audio_ducking import duck_audio
+                        duck_audio()
+                    except Exception:
+                        pass
 
                 self._set_legacy_tts_flag(True)
                 self._emit_state(True, 35.0, f"backend_tts:{item.engine_used}", force=True)
@@ -1286,6 +1313,11 @@ class TTSOutputService:
                     self._reset_echo_guard()
                     self._set_legacy_tts_flag(False)
                     self._emit_state(False, 0.0, "backend_tts", force=True)
+                    try:
+                        from core_ai.voice.audio_ducking import unduck_audio
+                        unduck_audio()
+                    except Exception:
+                        pass
 
         _close_stream()
 
@@ -1404,6 +1436,8 @@ class TTSOutputService:
     ) -> None:
         if not self._is_gen_valid(gen):
             return
+        if text and any('\u0900' <= ch <= '\u097F' for ch in text):
+            text = devanagari_to_hinglish(text) or text
         coinit_done = False
         try:
             try:
@@ -1436,7 +1470,7 @@ class TTSOutputService:
     @staticmethod
     def _note_echo_guard(block: np.ndarray, rms: float) -> None:
         try:
-            from ai_assistant.voice.echo_guard import get_echo_guard
+            from core_ai.voice.echo_guard import get_echo_guard
             get_echo_guard().note_output(block, TARGET_SAMPLE_RATE, level=rms)
         except Exception:
             pass
@@ -1444,7 +1478,7 @@ class TTSOutputService:
     @staticmethod
     def _reset_echo_guard() -> None:
         try:
-            from ai_assistant.voice.echo_guard import reset_echo_guard
+            from core_ai.voice.echo_guard import reset_echo_guard
             reset_echo_guard()
         except Exception:
             pass

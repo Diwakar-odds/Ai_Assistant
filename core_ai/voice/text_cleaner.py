@@ -226,7 +226,7 @@ def clean_text_for_tts(text: Optional[str]) -> str:
         return ""
 
     try:
-        from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+        from core_ai.voice.vocabulary_registry import get_vocabulary_registry
         reg = get_vocabulary_registry()
         s = reg.enforce_grammar_and_tone(s)
         s = reg.apply_tts_phonetics(s, target="spoken")
@@ -620,7 +620,7 @@ def prepare_text_for_kitten_tts(text: Optional[str]) -> str:
     cleaned = re.sub(r'\s{2,}', ' ', cleaned).strip()
 
     try:
-        from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+        from core_ai.voice.vocabulary_registry import get_vocabulary_registry
         reg = get_vocabulary_registry()
         cleaned = reg.enforce_grammar_and_tone(cleaned)
         cleaned = reg.apply_tts_phonetics(cleaned, target="kitten")
@@ -642,7 +642,7 @@ def devanagari_to_hinglish(text: Optional[str]) -> str:
 
     # Pre-map registered Devanagari words to their natural Romanized spoken form
     try:
-        from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+        from core_ai.voice.vocabulary_registry import get_vocabulary_registry
         reg = get_vocabulary_registry()
         for _, meta in reg._words.items():
             dev = meta.get("devanagari")
@@ -918,7 +918,7 @@ def hinglish_to_devanagari(text: Optional[str]) -> str:
     # If text has no Latin letters at all, it's already purely Devanagari/punctuation
     if not re.search(r'[a-zA-Z]', raw):
         try:
-            from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+            from core_ai.voice.vocabulary_registry import get_vocabulary_registry
             return get_vocabulary_registry().enforce_grammar_and_tone(raw)
         except Exception:
             return raw
@@ -927,7 +927,7 @@ def hinglish_to_devanagari(text: Optional[str]) -> str:
 
     # 0. User custom vocabulary & phonetics (Devanagari for EdgeTTS)
     try:
-        from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+        from core_ai.voice.vocabulary_registry import get_vocabulary_registry
         s = get_vocabulary_registry().apply_tts_phonetics(s, target="devanagari")
     except Exception:
         pass
@@ -949,7 +949,7 @@ def hinglish_to_devanagari(text: Optional[str]) -> str:
 
     # 3. Deterministic grammar and tone check
     try:
-        from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+        from core_ai.voice.vocabulary_registry import get_vocabulary_registry
         s = get_vocabulary_registry().enforce_grammar_and_tone(s)
     except Exception:
         pass

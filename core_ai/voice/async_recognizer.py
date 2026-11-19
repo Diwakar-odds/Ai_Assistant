@@ -13,7 +13,7 @@ import time
 
 # Import the synchronous recognizer
 try:
-    from ai_assistant.voice.advanced_speech_recognizer import get_advanced_speech_recognizer
+    from core_ai.voice.advanced_speech_recognizer import get_advanced_speech_recognizer
     RECOGNIZER_AVAILABLE = True
 except ImportError:
     RECOGNIZER_AVAILABLE = False

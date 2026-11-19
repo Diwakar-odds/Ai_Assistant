@@ -23,8 +23,6 @@ from typing import Dict, Any, List, Optional, Tuple
 logger = logging.getLogger(__name__)
 
 _DEFAULT_WORDS = {
-    "diwakar": {"devanagari": "दिवाकर", "spoken": "Diwakar", "category": "user_name"},
-    "rancho": {"devanagari": "रांचो", "spoken": "Rancho", "category": "profile"},
     "vs code": {"devanagari": "वीएस कोड", "spoken": "VS Code", "category": "app"},
     "vscode": {"devanagari": "वीएस कोड", "spoken": "VS Code", "category": "app"},
     "pulsar": {"devanagari": "पल्सर", "spoken": "Pulsar", "category": "assistant"},
@@ -36,10 +34,6 @@ _DEFAULT_WORDS = {
 }
 
 _DEFAULT_STT_CORRECTIONS = {
-    "divakar": "diwakar",
-    "dewakar": "diwakar",
-    "deewakar": "diwakar",
-    "ranjo": "rancho",
     "pulser": "pulsar",
     "palsar": "pulsar",
     "paulsar": "pulsar",
@@ -173,7 +167,7 @@ class VocabularyRegistry:
     @staticmethod
     def _resolve_default_path() -> Path:
         try:
-            from ai_assistant.core.database_config import DATA_DIR
+            from core_ai.core.database_config import DATA_DIR
             target = Path(DATA_DIR) / "user_preferences" / "user_dictionary.json"
             target.parent.mkdir(parents=True, exist_ok=True)
             return target
@@ -277,7 +271,7 @@ class VocabularyRegistry:
         """
         Replace custom user words with their configured phonetic spelling.
         - target="devanagari": For EdgeTTS hi-IN (replaces with Devanagari script: 'वीएस कोड', 'दिवाकर').
-        - target="spoken" / "kitten": For KittenTTS or English EdgeTTS (replaces with spoken English: 'VS Code', 'Diwakar').
+        - target="spoken" / "kitten": For KittenTTS or English EdgeTTS (replaces with spoken English: 'VS Code', 'FastAPI').
         """
         if not text:
             return ""
@@ -299,10 +293,6 @@ class VocabularyRegistry:
                         rep = "G G U F"
                     elif low_rep == "fastapi":
                         rep = "Fast A P I"
-                    elif low_rep == "diwakar":
-                        rep = "Dih-wah-kur"
-                    elif low_rep == "rancho":
-                        rep = "Rahn-choh"
             else:
                 rep = meta.get("spoken")
 

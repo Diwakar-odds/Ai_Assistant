@@ -18,8 +18,8 @@ try:
 except ImportError:
     KITTEN_AVAILABLE = False
 
-from ai_assistant.voice.text_cleaner import clean_text_for_tts, prepare_text_for_kitten_tts
-from ai_assistant.voice.tts_output_service import (
+from core_ai.voice.text_cleaner import clean_text_for_tts, prepare_text_for_kitten_tts
+from core_ai.voice.tts_output_service import (
     ensure_espeak_environment,
     load_kitten_mini_model,
     resolve_edge_voice,
@@ -57,7 +57,7 @@ class NeuralVoiceEngine:
     def __init__(self, cache_dir: Optional[str] = None, gpu: bool = False):
         if cache_dir is None or cache_dir == "data/voice_cache":
             try:
-                from ai_assistant.core.database_config import get_data_root
+                from core_ai.core.database_config import get_data_root
                 self.cache_dir = get_data_root() / "voice_cache"
             except Exception:
                 self.cache_dir = Path("data/voice_cache")
@@ -149,7 +149,7 @@ class NeuralVoiceEngine:
         resolved_voice = resolve_edge_voice(cleaned, voice)
         tts_text = cleaned
         if resolved_voice.startswith("hi-IN-"):
-            from ai_assistant.voice.text_cleaner import hinglish_to_devanagari
+            from core_ai.voice.text_cleaner import hinglish_to_devanagari
             tts_text = hinglish_to_devanagari(cleaned) or cleaned
 
         digest = hashlib.md5(f"{tts_text}|{resolved_voice}".encode("utf-8")).hexdigest()[:16]

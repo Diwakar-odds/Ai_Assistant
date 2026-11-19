@@ -307,7 +307,7 @@ class ContinuousListeningManager:
         self.voice_manager = VoiceProfileManager()
         
         try:
-            from ai_assistant.voice.advanced_speech_recognizer import get_advanced_speech_recognizer
+            from core_ai.voice.advanced_speech_recognizer import get_advanced_speech_recognizer
             self.advanced_recognizer = get_advanced_speech_recognizer()
         except ImportError:
             self.advanced_recognizer = None

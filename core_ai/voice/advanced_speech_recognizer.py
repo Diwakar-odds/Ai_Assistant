@@ -38,7 +38,7 @@ except ImportError:
 
 # Import privacy consent manager
 try:
-    from ai_assistant.core.privacy_consent import get_consent_manager, ConsentType
+    from core_ai.core.privacy_consent import get_consent_manager, ConsentType
     CONSENT_MANAGER_AVAILABLE = True
 except ImportError:
     CONSENT_MANAGER_AVAILABLE = False
@@ -95,7 +95,7 @@ class AdvancedSpeechRecognizer:
         self.noise_reducer = None
         if self.noise_reduction:
             try:
-                from ai_assistant.voice.noise_reduction import NoiseReductionSystem, NoiseReductionConfig, NoiseReductionMethod
+                from core_ai.voice.noise_reduction import NoiseReductionSystem, NoiseReductionConfig, NoiseReductionMethod
                 self.noise_reducer = NoiseReductionSystem(
                     NoiseReductionConfig(
                         method=NoiseReductionMethod.HYBRID,
