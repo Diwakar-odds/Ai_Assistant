@@ -125,16 +125,20 @@ else:
 _env_models_dir = os.environ.get("PULSAR_MODELS_DIR")
 if _env_models_dir and _env_models_dir.strip():
     MODELS_DIR = Path(_env_models_dir.strip()).expanduser().resolve()
+elif IS_FROZEN and (Path(sys.executable).resolve().parent / "models").exists():
+    MODELS_DIR = (Path(sys.executable).resolve().parent / "models").resolve()
 else:
     MODELS_DIR = (PROJECT_ROOT / "models").resolve()
 
 
 def get_candidate_model_dirs() -> List[Path]:
-    """Return ordered list of directories to look for models (user overrides, repo, bundle)."""
+    """Return ordered list of directories to look for models (user overrides, exe dir, repo, bundle)."""
     candidates = []
     if _env_models_dir:
         candidates.append(Path(_env_models_dir).resolve())
     candidates.append(MODELS_DIR)
+    if IS_FROZEN:
+        candidates.append(Path(sys.executable).resolve().parent / "models")
     if IS_PRODUCTION:
         candidates.append(_get_os_system_data_dir() / "models")
     candidates.append(PROJECT_ROOT / "models")

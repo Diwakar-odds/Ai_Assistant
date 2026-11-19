@@ -95,7 +95,7 @@ def generate_combinations(target_count):
 def main():
     target_count = 250000  # 2.5 Lakh rows
     
-    output_path = Path("d:/Projects/Ai_Assistant/data/training/hinglish_commands_v4.jsonl.gz")
+    output_path = Path(__file__).resolve().parents[2] / "data" / "training" / "hinglish_commands_v4.jsonl.gz"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     
     dataset = generate_combinations(target_count)

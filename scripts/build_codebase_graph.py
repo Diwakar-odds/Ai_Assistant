@@ -4,8 +4,8 @@ import json
 from pathlib import Path
 
 # Configuration
-PROJECT_ROOT = r"d:\Projects\Ai_Assistant"
-OUTPUT_FILE = os.path.join(PROJECT_ROOT, "shared", "data", "codebase_graph.json")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+OUTPUT_FILE = os.path.join(str(PROJECT_ROOT), "data", "codebase_graph.json")
 
 # Directories to ignore
 IGNORE_DIRS = {

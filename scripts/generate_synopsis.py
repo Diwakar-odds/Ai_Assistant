@@ -18,11 +18,12 @@ import os
 import subprocess
 import re
 
-OUTPUT_DIR = r"d:\Projects\Ai_Assistant\docs"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+OUTPUT_DIR = str(PROJECT_ROOT / "docs")
 HTML_PATH = os.path.join(OUTPUT_DIR, "PULSAR_Major_Project_Synopsis.html")
 PDF_PATH = os.path.join(OUTPUT_DIR, "PULSAR_Major_Project_Synopsis.pdf")
 MD_PATH = os.path.join(OUTPUT_DIR, "PULSAR_Major_Project_Synopsis.md")
-DESKTOP_PDF_PATH = r"C:\Users\bdiwa\Desktop\PULSAR_Major_Project_Synopsis.pdf"
+DESKTOP_PDF_PATH = str(Path.home() / "Desktop" / "PULSAR_Major_Project_Synopsis.pdf")
 EDGE_PATH = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 
 def build_html():

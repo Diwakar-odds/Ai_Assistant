@@ -1,5 +1,4 @@
 import sys
-sys.path.append(r"c:\users\hp\appdata\roaming\python\python39\site-packages")
 
 try:
     import moviepy as mp

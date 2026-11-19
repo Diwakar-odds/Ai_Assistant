@@ -31,8 +31,8 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 try:
-    from ai_assistant.integrations.mcp_manager import MCPManager
-    from ai_assistant.integrations.mcp_client import MCPClient
+    from core_ai.integrations.mcp_manager import MCPManager
+    from core_ai.integrations.mcp_client import MCPClient
     MCP_AVAILABLE = True
 except ImportError:
     MCP_AVAILABLE = False

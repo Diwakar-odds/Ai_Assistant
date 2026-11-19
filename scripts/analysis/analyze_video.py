@@ -17,7 +17,7 @@ def main():
     """Analyze a video file."""
     
     # Video path - find the correct file
-    captures_dir = r"c:\Users\hp\Videos\Captures"
+    captures_dir = os.path.expandvars(r"%USERPROFILE%\Videos\Captures")
     video_path = None
     
     if os.path.exists(captures_dir):

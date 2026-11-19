@@ -90,5 +90,17 @@
       "desktop": true,
       "sound": true
     }
+  },
+  "web_intelligence": {
+    "enabled": true,
+    "preferred_engine": "duckduckgo",
+    "timeout_seconds": 3.5,
+    "cache_enabled": true,
+    "max_results_chat": 4,
+    "max_results_research": 6,
+    "api_keys": {
+      "tavily": "",
+      "serpapi": ""
+    }
   }
 }

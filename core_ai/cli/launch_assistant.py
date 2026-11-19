@@ -324,7 +324,7 @@ def main():
         try:
             import sys
             sys.path.insert(0, '../../')  # Add root directory to path
-            from ai_assistant.auth import authenticate
+            from core_ai.auth import authenticate
             if not authenticate():
                 logger.error("❌ Authentication failed. Exiting...")
                 return False

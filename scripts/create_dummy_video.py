@@ -1,7 +1,6 @@
 import sys
 import os
 # Force add user site packages
-sys.path.append(r"c:\users\hp\appdata\roaming\python\python39\site-packages")
 
 try:
     import moviepy as mp

@@ -193,6 +193,7 @@ $RECYCLE.BIN/
 # PyInstaller
 *.spec
 !desktop/pyinstaller_specs/*.spec
+!pulsar_release.spec
 
 # Miscellaneous
 .sass-cache/
@@ -234,8 +235,12 @@ SECURITY_AUDIT_REPORT.md
 ROOM_FOR_IMPROVEMENTS_AND_FUTURE_SCOPES.md
 
 dist_package/
+dist_release/
+build_release_tmp/
 desktop/build/
 desktop/dist/
+outputs/
+*.lnk
 
 # Local AI Models
 core_ai/src/ai_assistant/models/vosk-*/
