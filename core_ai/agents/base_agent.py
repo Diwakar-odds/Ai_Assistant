@@ -98,7 +98,7 @@ class BaseAgent(ABC):
         if self.llm is not None:
             return self.llm
         try:
-            from ai_assistant.ai.llm_provider import UnifiedChatInterface
+            from core_ai.ai.llm_provider import UnifiedChatInterface
         except ImportError:
             try:
                 from ..ai.llm_provider import UnifiedChatInterface  # type: ignore
@@ -163,7 +163,7 @@ class BaseAgent(ABC):
         if self.vlm is not None:
             return self.vlm
         try:
-            from ai_assistant.multimodal import MultiModalAI
+            from core_ai.multimodal import MultiModalAI
             self.vlm = MultiModalAI()
             return self.vlm
         except Exception as exc:

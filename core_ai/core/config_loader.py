@@ -9,7 +9,7 @@ Centralized configuration management using environment variables.
 Replaces api_keys.json with secure .env file.
 
 Usage:
-    from ai_assistant.core.config_loader import get_config
+    from core_ai.core.config_loader import get_config
     
     config = get_config()
     gemini_key = config['GOOGLE_GEMINI_API_KEY']

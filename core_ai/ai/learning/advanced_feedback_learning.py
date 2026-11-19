@@ -22,7 +22,7 @@ import random
 from typing import Dict, List, Tuple, Optional
 from datetime import datetime, timedelta
 
-from ai_assistant.core.database_config import get_db_path_str
+from core_ai.core.database_config import get_db_path_str
 from typing import Dict, List, Optional, Tuple, Any, Callable
 from dataclasses import dataclass, asdict
 from enum import Enum

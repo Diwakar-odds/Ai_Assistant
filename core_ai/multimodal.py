@@ -1,9 +1,9 @@
 """
 Bridge module for backward compatibility.
-Exposes MultiModalAI and visual utilities from ai_assistant.vision.multimodal.
+Exposes MultiModalAI and visual utilities from core_ai.vision.multimodal.
 """
 
-from ai_assistant.vision.multimodal import (
+from core_ai.vision.multimodal import (
     MultiModalAI,
     analyze_current_screen,
     answer_visual_question_quick,

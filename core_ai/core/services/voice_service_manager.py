@@ -29,7 +29,7 @@ class VoiceServiceManager:
         """Get voice recognizer (lazy loaded)"""
         if not self._initialized['recognizer']:
             try:
-                from ai_assistant.modules.voice_recognition import VoiceRecognizer
+                from core_ai.modules.voice_recognition import VoiceRecognizer
                 self._voice_recognizer = VoiceRecognizer()
                 self._initialized['recognizer'] = True
                 logger.info("Voice recognizer initialized")
@@ -42,7 +42,7 @@ class VoiceServiceManager:
         """Get TTS engine (lazy loaded)"""
         if not self._initialized['tts']:
             try:
-                from ai_assistant.modules.tts import TextToSpeech
+                from core_ai.modules.tts import TextToSpeech
                 self._tts_engine = TextToSpeech()
                 self._initialized['tts'] = True
                 logger.info("TTS engine initialized")
@@ -55,7 +55,7 @@ class VoiceServiceManager:
         """Get wake word detector (lazy loaded)"""
         if not self._initialized['wake_word']:
             try:
-                from ai_assistant.modules.wake_word import WakeWordDetector
+                from core_ai.modules.wake_word import WakeWordDetector
                 self._wake_word_detector = WakeWordDetector()
                 self._initialized['wake_word'] = True
                 logger.info("Wake word  detector initialized")

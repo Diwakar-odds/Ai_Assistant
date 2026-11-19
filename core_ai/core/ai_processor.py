@@ -36,7 +36,7 @@ class AIProcessor:
         """Lazy load MultiModal AI"""
         if self._multimodal_ai is None and self.enable_multimodal:
             try:
-                from ai_assistant.multimodal import MultiModalAI
+                from core_ai.multimodal import MultiModalAI
                 self._multimodal_ai = MultiModalAI()
                 self._init_status['multimodal_ai'] = 'ready'
                 logger.info("✅ MultiModal AI initialized")
@@ -50,7 +50,7 @@ class AIProcessor:
         """Lazy load Conversational AI"""
         if self._conversational_ai is None and self.enable_conversational:
             try:
-                from ai_assistant.ai.conversational_ai import AdvancedConversationalAI
+                from core_ai.ai.conversational_ai import AdvancedConversationalAI
                 self._conversational_ai = AdvancedConversationalAI()
                 self._init_status['conversational_ai'] = 'ready'
                 logger.info("✅ Conversational AI initialized")
@@ -65,9 +65,9 @@ class AIProcessor:
         if self._multilingual is None and self.enable_multilingual:
             try:
                 try:
-                    from ai_assistant.utils.multilingual import MultilingualSupport
+                    from core_ai.utils.multilingual import MultilingualSupport
                 except ImportError:
-                    from ai_assistant.multilingual import MultilingualSupport
+                    from core_ai.multilingual import MultilingualSupport
                 self._multilingual = MultilingualSupport()
                 self._init_status['multilingual'] = 'ready'
                 logger.info("✅ Multilingual support initialized")
@@ -81,7 +81,7 @@ class AIProcessor:
         """Lazy load LLM Chat provider"""
         if self._llm_chat is None:
             try:
-                from ai_assistant.ai.llm_provider import get_llm_provider
+                from core_ai.ai.llm_provider import get_llm_provider
                 self._llm_chat = get_llm_provider()
                 self._init_status['llm_chat'] = 'ready'
             except Exception as e:

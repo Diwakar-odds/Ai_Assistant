@@ -251,7 +251,7 @@ class MultilingualSupport:
             if TTS_AVAILABLE:
                 self.tts_engine = pyttsx3.init()
                 try:
-                    from ai_assistant.voice.tts_output_service import configure_sapi5_voice
+                    from core_ai.voice.tts_output_service import configure_sapi5_voice
                     configure_sapi5_voice(self.tts_engine)
                 except Exception:
                     pass
@@ -278,7 +278,7 @@ class MultilingualSupport:
     def _setup_database(self):
         """Setup language database for caching and learning."""
         try:
-            from ai_assistant.core.database_config import get_db_path
+            from core_ai.core.database_config import get_db_path
             conn = sqlite3.connect(str(get_db_path('language_data')))
             cursor = conn.cursor()
             
@@ -458,7 +458,8 @@ class MultilingualSupport:
             
         except Exception as e:
             logging.error(f"Translation error: {e}")
-            return f"❌ Translation failed: {str(e)}"
+            # Gracefully degrade to original text instead of clobbering output with an error banner
+            return text
     
     def _translate_hinglish(self, text: str, target_language: Language) -> str:
         """Handle Hinglish to other language translation."""
@@ -521,7 +522,7 @@ class MultilingualSupport:
     def _get_cached_translation(self, text: str, target_language: Language) -> Optional[str]:
         """Get cached translation if available."""
         try:
-            from ai_assistant.core.database_config import get_db_path
+            from core_ai.core.database_config import get_db_path
             conn = sqlite3.connect(str(get_db_path('language_data')))
             cursor = conn.cursor()
             
@@ -543,7 +544,7 @@ class MultilingualSupport:
                           translated: str, target_lang: Language, confidence: float):
         """Cache translation for future use."""
         try:
-            from ai_assistant.core.database_config import get_db_path
+            from core_ai.core.database_config import get_db_path
             conn = sqlite3.connect(str(get_db_path('language_data')))
             cursor = conn.cursor()
             
@@ -613,7 +614,7 @@ class MultilingualSupport:
     def speak_multilingual(self, text: str, language: Language = Language.AUTO_DETECT) -> str:
         """Speak text via the unified desktop TTS service (EdgeTTS / offline KittenTTS mini-0.8)."""
         try:
-            from ai_assistant.voice.tts_output_service import get_tts_service
+            from core_ai.voice.tts_output_service import get_tts_service
             svc = get_tts_service()
             if svc.speak(text, wait=True, source="multilingual"):
                 engine_used = svc.get_status().get("active_engine", "unified_tts")
@@ -874,7 +875,7 @@ class MultilingualSupport:
     def set_language_preference(self, user_id: str, language: Language, tts_language: Language = None):
         """Set user language preference."""
         try:
-            from ai_assistant.core.database_config import get_db_path
+            from core_ai.core.database_config import get_db_path
             conn = sqlite3.connect(str(get_db_path('language_data')))
             cursor = conn.cursor()
             
@@ -896,7 +897,7 @@ class MultilingualSupport:
     def get_language_preference(self, user_id: str) -> Tuple[Language, Language]:
         """Get user language preference."""
         try:
-            from ai_assistant.core.database_config import get_db_path
+            from core_ai.core.database_config import get_db_path
             conn = sqlite3.connect(str(get_db_path('language_data')))
             cursor = conn.cursor()
             
@@ -927,7 +928,7 @@ class MultilingualSupport:
                 'hinglish_usage': 0
             }
             
-            from ai_assistant.core.database_config import get_db_path
+            from core_ai.core.database_config import get_db_path
             conn = sqlite3.connect(str(get_db_path('language_data')))
             cursor = conn.cursor()
             

@@ -4,8 +4,8 @@ import json
 from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Any, Optional
 from datetime import datetime
-from ai_assistant.core.database_config import DATA_DIR
-from ai_assistant.ai.llm_provider import UnifiedChatInterface
+from core_ai.core.database_config import DATA_DIR
+from core_ai.ai.llm_provider import UnifiedChatInterface
 
 logger = logging.getLogger(__name__)
 

@@ -22,19 +22,19 @@ class Dispatcher:
 
     def _get_intent_extractor(self):
         if self._intent_extractor is None:
-            from ai_assistant.nlp.unified_intent_classifier import UnifiedIntentClassifier
+            from core_ai.nlp.unified_intent_classifier import UnifiedIntentClassifier
             self._intent_extractor = UnifiedIntentClassifier()
         return self._intent_extractor
 
     def _get_intent_registry(self):
         if self._intent_registry is None:
-            from ai_assistant.workflow.intent_registry import intent_registry
+            from core_ai.workflow.intent_registry import intent_registry
             self._intent_registry = intent_registry
         return self._intent_registry
 
     def _get_scheduler(self):
         if self._scheduler is None:
-            from ai_assistant.automation.task_scheduler import TaskScheduler
+            from core_ai.automation.task_scheduler import TaskScheduler
             self._scheduler = TaskScheduler()
         return self._scheduler
 
@@ -75,7 +75,7 @@ class Dispatcher:
         # Schedule workflow if time entity + mapping present
         if mapping and entities.get("time"):
             try:
-                from ai_assistant.automation.task_scheduler import ScheduleType
+                from core_ai.automation.task_scheduler import ScheduleType
                 schedule_time = entities["time"]
                 workflow_entities = {k: v for k, v in entities.items() if k != "time"}
                 task_id = self._get_scheduler().schedule_workflow(
@@ -102,7 +102,7 @@ class Dispatcher:
 
         # Fallback or direct execution through MultiAgentCoordinator
         try:
-            from ai_assistant.core.multi_agent_coordinator import get_multi_agent_coordinator
+            from core_ai.core.multi_agent_coordinator import get_multi_agent_coordinator
             coordinator = get_multi_agent_coordinator()
             result = self._run_async(coordinator.process_command(user_input))
             ok = result.get("status") in ("completed", "success")

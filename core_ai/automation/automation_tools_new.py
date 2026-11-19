@@ -190,7 +190,7 @@ _LAZY_IMPORTS = {
 def speak(text: str, *args, **kwargs):
     """Fallback speak function delegating to active TTS service."""
     try:
-        from ai_assistant.voice.tts_output_service import get_tts_service
+        from core_ai.voice.tts_output_service import get_tts_service
         tts = get_tts_service()
         if tts:
             return tts.speak(text)

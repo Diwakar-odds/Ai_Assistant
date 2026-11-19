@@ -18,8 +18,15 @@ except ImportError:
     logger.warning("face_recognition library not found. Facial recognition features will be disabled.")
 
 class FacialRecognitionSystem:
-    def __init__(self, faces_dir: str = "user_data/faces"):
-        self.faces_dir = Path(faces_dir)
+    def __init__(self, faces_dir: Optional[str] = None):
+        if faces_dir:
+            self.faces_dir = Path(faces_dir)
+        else:
+            try:
+                from core_ai.config.paths import DATA_DIR
+                self.faces_dir = DATA_DIR / "faces"
+            except Exception:
+                self.faces_dir = Path("data/faces")
         self.known_face_encodings = []
         self.known_face_names = []
         self.is_initialized = False

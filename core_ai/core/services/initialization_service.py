@@ -28,7 +28,7 @@ class InitializationService:
     def initialize_memory(self):
         """Initialize memory system"""
         try:
-            from ai_assistant.modules.memory_manager import MemoryManager
+            from core_ai.modules.memory_manager import MemoryManager
             memory = MemoryManager()
             self.init_status['memory'] = 'ready'
             logger.info("Memory uninitialized")

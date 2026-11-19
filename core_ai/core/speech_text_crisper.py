@@ -184,7 +184,7 @@ def is_recent_tts_echo(
 
     # Never treat an explicit user stop/pause command as echo!
     try:
-        from ai_assistant.core.local_command_normalizer import is_barge_in_stop_command
+        from core_ai.core.local_command_normalizer import is_barge_in_stop_command
         if is_barge_in_stop_command(transcript):
             return False, 0.0, ""
     except Exception:
@@ -328,7 +328,7 @@ def filter_and_crisp_speech_transcript(
             }
 
     # Step 3: Match and strip wake word
-    from ai_assistant.core.local_command_normalizer import match_and_strip_wake_phrase
+    from core_ai.core.local_command_normalizer import match_and_strip_wake_phrase
     matched_wake, clean_command = match_and_strip_wake_phrase(raw_transcript)
 
     if require_wake_word and not matched_wake:

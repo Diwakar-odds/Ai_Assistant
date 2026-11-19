@@ -1,5 +1,5 @@
 # Setup centralized logging
-from ai_assistant.utils.logging_config import get_logger
+from core_ai.utils.logging_config import get_logger
 logger = get_logger(__name__, log_category="app")
 
 """

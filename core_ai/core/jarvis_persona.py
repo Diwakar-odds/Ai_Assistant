@@ -395,7 +395,7 @@ class _VariationPool:
             if provider == "openai" and not sm.get_api_key("openai"):
                 return
 
-            from ai_assistant.ai.llm_provider import UnifiedChatInterface
+            from core_ai.ai.llm_provider import UnifiedChatInterface
 
             chat = UnifiedChatInterface(provider=provider, model=model, use_fallback=False)
             if getattr(chat, "offline_mode", False):
@@ -608,7 +608,7 @@ def build_persona_system_prompt(
 
     user_dna_block = ""
     try:
-        from ai_assistant.ai.user_dna import UserDNA
+        from core_ai.ai.user_dna import UserDNA
         dna_ctx = UserDNA().get_relationship_context()
         if dna_ctx and "No personal context" not in dna_ctx:
             user_dna_block = f"\nLIVING USER CONTEXT & HABITS:\n{dna_ctx}"
@@ -616,7 +616,7 @@ def build_persona_system_prompt(
         pass
 
     sections = [
-        f"You are {name}, an intelligent, human-like personal AI co-pilot created by Diwakar.",
+        f"You are {name}, an intelligent, human-like personal AI co-pilot.",
     ]
     if user_dna_block:
         sections.append(user_dna_block)
@@ -880,7 +880,7 @@ def _extract_action_target(command: str) -> str:
 
     # Normalize Hinglish/Devanagari app name if possible
     try:
-        from ai_assistant.core.local_command_normalizer import normalize_hinglish_devanagari
+        from core_ai.core.local_command_normalizer import normalize_hinglish_devanagari
         normalized = normalize_hinglish_devanagari(cleaned)
         if normalized and normalized != cleaned:
             cleaned = normalized
@@ -914,7 +914,7 @@ def _infer_action_category(command: str, intent: Optional[str] = None) -> str:
 
     # Bare wake phrases and immediate voice-control toggles skip pre-task reports
     try:
-        from ai_assistant.core.local_command_normalizer import (
+        from core_ai.core.local_command_normalizer import (
             match_and_strip_wake_phrase,
             parse_voice_control_command,
         )
@@ -980,8 +980,12 @@ def generate_pre_task_report(
         return None
 
     cat = _infer_action_category(command, intent=intent)
-    # Instant local actions, screen inquiries, and general thinking/chat MUST NOT emit spammy pre-task speeches
-    if cat in ("silent", "general_think", "open_app", "close_app", "media", "volume_brightness", "connectivity", "screen_vision"):
+    is_voice = any(v in str(source).lower() for v in ("voice", "companion", "whisper", "mic"))
+    # Instant local reflex actions must never emit pre-task speeches
+    if cat in ("silent", "open_app", "close_app", "media", "volume_brightness", "connectivity"):
+        return None
+    # For general LLM reasoning, only voice queries get a natural backchannel filler; chat stays instant
+    if cat == "general_think" and not is_voice:
         return None
 
     lang = language_hint or detect_language_hint(command, cfg=cfg)
@@ -1344,7 +1348,7 @@ def format_post_task_report(
         dev_detail = detail_clean
         if not is_multiline:
             try:
-                from ai_assistant.voice.text_cleaner import hinglish_to_devanagari
+                from core_ai.voice.text_cleaner import hinglish_to_devanagari
                 dev_detail = hinglish_to_devanagari(detail_clean)
             except Exception:
                 dev_detail = detail_clean
@@ -1504,7 +1508,7 @@ class CommandLifecycleCoordinator:
     @staticmethod
     def _get_tts_service():
         try:
-            from ai_assistant.voice.tts_output_service import get_tts_service
+            from core_ai.voice.tts_output_service import get_tts_service
             return get_tts_service()
         except Exception:
             return None
@@ -1610,7 +1614,7 @@ class CommandLifecycleCoordinator:
                             self._active_turns[turn_id]["pre_spoken"] = spoke
                     if spoke and pre_text:
                         try:
-                            from ai_assistant.core.speech_text_crisper import record_recent_tts
+                            from core_ai.core.speech_text_crisper import record_recent_tts
                             record_recent_tts(pre_text)
                         except Exception:
                             pass
@@ -1690,7 +1694,7 @@ class CommandLifecycleCoordinator:
                     spoke = bool(tts_svc.speak(speech_target, interrupt=interrupt_flag, source=f"{source}_post"))
                     if spoke and speech_target:
                         try:
-                            from ai_assistant.core.speech_text_crisper import record_recent_tts
+                            from core_ai.core.speech_text_crisper import record_recent_tts
                             record_recent_tts(speech_target)
                         except Exception:
                             pass
@@ -1708,7 +1712,7 @@ class CommandLifecycleCoordinator:
 
         if success and command and formatted:
             try:
-                from ai_assistant.ai.memory_retrieval import persist_turn_to_conversation_ai
+                from core_ai.ai.memory_retrieval import persist_turn_to_conversation_ai
                 threading.Thread(
                     target=persist_turn_to_conversation_ai,
                     args=(command, formatted),

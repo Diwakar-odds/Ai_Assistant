@@ -171,11 +171,15 @@ class MultiStepCommandParser:
         }
 
         try:
-            from ai_assistant.ai.intent_router import IntentRouter
+            from core_ai.ai.intent_router import IntentRouter
             self.intent_router = IntentRouter()
-        except Exception as e:
-            self.intent_router = None
-            logger.warning(f"Intent router not available in multi_step_parser: {e}")
+        except Exception:
+            try:
+                from core_ai.ai.intent_router import IntentRouter
+                self.intent_router = IntentRouter()
+            except Exception as e:
+                self.intent_router = None
+                logger.warning(f"Intent router not available in multi_step_parser: {e}")
 
     # =========================================================================
     # QUOTE / URL / PATH PROTECTION LEXER
@@ -243,7 +247,7 @@ class MultiStepCommandParser:
 
         # Check normalized/raw tokens for known action verbs
         try:
-            from ai_assistant.core.local_command_normalizer import (
+            from core_ai.core.local_command_normalizer import (
                 normalize_hinglish_devanagari,
                 strip_punctuation_unicode,
             )
@@ -278,7 +282,7 @@ class MultiStepCommandParser:
 
         raw = command.strip()
         try:
-            from ai_assistant.core.local_command_normalizer import normalize_hinglish_devanagari
+            from core_ai.core.local_command_normalizer import normalize_hinglish_devanagari
             norm = normalize_hinglish_devanagari(raw)
             if norm:
                 raw = norm
@@ -532,7 +536,7 @@ class MultiStepCommandParser:
     def _infer_action_hints(self, intent: str, params: Dict[str, Any], text: str) -> Tuple[str, Optional[str], Optional[str]]:
         """Determine (execution_target, agent_id, capability) for a parsed step."""
         try:
-            from ai_assistant.ai.intent_router import AGENT_INTENT_METADATA
+            from core_ai.ai.intent_router import AGENT_INTENT_METADATA
             if intent in AGENT_INTENT_METADATA:
                 aid, cap = AGENT_INTENT_METADATA[intent]
                 return "agent", params.get("agent_id") or aid, params.get("capability") or cap
@@ -593,7 +597,7 @@ class MultiStepCommandParser:
         intent = 'unknown'
         params: Dict[str, Any] = {'text': step_text_clean}
         try:
-            from ai_assistant.core.local_command_normalizer import normalize_hinglish_devanagari
+            from core_ai.core.local_command_normalizer import normalize_hinglish_devanagari
             candidates = list(dict.fromkeys([step_text_clean, normalize_hinglish_devanagari(step_text_clean)]))
         except Exception:
             candidates = [step_text_clean]
@@ -802,11 +806,15 @@ class MultiStepCommandParser:
             r'(?:message|msg|भेजो|send|text).*?(?:कि|ki|that|saying|:)\s+(.+)',
             r'(?:बोल|bol|tell).*?(?:कि|ki|that)\s+(.+)',
             r'(?:message|msg|भेजो|send)\s+["\'](.+?)["\']',
+            r'(?:send|message|msg|text|भेजो)\s+(.+?)\s+to\s+[^\s,:]+',
+            r'(?:send|message|msg|text|भेजो)\s+(.+?)\s+(?:ko|को)\b',
         ]
         for pattern in patterns:
             match = re.search(pattern, command, re.IGNORECASE | re.UNICODE)
             if match:
-                return match.group(1).strip()
+                cand = match.group(1).strip()
+                if cand.lower() not in {"to", "on", "via", "ki", "that", "saying"}:
+                    return cand
         return None
 
     def extract_contact_name(self, command: str) -> Optional[str]:
@@ -814,7 +822,8 @@ class MultiStepCommandParser:
         patterns = [
             r'([^\s,]+?)\s+को\s+(?:message|msg|भेजो|send|बोल)',
             r'([^\s,]+?)\s+ko\s+(?:message|msg|bhejo|send|bol)',
-            r'(?:message|msg|भेजो|send|text)\s+(?:to\s+)?([^\s,:]+)',
+            r'(?:send|message|msg|text|भेजो)\s+.+?\s+to\s+([^\s,:]+)',
+            r'(?:send|message|msg|text|भेजो)\s+to\s+([^\s,:]+)',
         ]
         for pattern in patterns:
             match = re.search(pattern, command, re.IGNORECASE | re.UNICODE)
@@ -835,33 +844,65 @@ class MultiStepCommandParser:
         step_text = step.original_text or ""
 
         if step.intent == 'send_message':
-            contact = self.extract_contact_name(step_text)
-            if contact:
-                step.params['contact'] = contact
-            # Extract from THIS step first (prevents step 2 from overwriting step 1's message!)
-            message = self.extract_message_content(step_text)
-            if not message and (all_steps is None or step_index == len(all_steps) - 1):
-                message = self.extract_message_content(full_command)
-            if message:
-                step.params['message'] = message
+            existing_contact = step.params.get('contact')
+            existing_msg = step.params.get('message')
+
+            # If contact was mistakenly extracted equal to message, clear contact
+            if existing_contact and existing_msg and str(existing_contact).lower() == str(existing_msg).lower():
+                existing_contact = None
+                step.params.pop('contact', None)
+
+            if not existing_contact:
+                contact = self.extract_contact_name(step_text)
+                if not contact and full_command:
+                    contact = self.extract_contact_name(full_command)
+                if contact:
+                    step.params['contact'] = contact
+
+            if not existing_msg:
+                # Extract from THIS step first (prevents step 2 from overwriting step 1's message!)
+                message = self.extract_message_content(step_text)
+                if not message and (all_steps is None or step_index == len(all_steps) - 1):
+                    message = self.extract_message_content(full_command)
+                if message:
+                    step.params['message'] = message
 
         elif step.intent == 'open_app':
             target = str(step.params.get('target') or step.params.get('app_name') or '').strip()
             # Dynamic Chrome profile detection via automation.browser_profiles (never hardcoded list!)
-            if target:
+            if target or step_text:
                 try:
-                    from ai_assistant.automation.browser_profiles import (
+                    from core_ai.automation.browser_profiles import (
                         extract_profile_from_text,
                         resolve_chrome_profile,
                     )
-                    extracted_prof, _ = extract_profile_from_text(target)
+                except ImportError:
+                    try:
+                        from automation.browser_profiles import (
+                            extract_profile_from_text,
+                            resolve_chrome_profile,
+                        )
+                    except ImportError:
+                        from core_ai.automation.browser_profiles import (
+                            extract_profile_from_text,
+                            resolve_chrome_profile,
+                        )
+
+                try:
+                    extracted_prof, _ = extract_profile_from_text(target) if target else (None, None)
+                    if not extracted_prof and step_text:
+                        extracted_prof, _ = extract_profile_from_text(step_text)
+
+                    lookup_target = target if ('profile' in target.lower()) else step_text
                     resolved = extracted_prof or (
-                        target.lower().replace('profile', '').strip()
-                        if 'profile' in target.lower() and resolve_chrome_profile(target)
+                        lookup_target.lower().replace('profile', '').strip()
+                        if 'profile' in lookup_target.lower() and resolve_chrome_profile(lookup_target)
                         else None
                     )
-                    if not resolved and resolve_chrome_profile(target):
+                    if not resolved and target and resolve_chrome_profile(target):
                         resolved = target.lower().strip()
+                    elif not resolved and step_text and resolve_chrome_profile(step_text):
+                        resolved = resolve_chrome_profile(step_text)
                     if resolved:
                         step.params['profile'] = resolved.lower().strip()
                         step.params['target'] = resolved.title() if 'profile' not in target.lower() else target.title()

@@ -23,7 +23,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from ai_assistant.core.action_chain_models import (
+from core_ai.core.action_chain_models import (
     Action,
     ActionChain,
     ActionType,
@@ -34,49 +34,45 @@ from ai_assistant.core.action_chain_models import (
     generate_action_id,
     generate_chain_id,
 )
-from ai_assistant.core.progress_tracker import get_progress_tracker
+from core_ai.core.progress_tracker import get_progress_tracker
 
 try:
-    from ai_assistant.automation.task_planner import TaskPlanner
+    from core_ai.automation.task_planner import TaskPlanner
     TASK_PLANNER_AVAILABLE = True
 except ImportError:
     TASK_PLANNER_AVAILABLE = False
 
 try:
-    from ai_assistant.automation.orchestrator import AutomationOrchestrator
+    from core_ai.automation.orchestrator import AutomationOrchestrator
     ORCHESTRATOR_AVAILABLE = True
 except ImportError:
     ORCHESTRATOR_AVAILABLE = False
 
 try:
-    from ai_assistant.automation.visual_verification import get_visual_verifier
+    from core_ai.automation.visual_verification import get_visual_verifier
     VERIFIER_AVAILABLE = True
 except ImportError:
     VERIFIER_AVAILABLE = False
 
 try:
-    from ai_assistant.core.task_chain_orchestrator import get_orchestrator
+    from core_ai.core.task_chain_orchestrator import get_orchestrator
     TASK_CHAIN_AVAILABLE = True
 except ImportError:
     TASK_CHAIN_AVAILABLE = False
 
 try:
-    from ai_assistant.automation.browser_automation import BrowserAutomation
+    from core_ai.automation.browser_automation import BrowserAutomation
     BROWSER_AUTO_AVAILABLE = True
 except ImportError:
     BROWSER_AUTO_AVAILABLE = False
 
 try:
-    from ai_assistant.automation.app_automation import AppAutomation
+    from core_ai.automation.app_automation import AppAutomation
     APP_AUTO_AVAILABLE = True
 except ImportError:
     APP_AUTO_AVAILABLE = False
 
-try:
-    from ai_assistant.multimodal import MultiModalAI
-    VLM_AVAILABLE = True
-except ImportError:
-    VLM_AVAILABLE = False
+VLM_AVAILABLE = True
 
 logger = logging.getLogger(__name__)
 
@@ -112,11 +108,11 @@ class ChainOfActionsManager:
         self._agent_coordinator = None
 
         self.vlm = None
-        if VLM_AVAILABLE:
-            try:
-                self.vlm = MultiModalAI()
-            except Exception as e:
-                logger.warning(f"Could not initialize MultiModalAI: {e}")
+        try:
+            from core_ai.multimodal import MultiModalAI
+            self.vlm = MultiModalAI()
+        except Exception as e:
+            logger.debug(f"Could not initialize MultiModalAI: {e}")
 
         # Persistence
         self.tracker = get_progress_tracker()
@@ -138,7 +134,7 @@ class ChainOfActionsManager:
 
     def _get_intent_executor(self):
         if self._intent_executor is None:
-            from ai_assistant.core.intent_executor import get_intent_executor
+            from core_ai.core.intent_executor import get_intent_executor
             self._intent_executor = get_intent_executor()
         return self._intent_executor
 
@@ -147,14 +143,14 @@ class ChainOfActionsManager:
         if self._agent_coordinator is not None:
             return self._agent_coordinator
         try:
-            import ai_assistant.core.multi_agent_coordinator as mac_mod
+            import core_ai.core.multi_agent_coordinator as mac_mod
             getter = getattr(mac_mod, "get_multi_agent_coordinator", None)
             if callable(getter):
                 self._agent_coordinator = getter()
                 return self._agent_coordinator
 
-            from ai_assistant.agents.registry import AgentRegistry
-            from ai_assistant.agents.loader import AgentLoader
+            from core_ai.agents.registry import AgentRegistry
+            from core_ai.agents.loader import AgentLoader
             registry = AgentRegistry()
             AgentLoader.register_agent_definitions(registry)
             self._agent_coordinator = mac_mod.MultiAgentCoordinator(registry)
@@ -331,7 +327,7 @@ class ChainOfActionsManager:
     def _parser_decomposition(self, command: str) -> Tuple[List[Action], bool]:
         """Decompose command via MultiStepCommandParser into canonical Action DAG nodes."""
         try:
-            from ai_assistant.ai.multi_step_parser import MultiStepCommandParser
+            from core_ai.ai.multi_step_parser import MultiStepCommandParser
             parser = MultiStepCommandParser()
             steps = parser.parse_command(command)
             if not steps:
@@ -824,7 +820,7 @@ class ChainOfActionsManager:
                         verification = None
                         if self.vlm and act.type in (ActionType.BROWSER, ActionType.APP):
                             try:
-                                from ai_assistant.core.intent_executor import _is_gemini_active_and_configured
+                                from core_ai.core.intent_executor import _is_gemini_active_and_configured
                                 if _is_gemini_active_and_configured():
                                     verification = await self._verify_action_with_vlm(act)
                                     if verification and verification.get("verified") is False:
@@ -1057,7 +1053,7 @@ class ChainOfActionsManager:
                 chain_id=chain.id,
             )
         else:
-            from ai_assistant.agents.models import Task
+            from core_ai.agents.models import Task
             task = Task(
                 description=str(description),
                 params=dict(params),

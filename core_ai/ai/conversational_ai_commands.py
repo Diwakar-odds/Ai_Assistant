@@ -59,7 +59,7 @@ def _execute_open_command(self, query: str, query_lower: str) -> str:
     # This handles variations like "whats app" -> "whatsapp"
     original_app_name = app_name
     try:
-        from ai_assistant.ai.intent_recognizer import IntentRecognizer
+        from core_ai.ai.intent_recognizer import IntentRecognizer
         recognizer = IntentRecognizer()
         app_name = recognizer.normalize_app_name(app_name)
         if app_name != original_app_name:
@@ -92,7 +92,7 @@ def _execute_open_command(self, query: str, query_lower: str) -> str:
             pass
 
     # Direct fallback to centralized engine
-    from ai_assistant.automation.app_discovery import smart_open_application
+    from core_ai.automation.app_discovery import smart_open_application
     return smart_open_application(app_name)
 
 def _execute_close_command(self, query: str, query_lower: str) -> str:
@@ -110,7 +110,7 @@ def _execute_close_command(self, query: str, query_lower: str) -> str:
             pass
     
     # Direct fallback to centralized engine
-    from ai_assistant.automation.app_automation import AppAutomation
+    from core_ai.automation.app_automation import AppAutomation
     automator = AppAutomation()
     if automator.close_app(app_name):
         return f"✅ Closed {app_name}"
@@ -136,7 +136,7 @@ def _execute_search_command(self, query: str, query_lower: str) -> str:
             pass
     
     # Direct fallback
-    from ai_assistant.automation.app_automation import AppAutomation
+    from core_ai.automation.app_automation import AppAutomation
     automator = AppAutomation()
     if automator.search_web(search_query):
         return f"🔍 Searching web for: {search_query}"
@@ -162,7 +162,7 @@ def _execute_play_command(self, query: str, query_lower: str) -> str:
             pass
     
     # Direct fallback
-    from ai_assistant.automation.app_automation import AppAutomation
+    from core_ai.automation.app_automation import AppAutomation
     automator = AppAutomation()
     if automator.play_media(song):
         return f"🎵 Playing: {song}"
@@ -170,7 +170,7 @@ def _execute_play_command(self, query: str, query_lower: str) -> str:
 
 def _execute_create_document(self, query: str, query_lower: str) -> str:
     """Execute document creation commands."""
-    from ai_assistant.automation.app_discovery import smart_open_application
+    from core_ai.automation.app_discovery import smart_open_application
     
     if 'ppt' in query_lower or 'powerpoint' in query_lower or 'presentation' in query_lower:
         smart_open_application('powerpoint')

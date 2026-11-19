@@ -2,7 +2,7 @@ import logging
 import threading
 from typing import Dict, Any
 
-from ai_assistant.knowledge.fact_extractor import FactExtractor
+from core_ai.knowledge.fact_extractor import FactExtractor
 
 logger = logging.getLogger(__name__)
 
@@ -28,21 +28,21 @@ class LearningLoop:
         self.fact_extractor = FactExtractor()
 
         try:
-            from ai_assistant.ai.emotional_intelligence import EmotionalIntelligence
+            from core_ai.ai.emotional_intelligence import EmotionalIntelligence
             self.emotional_intelligence = EmotionalIntelligence()
-            from ai_assistant.ai.personality_engine import PersonalityEngine
+            from core_ai.ai.personality_engine import PersonalityEngine
             self.personality_engine = PersonalityEngine()
         except ImportError as e:
             logger.warning(f"EmotionalIntelligence unavailable: {e}")
 
         try:
-            from ai_assistant.ai.user_dna import UserDNA
+            from core_ai.ai.user_dna import UserDNA
             self.dna = UserDNA()
         except ImportError as e:
             logger.warning(f"UserDNA unavailable: {e}")
 
         try:
-            from ai_assistant.core.relationship_manager import RelationshipManager
+            from core_ai.core.relationship_manager import RelationshipManager
             self.relationship = RelationshipManager()
         except ImportError as e:
             logger.warning(f"RelationshipManager unavailable: {e}")
@@ -117,7 +117,7 @@ class LearningLoop:
 
         # 4. Save to semantic memory (embeddings auto-computed by memory.py)
         try:
-            from ai_assistant.ai.memory import save_to_memory
+            from core_ai.ai.memory import save_to_memory
             save_to_memory("User", prompt)
             save_to_memory("Pulsar", response)
         except Exception as e:

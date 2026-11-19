@@ -1,4 +1,4 @@
-from ai_assistant.core.database_config import get_db_path_str
+from core_ai.core.database_config import get_db_path_str
 """
 Federated Learning System
 Privacy-preserving distributed learning across devices

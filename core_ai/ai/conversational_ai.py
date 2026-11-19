@@ -24,11 +24,11 @@ import sqlite3
 import os
 import re
 
-from ai_assistant.core.database_config import get_db_path_str
+from core_ai.core.database_config import get_db_path_str
 import webbrowser
 import subprocess
-from ai_assistant.vision.gemini_vision_provider import GeminiVisionProvider
-from ai_assistant.ai.rag_trace import write_trace
+from core_ai.vision.gemini_vision_provider import GeminiVisionProvider
+from core_ai.ai.rag_trace import write_trace
 
 
 try:
@@ -204,11 +204,11 @@ class AdvancedConversationalAI:
         self.memory_retrieval = None
         self.historical_rag = None
         try:
-            from ai_assistant.ai.memory_retrieval import MemoryRetrieval
+            from core_ai.ai.memory_retrieval import MemoryRetrieval
             self.memory_retrieval = MemoryRetrieval(self.db_path)
             print("✅ Long-Term Memory (RAG) initialized")
             
-            from ai_assistant.ai.historical_rag import HistoricalRAG
+            from core_ai.ai.historical_rag import HistoricalRAG
             self.historical_rag = HistoricalRAG()
             print("✅ Historical RAG initialized")
         except Exception as e:
@@ -230,7 +230,7 @@ class AdvancedConversationalAI:
         # Initialize MCP Enhancer
         try:
             import asyncio
-            from ai_assistant.integrations.mcp_conversational import enhance_with_mcp
+            from core_ai.integrations.mcp_conversational import enhance_with_mcp
             
             def _apply_mcp_enhancement():
                 try:
@@ -257,7 +257,7 @@ class AdvancedConversationalAI:
             except:
                 pass  # dotenv not available, use system env vars
             
-            from ai_assistant.ai.llm_provider import UnifiedChatInterface, LLMFactory, is_local_provider
+            from core_ai.ai.llm_provider import UnifiedChatInterface, LLMFactory, is_local_provider
             
             try:
                 from backend.services.settings_manager import get_provider, get_model
@@ -282,7 +282,7 @@ class AdvancedConversationalAI:
             
             # Build unified persona system prompt
             try:
-                from ai_assistant.core.jarvis_persona import build_persona_system_prompt
+                from core_ai.core.jarvis_persona import build_persona_system_prompt
                 system_prompt = build_persona_system_prompt(
                     provider=_sm_provider or "",
                     model=_sm_model or "",
@@ -290,14 +290,14 @@ class AdvancedConversationalAI:
                 )
             except Exception:
                 system_prompt = (
-                    "You are Pulsar, a smart, helpful, and concise AI companion created by Diwakar. "
+                    "You are Pulsar, a smart, helpful, and concise AI companion. "
                     "You MUST NEVER identify as Google, OpenAI, Gemma, or any base model. "
                     "If the user writes in Hindi or Hinglish, reply naturally in Hinglish/Hindi."
                 )
 
             # Try to load user profile to personalize the prompt
             try:
-                from ai_assistant.core.database_config import get_db_path
+                from core_ai.core.database_config import get_db_path
                 db_path = str(get_db_path('personal_knowledge'))
                 
                 if os.path.exists(db_path):
@@ -367,7 +367,7 @@ class AdvancedConversationalAI:
 
                     # Inject usage patterns dynamically
                     try:
-                        from ai_assistant.ai.usage_pattern_analyzer import UsagePatternAnalyzer
+                        from core_ai.ai.usage_pattern_analyzer import UsagePatternAnalyzer
                         analyzer = UsagePatternAnalyzer()
                         summary = analyzer.get_pattern_summary()
                         if summary:
@@ -380,7 +380,7 @@ class AdvancedConversationalAI:
 
                     # Inject User DNA (Living Profile)
                     try:
-                        from ai_assistant.ai.user_dna import UserDNA
+                        from core_ai.ai.user_dna import UserDNA
                         dna_system = UserDNA()
                         dna_profile = dna_system.get_full_profile()
                         if dna_profile:
@@ -406,7 +406,7 @@ class AdvancedConversationalAI:
     def _init_feedback_system(self):
         """Initialize feedback learning system for training data collection."""
         try:
-            from ai_assistant.ai.advanced_feedback_learning import AdaptiveLearningEngine
+            from core_ai.ai.advanced_feedback_learning import AdaptiveLearningEngine
             self.feedback_system = AdaptiveLearningEngine()
             print("✅ Training data feedback loop initialized")
         except Exception as e:
@@ -549,7 +549,7 @@ class AdvancedConversationalAI:
             
             # Emit mood change to UI
             try:
-                from ai_assistant.services.modern_web_backend import socketio
+                from core_ai.services.modern_web_backend import socketio
                 if socketio:
                     socketio.emit('mood_update', {'mood': new_mood.value})
             except ImportError:
@@ -698,7 +698,7 @@ class AdvancedConversationalAI:
             try:
                 # Update User DNA implicitly
                 try:
-                    from ai_assistant.ai.user_dna import UserDNA
+                    from core_ai.ai.user_dna import UserDNA
                     dna_system = UserDNA()
                     if feedback_type == "thumbs_up":
                         dna_system.update_trait("latest_successful_topic", getattr(self.contexts.get(self.active_context_id), 'topic', "unknown"))
@@ -795,7 +795,7 @@ class AdvancedConversationalAI:
                 ]
                 if any(trigger in message_lower for trigger in save_triggers):
                     try:
-                        from ai_assistant.ai.user_dna import UserDNA
+                        from core_ai.ai.user_dna import UserDNA
                         UserDNA().extract_facts_from_text(message)
                     except Exception as e:
                         pass
@@ -822,7 +822,7 @@ class AdvancedConversationalAI:
                         pass
             
             # --- UNIFIED INTENT ROUTER (HYBRID TIERED SYSTEM) ---
-            from ai_assistant.ai.intent_router import IntentRouter
+            from core_ai.ai.intent_router import IntentRouter
             router = IntentRouter(llm_provider=self)
             
             intent_result = router.route(message)
@@ -874,7 +874,7 @@ class AdvancedConversationalAI:
                 # If it's a command but we don't have a direct executor, route it to TaskPlanner (Universal Action Planner)
                 if intent_name in ["task_automation", "file_operation"]:
                     try:
-                        from ai_assistant.automation.task_planner import TaskPlanner
+                        from core_ai.automation.task_planner import TaskPlanner
                         planner = TaskPlanner()
                         # We will execute the complex task via the task planner
                         actions = planner.create_plan(message, context={})
@@ -1005,7 +1005,7 @@ class AdvancedConversationalAI:
             
         if 'mood' in query_lower or 'emotion' in query_lower:
             try:
-                from ai_assistant.ai.emotional_intelligence import EmotionalIntelligence
+                from core_ai.ai.emotional_intelligence import EmotionalIntelligence
                 ei = EmotionalIntelligence()
                 trend = ei.get_mood_trend(days=7)
                 return f"Based on your recent interactions, your mood has been: {trend}."
@@ -1174,7 +1174,7 @@ class AdvancedConversationalAI:
         # --- Smart App Extraction & Negation Logic ---
         app_name = ""
         try:
-            from ai_assistant.automation.app_discovery import app_discovery
+            from core_ai.automation.app_discovery import app_discovery
             
             # 1. Find all known apps mentioned in the query
             mentioned_apps = []
@@ -1221,7 +1221,7 @@ class AdvancedConversationalAI:
         # 🚀 CRITICAL FIX: Use Intent Recognizer to normalize app name
         original_app_name = app_name
         try:
-            from ai_assistant.ai.intent_recognizer import IntentRecognizer
+            from core_ai.ai.intent_recognizer import IntentRecognizer
             recognizer = IntentRecognizer()
             app_name = recognizer.normalize_app_name(app_name)
             if app_name != original_app_name:
@@ -1252,7 +1252,7 @@ class AdvancedConversationalAI:
         
         # Direct fallback to centralized engine
         try:
-            from ai_assistant.automation.app_discovery import smart_open_application
+            from core_ai.automation.app_discovery import smart_open_application
             result = smart_open_application(app_name)
             return self._format_success(f"✅ {result}", f"open {app_name}")
         except Exception as e:
@@ -1320,7 +1320,7 @@ class AdvancedConversationalAI:
             except Exception as e:
                 print(f"Automation close error: {e}")
         
-        from ai_assistant.automation.app_automation import AppAutomation
+        from core_ai.automation.app_automation import AppAutomation
         automator = AppAutomation()
         if automator.close_app(app_name):
             return f"✅ Closed {app_name.title()}"
@@ -1367,7 +1367,7 @@ class AdvancedConversationalAI:
                 print(f"Automation search error: {e}")
         
         # Fallback to direct automation engine
-        from ai_assistant.automation.app_automation import AppAutomation
+        from core_ai.automation.app_automation import AppAutomation
         automator = AppAutomation()
         if automator.search_web(search_query):
             return f"🔍 Searching Google for: '{search_query}'"
@@ -1418,7 +1418,7 @@ class AdvancedConversationalAI:
                 print(f"Automation play error: {e}")
         
         # Fallback to direct automation engine
-        from ai_assistant.automation.app_automation import AppAutomation
+        from core_ai.automation.app_automation import AppAutomation
         automator = AppAutomation()
         if automator.play_media(song):
             return f"🎵 Playing: '{song}'"
@@ -1426,7 +1426,7 @@ class AdvancedConversationalAI:
     
     def _execute_create_document(self, query: str, query_lower: str) -> str:
         """Execute document creation commands."""
-        from ai_assistant.automation.app_discovery import smart_open_application
+        from core_ai.automation.app_discovery import smart_open_application
         
         if 'ppt' in query_lower or 'powerpoint' in query_lower or 'presentation' in query_lower:
             smart_open_application('powerpoint')
@@ -1532,7 +1532,7 @@ class AdvancedConversationalAI:
     def _execute_battery_command(self, query: str, query_lower: str) -> str:
         """Execute battery status check."""
         try:
-            from ai_assistant.automation.system_automation import SystemAutomation
+            from core_ai.automation.system_automation import SystemAutomation
             sys_auto = SystemAutomation()
             return sys_auto.get_battery_status()
         except Exception as e:
@@ -1541,7 +1541,7 @@ class AdvancedConversationalAI:
     def _execute_open_apps_command(self, query: str, query_lower: str) -> str:
         """Execute open apps check."""
         try:
-            from ai_assistant.automation.app_automation import AppAutomation
+            from core_ai.automation.app_automation import AppAutomation
             app_auto = AppAutomation()
             return app_auto.get_open_apps()
         except Exception as e:
@@ -1551,7 +1551,7 @@ class AdvancedConversationalAI:
         """Execute bluetooth toggle."""
         enable = 'on' in query_lower or 'chalu' in query_lower or 'start' in query_lower
         try:
-            from ai_assistant.automation.system_automation import SystemAutomation
+            from core_ai.automation.system_automation import SystemAutomation
             sys_auto = SystemAutomation()
             success = sys_auto.toggle_bluetooth(enable)
             status = "On" if enable else "Off"
@@ -1566,7 +1566,7 @@ class AdvancedConversationalAI:
         """Execute wifi toggle."""
         enable = not ('off' in query_lower or ' of ' in query_lower or 'of wifi' in query_lower or 'band' in query_lower or 'stop' in query_lower)
         try:
-            from ai_assistant.automation.system_automation import SystemAutomation
+            from core_ai.automation.system_automation import SystemAutomation
             sys_auto = SystemAutomation()
             success = sys_auto.toggle_wifi(enable)
             status = "On" if enable else "Off"
@@ -1662,7 +1662,7 @@ class AdvancedConversationalAI:
         message_lower = message.lower().strip()
         
         # Determine which provider to use (local requests NEVER fall back to cloud)
-        from ai_assistant.ai.llm_provider import UnifiedChatInterface, LLMFactory, is_local_provider
+        from core_ai.ai.llm_provider import UnifiedChatInterface, LLMFactory, is_local_provider
         active_provider = self.llm_provider
         is_local_req = False
         req_prov = LLMFactory.normalize_provider(provider) if provider else None
@@ -1681,7 +1681,7 @@ class AdvancedConversationalAI:
                         model=req_model,
                         use_fallback=(not is_local_req),
                     )
-                    from ai_assistant.core.jarvis_persona import build_persona_system_prompt
+                    from core_ai.core.jarvis_persona import build_persona_system_prompt
                     sys_msg = build_persona_system_prompt(provider=req_prov, model=req_model or '')
                     if hasattr(active_provider, 'set_system_message'):
                         active_provider.set_system_message(sys_msg)
@@ -1762,15 +1762,15 @@ class AdvancedConversationalAI:
                 dna_context = ""
                 tone_context = ""
                 try:
-                    from ai_assistant.ai.user_dna import UserDNA
+                    from core_ai.ai.user_dna import UserDNA
                     dna_system = UserDNA()
                     dna = dna_system.get_full_profile()
                     if dna:
                         dna_context = "[User Facts]\n" + "\n".join([f"- {k}: {v}" for k, v in dna.items()])
                     
                     try:
-                        from ai_assistant.ai.personality_engine import PersonalityEngine
-                        from ai_assistant.ai.emotional_intelligence import EmotionalIntelligence
+                        from core_ai.ai.personality_engine import PersonalityEngine
+                        from core_ai.ai.emotional_intelligence import EmotionalIntelligence
                         trust_score = dna_system.get_trait("trust_score") or 50
                         personality_modifier = PersonalityEngine().get_personality_modifier(trust_score)
                         emotion_profile = EmotionalIntelligence().analyze_sentiment(message)
@@ -1789,7 +1789,7 @@ class AdvancedConversationalAI:
                 clean_messages = []
                 
                 # 4a. Base system prompt
-                base_sys_prompt = "You are Pulsar, a smart, helpful, and concise AI assistant created by Diwakar. Keep your answers brief and directly address the user."
+                base_sys_prompt = "You are Pulsar, a smart, helpful, and concise AI assistant. Keep your answers brief and directly address the user."
                 if active_provider.conversation_history and active_provider.conversation_history[0].get("role") == "system":
                     base_sys_prompt = active_provider.conversation_history[0].get("content", base_sys_prompt)
                 
@@ -2263,7 +2263,7 @@ JSON:"""
                     json_match = _re.search(r'\{.*\}', result, _re.DOTALL)
                     if json_match:
                         facts = _json.loads(json_match.group())
-                        from ai_assistant.ai.user_dna import UserDNA
+                        from core_ai.ai.user_dna import UserDNA
                         dna = UserDNA()
                         saved = 0
                         for key, value in facts.items():

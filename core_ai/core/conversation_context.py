@@ -300,7 +300,7 @@ class ContextManager:
         ]
 
         try:
-            from ai_assistant.core.local_command_normalizer import (
+            from core_ai.core.local_command_normalizer import (
                 word_boundary_contains,
                 normalize_hinglish_devanagari,
             )
@@ -347,7 +347,7 @@ class ContextManager:
 
         # Signal Executive Brain to cancel active chains only if busy with a different chain
         try:
-            from ai_assistant.core.command_brain import get_executive_brain
+            from core_ai.core.command_brain import get_executive_brain
             brain = get_executive_brain()
             if brain.is_busy():
                 other_active = any(
@@ -368,7 +368,7 @@ class ContextManager:
     def is_busy(self) -> bool:
         """Check if any chains are currently active via the Executive Brain"""
         try:
-            from ai_assistant.core.command_brain import get_executive_brain
+            from core_ai.core.command_brain import get_executive_brain
             return get_executive_brain().is_busy()
         except Exception:
             return self.get_state() == ExecutionState.EXECUTING
@@ -376,7 +376,7 @@ class ContextManager:
     def get_active_chain_ids(self):
         """Get IDs of all active chains from the Executive Brain"""
         try:
-            from ai_assistant.core.command_brain import get_executive_brain
+            from core_ai.core.command_brain import get_executive_brain
             return get_executive_brain().get_active_chain_ids()
         except Exception:
             return []

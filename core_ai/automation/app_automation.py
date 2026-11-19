@@ -92,7 +92,7 @@ def _ensure_whatsapp_module() -> bool:
         return True
 
     try:
-        from ai_assistant.integrations.whatsapp import send_whatsapp_message as _send_whatsapp_message
+        from core_ai.integrations.whatsapp import send_whatsapp_message as _send_whatsapp_message
 
         send_whatsapp_message = _send_whatsapp_message
         WHATSAPP_MODULE_AVAILABLE = True
@@ -167,7 +167,7 @@ class AppAutomation:
         logger.info(f"📱 Opening app: {app_name}")
         
         try:
-            from ai_assistant.automation.app_discovery import smart_open_application
+            from core_ai.automation.app_discovery import smart_open_application
             
             # Execute the smart launcher which handles both Web Apps and Native Windows Apps
             result_msg = smart_open_application(app_name)
@@ -256,7 +256,7 @@ class AppAutomation:
             
             # If the user just asked for an app name
             if query_lower in ["spotify", "youtube music", "music", "youtube"]:
-                from ai_assistant.automation.app_discovery import smart_open_application
+                from core_ai.automation.app_discovery import smart_open_application
                 result_msg = smart_open_application(query, action_type='play_music')
                 if "✅" in result_msg:
                     logger.info(result_msg)
@@ -330,7 +330,7 @@ class AppAutomation:
         logger.info(f"Closing app: {app_name}")
 
         try:
-            from ai_assistant.automation.window_manager import close_window_gracefully
+            from core_ai.automation.window_manager import close_window_gracefully
             if close_window_gracefully(app_name):
                 logger.info(f"✅ Gracefully closed app: {app_name}")
                 return True
@@ -430,7 +430,7 @@ class StickyNotesAutomation(AppAutomation):
         if TTS_AVAILABLE:
             self.tts_engine = pyttsx3.init()
             try:
-                from ai_assistant.voice.tts_output_service import configure_sapi5_voice
+                from core_ai.voice.tts_output_service import configure_sapi5_voice
                 configure_sapi5_voice(self.tts_engine)
             except Exception:
                 pass
@@ -607,7 +607,7 @@ class WhatsAppAutomation(AppAutomation):
             # For now, let's assume we can use the protocol if possible, or just focus window.
             
             # Try to get number if possible (imports inside method to avoid cycles)
-            from ai_assistant.integrations.whatsapp import get_contact_number
+            from core_ai.integrations.whatsapp import get_contact_number
             phone = get_contact_number(contact)
             
             if phone:

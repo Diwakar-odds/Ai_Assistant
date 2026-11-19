@@ -189,7 +189,7 @@ class MultiAgentCoordinator:
         if self.llm is not None:
             return self.llm
         try:
-            from ai_assistant.ai.llm_provider import UnifiedChatInterface
+            from core_ai.ai.llm_provider import UnifiedChatInterface
 
             self.llm = UnifiedChatInterface(use_fallback=True)
             return self.llm
@@ -548,7 +548,7 @@ class MultiAgentCoordinator:
         """
         # 1. Fast Cache Check (Never Think Twice)
         try:
-            from ai_assistant.core.workflow_memory import get_workflow_memory
+            from core_ai.core.workflow_memory import get_workflow_memory
             cached_plan = get_workflow_memory().find_matching_workflow(command_text)
             if cached_plan and cached_plan.all_steps:
                 logger.info(f"⚡ [WORKFLOW CACHE HIT] Using learned recipe: '{cached_plan.workflow_name}'")
@@ -571,7 +571,7 @@ class MultiAgentCoordinator:
 
         # 2. Dynamic SwarmPlanner Meta-Planning
         try:
-            from ai_assistant.core.swarm_planner import SwarmPlanner
+            from core_ai.core.swarm_planner import SwarmPlanner
             planner = SwarmPlanner(registry=self.registry, llm_provider=self.llm)
             plan = await planner.plan_workflow(command_text)
             if plan and plan.all_steps:
@@ -856,7 +856,7 @@ class MultiAgentCoordinator:
                 )
                 if should_review and res.success:
                     try:
-                        from ai_assistant.core.swarm_planner import SwarmPlanner
+                        from core_ai.core.swarm_planner import SwarmPlanner
                         planner = SwarmPlanner(registry=self.registry, llm_provider=self.llm)
                         out_val = self._extract_result_values(res)["output"]
                         critique_data = await planner.critique_output(
@@ -962,7 +962,7 @@ class MultiAgentCoordinator:
                     # Self-Healing Layer 2: Dynamic Re-Planning Engine
                     if not healed:
                         try:
-                            from ai_assistant.core.swarm_planner import SwarmPlanner, WorkflowStep
+                            from core_ai.core.swarm_planner import SwarmPlanner, WorkflowStep
                             planner = SwarmPlanner(registry=self.registry, llm_provider=self.llm)
                             curr_step = WorkflowStep(
                                 step_id=sid,
@@ -1051,8 +1051,8 @@ class MultiAgentCoordinator:
         # Cache successful novel workflows into WorkflowMemory (Never Think Twice)
         if overall_ok and command_text:
             try:
-                from ai_assistant.core.workflow_memory import get_workflow_memory
-                from ai_assistant.core.swarm_planner import WorkflowPlan, WorkflowStep, WorkflowWave, SwarmPlanner
+                from core_ai.core.workflow_memory import get_workflow_memory
+                from core_ai.core.swarm_planner import WorkflowPlan, WorkflowStep, WorkflowWave, SwarmPlanner
 
                 wf_steps = [
                     WorkflowStep(

@@ -8,19 +8,19 @@ class WeeklyReport:
     
     def __init__(self):
         try:
-            from ai_assistant.core.project_manager import ProjectManager
+            from core_ai.core.project_manager import ProjectManager
             self.project_manager = ProjectManager()
         except ImportError:
             self.project_manager = None
             
         try:
-            from ai_assistant.core.commitment_tracker import CommitmentTracker
+            from core_ai.core.commitment_tracker import CommitmentTracker
             self.commitment_tracker = CommitmentTracker()
         except ImportError:
             self.commitment_tracker = None
             
         try:
-            from ai_assistant.ai.conversational_ai import get_conversational_ai
+            from core_ai.ai.conversational_ai import get_conversational_ai
             self.conversational_ai = get_conversational_ai()
         except ImportError:
             self.conversational_ai = None

@@ -10,8 +10,8 @@ from typing import Dict, Optional, Any, List
 from pathlib import Path
 
 # Import existing modules
-from ai_assistant.automation.app_discovery import smart_open_application, app_discovery
-from ai_assistant.automation.window_manager import (
+from core_ai.automation.app_discovery import smart_open_application, app_discovery
+from core_ai.automation.window_manager import (
     find_window_by_name,
     bring_window_to_foreground,
     close_window_gracefully,
@@ -83,7 +83,7 @@ class UniversalAppController:
         """Lazy load automation engine"""
         if self._automation_engine is None:
             try:
-                from ai_assistant.automation.automation_engine import SmartAutomationEngine
+                from core_ai.automation.automation_engine import SmartAutomationEngine
                 self._automation_engine = SmartAutomationEngine()
             except Exception as e:
                 logger.warning(f"Automation engine not available: {e}")
@@ -95,7 +95,7 @@ class UniversalAppController:
         """Lazy load plugin manager"""
         if self._plugin_manager is None:
             try:
-                from ai_assistant.automation.plugin_manager import PluginManager
+                from core_ai.automation.plugin_manager import PluginManager
                 self._plugin_manager = PluginManager()
             except ImportError:
                 logger.warning("Plugin manager not available, using generic automation only")
@@ -107,7 +107,7 @@ class UniversalAppController:
         """Lazy load vision engine"""
         if self._vision_engine is None:
             try:
-                from ai_assistant.automation.vision_engine import VisionEngine
+                from core_ai.automation.vision_engine import VisionEngine
                 self._vision_engine = VisionEngine()
             except ImportError:
                 logger.warning("Vision engine not available")
@@ -119,7 +119,7 @@ class UniversalAppController:
         """Lazy load learning system"""
         if self._learning_system is None:
             try:
-                from ai_assistant.automation.learning_system import LearningSystem
+                from core_ai.automation.learning_system import LearningSystem
                 self._learning_system = LearningSystem()
             except ImportError:
                 logger.warning("Learning system not available")
@@ -505,10 +505,44 @@ class UniversalAppController:
                 }
         
         elif action == "send_message":
-            # Generic message sending for ANY messaging app
-            contact = params.get('contact', '')
-            message = params.get('message', '')
-            
+            # Message sending
+            contact = (
+                params.get('contact')
+                or params.get('recipient')
+                or params.get('contact_name')
+                or params.get('to')
+                or params.get('name')
+                or ''
+            )
+            message = (
+                params.get('message')
+                or params.get('text')
+                or params.get('body')
+                or params.get('msg')
+                or ''
+            )
+
+            # Direct WhatsApp integration
+            if app_name.lower() in ('whatsapp', 'whats app', 'whtsp'):
+                try:
+                    from core_ai.integrations.whatsapp import send_whatsapp_message
+                    res = send_whatsapp_message(contact, message)
+                    return {
+                        'success': '✅' in res,
+                        'app_name': app_name,
+                        'action': action,
+                        'message': res,
+                        'result': res,
+                    }
+                except Exception as e:
+                    return {
+                        'success': False,
+                        'app_name': app_name,
+                        'action': action,
+                        'error': str(e),
+                        'message': f"WhatsApp message failed: {e}"
+                    }
+
             # Use Vision AI to understand the app and suggest steps
             if self.vision_engine:
                 steps = self.vision_engine.suggest_action_sequence(
@@ -517,19 +551,12 @@ class UniversalAppController:
                 )
                 # Execute suggested steps
                 # (This will be implemented in vision_engine.py)
-            
-            # Fallback: Generic approach
-            # 1. Try to find search/input field
-            # 2. Type contact name
-            # 3. Find message field
-            # 4. Type message
-            # 5. Press Enter or click Send
-            
+
             return {
                 'success': False,
                 'app_name': app_name,
                 'action': action,
-                'message': "Generic send_message not yet fully implemented. Please teach me using 'start recording'."
+                'message': f"Generic send_message for {app_name} not yet fully implemented. Please teach me using 'start recording'."
             }
         
         else:

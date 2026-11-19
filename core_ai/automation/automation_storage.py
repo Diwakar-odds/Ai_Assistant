@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 
-from ai_assistant.automation.automation_models import Workflow, WorkflowResult, WorkflowStatus
+from core_ai.automation.automation_models import Workflow, WorkflowResult, WorkflowStatus
 
 logger = logging.getLogger(__name__)
 

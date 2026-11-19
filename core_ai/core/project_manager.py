@@ -4,7 +4,7 @@ import json
 from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Any, Optional
 from datetime import datetime
-from ai_assistant.core.database_config import get_db_path_str
+from core_ai.core.database_config import get_db_path_str
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ class ProjectManager:
     def __init__(self, db_path: Optional[str] = None):
         if not db_path:
             import os
-            from ai_assistant.core.database_config import DATA_DIR
+            from core_ai.core.database_config import DATA_DIR
             self.db_path = str(DATA_DIR / "projects.db")
         else:
             self.db_path = db_path

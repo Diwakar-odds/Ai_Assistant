@@ -83,7 +83,7 @@ def trigger_emergency_stop(reason: str = "Global Emergency Stop Activated") -> d
 
         # 0. Cut off active TTS speech immediately
         try:
-            from ai_assistant.voice.tts_output_service import get_tts_service
+            from core_ai.voice.tts_output_service import get_tts_service
             get_tts_service().stop(reason=reason)
         except Exception:
             pass
@@ -93,7 +93,7 @@ def trigger_emergency_stop(reason: str = "Global Emergency Stop Activated") -> d
 
         # 2. Halt TaskChainOrchestrator
         try:
-            from ai_assistant.core.task_chain_orchestrator import get_orchestrator
+            from core_ai.core.task_chain_orchestrator import get_orchestrator
             orchestrator = get_orchestrator()
             orchestrator.emergency_stop(reason=reason)
         except Exception as orch_e:
@@ -101,7 +101,7 @@ def trigger_emergency_stop(reason: str = "Global Emergency Stop Activated") -> d
 
         # 3. Halt CommandBrain & Active Chains (emit_notice=False to prevent duplicate chat items)
         try:
-            from ai_assistant.core.command_brain import get_executive_brain, CommandClassification
+            from core_ai.core.command_brain import get_executive_brain, CommandClassification
             brain = get_executive_brain()
             brain.handle_executive(CommandClassification.EXECUTIVE_STOP, reason, emit_notice=False)
         except Exception as brain_e:
@@ -109,7 +109,7 @@ def trigger_emergency_stop(reason: str = "Global Emergency Stop Activated") -> d
 
         # 4. Clear context execution state
         try:
-            from ai_assistant.core.conversation_context import get_context_manager, ExecutionState
+            from core_ai.core.conversation_context import get_context_manager, ExecutionState
             ctx = get_context_manager()
             ctx.clear_task_chain()
             ctx.set_state(ExecutionState.IDLE)

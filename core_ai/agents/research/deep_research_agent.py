@@ -96,63 +96,27 @@ class DeepResearchAgent(BaseAgent):
         ]
 
     def _search_urls_sync(self, query: str) -> List[Dict[str, str]]:
-        # 1. googlesearch-python if available
         try:
-            from googlesearch import search as g_search
-            items = []
-            for res in g_search(query, num_results=2, advanced=True):
-                items.append(
-                    {
-                        "url": getattr(res, "url", str(res)),
-                        "title": getattr(res, "title", "") or "",
-                        "snippet": getattr(res, "description", "") or "",
-                    }
-                )
-            if items:
-                return items
-        except Exception:
-            pass
-
-        # 2. DuckDuckGo HTML fallback
-        try:
-            url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote_plus(query)}"
-            resp = requests.get(url, headers=_HEADERS, timeout=8)
-            resp.raise_for_status()
-            soup = BeautifulSoup(resp.text, "html.parser")
-            items = []
-            for item in soup.select(".result"):
-                a = item.select_one("a.result__a")
-                if not a:
-                    continue
-                href = a.get("href") or ""
-                if href.startswith("http"):
-                    sn = item.select_one(".result__snippet")
-                    items.append(
-                        {
-                            "url": href,
-                            "title": a.get_text(" ", strip=True),
-                            "snippet": sn.get_text(" ", strip=True) if sn else "",
-                        }
-                    )
-                if len(items) >= 2:
-                    break
-            return items
+            from core_ai.integrations.web_intelligence import get_web_intelligence
+            web_intel = get_web_intelligence()
+            search_items = web_intel.search(query, num_results=2)
+            return [
+                {
+                    "url": r.url,
+                    "title": r.title,
+                    "snippet": r.snippet,
+                }
+                for r in search_items
+            ]
         except Exception as exc:
-            logger.debug("Search query %r failed: %s", query, exc)
+            logger.debug("Search query %r via WebIntelligenceService failed: %s", query, exc)
             return []
 
     def _scrape_text_sync(self, url: str) -> str:
         try:
-            parsed = urllib.parse.urlparse(url)
-            if parsed.scheme not in ("http", "https"):
-                return ""
-            response = requests.get(url, headers=_HEADERS, timeout=6)
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.text, "html.parser")
-                for tag in soup(["script", "style", "noscript"]):
-                    tag.decompose()
-                return " ".join(soup.stripped_strings)
-            return ""
+            from core_ai.integrations.web_intelligence import get_web_intelligence
+            text = get_web_intelligence().scrape_url(url, max_chars=3000)
+            return text or ""
         except Exception:
             return ""
 

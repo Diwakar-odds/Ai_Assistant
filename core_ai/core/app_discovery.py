@@ -6,7 +6,7 @@ The comprehensive implementation is in ai_assistant.modules.app_discovery
 
 # Re-export from the main modules implementation
 try:
-    from ai_assistant.automation.app_discovery import (
+    from core_ai.automation.app_discovery import (
         AppDiscovery,
         smart_open_application,
         discover_applications,

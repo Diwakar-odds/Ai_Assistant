@@ -144,7 +144,7 @@ class WebAgent(BaseAgent):
     async def _browse_with_selenium(self, url: str, params: Dict[str, Any]) -> TaskResult:
         """Run optional headless/interactive Selenium session via BrowserAutomation."""
         def _run_browser() -> Dict[str, Any]:
-            from ai_assistant.automation.browser_automation import BrowserAutomation, BrowserConfig
+            from core_ai.automation.browser_automation import BrowserAutomation, BrowserConfig
 
             cfg = BrowserConfig(headless=bool(params.get("headless", True)))
             browser = BrowserAutomation(cfg)
@@ -293,7 +293,7 @@ class WebAgent(BaseAgent):
                 return TaskResult(success=False, error=err)
 
             def _selenium_interact() -> Dict[str, Any]:
-                from ai_assistant.automation.browser_automation import BrowserAutomation, BrowserConfig
+                from core_ai.automation.browser_automation import BrowserAutomation, BrowserConfig
                 from selenium.webdriver.common.by import By
 
                 browser = BrowserAutomation(BrowserConfig(headless=bool(params.get("headless", True))))

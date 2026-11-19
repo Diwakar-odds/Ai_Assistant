@@ -54,7 +54,7 @@ except Exception as e:
 
 # Import multimodal capabilities for visual analysis
 try:
-    from ai_assistant.vision.multimodal import MultiModalAI
+    from core_ai.vision.multimodal import MultiModalAI
     MULTIMODAL_AVAILABLE = True
 except ImportError:
     MULTIMODAL_AVAILABLE = False

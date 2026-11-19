@@ -12,9 +12,9 @@ except ImportError:
     logger.warning("WARNING: PyPDF2 not found. PDF features in workflows will be disabled.")
 
 from typing import Optional
-from ai_assistant.utils.file_ops import smart_file_search
-from ai_assistant.integrations.whatsapp import send_whatsapp_message
-from ai_assistant.ai.llm_provider import UnifiedChatInterface
+from core_ai.utils.file_ops import smart_file_search
+from core_ai.integrations.whatsapp import send_whatsapp_message
+from core_ai.ai.llm_provider import UnifiedChatInterface
 import platform
 
 logger = logging.getLogger(__name__)

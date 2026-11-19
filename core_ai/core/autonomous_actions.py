@@ -10,19 +10,19 @@ class AutonomousActions:
     
     def __init__(self):
         try:
-            from ai_assistant.core.project_manager import ProjectManager
+            from core_ai.core.project_manager import ProjectManager
             self.project_manager = ProjectManager()
         except ImportError:
             self.project_manager = None
             
         try:
-            from ai_assistant.automation.task_planner import TaskPlanner
+            from core_ai.automation.task_planner import TaskPlanner
             self.task_planner = TaskPlanner()
         except ImportError:
             self.task_planner = None
             
         try:
-            from ai_assistant.core.chain_of_actions_manager import ChainOfActionsManager
+            from core_ai.core.chain_of_actions_manager import ChainOfActionsManager
             self.chain_manager = ChainOfActionsManager()
         except ImportError:
             self.chain_manager = None

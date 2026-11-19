@@ -1,6 +1,6 @@
 # Setup centralized logging
 try:
-    from ai_assistant.utils.logging_config import get_logger
+    from core_ai.utils.logging_config import get_logger
     logger = get_logger(__name__, log_category="app")
 except ImportError:
     import logging
@@ -25,8 +25,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import numpy as np
 
-from ai_assistant.core.local_command_normalizer import normalize_hinglish_devanagari
-from ai_assistant.ai.shared_embedder import encode_text
+from core_ai.core.local_command_normalizer import normalize_hinglish_devanagari
+from core_ai.ai.shared_embedder import encode_text
 
 
 # =============================================================================
@@ -1032,7 +1032,7 @@ class IntentRouter:
         if re.match(r'^\s*(?:how\s+(?:to|do\s+i|can\s+i)|what\s+is\s+(?:a|an)\s+|explain\s+|define\s+)\b', message, re.IGNORECASE):
             return None
 
-        from ai_assistant.core.local_command_normalizer import normalize_hinglish_devanagari
+        from core_ai.core.local_command_normalizer import normalize_hinglish_devanagari
 
         candidates: List[str] = []
         raw_clean = self._clean_for_tier1(message)
@@ -1236,11 +1236,11 @@ class IntentRouter:
         """Tier 2: Use local SentenceTransformers ML to determine intent."""
         try:
             if self._local_classifier is None:
-                from ai_assistant.ai.intent_classification import IntentClassifier
-                from ai_assistant.core.database_config import get_db_path
+                from core_ai.ai.intent_classification import IntentClassifier
+                from core_ai.core.database_config import get_db_path
                 self._local_classifier = IntentClassifier(db_path=str(get_db_path("intent_classifier")))
 
-            from ai_assistant.core.local_command_normalizer import normalize_hinglish_devanagari
+            from core_ai.core.local_command_normalizer import normalize_hinglish_devanagari
             query_for_ml = normalize_hinglish_devanagari(message) or message
 
             start_time = time.time()
@@ -1344,7 +1344,7 @@ class IntentRouter:
             active_prov = self._get_active_provider_name()
             if active_prov and active_prov not in ("gemini", "offline"):
                 try:
-                    from ai_assistant.ai.llm_provider import UnifiedChatInterface
+                    from core_ai.ai.llm_provider import UnifiedChatInterface
                     provider_obj = UnifiedChatInterface(provider=active_prov, use_fallback=False)
                 except Exception:
                     provider_obj = None
@@ -1426,7 +1426,7 @@ class IntentRouter:
             self._tls.offline_mode = prev_off
 
     def _route_inner(self, message: str) -> Optional[IntentResult]:
-        from ai_assistant.core.local_command_normalizer import normalize_hinglish_devanagari
+        from core_ai.core.local_command_normalizer import normalize_hinglish_devanagari
         msg_clean = message.strip().lower()
         norm_clean = normalize_hinglish_devanagari(message).strip().lower()
 

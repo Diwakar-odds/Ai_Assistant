@@ -1,6 +1,6 @@
 # Setup centralized logging
 try:
-    from ai_assistant.utils.logging_config import get_logger
+    from core_ai.utils.logging_config import get_logger
 except ImportError:
     from utils.logging_config import get_logger
 logger = get_logger(__name__, log_category="app")
@@ -30,7 +30,7 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 
 # Locate this file and resolve relative DB path to be CWD-independent.
-from ai_assistant.core.database_config import DATA_DIR, PROJECT_ROOT, get_db_path_str
+from core_ai.core.database_config import DATA_DIR, PROJECT_ROOT, get_db_path_str
 _DEFAULT_DB = get_db_path_str('conversation_ai')
 _persist_lock = threading.Lock()
 _singleton_lock = threading.Lock()
@@ -416,7 +416,7 @@ class MemoryRetrieval:
             return []
 
         try:
-            from ai_assistant.ai.shared_embedder import encode_text
+            from core_ai.ai.shared_embedder import encode_text
             import numpy as np
 
             q_vec = encode_text(clean_q, normalize=True)
@@ -717,7 +717,7 @@ class MemoryRetrieval:
             return True
         if any(trigger in message_lower for trigger in self.MEMORY_TRIGGERS):
             return True
-        if re.search(r'\b(?:kl|kal|aaj|pehle|pichli|pichle|purani|abhishek|mahine)\b', message_lower):
+        if re.search(r'\b(?:kl|kal|aaj|pehle|pichli|pichle|purani|mahine)\b', message_lower):
             return True
         if self._BROAD_HISTORY_RE.search(message_lower):
             return True
@@ -842,7 +842,7 @@ class MemoryRetrieval:
         # Also search personal knowledge traits semantically via vector similarity
         if query:
             try:
-                from ai_assistant.ai.user_dna import UserDNA
+                from core_ai.ai.user_dna import UserDNA
                 vec_traits = UserDNA(db_path=str(db_path)).search_traits_by_vector(query, limit=2, min_score=0.38)
                 for vt in vec_traits:
                     f_str = f"{vt['key']}: {vt['value']}"
@@ -1428,7 +1428,7 @@ def persist_turn_to_conversation_ai(
                     """)
                     conn.execute("CREATE INDEX IF NOT EXISTS idx_conv_vectors_cid ON conversation_vectors(conversation_id)")
 
-                    from ai_assistant.ai.shared_embedder import encode_text
+                    from core_ai.ai.shared_embedder import encode_text
                     import numpy as np
 
                     u_vec = encode_text(u_clean, normalize=True)

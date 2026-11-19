@@ -110,7 +110,7 @@ class CommunicationAgent(BaseAgent):
         max_results = int(params.get("max_results", 10))
 
         def _fetch() -> str:
-            from ai_assistant.integrations.email_handler import get_inbox_summary, search_emails
+            from core_ai.integrations.email_handler import get_inbox_summary, search_emails
 
             if query:
                 return search_emails(str(query), max_results=max_results)
@@ -169,7 +169,7 @@ class CommunicationAgent(BaseAgent):
         bcc = str(params.get("bcc", ""))
 
         def _send() -> str:
-            from ai_assistant.integrations.email_handler import send_email
+            from core_ai.integrations.email_handler import send_email
 
             return send_email(to=recipient, subject=subject, body=body, cc=cc, bcc=bcc)
 
@@ -227,7 +227,7 @@ class CommunicationAgent(BaseAgent):
             )
 
         def _send_wa() -> str:
-            from ai_assistant.integrations.whatsapp import send_whatsapp_message
+            from core_ai.integrations.whatsapp import send_whatsapp_message
 
             return send_whatsapp_message(contact_name=recipient, message=body)
 
@@ -252,7 +252,7 @@ class CommunicationAgent(BaseAgent):
         days_ahead = int((task.params or {}).get("days_ahead", 7))
 
         def _fetch() -> str:
-            from ai_assistant.integrations.google_calendar import get_upcoming_events
+            from core_ai.integrations.google_calendar import get_upcoming_events
 
             return get_upcoming_events(days_ahead=days_ahead)
 
@@ -300,7 +300,7 @@ class CommunicationAgent(BaseAgent):
             )
 
         def _create() -> str:
-            from ai_assistant.integrations.google_calendar import create_calendar_event
+            from core_ai.integrations.google_calendar import create_calendar_event
 
             return create_calendar_event(
                 title=title,

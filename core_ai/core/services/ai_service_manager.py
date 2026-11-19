@@ -28,7 +28,7 @@ class AIServiceManager:
         """Get multimodal AI service (lazy loaded)"""
         if not self._initialized['multimodal']:
             try:
-                from ai_assistant.integrations.multimodal_integration import get_multimodal_ai
+                from core_ai.integrations.multimodal_integration import get_multimodal_ai
                 self._multimodal_ai = get_multimodal_ai()
                 self._initialized['multimodal'] = True
                 logger.info("Multimodal AI initialized")
@@ -41,7 +41,7 @@ class AIServiceManager:
         """Get conversational AI service (lazy loaded)"""
         if not self._initialized['conversational']:
             try:
-                from ai_assistant.integrations.conversational_ai import get_conversational_ai
+                from core_ai.integrations.conversational_ai import get_conversational_ai
                 self._conversational_ai = get_conversational_ai()
                 self._initialized['conversational'] = True
                 logger.info("Conversational AI initialized")
@@ -54,7 +54,7 @@ class AIServiceManager:
         """Get LLM chat service (lazy loaded)"""
         if not self._initialized['llm']:
             try:
-                from ai_assistant.modules.gemini_chat import GeminiChat
+                from core_ai.modules.gemini_chat import GeminiChat
                 self._llm_chat = GeminiChat()
                 self._initialized['llm'] = True
                 logger.info("LLM chat initialized")

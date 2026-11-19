@@ -34,14 +34,14 @@ def _get_multi_agent_coordinator():
     if _agent_coordinator is not None:
         return _agent_coordinator
     try:
-        import ai_assistant.core.multi_agent_coordinator as mac_mod
+        import core_ai.core.multi_agent_coordinator as mac_mod
         getter = getattr(mac_mod, "get_multi_agent_coordinator", None)
         if callable(getter):
             _agent_coordinator = getter()
             return _agent_coordinator
 
-        from ai_assistant.agents.registry import AgentRegistry
-        from ai_assistant.agents.loader import AgentLoader
+        from core_ai.agents.registry import AgentRegistry
+        from core_ai.agents.loader import AgentLoader
         registry = AgentRegistry()
         AgentLoader.register_agent_definitions(registry)
         _agent_coordinator = mac_mod.MultiAgentCoordinator(registry)
@@ -82,7 +82,7 @@ def _normalize_app_target(app_name: str) -> str:
     """Normalize Hinglish/Devanagari app names using shared normalizer."""
     text = str(app_name or "").strip()
     try:
-        from ai_assistant.core.local_command_normalizer import normalize_hinglish_devanagari
+        from core_ai.core.local_command_normalizer import normalize_hinglish_devanagari
         text = normalize_hinglish_devanagari(text)
     except Exception:
         pass
@@ -105,7 +105,7 @@ def _get_app_controller():
     global _app_controller
     if _app_controller is None:
         try:
-            from ai_assistant.core.universal_app_controller import get_universal_controller
+            from core_ai.core.universal_app_controller import get_universal_controller
             _app_controller = get_universal_controller()
         except ImportError:
             logger.warning("⚠️ UniversalAppController not available")
@@ -116,7 +116,7 @@ def _get_file_automation():
     global _file_automation
     if _file_automation is None:
         try:
-            from ai_assistant.automation.file_automation import FileAutomation
+            from core_ai.automation.file_automation import FileAutomation
             _file_automation = FileAutomation()
         except ImportError:
             logger.warning("⚠️ FileAutomation not available")
@@ -127,7 +127,7 @@ def _get_system_automation():
     global _system_automation
     if _system_automation is None:
         try:
-            from ai_assistant.automation.system_automation import SystemAutomation
+            from core_ai.automation.system_automation import SystemAutomation
             _system_automation = SystemAutomation()
         except ImportError:
             logger.warning("⚠️ SystemAutomation not available")
@@ -138,7 +138,7 @@ def _get_whatsapp_automation():
     global _whatsapp_automation
     if _whatsapp_automation is None:
         try:
-            from ai_assistant.automation.app_automation import WhatsAppAutomation
+            from core_ai.automation.app_automation import WhatsAppAutomation
             _whatsapp_automation = WhatsAppAutomation()
         except ImportError:
             pass
@@ -149,7 +149,7 @@ def _get_taskbar_detector():
     global _taskbar_detector
     if _taskbar_detector is None:
         try:
-            from ai_assistant.automation.taskbar_detection import TaskbarDetector
+            from core_ai.automation.taskbar_detection import TaskbarDetector
             _taskbar_detector = TaskbarDetector()
         except ImportError:
             pass
@@ -160,7 +160,7 @@ def _get_vlm():
     global _vlm
     if _vlm is None:
         try:
-            from ai_assistant.multimodal import MultiModalAI
+            from core_ai.multimodal import MultiModalAI
             _vlm = MultiModalAI()
         except ImportError:
             pass
@@ -171,7 +171,7 @@ def _get_visual_verifier():
     global _visual_verifier
     if _visual_verifier is None:
         try:
-            from ai_assistant.automation.visual_verification import get_visual_verifier
+            from core_ai.automation.visual_verification import get_visual_verifier
             _visual_verifier = get_visual_verifier()
         except ImportError:
             pass
@@ -454,13 +454,13 @@ class IntentExecutor:
         if not _check_security_permission('is_app_execution_allowed', True):
             return {'success': False, 'intent': 'open_app', 'error': 'Application execution is disabled by Security -> Permissions settings.'}
         import os, re, subprocess
-        from ai_assistant.automation.browser_profiles import (
+        from core_ai.automation.browser_profiles import (
             launch_browser_profile,
             resolve_chrome_profile,
             extract_profile_from_text
         )
-        from ai_assistant.automation.window_manager import bring_window_to_foreground
-        from ai_assistant.automation.app_discovery import app_discovery, smart_open_application
+        from core_ai.automation.window_manager import bring_window_to_foreground
+        from core_ai.automation.app_discovery import app_discovery, smart_open_application
 
         raw_app_name = params.get('app_name') or params.get('target') or params.get('app') or params.get('name')
         if not raw_app_name:
@@ -491,7 +491,7 @@ class IntentExecutor:
                     ok = launch_browser_profile('chrome', profile_query=resolved_dir)
                     if ok:
                         bring_window_to_foreground('chrome')
-                        from ai_assistant.automation.browser_profiles import get_chrome_profiles
+                        from core_ai.automation.browser_profiles import get_chrome_profiles
                         p_info = get_chrome_profiles().get(resolved_dir, {})
                         p_email = p_info.get('email', '')
                         clean_label = re.sub(
@@ -600,7 +600,7 @@ class IntentExecutor:
                     return {'success': True, 'intent': 'close_app', 'result': f"Closed {app_name}"}
 
             # 2. Try AppAutomation graceful close
-            from ai_assistant.automation.app_automation import AppAutomation
+            from core_ai.automation.app_automation import AppAutomation
             auto = AppAutomation()
             success = auto.close_app(app_name)
             if ctx and success:
@@ -614,27 +614,60 @@ class IntentExecutor:
             return {'success': False, 'intent': 'close_app', 'error': str(e)}
     
     def _send_message(self, params: Dict, ctx=None) -> Dict:
-        """Send a message via an app"""
+        """Send a message via an app (WhatsApp, etc.)"""
         app_name = params.get('app_name', ctx.get_var('current_app', 'WhatsApp') if ctx else 'WhatsApp')
-        contact = params.get('contact')
-        message = params.get('message', '')
-        
+        contact = (
+            params.get('contact')
+            or params.get('recipient')
+            or params.get('contact_name')
+            or params.get('to')
+            or params.get('name')
+        )
+        message = (
+            params.get('message')
+            or params.get('text')
+            or params.get('body')
+            or params.get('msg')
+            or ''
+        )
+
         if not contact:
             return {'success': False, 'intent': 'send_message', 'error': 'No contact specified'}
-        
+
+        # Special direct path for WhatsApp
+        if str(app_name).lower() in ('whatsapp', 'whats app', 'whtsp') or params.get('platform') == 'whatsapp':
+            try:
+                from core_ai.integrations.whatsapp import send_whatsapp_message
+                res_str = send_whatsapp_message(contact, message)
+                ok = "✅" in res_str
+                if ctx and ok:
+                    ctx.set_var('selected_contact', contact)
+                    ctx.set_var('last_message', message)
+                    ctx.set_var('last_action', 'sent_message')
+                    ctx.set_var('current_app', 'WhatsApp')
+                return {
+                    'success': ok,
+                    'intent': 'send_message',
+                    'result': res_str,
+                    'message': res_str,
+                }
+            except Exception as e:
+                logger.error(f"WhatsApp direct dispatch error: {e}")
+                return {'success': False, 'intent': 'send_message', 'error': str(e)}
+
         controller = _get_app_controller()
         if not controller:
             return {'success': False, 'intent': 'send_message', 'error': 'App controller not available'}
-        
+
         result = controller.execute_action(app_name, 'send_message', {
             'contact': contact, 'message': message
         })
-        
+
         if ctx and result.get('success'):
             ctx.set_var('selected_contact', contact)
             ctx.set_var('last_message', message)
             ctx.set_var('last_action', 'sent_message')
-        
+
         return {'success': result.get('success', False), 'intent': 'send_message', 'result': result}
     
     def _type_text(self, params: Dict, ctx=None) -> Dict:
@@ -855,7 +888,7 @@ class IntentExecutor:
         """Read and summarize unread emails or open Gmail inbox."""
         import webbrowser
         try:
-            from ai_assistant.integrations.email_handler import read_emails, summarize_email, GmailManager
+            from core_ai.integrations.email_handler import read_emails, summarize_email, GmailManager
             mgr = GmailManager()
             if mgr.is_authenticated():
                 emails = read_emails(max_results=5, unread_only=True)
@@ -902,7 +935,7 @@ class IntentExecutor:
         """Record latest hardware/theme toggle so bare follow-ups ('off कर दो') resolve accurately."""
         if ctx is None:
             try:
-                from ai_assistant.core.conversation_context import get_context_manager
+                from core_ai.core.conversation_context import get_context_manager
                 ctx = get_context_manager()
             except Exception:
                 ctx = None
@@ -1061,7 +1094,7 @@ class IntentExecutor:
         action = str(params.get('action', 'up')).lower().strip()
         level = params.get('level')
         try:
-            from ai_assistant.core.core import (
+            from core_ai.core.core import (
                 get_system_volume,
                 set_system_volume,
                 volume_up,
@@ -1097,7 +1130,7 @@ class IntentExecutor:
     def _battery_status(self, params: Dict, ctx=None) -> Dict:
         """Get system battery status"""
         try:
-            from ai_assistant.core.system import get_battery_status
+            from core_ai.core.system import get_battery_status
             msg = get_battery_status()
             return {'success': not str(msg).startswith('Error'), 'intent': 'battery_status', 'result': msg}
         except Exception:
@@ -1114,7 +1147,7 @@ class IntentExecutor:
             if detector and hasattr(detector, 'format_taskbar_open_apps'):
                 msg = detector.format_taskbar_open_apps()
                 return {'success': True, 'intent': 'list_running_apps', 'result': msg}
-            from ai_assistant.core.system import get_running_processes
+            from core_ai.core.system import get_running_processes
             limit = int(params.get('limit', 12) or 12)
             msg = get_running_processes(limit=limit)
             return {'success': not str(msg).startswith('Error'), 'intent': 'list_running_apps', 'result': msg}
@@ -1166,7 +1199,7 @@ class IntentExecutor:
         }
         try:
             page = page_map.get(setting, setting) if setting else ''
-            from ai_assistant.core.core import open_settings_page
+            from core_ai.core.core import open_settings_page
             msg = open_settings_page(page)
             success = not str(msg).startswith(('❌', 'Error'))
             res = {'success': success, 'intent': 'open_settings', 'result': msg}
@@ -1185,7 +1218,7 @@ class IntentExecutor:
         if not query:
             return {'success': False, 'intent': 'youtube_search', 'error': 'No search query provided'}
         try:
-            from ai_assistant.core.core import search_youtube
+            from core_ai.core.core import search_youtube
             msg = search_youtube(query)
             if ctx:
                 ctx.set_var('last_action', 'youtube_search')
@@ -1213,7 +1246,7 @@ class IntentExecutor:
             return {'success': False, 'intent': 'youtube_history', 'error': str(e)}
 
     def _search_web(self, params: Dict, ctx=None) -> Dict:
-        """Search Google/web in the browser"""
+        """Search Google/web: opens browser for explicit browser requests, or grounds silently for factual questions."""
         if not _check_security_permission('is_web_browsing_allowed', True):
             return {'success': False, 'intent': 'search_web', 'error': 'Web browsing is disabled by Security -> Permissions settings.'}
         query = (params.get('query') or params.get('target') or '').strip()
@@ -1224,12 +1257,34 @@ class IntentExecutor:
         if not query:
             return {'success': False, 'intent': 'search_web', 'error': 'No search query provided'}
         try:
-            from ai_assistant.core.core import search_google
+            from core_ai.integrations.web_intelligence import get_web_intelligence, WebQueryMode
+            web_intel = get_web_intelligence()
+            mode, _ = web_intel.classify(query)
+
+            # If background grounding query (e.g. gold price, weather, sports score), search silently without popping browser
+            if mode == WebQueryMode.BACKGROUND_GROUNDING:
+                results = web_intel.search(query, num_results=3)
+                if results:
+                    summary_lines = [f"{r.title}: {r.snippet}" for r in results]
+                    res_msg = " | ".join(summary_lines)
+                    if ctx:
+                        ctx.set_var('last_action', 'search_web')
+                        ctx.set_var('last_query', query)
+                    return {
+                        'success': True,
+                        'intent': 'search_web',
+                        'result': res_msg,
+                        'grounding_mode': 'background',
+                        'results': [r.to_dict() for r in results],
+                    }
+
+            # Default / explicit browser action: open web browser
+            from core_ai.core.core import search_google
             msg = search_google(query)
             if ctx:
                 ctx.set_var('last_action', 'search_web')
                 ctx.set_var('last_query', query)
-            return {'success': not str(msg).startswith(('❌', 'Error')), 'intent': 'search_web', 'result': msg}
+            return {'success': not str(msg).startswith(('❌', 'Error')), 'intent': 'search_web', 'result': msg, 'grounding_mode': 'browser'}
         except Exception as e:
             return {'success': False, 'intent': 'search_web', 'error': str(e)}
 
@@ -1248,7 +1303,7 @@ class IntentExecutor:
         }
         mapped = action_map.get(action, 'play_pause')
         try:
-            from ai_assistant.integrations.music import control_media_player
+            from core_ai.integrations.music import control_media_player
             msg = control_media_player(mapped)
             return {'success': not str(msg).startswith('❌'), 'intent': 'media_control', 'result': msg}
         except Exception as e:
@@ -1265,7 +1320,7 @@ class IntentExecutor:
         q_lower = query.lower()
 
         try:
-            from ai_assistant.integrations.music import (
+            from core_ai.integrations.music import (
                 play_youtube_music,
                 search_and_play_spotify,
                 control_media_player,
@@ -1340,7 +1395,7 @@ class IntentExecutor:
                 if not msg.startswith(('❌', '🎵 YouTube Music')):
                     return {'success': True, 'intent': 'play_media', 'result': msg}
 
-            from ai_assistant.core.core import search_youtube
+            from core_ai.core.core import search_youtube
             yt_msg = search_youtube(cleaned_query)
             return {'success': not str(yt_msg).startswith(('❌', 'Error')), 'intent': 'play_media', 'result': yt_msg}
         except Exception as e:
@@ -1613,7 +1668,7 @@ class IntentExecutor:
         if not query:
             return {'success': False, 'intent': 'download_media', 'error': 'No query or URL provided', 'no_retry': True}
         try:
-            from ai_assistant.integrations.youtube_ops import YouTubeDownloader
+            from core_ai.integrations.youtube_ops import YouTubeDownloader
             dl = YouTubeDownloader()
             if hasattr(dl, 'download_audio') and 'audio' in str(params.get('text', '')).lower():
                 res = dl.download_audio(query)
@@ -1649,7 +1704,7 @@ class IntentExecutor:
         capability = params.get('capability')
         if intent and intent.startswith('agent_') and (not preferred_agent_id or not capability):
             try:
-                from ai_assistant.ai.intent_router import AGENT_INTENT_METADATA
+                from core_ai.ai.intent_router import AGENT_INTENT_METADATA
                 if intent in AGENT_INTENT_METADATA:
                     meta_aid, meta_cap = AGENT_INTENT_METADATA[intent]
                     preferred_agent_id = preferred_agent_id or meta_aid
@@ -1690,7 +1745,7 @@ class IntentExecutor:
                     )
                 )
             else:
-                from ai_assistant.agents.models import Task
+                from core_ai.agents.models import Task
                 task = Task(
                     description=str(description),
                     params=dict(params),

@@ -12,7 +12,7 @@ class HealthMonitor:
         self.running = False
         self.thread = None
         self._last_backup = time.time() - (8 * 86400) # Mock: 8 days ago
-        from ai_assistant.core.situation_awareness import SituationAwareness
+        from core_ai.core.situation_awareness import SituationAwareness
         self.situation_awareness = SituationAwareness()
         
     def start(self):

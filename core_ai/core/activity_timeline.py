@@ -2,7 +2,7 @@ import sqlite3
 import logging
 import json
 from datetime import datetime
-from ai_assistant.core.database_config import get_db_path_str
+from core_ai.core.database_config import get_db_path_str
 
 logger = logging.getLogger(__name__)
 

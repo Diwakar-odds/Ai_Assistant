@@ -2,8 +2,8 @@ import threading
 import time
 import logging
 from datetime import datetime
-from ai_assistant.ai.usage_pattern_analyzer import UsagePatternAnalyzer
-from ai_assistant.core.context_optimizer import ContextOptimizer
+from core_ai.ai.usage_pattern_analyzer import UsagePatternAnalyzer
+from core_ai.core.context_optimizer import ContextOptimizer
 
 logger = logging.getLogger(__name__)
 
@@ -17,19 +17,19 @@ class ProactiveAnticipator:
         self.last_check_hour = -1
         
         try:
-            from ai_assistant.core.project_manager import ProjectManager
+            from core_ai.core.project_manager import ProjectManager
             self.project_manager = ProjectManager()
         except ImportError:
             self.project_manager = None
             
         try:
-            from ai_assistant.core.commitment_tracker import CommitmentTracker
+            from core_ai.core.commitment_tracker import CommitmentTracker
             self.commitment_tracker = CommitmentTracker()
         except ImportError:
             self.commitment_tracker = None
             
         try:
-            from ai_assistant.ai.conversational_ai import get_conversational_ai
+            from core_ai.ai.conversational_ai import get_conversational_ai
             self.conversational_ai = get_conversational_ai()
         except ImportError:
             self.conversational_ai = None
@@ -106,7 +106,7 @@ class ProactiveAnticipator:
                 self.chat_interface.add_message("assistant", proactive_msg)
             
             try:
-                from ai_assistant.backend.routes.common import get_socketio
+                from core_ai.backend.routes.common import get_socketio
                 socketio = get_socketio()
                 if socketio:
                     socketio.emit('chat_response', {'data': proactive_msg})
@@ -116,7 +116,7 @@ class ProactiveAnticipator:
             # Optionally trigger the brain for routine tasks automatically
             if "prepare your usual workflow" in proactive_msg or "daily briefing" in proactive_msg:
                 try:
-                    from ai_assistant.core.command_brain import get_executive_brain
+                    from core_ai.core.command_brain import get_executive_brain
                     brain = get_executive_brain()
                     if "workflow" in proactive_msg:
                         brain.receive_command("start morning routine", source="api")

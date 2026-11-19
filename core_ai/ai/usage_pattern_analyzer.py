@@ -40,7 +40,7 @@ class UsagePatternAnalyzer:
     
     def __init__(self, data_dir: str = None):
         """Initialize analyzer"""
-        from ai_assistant.core.database_config import get_db_path
+        from core_ai.core.database_config import get_db_path
         self.db_path = get_db_path('conversation_ai')
         self.feedback_db_path = get_db_path('feedback_learning')
         

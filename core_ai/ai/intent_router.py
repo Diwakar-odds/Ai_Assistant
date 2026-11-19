@@ -1,6 +1,6 @@
 # Setup centralized logging
 try:
-    from ai_assistant.utils.logging_config import get_logger
+    from core_ai.utils.logging_config import get_logger
     logger = get_logger(__name__, log_category="app")
 except ImportError:
     import logging
@@ -25,8 +25,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import numpy as np
 
-from ai_assistant.core.local_command_normalizer import normalize_hinglish_devanagari
-from ai_assistant.ai.shared_embedder import encode_text
+from core_ai.core.local_command_normalizer import normalize_hinglish_devanagari
+from core_ai.ai.shared_embedder import encode_text
 
 
 # =============================================================================
@@ -633,16 +633,18 @@ class IntentRouter:
                 "message": {"type": "string", "description": "Content of the message to send", "required": True}
             },
             tier1_patterns=[
+                r'^\s*(?:open\s+(?:whatsapp|whtsp|whtsap)\s+(?:and|ans|then|to|\&|\s)\s*)?(?:send\s+(?:a\s+)?message\s+|msg\s+|text\s+|send\s+)(?P<message>.+?)\s+to\s+(?P<contact>[^\s:,]+(?:\s+[^\s:,]+)?)(?:\s+(?:on|via)\s+whatsapp)?\s*$',
+                r'^\s*(?:open\s+(?:whatsapp|whtsp|whtsap)\s+(?:and|ans|then|to|\&|\s)\s*)?(?:send\s+(?:a\s+)?message\s+to|msg\s+to|text\s+to|send\s+to|send)\s+(?P<contact>[^\s:,]+(?:\s+[^\s:,]+)?)\s+(?:saying|that|with|:|\s)\s*(?P<message>.+)$',
                 r'^\s*(?:send\s+(?:a\s+)?message\s+to\s+(?P<contact>[^\s:,]+(?:\s+[^\s:,]+)?)\s+(?:saying|that|:)\s*(?P<message>.+))$',
                 r'^\s*(?:msg|message)\s+(?P<contact>[^\s:,]+)\s+(?:saying|that|:)\s*(?P<message>.+)$',
-                r'^\s*(?:send\s+(?:a\s+)?message\s+|msg\s+|text\s+|send\s+)(?P<message>.+?)\s+to\s+(?P<contact>[^\s:,]+(?:\s+[^\s:,]+)?)(?:\s+(?:on|via)\s+whatsapp)?\s*$',
                 r'^\s*(?:send\s+(?:a\s+)?message\s+to|text\s+to|whatsapp\s+to)\s+(?P<contact>[^\s:,]+(?:\s+[^\s:,]+)?)(?:\s+on\s+whatsapp|\s+via\s+whatsapp)?(?:\s+(?:saying|that|with|:)\s*(?P<message>.*))?$',
                 r'^\s*(?:text|whatsapp)\s+(?!kholo\b|khol\b|kholna\b|open\b|band\b|close\b|quit\b|exit\b|launch\b|start\b|chalu\b)(?P<contact>[^\s:,]+(?:\s+[^\s:,]+)?)(?:\s+on\s+whatsapp|\s+via\s+whatsapp)?\s+(?:saying|that|with|:)\s*(?P<message>.*)$',
-                r'^\s*(?:(?:whatsapp|whtsp|whtsap)\s+(?:pe|par|pr|me|mein)\s+)?(?P<contact>[^\s:,]+(?:\s+[^\s:,]+)?)\s+ko\s+(?P<message>.+?)\s+(?:likh\s+(?:ke|kar|kr)\s+)?(?:bhejo|bhej\s+do|send\s+karo|send\s+kar\s+do)(?:\s+(?:whatsapp|whtsp|whtsap)\s+(?:pe|par|pr|me|mein))?\s*$',
-                r'^\s*(?:(?:whatsapp|whtsp|whtsap)\s+(?:pe|par|pr|me|mein)\s+)?(?P<contact>[^\s:,]+(?:\s+[^\s:,]+)?)\s+ko\s+(?:message|msg|text)\s*(?:bhejo|karo|kar\s+do|भेजो|करो)?(?:\s+(?:ki|कि|saying|that|:)\s*(?P<message>.*))?$',
-                r'^\s*(?P<contact>[^\s:,]+)\s+ko\s+(?:bol\s+do|bat\s+karo|बोल\s+दो)\s*(?:ki|कि|that)?\s*(?P<message>.*)$',
+                r'^\s*(?:(?:whatsapp|whtsp|whtsap)\s+(?:kholo|khol\s+do|open\s+karo|open)\s+(?:aur|fir|and|then|ans)\s+)?(?P<contact>[^\s:,]+(?:\s+[^\s:,]+)?)\s+ko\s+(?:(?:whatsapp|whtsp|whtsap)\s+(?:pe|par|pr|me|mein)\s+)?(?P<message>.+?)\s+(?:likh\s+(?:ke|kar|kr)\s+)?(?:bhejo|bhej\s+do|bhejwao|bhejwa\s+do|send\s+karo|send\s+kar\s+do|send)(?:\s+(?:whatsapp|whtsp|whtsap)\s+(?:pe|par|pr|me|mein))?\s*$',
+                r'^\s*(?:(?:whatsapp|whtsp|whtsap)\s+(?:kholo|khol\s+do|open\s+karo|open)\s+(?:aur|fir|and|then|ans)\s+)?(?P<contact>[^\s:,]+(?:\s+[^\s:,]+)?)\s+ko\s+(?:(?:whatsapp|whtsp|whtsap)\s+(?:pe|par|pr|me|mein)\s+)?(?:message|msg|text)\s*(?:bhejo|karo|kar\s+do|bhejwao|भेजो|करो)\s*(?:ki|कि|saying|that|with|:|\s)?\s*(?P<message>.*)$',
+                r'^\s*(?:(?:whatsapp|whtsp|whtsap)\s+(?:pe|par|pr|me|mein)\s+)?(?P<contact>[^\s:,]+(?:\s+[^\s:,]+)?)\s+ko\s+(?:bol\s+do|bat\s+karo|बोल\s+दो)\s*(?:ki|कि|that)?\s*(?P<message>.*)$',
                 r'^\s*(?P<contact>[^\s:,]+)\s+message\s+karo\s+(?:saying|ki|:)\s*(?P<message>.+)$',
-                r'^\s*(?P<message>.+?)\s+(?:likh\s+(?:ke|kar|kr)\s+)?(?:bhejo|bhej\s+do|send\s+karo|send\s+kar\s+do)(?:\s+(?:whatsapp|whtsp|whtsap)\s+(?:pe|par|pr|me|mein))?\s*$',
+                r'^\s*(?:(?:whatsapp|whtsp|whtsap)\s+(?:pe|par|pr|me|mein)\s+)?(?P<contact>[^\s:,]+(?:\s+[^\s:,]+)?)\s+(?:ka|ki|ke)\s+chat\s+(?:kholo|khol\s+do|open\s+karo|open)(?:\s+(?:whatsapp|whtsp|whtsap)\s+(?:pe|par|pr|me|mein))?\s*$',
+                r'^\s*(?P<message>.+?)\s+(?:likh\s+(?:ke|kar|kr)\s+)?(?:bhejo|bhej\s+do|bhejwao|bhejwa\s+do|send\s+karo|send\s+kar\s+do)(?:\s+(?:whatsapp|whtsp|whtsap)\s+(?:pe|par|pr|me|mein))?\s*$',
             ],
             examples=["send message to John saying hello", "msg Jane: how are you", "John ko message karo ki namaste", "मॉम को message करो"]
         ))
@@ -950,8 +952,8 @@ class IntentRouter:
                 "target": {"type": "string", "description": "Name of the app, website, or program to open", "required": True}
             },
             tier1_patterns=[
-                r'^\s*(?:open|launch|start|run|खोलो|खोल\s+दो|खोल\s+दे|खोलिये|खोलिए|खोल|ओपन\s+करो|ओपन\s+कर\s+दो|ओपन|प्वलो|पोलो)\s+(?!writing\b|working\b|analyzing\b|researching\b|creating\b|generating\b|typing\b|a\s+query\b|sql\b)(?!(?:.*?)\b(?:and\s+then|aur\s+phir|and\s+(?:search|play|type|write|open|close|send|check|read)|aur\s+(?:chalao|likho|khojo|bhejo))\b)(?P<target>.+?)\s*$',
-                r'^\s*(?:khol|kholo|kholna|chalo|chalu\s+kar|chalu\s+karo)\s+(?!(?:.*?)\b(?:and\s+then|aur\s+phir|aur\s+fir|and\s+(?:search|play|type|write|open|close|send|check|read))\b)(?P<target>.+?)\s*$',
+                r'^\s*(?:open|launch|start|run|खोलो|खोल\s+दो|खोल\s+दे|खोलिये|खोलिए|खोल|ओपन\s+करो|ओपन\s+कर\s+दो|ओपन|प्वलो|पोलो)\s+(?!writing\b|working\b|analyzing\b|researching\b|creating\b|generating\b|typing\b|a\s+query\b|sql\b)(?!(?:.*?)\b(?:and\s+then|aur\s+phir|(?:and|ans|aur|then|to)\s+(?:search|play|type|write|open|close|send|bhejo|check|read)|aur\s+(?:chalao|likho|khojo|bhejo))\b)(?P<target>.+?)\s*$',
+                r'^\s*(?:khol|kholo|kholna|chalo|chalu\s+kar|chalu\s+karo)\s+(?!(?:.*?)\b(?:and\s+then|aur\s+phir|aur\s+fir|(?:and|ans|aur|then|to)\s+(?:search|play|type|write|open|close|send|bhejo|check|read))\b)(?P<target>.+?)\s*$',
                 r'^\s*(?!(?:which|what|tell\s+me)\b)(?P<target>.+?)\s+(?:khol\s+do|khol\s+de|kholo|kholna|khol|open\s+karo|open\s+kar\s+do|open|launch\s+karo|launch|start\s+karo|start|chalu\s+karo|chalu\s+kar|खोलो|खोल\s+दो|खोल\s+दे|खोलिये|खोलिए|खोलना|खोल|ओपन\s+करो|ओपन\s+कर\s+दो|ओपन|चालू\s+करो|चालू\s+कर\s+दो|प्वलो|पोलो|कलो)\s*$',
             ],
             examples=["open chrome", "open youtube music", "youtube music khol do", "chrome khol do", "start notepad"]
@@ -1032,7 +1034,7 @@ class IntentRouter:
         if re.match(r'^\s*(?:how\s+(?:to|do\s+i|can\s+i)|what\s+is\s+(?:a|an)\s+|explain\s+|define\s+)\b', message, re.IGNORECASE):
             return None
 
-        from ai_assistant.core.local_command_normalizer import normalize_hinglish_devanagari
+        from core_ai.core.local_command_normalizer import normalize_hinglish_devanagari
 
         candidates: List[str] = []
         raw_clean = self._clean_for_tier1(message)
@@ -1236,11 +1238,11 @@ class IntentRouter:
         """Tier 2: Use local SentenceTransformers ML to determine intent."""
         try:
             if self._local_classifier is None:
-                from ai_assistant.ai.intent_classification import IntentClassifier
-                from ai_assistant.core.database_config import get_db_path
+                from core_ai.ai.intent_classification import IntentClassifier
+                from core_ai.core.database_config import get_db_path
                 self._local_classifier = IntentClassifier(db_path=str(get_db_path("intent_classifier")))
 
-            from ai_assistant.core.local_command_normalizer import normalize_hinglish_devanagari
+            from core_ai.core.local_command_normalizer import normalize_hinglish_devanagari
             query_for_ml = normalize_hinglish_devanagari(message) or message
 
             start_time = time.time()
@@ -1344,7 +1346,7 @@ class IntentRouter:
             active_prov = self._get_active_provider_name()
             if active_prov and active_prov not in ("gemini", "offline"):
                 try:
-                    from ai_assistant.ai.llm_provider import UnifiedChatInterface
+                    from core_ai.ai.llm_provider import UnifiedChatInterface
                     provider_obj = UnifiedChatInterface(provider=active_prov, use_fallback=False)
                 except Exception:
                     provider_obj = None
@@ -1425,8 +1427,13 @@ class IntentRouter:
             self._tls.provider_override = prev_prov
             self._tls.offline_mode = prev_off
 
+    @property
+    def vector_matcher(self) -> "IntentVectorMatcher":
+        """Return the precomputed Tier 1.5 vector matcher instance."""
+        return IntentVectorMatcher()
+
     def _route_inner(self, message: str) -> Optional[IntentResult]:
-        from ai_assistant.core.local_command_normalizer import normalize_hinglish_devanagari
+        from core_ai.core.local_command_normalizer import normalize_hinglish_devanagari
         msg_clean = message.strip().lower()
         norm_clean = normalize_hinglish_devanagari(message).strip().lower()
 
@@ -1520,6 +1527,10 @@ class VectorMatchResult(NamedTuple):
     matched_phrase: str
     margin: float
     parameters: Dict[str, Any]
+
+    @property
+    def similarity(self) -> float:
+        return self.confidence
 
 
 class IntentVectorMatcher:
@@ -1720,10 +1731,36 @@ class IntentVectorMatcher:
 
         elif intent_name == "send_message":
             params["platform"] = "whatsapp"
-            m = re.search(r'^(?P<contact>[a-zA-Z\u0900-\u097F]+)\s+ko\s+(?P<message>.+?)\s+(?:whatsapp|whtsp|msg|bhejo)', q)
-            if m:
-                params["contact"] = m.group("contact").strip()
-                params["message"] = m.group("message").strip()
+            if not params.get("contact"):
+                params["contact"] = (
+                    params.get("recipient")
+                    or params.get("contact_name")
+                    or params.get("to")
+                    or params.get("name")
+                )
+            if not params.get("message"):
+                params["message"] = (
+                    params.get("text")
+                    or params.get("body")
+                    or params.get("msg")
+                    or ""
+                )
+
+            # Fallback regex extraction if contact or message still missing
+            if not params.get("contact") or not params.get("message"):
+                m = re.search(r'^(?P<contact>[a-zA-Z\u0900-\u097F]+)\s+ko\s+(?:(?:whatsapp|whtsp|whtsap)\s+(?:pe|par|pr|me|mein)\s+)?(?P<message>.+?)\s+(?:whatsapp|whtsp|msg|bhejo|bhejwao|send)', q)
+                if m:
+                    if not params.get("contact"):
+                        params["contact"] = m.group("contact").strip()
+                    if not params.get("message"):
+                        params["message"] = m.group("message").strip()
+
+            # Clean trailing/leading "whatsapp pe / par" from message if accidentally captured
+            if params.get("message"):
+                msg = params["message"]
+                msg = re.sub(r'^(?:whatsapp|whtsp|whtsap)\s+(?:pe|par|pr|me|mein)\s+', '', msg, flags=re.I)
+                msg = re.sub(r'\s+(?:whatsapp|whtsp|whtsap)\s+(?:pe|par|pr|me|mein)$', '', msg, flags=re.I)
+                params["message"] = msg.strip()
 
         elif intent_name == "search_web":
             clean = re.sub(r'^(?:search|google|search\s+for|dhoondo|check|pata\s+karo)\s+', '', q)

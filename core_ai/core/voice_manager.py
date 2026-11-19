@@ -57,7 +57,7 @@ class VoiceManager:
                 if pyttsx3:
                     self._tts_engine = pyttsx3.init()
                     try:
-                        from ai_assistant.voice.tts_output_service import configure_sapi5_voice
+                        from core_ai.voice.tts_output_service import configure_sapi5_voice
                         configure_sapi5_voice(self._tts_engine)
                     except Exception:
                         pass
@@ -73,7 +73,7 @@ class VoiceManager:
         """Lazy load wake word detector"""
         if self._wake_word_detector is None and self.enabled:
             try:
-                from ai_assistant.voice.wake_word_detector import WakeWordDetector
+                from core_ai.voice.wake_word_detector import WakeWordDetector
                 self._wake_word_detector = WakeWordDetector()
                 logger.info("✅ Wake word detector initialized")
             except Exception as e:
@@ -98,14 +98,14 @@ class VoiceManager:
             return False
 
         try:
-            from ai_assistant.voice.tts_output_service import get_tts_service
+            from core_ai.voice.tts_output_service import get_tts_service
             if get_tts_service().speak(text, source="voice_manager"):
                 return True
         except Exception as e:
             logger.debug(f"TTSOutputService unavailable in VoiceManager, using legacy fallback: {e}")
 
         try:
-            from ai_assistant.voice.text_cleaner import clean_text_for_tts
+            from core_ai.voice.text_cleaner import clean_text_for_tts
             text = clean_text_for_tts(text)
         except Exception:
             pass
@@ -117,7 +117,7 @@ class VoiceManager:
 
         try:
             try:
-                from ai_assistant.voice.neural_voice_engine import get_neural_voice_engine
+                from core_ai.voice.neural_voice_engine import get_neural_voice_engine
                 nve = get_neural_voice_engine()
                 wav_file = nve.speak(text)
                 if wav_file and os.path.exists(wav_file):
@@ -142,7 +142,7 @@ class VoiceManager:
     def stop_speaking(self):
         """Stop any ongoing speech playback"""
         try:
-            from ai_assistant.voice.tts_output_service import get_tts_service
+            from core_ai.voice.tts_output_service import get_tts_service
             get_tts_service().stop(reason="voice_manager_stop")
         except Exception:
             pass

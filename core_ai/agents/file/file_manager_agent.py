@@ -47,7 +47,7 @@ class FileManagerAgent(BaseAgent):
     def _get_file_automation(self):
         if self._file_auto is None:
             try:
-                from ai_assistant.automation.file_automation import FileAutomation
+                from core_ai.automation.file_automation import FileAutomation
 
                 self._file_auto = FileAutomation()
             except Exception:

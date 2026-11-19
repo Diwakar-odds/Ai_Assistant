@@ -13,9 +13,9 @@ import threading
 from typing import List, Dict, Any, Optional, Callable
 from dataclasses import dataclass, field
 
-from ai_assistant.ai.multi_step_parser import TaskStep, MultiStepCommandParser
-from ai_assistant.core.conversation_context import ContextManager, ExecutionState, get_context_manager
-from ai_assistant.core.universal_app_controller import UniversalAppController, get_universal_controller
+from core_ai.ai.multi_step_parser import TaskStep, MultiStepCommandParser
+from core_ai.core.conversation_context import ContextManager, ExecutionState, get_context_manager
+from core_ai.core.universal_app_controller import UniversalAppController, get_universal_controller
 
 logger = logging.getLogger(__name__)
 
@@ -312,8 +312,8 @@ class TaskChainOrchestrator:
             # If the parser couldn't decompose it or produced an unknown intent, query Swarm Planner!
             if not steps or (len(steps) == 1 and steps[0].intent in ('unknown', None)):
                 try:
-                    from ai_assistant.core.multi_agent_coordinator import get_multi_agent_coordinator
-                    from ai_assistant.core.intent_executor import _run_async_coro
+                    from core_ai.core.multi_agent_coordinator import get_multi_agent_coordinator
+                    from core_ai.core.intent_executor import _run_async_coro
                     coord = get_multi_agent_coordinator()
                     if coord is not None:
                         swarm_steps = _run_async_coro(coord.plan_command(command))
@@ -343,6 +343,7 @@ class TaskChainOrchestrator:
                 except Exception as swarm_exc:
                     logger.debug(f"SwarmPlanner fallback check in TaskChainOrchestrator: {swarm_exc}")
 
+            self._current_command = command
             result = self.execute_chain(
                 steps,
                 chain_id=chain_id,
@@ -443,7 +444,7 @@ class TaskChainOrchestrator:
             raw_path = params.get('folder') or params.get('path') or params.get('file_name')
             if raw_path:
                 try:
-                    from ai_assistant.automation.file_automation import FileAutomation
+                    from core_ai.automation.file_automation import FileAutomation
                     fa = FileAutomation()
                     resolved = fa.resolve_folder_path(raw_path)
                     if resolved:
@@ -540,18 +541,29 @@ class TaskChainOrchestrator:
         waves = self._build_execution_waves(steps)
 
         def _emit(event_type: str, **payload):
+            event_payload = {
+                "event_type": event_type,
+                "chain_id": chain_id,
+                "command": getattr(self, "_current_command", "") or (steps[0].original_text if steps else ""),
+                "completed_actions": steps_completed,
+                "total_actions": len(steps),
+                "progress_percentage": round((steps_completed / len(steps)) * 100.0, 2) if steps else 100.0,
+                **payload,
+            }
             if progress_callback:
                 try:
-                    progress_callback({
-                        "event_type": event_type,
-                        "chain_id": chain_id,
-                        "completed_actions": steps_completed,
-                        "total_actions": len(steps),
-                        "progress_percentage": round((steps_completed / len(steps)) * 100.0, 2) if steps else 100.0,
-                        **payload,
-                    })
+                    progress_callback(event_payload)
                 except Exception as cb_err:
                     logger.debug(f"Progress callback error: {cb_err}")
+
+            try:
+                from core_ai.core.jarvis_persona import get_lifecycle_coordinator
+                sio = get_lifecycle_coordinator()._get_socketio()
+                if sio is not None:
+                    sio.emit(event_type, event_payload)
+                    sio.emit("chain_progress", event_payload)
+            except Exception as sio_err:
+                logger.debug(f"TaskChainOrchestrator socket emit note: {sio_err}")
 
         _emit("chain.started", status="executing")
 
@@ -790,7 +802,7 @@ class TaskChainOrchestrator:
             }
 
         try:
-            from ai_assistant.core.intent_executor import get_intent_executor
+            from core_ai.core.intent_executor import get_intent_executor
             executor = get_intent_executor()
             params = dict(step.params or {})
             if getattr(step, 'execution_target', None) == 'agent':
@@ -824,7 +836,7 @@ class TaskChainOrchestrator:
     def _verify_step(self, step, result) -> bool:
         """Verify that a step succeeded using 3-layer verification in IntentExecutor."""
         try:
-            from ai_assistant.core.intent_executor import get_intent_executor
+            from core_ai.core.intent_executor import get_intent_executor
             executor = get_intent_executor()
             return executor.verify(step.intent, result, step.params)
         except ImportError:
@@ -1048,7 +1060,7 @@ class ChainRecoveryManager:
 
         if intent in ("open_folder", "find_file", "file_operation", "browse_folder"):
             try:
-                from ai_assistant.automation.file_automation import FileAutomation
+                from core_ai.automation.file_automation import FileAutomation
                 fa = FileAutomation()
 
                 raw_query = params.get("folder") or params.get("path") or params.get("file_name") or orig_text
@@ -1141,7 +1153,7 @@ class ChainRecoveryManager:
 
         else:
             try:
-                from ai_assistant.core.intent_executor import get_intent_executor
+                from core_ai.core.intent_executor import get_intent_executor
                 executor = get_intent_executor()
                 exec_res = executor.execute(intent, params)
                 return {

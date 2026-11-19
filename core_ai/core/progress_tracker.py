@@ -12,7 +12,7 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime
 from pathlib import Path
 
-from ai_assistant.core.action_chain_models import ProgressReport, ChainStatus
+from core_ai.core.action_chain_models import ProgressReport, ChainStatus
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ def _resolve_default_db_path() -> str:
         return str((DATA_DIR / "core" / "chain_history.db").resolve())
     except Exception:
         try:
-            from ai_assistant.core.database_config import DATA_DIR
+            from core_ai.core.database_config import DATA_DIR
             return str((DATA_DIR / "core" / "chain_history.db").resolve())
         except Exception:
             return str((Path(__file__).resolve().parent.parent.parent / "data" / "core" / "chain_history.db").resolve())

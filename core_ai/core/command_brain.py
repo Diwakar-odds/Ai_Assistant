@@ -17,7 +17,7 @@ import re
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 
-from ai_assistant.core.command_models import (
+from core_ai.core.command_models import (
     TimestampedCommand, CommandClassification, CommandSource,
     CommandPriority, BrainState, ManagedChain, BrainResponse,
     EXECUTIVE_STOP_KEYWORDS, EXECUTIVE_PAUSE_KEYWORDS,
@@ -76,7 +76,7 @@ class ExecutiveBrain:
         logger.info("🧠 Executive Brain initialized")
         # Auto-start global emergency stop hotkey listener
         try:
-            from ai_assistant.core.emergency_stop import start_emergency_stop_listener
+            from core_ai.core.emergency_stop import start_emergency_stop_listener
             start_emergency_stop_listener()
         except Exception as _es_err:
             logger.debug(f"Could not auto-start emergency stop listener: {_es_err}")
@@ -93,7 +93,7 @@ class ExecutiveBrain:
         """Lazy-load ChainOfActionsManager"""
         if self._chain_manager is None:
             try:
-                from ai_assistant.core.chain_of_actions_manager import ChainOfActionsManager
+                from core_ai.core.chain_of_actions_manager import ChainOfActionsManager
                 self._chain_manager = ChainOfActionsManager()
             except ImportError:
                 logger.error("ChainOfActionsManager not available")
@@ -103,7 +103,7 @@ class ExecutiveBrain:
         """Lazy-load ContextManager"""
         if self._context_manager is None:
             try:
-                from ai_assistant.core.conversation_context import get_context_manager
+                from core_ai.core.conversation_context import get_context_manager
                 self._context_manager = get_context_manager()
             except ImportError:
                 logger.error("ContextManager not available")
@@ -141,7 +141,7 @@ class ExecutiveBrain:
 
         if source in ('voice', 'companion', 'whisper', 'webui_voice'):
             try:
-                from ai_assistant.core.speech_text_crisper import crisp_speech_transcript
+                from core_ai.core.speech_text_crisper import crisp_speech_transcript
                 crisped_cmd = crisp_speech_transcript(command)
                 if crisped_cmd:
                     command = crisped_cmd
@@ -164,7 +164,7 @@ class ExecutiveBrain:
         cmd_strip = command.strip().lower()
         # Check Pending Task Chain Recovery (Zero LLM calls, deterministic recovery)
         try:
-            from ai_assistant.core.task_chain_orchestrator import get_chain_recovery_manager
+            from core_ai.core.task_chain_orchestrator import get_chain_recovery_manager
             recovery_mgr = get_chain_recovery_manager()
             if recovery_mgr.has_pending_recovery():
                 if recovery_mgr.is_affirmative(command):
@@ -225,7 +225,7 @@ class ExecutiveBrain:
 
         # Fast Voice / Mode Control interception (Zero LLM calls)
         try:
-            from ai_assistant.core.local_command_normalizer import (
+            from core_ai.core.local_command_normalizer import (
                 parse_voice_control_command,
                 execute_voice_control_command,
             )
@@ -246,7 +246,7 @@ class ExecutiveBrain:
             commitment_keywords = ["remind", "promise", "deadline", "by tomorrow", "schedule", "task", "meeting", "submit", "deliver", "kal", "parso", "yaad", "bhul mat"]
             if any(kw in cmd_text.lower() for kw in commitment_keywords):
                 try:
-                    from ai_assistant.core.commitment_tracker import CommitmentTracker
+                    from core_ai.core.commitment_tracker import CommitmentTracker
                     tracker = CommitmentTracker()
                     tracker.extract_and_store(cmd_text)
                 except Exception as e:
@@ -259,7 +259,7 @@ class ExecutiveBrain:
         # Bare contextual follow-up resolution (e.g., "off कर दो" right after "Bluetooth on कर दो")
         if not self._active_chains:
             try:
-                from ai_assistant.core.local_command_normalizer import resolve_contextual_toggle_command
+                from core_ai.core.local_command_normalizer import resolve_contextual_toggle_command
                 resolved_toggle = resolve_contextual_toggle_command(command, self._get_context_manager())
                 if resolved_toggle:
                     t_intent, t_params = resolved_toggle
@@ -316,8 +316,8 @@ class ExecutiveBrain:
         """
         Classify a command using the unified IntentRouter.
         """
-        from ai_assistant.ai.intent_router import IntentRouter
-        from ai_assistant.core.local_command_normalizer import (
+        from core_ai.ai.intent_router import IntentRouter
+        from core_ai.core.local_command_normalizer import (
             word_boundary_contains,
             contains_any_sequential_keyword,
         )
@@ -430,21 +430,21 @@ class ExecutiveBrain:
         
         # 1. Halt TaskChainOrchestrator immediately
         try:
-            from ai_assistant.core.task_chain_orchestrator import get_orchestrator
+            from core_ai.core.task_chain_orchestrator import get_orchestrator
             get_orchestrator().emergency_stop(reason=reason or "Executive Stop triggered")
         except Exception as orch_e:
             logger.warning(f"Orchestrator emergency stop warning: {orch_e}")
 
         # 2. Forcibly release OS inputs (mouse and modifier keys)
         try:
-            from ai_assistant.core.emergency_stop import release_system_inputs
+            from core_ai.core.emergency_stop import release_system_inputs
             release_system_inputs()
         except Exception:
             pass
 
         # 3. Clear context manager state & pending recovery
         try:
-            from ai_assistant.core.task_chain_orchestrator import get_chain_recovery_manager
+            from core_ai.core.task_chain_orchestrator import get_chain_recovery_manager
             get_chain_recovery_manager().clear()
         except Exception:
             pass
@@ -452,7 +452,7 @@ class ExecutiveBrain:
         ctx = self._get_context_manager()
         if ctx:
             try:
-                from ai_assistant.core.conversation_context import ExecutionState
+                from core_ai.core.conversation_context import ExecutionState
                 ctx.clear_task_chain()
                 ctx.set_state(ExecutionState.IDLE)
             except Exception:
@@ -460,7 +460,7 @@ class ExecutiveBrain:
 
         # 4. Cancel active lifecycle turns & optionally broadcast stop signal via Socket.IO
         try:
-            from ai_assistant.core.jarvis_persona import get_lifecycle_coordinator
+            from core_ai.core.jarvis_persona import get_lifecycle_coordinator
             get_lifecycle_coordinator().cancel_all(reason=reason or 'executive_stop')
         except Exception:
             pass
@@ -501,7 +501,7 @@ class ExecutiveBrain:
         ctx = self._get_context_manager()
         if ctx:
             try:
-                from ai_assistant.core.conversation_context import ExecutionState
+                from core_ai.core.conversation_context import ExecutionState
                 ctx.set_state(ExecutionState.PAUSED)
             except Exception:
                 pass
@@ -520,7 +520,7 @@ class ExecutiveBrain:
         ctx = self._get_context_manager()
         if ctx:
             try:
-                from ai_assistant.core.conversation_context import ExecutionState
+                from core_ai.core.conversation_context import ExecutionState
                 ctx.set_state(ExecutionState.EXECUTING)
             except Exception:
                 pass
@@ -566,7 +566,7 @@ class ExecutiveBrain:
         cmd_lower = command.lower()
 
         # Rule 1: Whole-word sequential keywords → always related to latest chain
-        from ai_assistant.core.local_command_normalizer import contains_any_sequential_keyword
+        from core_ai.core.local_command_normalizer import contains_any_sequential_keyword
         if contains_any_sequential_keyword(command, SEQUENTIAL_KEYWORDS):
             latest = max(self._active_chains.values(), key=lambda c: c.created_at)
             return latest.chain_id
@@ -680,9 +680,9 @@ class ExecutiveBrain:
     
     def _get_agent_coordinator(self):
         if not hasattr(self, '_coordinator'):
-            from ai_assistant.core.multi_agent_coordinator import MultiAgentCoordinator
-            from ai_assistant.agents.registry import AgentRegistry
-            from ai_assistant.agents.loader import AgentLoader
+            from core_ai.core.multi_agent_coordinator import MultiAgentCoordinator
+            from core_ai.agents.registry import AgentRegistry
+            from core_ai.agents.loader import AgentLoader
             
             registry = AgentRegistry()
             AgentLoader.register_agent_definitions(registry)
@@ -709,7 +709,7 @@ class ExecutiveBrain:
         coordinator = None
         pre_msg = None
         try:
-            from ai_assistant.core.jarvis_persona import get_lifecycle_coordinator, should_speak_for_request
+            from core_ai.core.jarvis_persona import get_lifecycle_coordinator, should_speak_for_request
             coordinator = get_lifecycle_coordinator()
             if turn_id is None:
                 speak_flag = should_speak_for_request({'source': src_str}, default_for_chat=speak_flag)
@@ -743,9 +743,28 @@ class ExecutiveBrain:
                 if coordinator is not None and turn_id is not None and not coordinator.is_turn_active(turn_id):
                     return
                 # 1. Primary execution engine: TaskChainOrchestrator
-                from ai_assistant.core.task_chain_orchestrator import get_orchestrator
+                from core_ai.core.task_chain_orchestrator import get_orchestrator
                 orchestrator = get_orchestrator()
-                res = orchestrator.execute_command(command, skip_override_check=True)
+
+                def _chain_progress_cb(evt):
+                    try:
+                        sio = coordinator._get_socketio() if coordinator is not None else None
+                        if sio is not None:
+                            evt_type = evt.get("event_type", "chain_progress")
+                            evt.setdefault("chain_id", chain_id)
+                            sio.emit(evt_type, evt)
+                            sio.emit("chain_progress", evt)
+                    except Exception as cb_err:
+                        logger.debug(f"Chain progress callback note: {cb_err}")
+
+                res = orchestrator.execute_command(
+                    command,
+                    skip_override_check=True,
+                    chain_id=chain_id,
+                    progress_callback=_chain_progress_cb,
+                    cancel_event=managed.cancel_event if hasattr(managed, 'cancel_event') else None,
+                    pause_event=managed.pause_event if hasattr(managed, 'pause_event') else None,
+                )
 
                 success = bool(res.success)
                 details = []
@@ -770,6 +789,30 @@ class ExecutiveBrain:
                         self._completed_chains[chain_id] = popped
                     if not self._active_chains and self._state == BrainState.EXECUTING:
                         self._state = BrainState.IDLE
+
+                # Guarantee terminal event reaches frontend Socket.IO so card and spinner resolve cleanly
+                try:
+                    sio = coordinator._get_socketio() if coordinator is not None else None
+                    if sio is not None:
+                        term_event = "chain.completed" if success else "chain.failed"
+                        term_status = "completed" if success else "failed"
+                        res_results = getattr(res, 'results', None) if 'res' in locals() else None
+                        term_payload = {
+                            "chain_id": chain_id,
+                            "command": command,
+                            "status": term_status,
+                            "success": bool(success),
+                            "progress_percentage": 100.0 if success else 0.0,
+                            "completed_actions": len(res_results) if res_results else (1 if success else 0),
+                            "total_actions": len(res_results) if res_results else 1,
+                            "error": None if success else response_msg,
+                            "response": response_msg,
+                            "timestamp": datetime.now().isoformat(),
+                        }
+                        sio.emit(term_event, term_payload)
+                        sio.emit("chain_progress", term_payload)
+                except Exception as term_err:
+                    logger.debug(f"Terminal chain emit note: {term_err}")
 
             if managed.is_cancelled:
                 return

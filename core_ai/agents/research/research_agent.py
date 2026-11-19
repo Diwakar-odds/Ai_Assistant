@@ -108,33 +108,18 @@ class ResearchAgent(BaseAgent):
             return TaskResult(success=False, error="No search query provided.")
 
         def _search_sync() -> List[Dict[str, str]]:
-            # 1. Optional googlesearch-python if installed
-            try:
-                from googlesearch import search as g_search
-                items: List[Dict[str, str]] = []
-                for res in g_search(query, num_results=num_results, advanced=True):
-                    items.append(
-                        {
-                            "title": getattr(res, "title", "") or "",
-                            "url": getattr(res, "url", str(res)),
-                            "description": getattr(res, "description", "") or "",
-                        }
-                    )
-                if items:
-                    return items
-            except Exception:
-                pass
-
-            # 2. DuckDuckGo HTML fallback (zero extra deps)
-            try:
-                items = self._duckduckgo_search_sync(query, num_results)
-                if items:
-                    return items
-            except Exception as exc:
-                logger.debug("DuckDuckGo search failed: %s", exc)
-
-            # 3. Wikipedia OpenSearch fallback
-            return self._wikipedia_opensearch_sync(query, num_results)
+            from core_ai.integrations.web_intelligence import get_web_intelligence
+            web_intel = get_web_intelligence()
+            search_items = web_intel.search(query, num_results=num_results)
+            return [
+                {
+                    "title": r.title,
+                    "url": r.url,
+                    "description": r.snippet,
+                    "source": r.source,
+                }
+                for r in search_items
+            ]
 
         try:
             results = await asyncio.to_thread(_search_sync)

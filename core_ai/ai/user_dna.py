@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Dict, Any, List
 from pathlib import Path
 import re
-from ai_assistant.core.database_config import get_db_path
+from core_ai.core.database_config import get_db_path
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ class UserDNA:
 
             blob = None
             try:
-                from ai_assistant.ai.shared_embedder import encode_text
+                from core_ai.ai.shared_embedder import encode_text
                 import numpy as np
                 trait_text = f"{key}: {value}"
                 vec = encode_text(trait_text, normalize=True)
@@ -74,7 +74,7 @@ class UserDNA:
         if not clean_q:
             return []
         try:
-            from ai_assistant.ai.shared_embedder import encode_text
+            from core_ai.ai.shared_embedder import encode_text
             import numpy as np
 
             q_vec = encode_text(clean_q, normalize=True)
@@ -163,7 +163,7 @@ class UserDNA:
         context_parts.append(f"User Name: {name}")
         
         try:
-            from ai_assistant.knowledge.personal_knowledge_graph import get_knowledge_graph
+            from core_ai.knowledge.personal_knowledge_graph import get_knowledge_graph
             pkg = get_knowledge_graph()
             # Fetch generic context based on "user" to grab general relations
             graph_context = pkg.get_context_for_command("user my")

@@ -29,7 +29,7 @@ from enum import Enum
 from datetime import datetime
 
 # Import LLM providers
-from ai_assistant.ai.llm_provider import LLMFactory
+from core_ai.ai.llm_provider import LLMFactory
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +155,7 @@ class PlanValidator:
                 return True, f"⚠️ This action involves '{keyword}' and requires confirmation"
                 
         try:
-            from ai_assistant.core.permission_system import get_permission_system
+            from core_ai.core.permission_system import get_permission_system
             perm_sys = get_permission_system()
             if perm_sys.require_confirmation(command_lower):
                 plan.safety_level = "dangerous"

@@ -2,10 +2,10 @@ import logging
 import json
 import re
 from typing import Dict, Any, List, Optional
-from ai_assistant.ai.llm_provider import UnifiedChatInterface
-from ai_assistant.ai.user_dna import UserDNA
-from ai_assistant.ai.enhanced_learning import PersonalKnowledgeGraph
-from ai_assistant.core.database_config import get_db_path_str
+from core_ai.ai.llm_provider import UnifiedChatInterface
+from core_ai.ai.user_dna import UserDNA
+from core_ai.ai.enhanced_learning import PersonalKnowledgeGraph
+from core_ai.core.database_config import get_db_path_str
 
 logger = logging.getLogger(__name__)
 

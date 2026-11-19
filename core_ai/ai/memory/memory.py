@@ -1,7 +1,7 @@
-from ai_assistant.core.database_config import get_db_path_str
+from core_ai.core.database_config import get_db_path_str
 # Setup centralized logging
 try:
-    from ai_assistant.utils.logging_config import get_logger
+    from core_ai.utils.logging_config import get_logger
 except ImportError:
     from utils.logging_config import get_logger
 logger = get_logger(__name__, log_category="app")
@@ -41,7 +41,7 @@ def get_embedding_model():
 
 # Import encryption support
 try:
-    from ai_assistant.core.encrypted_database import create_encrypted_memory_db
+    from core_ai.core.encrypted_database import create_encrypted_memory_db
     ENCRYPTION_AVAILABLE = True
 except ImportError:
     ENCRYPTION_AVAILABLE = False

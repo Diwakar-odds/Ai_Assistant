@@ -95,7 +95,7 @@ class HistoricalRAG:
 
         if SBERT_AVAILABLE:
             try:
-                from ai_assistant.ai.shared_embedder import get_shared_embedder
+                from core_ai.ai.shared_embedder import get_shared_embedder
                 self.embedder = get_shared_embedder(model_name)
                 if self.embedder is not None:
                     self.embedding_dim = self.embedder.get_sentence_embedding_dimension()

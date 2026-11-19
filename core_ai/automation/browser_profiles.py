@@ -1,7 +1,7 @@
 """
 Browser Profile Manager
 Handles multi-profile browser launching for Google Chrome, Brave, and Microsoft Edge.
-Supports named profiles like 'Rancho', 'DIWAKAR', 'DIWAKAR Saurashtra', etc.
+Supports named profiles like 'Default', 'Work', 'Personal', etc.
 """
 
 import os
@@ -16,20 +16,15 @@ logger = logging.getLogger(__name__)
 CHROME_USER_DATA = os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\User Data")
 CHROME_LOCAL_STATE = os.path.join(CHROME_USER_DATA, "Local State")
 
-# Known explicit alias overrides for user convenience and disambiguation
+# Generic default alias overrides for common browser profile requests
 PROFILE_ALIASES = {
-    "rancho": "Profile 9",
-    "diwakar": "Profile 3",
-    "diwakar saurashtra": "Profile 5",
-    "saurashtra": "Profile 5",
-    "kit": "Profile 5",
-    "college": "Profile 5",
-    "university": "Profile 5",
-    "campus": "Profile 5",
-    "institute": "Profile 5",
-    "academic": "Profile 5",
-    "rajat": "Profile 15",
-    "codeforeveryone": "Profile 4"
+    "default": "Default",
+    "personal": "Default",
+    "work": "Profile 1",
+    "office": "Profile 1",
+    "college": "Profile 2",
+    "university": "Profile 2",
+    "academic": "Profile 2",
 }
 
 _ACADEMIC_KEYWORDS = ("college", "university", "uni", "campus", "institute", "academic", "edu", "kit", "school")
@@ -105,8 +100,8 @@ def get_chrome_profiles() -> Dict[str, Dict]:
 
 def resolve_chrome_profile(profile_query: str) -> Optional[str]:
     """
-    Resolves a profile query like 'Rancho', 'Diwakar', 'Saurashtra', 'KIT', 'Rajat'
-    or 'Profile 9' to the exact directory name (e.g. 'Profile 9').
+    Resolves a profile query like 'Work', 'Personal', 'Default'
+    or 'Profile 1' to the exact directory name (e.g. 'Profile 1').
     Dynamically checks Chrome Local State and falls back/matches against known aliases.
     """
     if not profile_query:
@@ -248,7 +243,7 @@ def get_requested_profile(
     1. params['profile'] or params['browser_profile']
     2. Profile name mentioned in query/text (and cleans query of the profile mention)
     3. Context variable 'current_browser_profile'
-    4. Sensible default (e.g. 'Profile 3' or 'DIWAKAR')
+    4. Sensible default (e.g. 'Default' or 'Profile 1')
     
     Returns:
         (resolved_profile_directory, cleaned_text)
@@ -293,7 +288,7 @@ def launch_browser_profile(browser: str = "chrome", profile_query: Optional[str]
     
     Args:
         browser: 'chrome', 'brave', 'edge'
-        profile_query: 'Rancho', 'Diwakar', 'DIWAKAR Saurashtra', 'Profile 9', etc.
+        profile_query: 'Work', 'Personal', 'Default', 'Profile 1', etc.
         url: URL to open (e.g. 'https://www.youtube.com')
     """
     browser_lower = (browser or 'chrome').lower()

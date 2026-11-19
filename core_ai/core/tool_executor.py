@@ -232,24 +232,27 @@ class ToolExecutor:
 # Default tools
 def web_search(query: str, max_results: int = 5) -> Dict[str, Any]:
     """
-    Search the web for information.
+    Search the web for information using the centralized WebIntelligenceService.
     
     Args:
         query: Search query
         max_results: Maximum results to return
     """
     try:
-        from automation_tools_new import search_google
-        results = search_google(query)
+        from core_ai.integrations.web_intelligence import get_web_intelligence
+        search_items = get_web_intelligence().search(query, num_results=max_results)
+        results = [r.to_dict() for r in search_items]
         return {
             "query": query,
-            "results": results[:max_results] if results else [],
-            "count": len(results) if results else 0
+            "results": results,
+            "count": len(results),
+            "success": True,
         }
     except Exception as e:
         return {
             "error": str(e),
-            "query": query
+            "query": query,
+            "success": False,
         }
 
 

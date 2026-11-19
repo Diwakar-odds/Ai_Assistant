@@ -16,7 +16,7 @@ import re
 from typing import Optional, Dict, Any, List
 from pathlib import Path
 
-from ai_assistant.core.swarm_planner import WorkflowPlan, WorkflowStep, WorkflowWave
+from core_ai.core.swarm_planner import WorkflowPlan, WorkflowStep, WorkflowWave
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ class WorkflowMemory:
     def __init__(self, db_path: Optional[str] = None):
         if db_path is None:
             try:
-                from ai_assistant.core.database_config import DATA_DIR
+                from core_ai.core.database_config import DATA_DIR
                 db_path = str(DATA_DIR / "core" / "workflow_memory.db")
             except Exception:
                 db_path = "data/core/workflow_memory.db"
@@ -242,7 +242,7 @@ class WorkflowMemory:
             waves.append(WorkflowWave(wave_number=w.get("wave_number", 1), steps=wave_steps))
 
         if not waves:
-            from ai_assistant.core.swarm_planner import SwarmPlanner
+            from core_ai.core.swarm_planner import SwarmPlanner
             waves = SwarmPlanner._build_waves_from_steps(steps) or [WorkflowWave(wave_number=1, steps=steps)]
 
         return WorkflowPlan(

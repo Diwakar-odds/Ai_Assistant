@@ -9,7 +9,7 @@ from typing import List, Dict, Any, Optional
 from enum import Enum
 from datetime import datetime
 
-from ai_assistant.core.action_chain_models import ChainStatus, ActionChain
+from core_ai.core.action_chain_models import ChainStatus, ActionChain
 
 
 class CommandSource(Enum):

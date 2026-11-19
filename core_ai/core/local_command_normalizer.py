@@ -673,7 +673,7 @@ _IMPOSSIBLE_DEVANAGARI_NUKTA_RE = re.compile(
 _WAKE_NOISE_RESIDUE_TOKENS = frozenset({
     "a", "an", "the", "he", "she", "it", "uh", "um", "er", "ah", "oh", "eh", "ey", "ay", "hay",
     "ye", "yeh", "ya", "ha",
-    "ए", "ये", "ओ", "हे", "अ", "उ",
+    "ए", "ये", "ओ", "हे", "अ", "उ", "के", "रे", "पे", "से", "ले", "है", "हाय", "हो", "रेप",
 })
 
 BARGE_IN_STOP_PHRASES: Tuple[str, ...] = (
@@ -1084,7 +1084,7 @@ def resolve_contextual_toggle_command(
     ctx = context_manager
     if ctx is None:
         try:
-            from ai_assistant.core.conversation_context import get_context_manager
+            from core_ai.core.conversation_context import get_context_manager
             ctx = get_context_manager()
         except Exception:
             return None
@@ -1254,19 +1254,19 @@ def execute_voice_control_command(
 
     if action == "stop_speaking":
         try:
-            from ai_assistant.core.jarvis_persona import get_lifecycle_coordinator
+            from core_ai.core.jarvis_persona import get_lifecycle_coordinator
             get_lifecycle_coordinator().cancel_all(reason="voice_stop_command")
         except Exception:
             pass
         try:
-            from ai_assistant.core.command_brain import get_executive_brain
+            from core_ai.core.command_brain import get_executive_brain
             brain = get_executive_brain()
             if brain.is_busy():
                 brain._cancel_all_active(reason="voice_stop_command", emit_notice=False)
         except Exception:
             pass
         try:
-            from ai_assistant.voice.tts_output_service import get_tts_service
+            from core_ai.voice.tts_output_service import get_tts_service
             get_tts_service().stop(reason="voice_stop_command")
         except Exception:
             pass

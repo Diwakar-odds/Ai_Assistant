@@ -1,4 +1,4 @@
-from ai_assistant.core.database_config import get_db_path_str
+from core_ai.core.database_config import get_db_path_str
 """
 Graph Neural Networks for Knowledge Graph Reasoning
 GCN/GAT for graph-based learning and reasoning

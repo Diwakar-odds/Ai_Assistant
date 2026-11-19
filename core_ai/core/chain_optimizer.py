@@ -3,7 +3,7 @@ import sqlite3
 import json
 from pathlib import Path
 from typing import Dict, Any, List, Optional
-from ai_assistant.core.database_config import get_db_path_str
+from core_ai.core.database_config import get_db_path_str
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ class ChainOptimizer:
         if not self._llm_attempted:
             self._llm_attempted = True
             try:
-                from ai_assistant.ai.llm_provider import UnifiedChatInterface
+                from core_ai.ai.llm_provider import UnifiedChatInterface
                 try:
                     from backend.services.settings_manager import get_provider, get_model
                     _sm_provider, _sm_model = get_provider(), get_model()
@@ -61,7 +61,7 @@ class ChainOptimizer:
         if not self._predictor_attempted:
             self._predictor_attempted = True
             try:
-                from ai_assistant.ai.command_predictor import CommandPredictor
+                from core_ai.ai.command_predictor import CommandPredictor
                 self._predictor = CommandPredictor()
             except Exception:
                 self._predictor = None

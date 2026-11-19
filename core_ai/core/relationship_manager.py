@@ -1,6 +1,6 @@
 import logging
 import sqlite3
-from ai_assistant.core.database_config import get_db_path
+from core_ai.core.database_config import get_db_path
 
 logger = logging.getLogger(__name__)
 

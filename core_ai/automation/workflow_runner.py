@@ -10,7 +10,7 @@ import logging
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 
-from ai_assistant.automation.automation_models import (
+from core_ai.automation.automation_models import (
     Workflow, WorkflowTask, WorkflowResult, WorkflowStatus, TaskType
 )
 

@@ -1,7 +1,7 @@
 import logging
 from typing import Dict, Any, List, Optional
-from ai_assistant.ai.enhanced_learning import PersonalKnowledgeGraph
-from ai_assistant.core.database_config import get_db_path_str
+from core_ai.ai.enhanced_learning import PersonalKnowledgeGraph
+from core_ai.core.database_config import get_db_path_str
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ class KnowledgeGraphInterface:
     def get_context_for_command(self, command: str) -> str:
         """
         Analyze a command, extract potential entities, and return relevant context from the graph.
-        For example, if command is "Message Diwakar", it will look up "Diwakar" and return relations.
+        For example, if command is "Message Alex", it will look up "Alex" and return relations.
         """
         words = command.lower().split()
         context_pieces = []

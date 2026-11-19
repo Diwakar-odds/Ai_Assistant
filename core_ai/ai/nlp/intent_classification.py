@@ -1,6 +1,6 @@
-from ai_assistant.core.database_config import get_db_path_str
+from core_ai.core.database_config import get_db_path_str
 # Setup centralized logging
-from ai_assistant.utils.logging_config import get_logger
+from core_ai.utils.logging_config import get_logger
 logger = get_logger(__name__, log_category="app")
 
 """
@@ -78,7 +78,7 @@ class IntentClassifier:
         # Load or initialize sentence transformer
         if SENTENCE_TRANSFORMERS_AVAILABLE:
             try:
-                from ai_assistant.ai.shared_embedder import get_shared_embedder
+                from core_ai.ai.shared_embedder import get_shared_embedder
                 self.model = get_shared_embedder('all-MiniLM-L6-v2')
             except Exception:
                 self.model = None

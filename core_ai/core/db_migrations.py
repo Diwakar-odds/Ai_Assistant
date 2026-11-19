@@ -177,7 +177,7 @@ class MigrationManager:
 def auto_migrate_all():
     """Helper to auto-migrate the primary application databases."""
     try:
-        from ai_assistant.core.database_config import get_db_path
+        from core_ai.core.database_config import get_db_path
         db_names = ['personal_knowledge', 'workflows', 'audit', 'learning_system']
         for name in db_names:
             try:

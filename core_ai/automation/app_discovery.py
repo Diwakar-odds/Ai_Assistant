@@ -316,8 +316,11 @@ class AppDiscovery:
                             app_name = app['name'].lower().replace(' ', '_')
                             self.apps_database[app_name] = app['path']
                     else:
-                        # Old simple format - use as is
-                        self.apps_database = data
+                        # Old simple format - expand environment variables for portability
+                        self.apps_database = {
+                            k: os.path.expandvars(v) if isinstance(v, str) else v
+                            for k, v in data.items()
+                        }
                 else:
                     self.apps_database = {}
         except Exception as e:
@@ -865,7 +868,7 @@ def smart_open_application(app_name: str, action_type: str = 'open_app') -> str:
     original_app_name = app_name
     try:
         import re
-        from ai_assistant.core.local_command_normalizer import normalize_hinglish_devanagari
+        from core_ai.core.local_command_normalizer import normalize_hinglish_devanagari
         normalized_unicode = normalize_hinglish_devanagari(app_name)
         app_name = re.sub(r'[^a-zA-Z0-9\s-]', '', (normalized_unicode or app_name).lower().strip())
         app_name = re.sub(r'\s+(?:app|karo|kar|do|de|please)\s*$', '', app_name).strip()
@@ -900,7 +903,7 @@ def smart_open_application(app_name: str, action_type: str = 'open_app') -> str:
     if clean_lower in protocol_schemes or (clean_lower.endswith(':') and re.fullmatch(r'[A-Za-z][A-Za-z0-9+.-]*:', clean_lower)):
         target_proto = protocol_schemes.get(clean_lower, clean_lower)
         try:
-            from ai_assistant.automation.window_manager import bring_window_to_foreground
+            from core_ai.automation.window_manager import bring_window_to_foreground
             if hasattr(os, 'startfile'):
                 os.startfile(target_proto)
             bring_window_to_foreground(clean_lower)
@@ -966,7 +969,7 @@ def smart_open_application(app_name: str, action_type: str = 'open_app') -> str:
                 
     if app_path:
         try:
-            from ai_assistant.automation.window_manager import bring_window_to_foreground
+            from core_ai.automation.window_manager import bring_window_to_foreground
             # METHOD 1: NATIVE WINDOWS APP OR SHORTCUT (.exe / .lnk)
             # This is reliable for Desktop apps and PWAs found in Start Menu
             if os.path.exists(app_path):
@@ -1022,7 +1025,7 @@ def smart_open_application(app_name: str, action_type: str = 'open_app') -> str:
         sys_exec = shutil.which(app_name) or shutil.which(f"{app_name}.exe") or shutil.which(clean_lower) or shutil.which(f"{clean_lower}.exe")
         if sys_exec:
             try:
-                from ai_assistant.automation.window_manager import bring_window_to_foreground
+                from core_ai.automation.window_manager import bring_window_to_foreground
                 if hasattr(os, 'startfile'):
                     os.startfile(sys_exec)
                 else:
@@ -1037,7 +1040,7 @@ def smart_open_application(app_name: str, action_type: str = 'open_app') -> str:
         # If not found natively, try web fallbacks (longest-key-first so 'youtube music' beats 'youtube')
         app_lower = (app_name or original_app_name).lower().strip()
         try:
-            from ai_assistant.core.local_command_normalizer import word_boundary_contains
+            from core_ai.core.local_command_normalizer import word_boundary_contains
         except Exception:
             word_boundary_contains = None
 
@@ -1127,7 +1130,7 @@ def get_app_usage_stats() -> str:
 # EXPORT ALIASES for backend compatibility
 get_installed_apps = get_apps_for_web
 refresh_app_list = refresh_app_database
-from ai_assistant.automation.window_manager import bring_window_to_foreground, find_window_by_name, close_window_gracefully
+from core_ai.automation.window_manager import bring_window_to_foreground, find_window_by_name, close_window_gracefully
 
 def start_periodic_refresh(interval_hours: int = 168):  # 168 hours = 1 week
     """Start periodic background refresh (runs in separate thread)"""
@@ -1168,7 +1171,7 @@ def search_apps_by_name(query: str) -> str:
 # =============================================================================
 # Section 2: Taskbar Detection (Canonical import from taskbar_detection.py)
 # =============================================================================
-from ai_assistant.automation.taskbar_detection import (
+from core_ai.automation.taskbar_detection import (
     TaskbarDetector,
     detect_taskbar_apps,
     can_see_taskbar,

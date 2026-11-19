@@ -359,7 +359,7 @@ class GGUFProvider(LLMProvider):
     def __init__(self, **kwargs):
         """Initialize GGUF provider with optional requested model name."""
         try:
-            from ai_assistant.ai.gguf_model_manager import gguf_manager
+            from core_ai.ai.gguf_model_manager import gguf_manager
         except ImportError:
             from src.ai_assistant.ai.gguf_model_manager import gguf_manager
 
@@ -696,14 +696,14 @@ class UnifiedChatInterface:
 
         # Single source of truth for Pulsar assistant persona (prevents base-model identity leaks)
         try:
-            from ai_assistant.core.jarvis_persona import build_persona_system_prompt
+            from core_ai.core.jarvis_persona import build_persona_system_prompt
             default_system_prompt = build_persona_system_prompt(
                 provider=self.provider_name,
                 model=self.model,
             )
         except Exception:
             default_system_prompt = (
-                "You are Pulsar, a smart, helpful, and human-like AI companion created by Diwakar. "
+                "You are Pulsar, a smart, helpful, and human-like AI companion. "
                 "You MUST NEVER identify as a large language model trained by Google or any other company. "
                 "You MUST NEVER mention Gemma, OpenAI, Google, or any base models. "
                 "Keep your answers brief and directly address the user. "

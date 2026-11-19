@@ -9,19 +9,19 @@ class DailyBriefing:
     
     def __init__(self):
         try:
-            from ai_assistant.core.real_time_api_manager import RealTimeAPIManager
+            from core_ai.core.real_time_api_manager import RealTimeAPIManager
             self.api_manager = RealTimeAPIManager()
         except ImportError:
             self.api_manager = None
             
         try:
-            from ai_assistant.core.project_manager import ProjectManager
+            from core_ai.core.project_manager import ProjectManager
             self.project_manager = ProjectManager()
         except ImportError:
             self.project_manager = None
             
         try:
-            from ai_assistant.core.commitment_tracker import CommitmentTracker
+            from core_ai.core.commitment_tracker import CommitmentTracker
             self.commitment_tracker = CommitmentTracker()
         except ImportError:
             self.commitment_tracker = None

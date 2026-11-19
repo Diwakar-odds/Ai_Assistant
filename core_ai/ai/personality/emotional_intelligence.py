@@ -4,7 +4,7 @@ import math
 import sqlite3
 import time
 from typing import Dict, Any, List
-from ai_assistant.core.database_config import get_db_path_str
+from core_ai.core.database_config import get_db_path_str
 
 logger = logging.getLogger(__name__)
 

@@ -7,7 +7,7 @@ Enhanced AI Integration Layer
 Integrates all advanced features: caching, routing, streaming, emotion detection, visual verification
 
 Usage:
-    from ai_assistant.core.enhanced_integration import EnhancedAI
+    from core_ai.core.enhanced_integration import EnhancedAI
     
     ai = EnhancedAI()
     response = await ai.process_query("What's the weather?", enable_cache=True)
@@ -23,35 +23,35 @@ logger = logging.getLogger(__name__)
 
 # Import all enhancement components
 try:
-    from ai_assistant.ai.semantic_cache import get_response_cache, cache_response, get_cached_response
+    from core_ai.ai.semantic_cache import get_response_cache, cache_response, get_cached_response
     CACHE_AVAILABLE = True
 except ImportError:
     CACHE_AVAILABLE = False
     logger.warning("Semantic cache not available")
 
 try:
-    from ai_assistant.ai.model_router import get_model_router, ModelTier
+    from core_ai.ai.model_router import get_model_router, ModelTier
     ROUTER_AVAILABLE = True
 except ImportError:
     ROUTER_AVAILABLE = False
     logger.warning("Model router not available")
 
 try:
-    from ai_assistant.ai.streaming_handler import get_streaming_handler, StreamProvider
+    from core_ai.ai.streaming_handler import get_streaming_handler, StreamProvider
     STREAMING_AVAILABLE = True
 except ImportError:
     STREAMING_AVAILABLE = False
     logger.warning("Streaming handler not available")
 
 try:
-    from ai_assistant.voice.emotion_detection import get_emotion_detector, Emotion
+    from core_ai.voice.emotion_detection import get_emotion_detector, Emotion
     EMOTION_AVAILABLE = True
 except ImportError:
     EMOTION_AVAILABLE = False
     logger.warning("Emotion detection not available")
 
 try:
-    from ai_assistant.automation.visual_verification import get_visual_verifier
+    from core_ai.automation.visual_verification import get_visual_verifier
     VERIFICATION_AVAILABLE = True
 except ImportError:
     VERIFICATION_AVAILABLE = False
@@ -173,7 +173,7 @@ class EnhancedAI:
                        f"(complexity: {analysis.complexity_score:.2f})")
         else:
             # Fallback to default
-            from ai_assistant.ai.model_router import ModelConfig, ModelTier
+            from core_ai.ai.model_router import ModelConfig, ModelTier
             selected_model = ModelConfig(
                 name="gemini-2.0-flash-exp",
                 tier=ModelTier.FAST,

@@ -1,4 +1,4 @@
-from ai_assistant.core.database_config import get_db_path_str
+from core_ai.core.database_config import get_db_path_str
 """
 Smart Command Prediction (Application)
 Intelligent command suggestion and completion
@@ -129,7 +129,7 @@ class SmartCommandPredictor:
             
         # Emit predictions to UI
         try:
-            from ai_assistant.services.modern_web_backend import socketio
+            from core_ai.services.modern_web_backend import socketio
             if socketio:
                 predictions = self.predict_next_commands(context, top_k=3)
                 if predictions:

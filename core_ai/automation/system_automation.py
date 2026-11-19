@@ -25,7 +25,7 @@ except ImportError:
     BRIGHTNESS_AVAILABLE = False
 
 try:
-    from ai_assistant.core.core import set_system_volume, get_system_volume, volume_up, volume_down, mute_volume, unmute_volume
+    from core_ai.core.core import set_system_volume, get_system_volume, volume_up, volume_down, mute_volume, unmute_volume
     VOLUME_AVAILABLE = True
 except ImportError:
     VOLUME_AVAILABLE = False

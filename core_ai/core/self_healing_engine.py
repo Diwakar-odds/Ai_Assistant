@@ -71,7 +71,7 @@ class SelfHealingEngine:
 
     def _check_database(self):
         try:
-            from ai_assistant.core.database_config import get_db_path
+            from core_ai.core.database_config import get_db_path
             import sqlite3
             db_path = get_db_path('personal_knowledge')
             with sqlite3.connect(db_path) as conn:

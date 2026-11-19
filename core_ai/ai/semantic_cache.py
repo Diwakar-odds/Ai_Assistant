@@ -108,7 +108,7 @@ class SemanticResponseCache:
         
         self._embedder_attempted = True
         try:
-            from ai_assistant.ai.shared_embedder import get_shared_embedder
+            from core_ai.ai.shared_embedder import get_shared_embedder
             self.embedder = get_shared_embedder('all-MiniLM-L6-v2')
             if self.embedder is not None:
                 logger.info("✅ Embeddings model loaded via shared embedder")

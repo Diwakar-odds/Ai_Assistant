@@ -1,4 +1,4 @@
-from ai_assistant.core.database_config import get_db_path_str
+from core_ai.core.database_config import get_db_path_str
 # Setup centralized logging
 from utils.logging_config import get_logger
 logger = get_logger(__name__, log_category="app")
@@ -11,11 +11,11 @@ This file exists to maintain import compatibility.
 """
 
 # Import all public symbols from the canonical location
-from ai_assistant.ai.enhanced_learning import *
+from core_ai.ai.enhanced_learning import *
 
 # Ensure __all__ is preserved
 try:
-    from ai_assistant.ai.enhanced_learning import __all__
+    from core_ai.ai.enhanced_learning import __all__
 except ImportError:
     pass
 

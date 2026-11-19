@@ -16,14 +16,14 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 # Import all learning systems
 try:
-    from ai_assistant.ai.behavior_clustering import BehaviorClusterer
-    from ai_assistant.ai.conversation_clustering import ConversationClusterer
-    from ai_assistant.ai.command_sequences import CommandMarkovChain
-    from ai_assistant.ai.command_predictor import CommandSuccessPredictor
-    from ai_assistant.ai.context_aware_response import ContextAwareResponseGenerator
-    from ai_assistant.ai.smart_command_prediction import SmartCommandPredictor
-    from ai_assistant.ai.enhanced_learning import PersonalKnowledgeGraph
-    from ai_assistant.ai.query_cache import QuerySimilarityCache
+    from core_ai.ai.behavior_clustering import BehaviorClusterer
+    from core_ai.ai.conversation_clustering import ConversationClusterer
+    from core_ai.ai.command_sequences import CommandMarkovChain
+    from core_ai.ai.command_predictor import CommandSuccessPredictor
+    from core_ai.ai.context_aware_response import ContextAwareResponseGenerator
+    from core_ai.ai.smart_command_prediction import SmartCommandPredictor
+    from core_ai.ai.enhanced_learning import PersonalKnowledgeGraph
+    from core_ai.ai.query_cache import QuerySimilarityCache
     IMPORTS_SUCCESS = True
 except ImportError as e:
     logger.warning(f"Warning: Some learning systems unavailable: {e}")
@@ -60,7 +60,7 @@ class LearningDataRouter:
             return
         
         try:
-            from ai_assistant.core.database_config import get_db_path_str
+            from core_ai.core.database_config import get_db_path_str
             self.behavior_clusterer = BehaviorClusterer()
             self.conversation_clusterer = ConversationClusterer()
             self.command_sequences = CommandMarkovChain()

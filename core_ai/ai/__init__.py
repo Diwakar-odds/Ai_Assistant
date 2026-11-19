@@ -11,7 +11,7 @@ try:
     logger = get_logger(__name__, log_category="app")
 except Exception:
     try:
-        from ai_assistant.utils.logging_config import get_logger
+        from core_ai.utils.logging_config import get_logger
         logger = get_logger(__name__, log_category="app")
     except Exception:
         logger = logging.getLogger(__name__)

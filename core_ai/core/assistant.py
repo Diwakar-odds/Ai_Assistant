@@ -43,25 +43,25 @@ except ImportError:
 
 # Internal imports - AI and ML
 try:
-    from ai_assistant.multimodal import MultiModalAI
+    from core_ai.multimodal import MultiModalAI
     MULTIMODAL_AVAILABLE = True
 except ImportError:
     MultiModalAI = None
     MULTIMODAL_AVAILABLE = False
 
 try:
-    from ai_assistant.ai.conversational_ai import AdvancedConversationalAI
+    from core_ai.ai.conversational_ai import AdvancedConversationalAI
     CONVERSATIONAL_AI_AVAILABLE = True
 except ImportError:
     AdvancedConversationalAI = None
     CONVERSATIONAL_AI_AVAILABLE = False
 
 try:
-    from ai_assistant.utils.multilingual import MultilingualSupport, Language, LanguageContext
+    from core_ai.utils.multilingual import MultilingualSupport, Language, LanguageContext
     MULTILINGUAL_AVAILABLE = True
 except ImportError:
     try:
-        from ai_assistant.multilingual import MultilingualSupport, Language, LanguageContext
+        from core_ai.multilingual import MultilingualSupport, Language, LanguageContext
         MULTILINGUAL_AVAILABLE = True
     except ImportError:
         MultilingualSupport = None
@@ -71,7 +71,7 @@ except ImportError:
 
 # Internal imports - Automation tools
 try:
-    from ai_assistant.automation_tools_new import (
+    from core_ai.automation_tools_new import (
         setup_memory, save_to_memory, get_memory,
         open_application, close_application,
         search_google, search_and_play_spotify,
@@ -92,7 +92,7 @@ except ImportError:
 memory_retriever = None
 SMART_MEMORY_AVAILABLE = False
 try:
-    from ai_assistant.automation.automation_tools_new import save_knowledge  # type: ignore
+    from core_ai.automation.automation_tools_new import save_knowledge  # type: ignore
 except ImportError:
     save_knowledge = lambda *args, **kwargs: None
 
@@ -202,7 +202,7 @@ class ModernAssistant:
         
         # Check custom commands / macros first
         try:
-            from ai_assistant.core.custom_commands import CustomCommandManager
+            from core_ai.core.custom_commands import CustomCommandManager
             if not hasattr(self, '_custom_cmd_mgr'):
                 self._custom_cmd_mgr = CustomCommandManager()
             resolved = self._custom_cmd_mgr.resolve_command(query)
@@ -219,7 +219,7 @@ class ModernAssistant:
 
         # Route explicit multi-step chains safely
         try:
-            from ai_assistant.integrations.orchestrator_integration import should_use_orchestrator
+            from core_ai.integrations.orchestrator_integration import should_use_orchestrator
             if should_use_orchestrator(query):
                 chain_res = self.execute_chain(query, source="query", wait=True)
                 if chain_res.get("requires_confirmation") or chain_res.get("success"):
@@ -234,9 +234,9 @@ class ModernAssistant:
         try:
             # Lazy import to avoid circular dependencies
             try:
-                from ai_assistant.ai.llm_provider import UnifiedChatInterface, LLMFactory, is_local_provider
-                from ai_assistant.core.onboarding import OnboardingManager
-                from ai_assistant.core.context_optimizer import ContextOptimizer
+                from core_ai.ai.llm_provider import UnifiedChatInterface, LLMFactory, is_local_provider
+                from core_ai.core.onboarding import OnboardingManager
+                from core_ai.core.context_optimizer import ContextOptimizer
                 
                 _sm_provider, _sm_model = self._get_configured_provider_model()
                 if _sm_provider:
@@ -249,7 +249,7 @@ class ModernAssistant:
                         self.reset_llm_session()
 
                 if self._llm_chat is None:
-                    from ai_assistant.core.jarvis_persona import build_persona_system_prompt
+                    from core_ai.core.jarvis_persona import build_persona_system_prompt
                     self._llm_chat = UnifiedChatInterface(
                         provider=_sm_provider,
                         model=_sm_model,
@@ -272,7 +272,7 @@ class ModernAssistant:
                     self._current_turn_mood = emotion_context.get("mood", "neutral")
                     modifier = emotion_context.get("prompt_modifier", "")
                     if modifier and getattr(self, '_onboarding_mgr', None) and self._onboarding_mgr.is_onboarded():
-                        from ai_assistant.core.jarvis_persona import build_persona_system_prompt
+                        from core_ai.core.jarvis_persona import build_persona_system_prompt
                         live_prompt = build_persona_system_prompt(
                             provider=_sm_provider,
                             model=_sm_model,
@@ -287,7 +287,7 @@ class ModernAssistant:
                 if hasattr(self, '_onboarding_mgr') and not self._onboarding_mgr.is_onboarded():
                     response, is_complete = self._onboarding_mgr.process_onboarding_response(response)
                     if is_complete:
-                        from ai_assistant.core.jarvis_persona import build_persona_system_prompt
+                        from core_ai.core.jarvis_persona import build_persona_system_prompt
                         if not hasattr(self, '_context_opt'):
                             self._context_opt = ContextOptimizer()
                         base_prompt = build_persona_system_prompt(provider=_sm_provider, model=_sm_model)
@@ -333,15 +333,15 @@ class ModernAssistant:
             self.start_system_monitoring()
             
         try:
-            from ai_assistant.core.proactive_anticipator import ProactiveAnticipator
+            from core_ai.core.proactive_anticipator import ProactiveAnticipator
             self._proactive_anticipator = ProactiveAnticipator(chat_interface=self._llm_chat if hasattr(self, '_llm_chat') else None)
             self._proactive_anticipator.start()
         except Exception as e:
             logger.warning(f"⚠️ Proactive Anticipator could not start: {e}")
             
         try:
-            from ai_assistant.core.autonomous_scheduler import AutonomousScheduler
-            from ai_assistant.core.autonomous_actions import AutonomousActions
+            from core_ai.core.autonomous_scheduler import AutonomousScheduler
+            from core_ai.core.autonomous_actions import AutonomousActions
             self._autonomous_scheduler = AutonomousScheduler()
             self._autonomous_actions = AutonomousActions()
             self._autonomous_scheduler.start()
@@ -352,7 +352,7 @@ class ModernAssistant:
             logger.warning(f"⚠️ Autonomous Scheduler could not start: {e}")
             
         try:
-            from ai_assistant.core.self_healing_engine import SelfHealingEngine
+            from core_ai.core.self_healing_engine import SelfHealingEngine
             self._self_healing_engine = SelfHealingEngine()
             self._self_healing_engine.start()
             logger.info("✅ Self-Healing Engine started")
@@ -361,7 +361,7 @@ class ModernAssistant:
         
         # Initialize the Learning Loop (connects DNA, EI, Relationship, Memory)
         try:
-            from ai_assistant.core.learning_loop import LearningLoop
+            from core_ai.core.learning_loop import LearningLoop
             self._learning_loop = LearningLoop()
             logger.info("✅ Learning Loop initialized (EI + DNA + Relationship + Memory)")
         except Exception as e:
@@ -401,11 +401,11 @@ class ModernAssistant:
                 if self._agent_registry is None:
                     try:
                         try:
-                            from ai_assistant.agents.registry import get_global_registry
+                            from core_ai.agents.registry import get_global_registry
                             self._agent_registry = get_global_registry()
                         except Exception:
-                            from ai_assistant.agents.registry import AgentRegistry
-                            from ai_assistant.agents.loader import AgentLoader
+                            from core_ai.agents.registry import AgentRegistry
+                            from core_ai.agents.loader import AgentLoader
                             reg = AgentRegistry()
                             if hasattr(AgentLoader, "load_all_agents"):
                                 AgentLoader.load_all_agents(registry=reg, eager=False)
@@ -427,10 +427,10 @@ class ModernAssistant:
                     try:
                         reg = self.agent_registry
                         try:
-                            from ai_assistant.core.multi_agent_coordinator import get_multi_agent_coordinator
+                            from core_ai.core.multi_agent_coordinator import get_multi_agent_coordinator
                             self._agent_coordinator = get_multi_agent_coordinator(reg)
                         except Exception:
-                            from ai_assistant.core.multi_agent_coordinator import MultiAgentCoordinator
+                            from core_ai.core.multi_agent_coordinator import MultiAgentCoordinator
                             self._agent_coordinator = MultiAgentCoordinator(reg)
                         self._init_status['multi_agent'] = 'ready'
                     except Exception as e:
@@ -561,7 +561,7 @@ class ModernAssistant:
         task_ctx = dict(context or {})
 
         try:
-            from ai_assistant.agents.models import Task
+            from core_ai.agents.models import Task
             sig = inspect.signature(Task)
             kwargs = {"task_id": task_id, "description": description, "params": task_params}
             if "target_agent_id" in sig.parameters and agent_id:
@@ -626,7 +626,7 @@ class ModernAssistant:
 
         try:
             import inspect
-            from ai_assistant.integrations.orchestrator_integration import process_with_orchestrator
+            from core_ai.integrations.orchestrator_integration import process_with_orchestrator
             sig = inspect.signature(process_with_orchestrator)
             kwargs = {}
             if "wait" in sig.parameters:
@@ -802,8 +802,8 @@ class ModernAssistant:
             self._init_status['llm_chat'] = 'initializing'
         
         try:
-            from ai_assistant.ai.network_aware_llm import get_optimal_llm_config
-            from ai_assistant.ai.llm_provider import UnifiedChatInterface, LLMFactory
+            from core_ai.ai.network_aware_llm import get_optimal_llm_config
+            from core_ai.ai.llm_provider import UnifiedChatInterface, LLMFactory
             
             # Get optimal configuration from central settings_manager first, then network config
             sm_provider, sm_model = self._get_configured_provider_model()
@@ -881,7 +881,7 @@ class ModernAssistant:
         if CONVERSATIONAL_AI_AVAILABLE:
             try:
                 # Initialize file automator for folder creation
-                from ai_assistant.automation.file_automation import FileAutomation
+                from core_ai.automation.file_automation import FileAutomation
                 file_automator = FileAutomation()
                 
                 # Create automation callback function
@@ -919,22 +919,22 @@ class ModernAssistant:
                             return f"Volume set to {param}%"
                         elif action == 'volume_up':
                             if AUTOMATION_AVAILABLE:
-                                from ai_assistant.core.core import volume_up as core_volume_up
+                                from core_ai.core.core import volume_up as core_volume_up
                                 return core_volume_up()
                             return "Volume increased"
                         elif action == 'volume_down':
                             if AUTOMATION_AVAILABLE:
-                                from ai_assistant.core.core import volume_down as core_volume_down
+                                from core_ai.core.core import volume_down as core_volume_down
                                 return core_volume_down()
                             return "Volume decreased"
                         elif action == 'mute':
                             if AUTOMATION_AVAILABLE:
-                                from ai_assistant.core.core import mute_volume
+                                from core_ai.core.core import mute_volume
                                 return mute_volume()
                             return "Muted"
                         elif action == 'unmute':
                             if AUTOMATION_AVAILABLE:
-                                from ai_assistant.core.core import unmute_volume
+                                from core_ai.core.core import unmute_volume
                                 return unmute_volume()
                             return "Unmuted"
                         elif action == 'media_pause':
@@ -983,7 +983,7 @@ class ModernAssistant:
                 # Initialize speech recognition (Faster-Whisper local)
                 try:
                     import os
-                    from ai_assistant.voice.tts_output_service import ensure_espeak_environment, load_kitten_mini_model
+                    from core_ai.voice.tts_output_service import ensure_espeak_environment, load_kitten_mini_model
                     ensure_espeak_environment()
                     # Ensure ffmpeg in bin/ is found
                     bin_dir = os.path.abspath('bin')
@@ -1182,20 +1182,12 @@ class ModernAssistant:
         """Process user command with chain orchestration, specialized agents, and multilingual support"""
         log_query(command_text)
         
-        # --- FUN EASTER EGG INJECTED ---
-        lower_command = command_text.lower()
-        if "abhishek maurya" in lower_command:
-            fun_reply = "Uski baat mat karo, woh bhadwa hai."
-            log_reply(fun_reply)
-            return fun_reply
-        # -------------------------------
-        
         with self._process_lock:
             try:
                 # 1. Check multi-step chains before single-step intent handlers
                 if include_chains:
                     try:
-                        from ai_assistant.integrations.orchestrator_integration import should_use_orchestrator
+                        from core_ai.integrations.orchestrator_integration import should_use_orchestrator
                         if should_use_orchestrator(command_text):
                             chain_res = self.execute_chain(
                                 command_text,
@@ -1518,7 +1510,7 @@ Just speak naturally - I understand context! """
         actual_model = None
         is_local_req = False
         try:
-            from ai_assistant.ai.llm_provider import LLMFactory, is_local_provider
+            from core_ai.ai.llm_provider import LLMFactory, is_local_provider
             if provider_preference:
                 is_local_req = is_local_provider(LLMFactory.normalize_provider(provider_preference))
         except Exception:
@@ -1533,7 +1525,7 @@ Just speak naturally - I understand context! """
             rag_context_block = ""
             if message:
                 try:
-                    from ai_assistant.ai.memory_retrieval import retrieve_unified_historical_context
+                    from core_ai.ai.memory_retrieval import retrieve_unified_historical_context
                     rag_context_block = retrieve_unified_historical_context(
                         message,
                         max_chars=1500,
@@ -1586,6 +1578,21 @@ Just speak naturally - I understand context! """
                 except Exception as e:
                     print(f"Multilingual processing error: {e}")
             
+            # 3.5 REAL-TIME WEB INTELLIGENCE GROUNDING
+            web_grounding_block = ""
+            if message:
+                try:
+                    from core_ai.integrations.web_intelligence import get_web_intelligence
+                    web_intel = get_web_intelligence()
+                    # Ground against original query (preserves natural Hindi/Hinglish terms)
+                    grounding = web_intel.ground_prompt(message, timeout=3.5)
+                    if grounding.has_grounding:
+                        web_grounding_block = grounding.context_block
+                        features_used.append("web_grounding")
+                        features_used.append(f"web_source:{grounding.source_engine}")
+                except Exception as wg_err:
+                    logger.debug(f"Web grounding skipped in enhanced chat: {wg_err}")
+
             # 4. SMART LLM PROCESSING (Network-Aware)
             if processed_message:
                 try:
@@ -1596,7 +1603,7 @@ Just speak naturally - I understand context! """
                             processed_message = f"{context_dict['prompt_modifier']}\n\nUser: {processed_message}"
                     
                     # Use smart LLM system or explicit provider/model preference (local NEVER falls back to cloud)
-                    from ai_assistant.ai.llm_provider import UnifiedChatInterface, LLMFactory, is_local_provider
+                    from core_ai.ai.llm_provider import UnifiedChatInterface, LLMFactory, is_local_provider
                     chat_interface = None
                     if provider_preference or model_preference:
                         norm_pref = LLMFactory.normalize_provider(provider_preference) if provider_preference else None
@@ -1640,20 +1647,28 @@ Just speak naturally - I understand context! """
                         else:
                             provider_info = f" (Custom - {actual_provider}:{actual_model})"
                         
-                        # Inject unified persona + historical RAG context before generating response
+                        # Inject unified persona + historical RAG context + Web Grounding before generating response
+                        combined_extra_context = ""
+                        if rag_context_block:
+                            combined_extra_context += f"{rag_context_block}\n\n"
+                        if web_grounding_block:
+                            combined_extra_context += f"{web_grounding_block}\n\n"
+
                         if hasattr(chat_interface, 'set_system_message'):
                             try:
-                                from ai_assistant.core.jarvis_persona import build_persona_system_prompt
+                                from core_ai.core.jarvis_persona import build_persona_system_prompt
                                 sys_prompt = build_persona_system_prompt(
                                     provider=actual_provider,
                                     model=actual_model,
                                     surface="chat",
-                                    extra_context=rag_context_block,
+                                    extra_context=combined_extra_context.strip(),
                                 )
                                 chat_interface.set_system_message(sys_prompt)
                             except Exception:
-                                if rag_context_block:
-                                    processed_message = f"{rag_context_block}\n\nUser message: {processed_message}"
+                                if combined_extra_context:
+                                    processed_message = f"{combined_extra_context.strip()}\n\nUser message: {processed_message}"
+                        elif combined_extra_context:
+                            processed_message = f"{combined_extra_context.strip()}\n\nUser message: {processed_message}"
 
                         # Generate response using smart LLM
                         ai_response = chat_interface.chat(processed_message, stream=False)
@@ -1728,7 +1743,7 @@ Just speak naturally - I understand context! """
             # 5. SMART AUTOMATION DETECTION
             if AUTOMATION_AVAILABLE and processed_message:
                 try:
-                    from ai_assistant.automation.automation_engine import SmartAutomationEngine
+                    from core_ai.automation.automation_engine import SmartAutomationEngine
                     automation_engine = SmartAutomationEngine()
                     
                     # Detect if message requires automation
@@ -1746,7 +1761,7 @@ Just speak naturally - I understand context! """
             
             # 6. ENHANCED LEARNING INTEGRATION
             try:
-                from ai_assistant.ai.enhanced_learning import EnhancedLearning
+                from core_ai.ai.enhanced_learning import EnhancedLearning
                 learning_system = EnhancedLearning()
                 
                 # Learn from this interaction
@@ -1763,7 +1778,7 @@ Just speak naturally - I understand context! """
             
             # 7. ADVANCED INTEGRATION FEATURES
             try:
-                from ai_assistant.automation.automation_engine import AdvancedIntegration
+                from core_ai.automation.automation_engine import AdvancedIntegration
                 advanced_integration = AdvancedIntegration()
                 
                 # Check for integration opportunities
@@ -1785,7 +1800,7 @@ Just speak naturally - I understand context! """
                     translated_response = self.multilingual.translate_text(
                         response_text, Language(detected_language)
                     )
-                    if translated_response != response_text:
+                    if translated_response and not translated_response.startswith("❌") and translated_response != response_text:
                         response_text = self.format_multilingual_response(
                             translated_response, Language(detected_language)
                         )
@@ -1833,7 +1848,7 @@ Just speak naturally - I understand context! """
                 suggestions = self._generate_contextual_suggestions(processed_message, features_used)
             
             try:
-                from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+                from core_ai.voice.vocabulary_registry import get_vocabulary_registry
                 response_text = get_vocabulary_registry().enforce_grammar_and_tone(response_text)
             except Exception:
                 pass
@@ -1982,7 +1997,7 @@ Just speak naturally - I understand context! """
                         try:
                             # Never capture mic while unified TTS is actively speaking over speakers
                             try:
-                                from ai_assistant.voice.tts_output_service import get_tts_service
+                                from core_ai.voice.tts_output_service import get_tts_service
                                 if get_tts_service().is_speaking():
                                     time.sleep(0.15)
                                     continue
@@ -2005,7 +2020,7 @@ Just speak naturally - I understand context! """
 
                                 # Speak response strictly via unified desktop TTS output service
                                 try:
-                                    from ai_assistant.voice.tts_output_service import get_tts_service
+                                    from core_ai.voice.tts_output_service import get_tts_service
                                     get_tts_service().speak(response, source="assistant_voice_loop")
                                 except Exception as tts_err:
                                     logger.debug(f"Unified TTS output error in listen_worker: {tts_err}")
@@ -2039,7 +2054,7 @@ Just speak naturally - I understand context! """
     
     def speak_text(self, text, mood=None):
         """Convert text to speech (WAV base64) using local KittenTTS mini-0.8."""
-        from ai_assistant.voice.tts_output_service import (
+        from core_ai.voice.tts_output_service import (
             load_kitten_mini_model,
             pcm_to_wav_bytes,
             resolve_kitten_voice,
@@ -2077,7 +2092,7 @@ Just speak naturally - I understand context! """
                 speed = 1.1
 
         try:
-            from ai_assistant.voice.text_cleaner import prepare_text_for_kitten_tts
+            from core_ai.voice.text_cleaner import prepare_text_for_kitten_tts
             text = prepare_text_for_kitten_tts(text)
         except Exception as e:
             logger.debug(f"Could not sanitize text for TTS: {e}")
@@ -2152,7 +2167,7 @@ Just speak naturally - I understand context! """
                 initial_prompt = "Hey Pulsar, OK Pulsar, नमस्ते! WhatsApp, Chrome, YouTube, Spotify, VS Code खोलो, बंद करो, गाना चलाओ, आवाज़ बढ़ाओ, स्क्रीनशॉट लो, बताओ क्या करना है?"
 
             try:
-                from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+                from core_ai.voice.vocabulary_registry import get_vocabulary_registry
                 kw = get_vocabulary_registry().get_whisper_prompt_keywords(limit=32)
                 if kw:
                     initial_prompt = f"{initial_prompt} ({kw})"
@@ -2197,7 +2212,7 @@ Just speak naturally - I understand context! """
                 
                 # Voice Emotion Detection
                 try:
-                    from ai_assistant.ai.emotional_intelligence import EmotionalIntelligence
+                    from core_ai.ai.emotional_intelligence import EmotionalIntelligence
                     ei = EmotionalIntelligence()
                     voice_emotion = ei.detect_emotion_from_voice(audio_data)
                     print(f"Detected voice emotion: {voice_emotion}")

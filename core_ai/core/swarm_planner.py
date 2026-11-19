@@ -263,7 +263,7 @@ class SwarmPlanner:
 
     def _get_registry(self):
         if self.registry is None:
-            from ai_assistant.agents.loader import get_global_registry
+            from core_ai.agents.loader import get_global_registry
             self.registry = get_global_registry()
         return self.registry
 
@@ -271,7 +271,7 @@ class SwarmPlanner:
         if self.llm_provider is not None:
             return self.llm_provider
         try:
-            from ai_assistant.ai.llm_provider import UnifiedChatInterface
+            from core_ai.ai.llm_provider import UnifiedChatInterface
             self.llm_provider = UnifiedChatInterface(use_fallback=True)
             return self.llm_provider
         except Exception as exc:
@@ -553,7 +553,7 @@ class SwarmPlanner:
             # 1. Check if registry has custom matching agents for this clause
             if reg:
                 try:
-                    from ai_assistant.agents.models import Task
+                    from core_ai.agents.models import Task
                     matched = await reg.find_best_agent(Task(description=clause))
                     if matched and (matched.agent_id.lower() in clause_lower or matched.name.lower() in clause_lower):
                         aid = matched.agent_id

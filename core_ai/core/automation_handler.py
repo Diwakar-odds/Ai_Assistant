@@ -12,7 +12,7 @@ from typing import Dict, Any, Optional
 logger = logging.getLogger(__name__)
 
 try:
-    from ai_assistant.automation_tools_new import (
+    from core_ai.automation_tools_new import (
         setup_memory, save_to_memory, get_memory,
         open_application, close_application,
         search_google, search_and_play_spotify,

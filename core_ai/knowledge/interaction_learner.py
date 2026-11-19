@@ -30,7 +30,7 @@ _PERSONAL_FACT_PATTERNS = [
 def _extract_and_persist_facts(user_text: str, assistant_response: str, active_window: Optional[Dict[str, Any]] = None) -> None:
     """Internal worker executed in a background daemon thread."""
     try:
-        from ai_assistant.ai.memory_retrieval import persist_turn_to_conversation_ai
+        from core_ai.ai.memory_retrieval import persist_turn_to_conversation_ai
         persist_turn_to_conversation_ai(user_text, assistant_response, source="interaction_learner")
     except Exception as exc:
         logger.debug(f"[Learner] Turn persistence note: {exc}")
@@ -41,8 +41,8 @@ def _extract_and_persist_facts(user_text: str, assistant_response: str, active_w
         return
 
     try:
-        from ai_assistant.ai.user_dna import UserDNA
-        from ai_assistant.knowledge.personal_knowledge_graph import get_knowledge_graph
+        from core_ai.ai.user_dna import UserDNA
+        from core_ai.knowledge.personal_knowledge_graph import get_knowledge_graph
 
         dna = UserDNA()
         pkg = get_knowledge_graph()
