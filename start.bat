@@ -33,34 +33,10 @@ if %ERRORLEVEL% neq 0 (
     exit /b
 )
 
-echo [1/3] Starting Python Backend Server...
-:: Start the backend in a new command window
-start "Pulsar Backend" cmd /k "cd backend && python modern_web_backend.py"
-
-echo [2/3] Starting React Frontend...
-cd frontend\web-app
-:: Ensure dependencies are installed just in case
-if not exist "node_modules\" (
-    echo Installing React dependencies...
-    call npm install
-)
-
-:: Start the frontend in a new command window
-start "Pulsar Frontend" cmd /k "npm run dev"
-
-cd /d "%~dp0"
-echo [3/3] Launching Floating Desktop Mascot Robot...
-if exist "venv\Scripts\pythonw.exe" (
-    start "" "venv\Scripts\pythonw.exe" "desktop\companion_app.py"
+echo [1/1] Starting Pulsar AI Assistant Desktop App (Paradigm B: Native Host + Headless Core on Port 5000)...
+if exist "venv\Scripts\python.exe" (
+    venv\Scripts\python.exe web.py --open %*
 ) else (
-    start "" python "desktop\companion_app.py"
+    python web.py --open %*
 )
-
-echo.
-echo ===================================================
-echo     SUCCESS! Pulsar Assistant is Running.
-echo ===================================================
-echo - Web Dashboard: http://localhost:5173
-echo - Floating Robot: Active on your desktop screen!
-echo.
 pause

@@ -40,27 +40,27 @@ def start_backend():
     print("Starting backend on port 5000 for Desktop App...")
     try:
         # LAZY IMPORT: Move heavy imports here so they don't block the UI window from opening!
-        from ai_assistant.services.modern_web_backend import app, socketio, start_ai_background_thread
+        from core_ai.services.modern_web_backend import app, socketio, start_ai_background_thread
         
         # Fire off the background thread to load AI models while Flask starts serving the UI instantly
         start_ai_background_thread()
         
         try:
-            from ai_assistant.services.backend.system_monitor import start_system_monitor
+            from core_ai.services.backend.system_monitor import start_system_monitor
             start_system_monitor(socketio)
         except Exception as e:
             pass
             
         try:
-            from ai_assistant.services.modern_web_backend import GOOGLE_SPEECH_WS_AVAILABLE, register_google_speech_handlers
+            from core_ai.services.modern_web_backend import GOOGLE_SPEECH_WS_AVAILABLE, register_google_speech_handlers
             if GOOGLE_SPEECH_WS_AVAILABLE:
                 register_google_speech_handlers(socketio)
         except Exception as e:
             pass
             
         try:
-            import ai_assistant.services.voice_service as chat_handlers
-            from ai_assistant.services.modern_web_backend import learning_router
+            import core_ai.services.voice_service as chat_handlers
+            from core_ai.services.modern_web_backend import learning_router
             chat_handlers.set_socketio(socketio)
             chat_handlers.set_learning_router(learning_router)
         except Exception as e:

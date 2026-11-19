@@ -113,7 +113,7 @@ def start_cli_app():
         learning_active = False
         learning_assistant = None
         try:
-            from ai_assistant.integrations.learning_integration import get_learning_assistant
+            from core_ai.integrations.learning_integration import get_learning_assistant
             learning_assistant = get_learning_assistant()
             learning_active = learning_assistant.systems_active
             if learning_active:
@@ -123,7 +123,7 @@ def start_cli_app():
         
         # Simple CLI loop
         try:
-            from ai_assistant.ai.conversational_ai import AdvancedConversationalAI
+            from core_ai.ai.conversational_ai import AdvancedConversationalAI
             ai = AdvancedConversationalAI()
             
             print("\nðŸ¤– Pulsar Assistant CLI")
@@ -286,7 +286,7 @@ def main():
         try:
             import sys
             sys.path.insert(0, '../../')  # Add root directory to path
-            from ai_assistant.auth import authenticate
+            from core_ai.auth import authenticate
             if not authenticate():
                 print("âŒ Authentication failed. Exiting...")
                 sys.exit(1)

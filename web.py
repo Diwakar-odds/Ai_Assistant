@@ -1,119 +1,123 @@
 """
-Pulsar AI Assistant - Web Backend & UI Launcher
-===============================================
-Unified Single-Process Launcher.
+Pulsar AI Assistant - Master Unified Launcher
+=============================================
+Paradigm B: Decoupled 2-Process Architecture (Native Host + Headless Core)
+
+Architecture Invariants (Claude Blueprint):
+1. One Launch Command: `python web.py` starts the entire system.
+2. One Lifecycle: Win32 Job Object (KILL_ON_JOB_CLOSE) + Parent Watchdog = zero orphans.
+3. One Port: Port 5000 bound strictly to loopback (127.0.0.1) with per-launch auth token.
+4. One Microphone Owner: Core Audio Worker owns WASAPI mic exclusively. Host NEVER touches mic or AI models.
+5. Native Host: PySide6 System Tray + 4D Glowing Orb + Dashboard + Single `reconcile()` handoff.
 
 Usage:
-    python web.py           (Production mode: runs backend + pre-built UI on http://localhost:5000)
-    python web.py --dev     (Dev mode: starts Vite dev server alongside backend)
-
-Guarantees 1 Process, 1 PID, and 1 Port (5000) with zero orphaned subprocesses.
+    python web.py             (Starts Tray Icon, 4D Orb, Dashboard, and Headless Core)
+    python web.py --tray      (Starts minimized in System Tray with 4D Orb immediately visible)
+    python web.py --test-orb  (Phase-1 standalone visual test: ONLY 4D Orb + Tray Icon)
+    python web.py --core-only (Runs Headless Core server only, without GUI)
 """
+
 import sys
 import os
-import atexit
-import time
+import argparse
+from pathlib import Path
 
-if sys.stdout is not None and hasattr(sys.stdout, 'reconfigure'):
-    try:
-        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
-    except Exception:
-        pass
-if sys.stderr is not None and hasattr(sys.stderr, 'reconfigure'):
-    try:
-        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
-    except Exception:
-        pass
+# 1. Auto-wrap with project virtual environment if launched via global python
+#    (accepts both venv\Scripts\python.exe and venv\Scripts\pythonw.exe cleanly!)
+_root_dir = Path(__file__).resolve().parent
+_venv_python = _root_dir / "venv" / "Scripts" / "python.exe"
+_venv_pythonw = _root_dir / "venv" / "Scripts" / "pythonw.exe"
 
-_backend_app = None
-
-def _get_backend_module():
-    global _backend_app
-    if _backend_app is None:
-        root_dir = os.path.dirname(os.path.abspath(__file__))
-        backend_dir = os.path.join(root_dir, 'backend')
-        for p in (root_dir, backend_dir, os.path.join(root_dir, 'core_ai')):
-            if p not in sys.path:
-                sys.path.insert(0, p)
+if _venv_python.exists():
+    def _is_same_exe(a: str, b: Path) -> bool:
+        if not b.exists():
+            return False
         try:
-            from core_ai.utils.crash_handler import install_crash_handler
-            install_crash_handler()
+            return os.path.samefile(a, str(b))
+        except Exception:
+            return os.path.normpath(a).lower() == os.path.normpath(str(b)).lower()
+
+    _in_venv = _is_same_exe(sys.executable, _venv_python) or _is_same_exe(sys.executable, _venv_pythonw)
+    if not _in_venv and os.environ.get("_PULSAR_VENV_WRAPPED") != "1":
+        os.environ["_PULSAR_VENV_WRAPPED"] = "1"
+        import subprocess
+        _target = _venv_pythonw if (sys.executable.lower().endswith("pythonw.exe") and _venv_pythonw.exists()) else _venv_python
+        sys.exit(subprocess.call([str(_target)] + sys.argv))
+
+# 2. Enforce Per-Monitor V2 DPI Awareness BEFORE any GUI library is imported (Claude Failure #4)
+if sys.platform == "win32":
+    try:
+        import ctypes
+        DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = ctypes.c_void_p(-4)
+        ctypes.windll.user32.SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)
+    except Exception:
+        try:
+            ctypes.windll.shcore.SetProcessDpiAwareness(2)
         except Exception:
             pass
-        if os.path.exists(backend_dir):
-            os.chdir(backend_dir)
-        from backend import modern_web_backend as backend_app
-        _backend_app = backend_app
-    return _backend_app
 
-def start_server(host="127.0.0.1", port=5000, **kwargs):
-    """Programmatic entry point to start the Pulsar server."""
-    backend_app = _get_backend_module()
-    return backend_app.start_server(host=host, port=port, **kwargs)
+# 3. Configure console UTF-8 encoding
+if sys.stdout is not None and hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+if sys.stderr is not None and hasattr(sys.stderr, "reconfigure"):
+    try:
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
+# Keep Host sys.path clean: ONLY add repo root (never eagerly expose backend/core_ai to Host)
+if str(_root_dir) not in sys.path:
+    sys.path.insert(0, str(_root_dir))
+
 
 def __getattr__(name):
-    """
-    Transparently proxy any attributes (e.g. app, socketio, assistant)
-    to backend.modern_web_backend so `import web; web.app` works seamlessly.
-    """
-    backend_app = _get_backend_module()
-    return getattr(backend_app, name)
+    """Backward compatibility: proxy attributes like app, socketio to backend."""
+    for _p in (str(_root_dir / "backend"), str(_root_dir / "core_ai")):
+        if _p not in sys.path:
+            sys.path.insert(0, _p)
+    from backend.modern_web_backend import app, socketio
+    if name == "app":
+        return app
+    elif name == "socketio":
+        return socketio
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+
 
 def main():
-    """
-    Unified Single-Process Launcher for Pulsar AI Assistant.
-    Guarantees 1 Process, 1 PID, and 1 Port (5000) with zero orphaned subprocesses.
-    Serves both WebUI and Backend in-process directly on http://localhost:5000.
-    """
-    os.environ['PYTHONIOENCODING'] = 'utf-8'
-    os.environ['PYTHONUTF8'] = '1'
-    os.environ['PYTHONUNBUFFERED'] = '1'
-    os.environ['HF_HUB_OFFLINE'] = '1'
-    os.environ['TRANSFORMERS_OFFLINE'] = '1'
-    # Allow companion orb by default; disable only if explicitly requested via --no-companion or --headless
-    if '--no-companion' in sys.argv or '--headless' in sys.argv:
-        os.environ['PULSAR_DISABLE_COMPANION'] = '1'
+    parser = argparse.ArgumentParser(description="Pulsar AI Assistant - Master Launcher")
+    parser.add_argument("--port", type=int, default=int(os.getenv("PORT", 5000)), help="Port (default: 5000)")
+    parser.add_argument("--minimized", "--tray", dest="start_minimized", action="store_true", help="Start minimized in system tray with 4D Orb visible")
+    parser.add_argument("--open", dest="open_dashboard", action="store_true", help="Open dashboard window immediately")
+    parser.add_argument("--test-orb", action="store_true", help="Standalone Phase-1 visual test of 4D Orb + System Tray")
+    parser.add_argument("--core-only", action="store_true", help="Run Headless Core only without GUI")
+    parser.add_argument("--no-prewarm", action="store_true", help="Skip heavy pre-warming on startup")
+
+    args = parser.parse_args()
+
+    os.environ["PYTHONIOENCODING"] = "utf-8"
+    os.environ["PYTHONUTF8"] = "1"
+    os.environ["PYTHONUNBUFFERED"] = "1"
+    os.environ["HF_HUB_OFFLINE"] = "1"
+    os.environ["TRANSFORMERS_OFFLINE"] = "1"
+    os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+    os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--disable-logging --log-level=3 --no-sandbox"
+
+    if args.test_orb:
+        from pulsar.host.__main__ import run_standalone_orb_tray_test
+        run_standalone_orb_tray_test(port=args.port)
+    elif args.core_only:
+        for _p in (str(_root_dir / "backend"), str(_root_dir / "core_ai")):
+            if _p not in sys.path:
+                sys.path.insert(0, _p)
+        from pulsar.core.server import run_core
+        run_core(host="127.0.0.1", port=args.port, prewarm=not args.no_prewarm)
     else:
-        os.environ.pop('PULSAR_DISABLE_COMPANION', None)
+        from pulsar.host.__main__ import run_host
+        run_host(port=args.port, start_dashboard=bool(args.open_dashboard and not args.start_minimized))
 
-    def cleanup_companion():
-        try:
-            from routes.system_routes import stop_companion_process
-            stop_companion_process()
-        except Exception:
-            pass
-    atexit.register(cleanup_companion)
 
-    root_dir = os.path.dirname(os.path.abspath(__file__))
-    backend_dir = os.path.join(root_dir, 'backend')
-    
-    for p in (root_dir, backend_dir, os.path.join(root_dir, 'core_ai')):
-        if p not in sys.path:
-            sys.path.insert(0, p)
-            
-    # Optional dev frontend flag (--dev or --dev-frontend)
-    dev_mode = '--dev' in sys.argv or '--dev-frontend' in sys.argv
-    if dev_mode:
-        import subprocess
-        frontend_dir = os.path.join(root_dir, 'frontend', 'web-app')
-        if os.path.exists(frontend_dir):
-            frontend_process = subprocess.Popen(
-                ["npm", "run", "dev"], 
-                cwd=frontend_dir,
-                shell=True
-            )
-            def cleanup():
-                if frontend_process and frontend_process.poll() is None:
-                    subprocess.run(['taskkill', '/F', '/T', '/PID', str(frontend_process.pid)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            atexit.register(cleanup)
-
-    os.chdir(backend_dir)
-    try:
-        backend_app = _get_backend_module()
-        backend_app.start_server(host="127.0.0.1", port=5000)
-    except KeyboardInterrupt:
-        print("\n🛑 Shutting down gracefully...")
-        sys.exit(0)
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

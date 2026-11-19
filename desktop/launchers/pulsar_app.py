@@ -853,7 +853,7 @@ class PulsarAssistant:
         """Discover installed applications"""
         try:
             self.log_output("Discovering applications...")
-            from ai_assistant.automation.app_discovery import discover_applications
+            from core_ai.automation.app_discovery import discover_applications
             result = discover_applications()
             self.log_output(f"Application discovery completed: {result}")
         except Exception as e:

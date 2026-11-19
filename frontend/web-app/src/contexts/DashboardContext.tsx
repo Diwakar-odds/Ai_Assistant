@@ -188,6 +188,7 @@ interface DashboardContextType {
     orbError: string | null;
     triggerOrbError: (msg?: string) => void;
     desktopOverlayEnabled: boolean;
+    playEarcon: (type: 'wake' | 'listening' | 'done' | 'error') => void;
     setDesktopOverlayEnabled: (enabled: boolean) => void;
     sendCommand: (command: string, opts?: { agentId?: string }) => void;
     isAITyping: boolean;
@@ -1724,10 +1725,76 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     // This persists across re-renders and ensures we always clean up the *actual* active instance
      
     const activeRecognitionRef = useRef<any>(null);
-
+    const followUpTimerRef = useRef<any>(null);
+    const isFollowUpRef = useRef<boolean>(false);
 
     const [remoteOrbState, setRemoteOrbState] = useState<OrbState>('idle');
     const [remoteOrbAudioLevel, setRemoteOrbAudioLevel] = useState<number>(0);
+
+    // Production-Grade Web Audio Earcon Synthesizer (Zero-Latency Audio Cues)
+    const playEarcon = useCallback((type: 'wake' | 'listening' | 'done' | 'error') => {
+        try {
+            const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+            if (!AudioCtx) return;
+            let ctx = audioContextRef.current;
+            if (!ctx || ctx.state === 'closed') {
+                ctx = new AudioCtx();
+                audioContextRef.current = ctx;
+            }
+            if (ctx.state === 'suspended') {
+                ctx.resume().catch(() => {});
+            }
+            const now = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            if (type === 'wake') {
+                // Dual rising chime: soft, elegant wake feedback (440Hz -> 880Hz)
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.exponentialRampToValueAtTime(880, now + 0.09);
+                gain.gain.setValueAtTime(0.0001, now);
+                gain.gain.linearRampToValueAtTime(0.12, now + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+                osc.start(now);
+                osc.stop(now + 0.13);
+            } else if (type === 'listening') {
+                // Soft rising blip on mic activate (520Hz -> 650Hz, 80ms)
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(520, now);
+                osc.frequency.exponentialRampToValueAtTime(650, now + 0.07);
+                gain.gain.setValueAtTime(0.0001, now);
+                gain.gain.linearRampToValueAtTime(0.09, now + 0.015);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+                osc.start(now);
+                osc.stop(now + 0.09);
+            } else if (type === 'done') {
+                // Harmonious bell chime: crisp affirmative (587Hz -> 880Hz)
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587.33, now); // D5
+                osc.frequency.setValueAtTime(880, now + 0.06); // A5
+                gain.gain.setValueAtTime(0.0001, now);
+                gain.gain.linearRampToValueAtTime(0.11, now + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.17);
+                osc.start(now);
+                osc.stop(now + 0.18);
+            } else if (type === 'error') {
+                // Low double tone: gentle failure cue (320Hz -> 180Hz)
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(320, now);
+                osc.frequency.exponentialRampToValueAtTime(180, now + 0.14);
+                gain.gain.setValueAtTime(0.0001, now);
+                gain.gain.linearRampToValueAtTime(0.12, now + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+                osc.start(now);
+                osc.stop(now + 0.16);
+            }
+        } catch (e) {
+            console.warn('Earcon playback error:', e);
+        }
+    }, []);
 
     // Initialize Socket.IO connection
     useEffect(() => {
@@ -1920,17 +1987,33 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                         ttsCooldownTimerRef.current = setTimeout(() => {
                             ttsCooldownTimerRef.current = null;
                             ttsSpeakingRef.current = false;
-                            if (
-                                alwaysActiveRef.current &&
-                                !requireWakeWordRef.current &&
-                                !userStoppedRef.current &&
+                            // Production Multi-Turn Follow-Up Window (7.5s active listening without repeating wake-word)
+                            const canFollowUp = !userStoppedRef.current &&
                                 !isVoiceActiveRef.current &&
                                 typeof document !== 'undefined' &&
-                                document.visibilityState !== 'hidden'
-                            ) {
+                                document.visibilityState !== 'hidden';
+
+                            if (canFollowUp) {
+                                console.log('🎙️ Opening 7.5s conversational follow-up window...');
+                                isFollowUpRef.current = true;
                                 toggleVoice().catch((err) => {
-                                    console.error('Error resuming continuous listening after backend TTS:', err);
+                                    console.error('Error starting follow-up listening after backend TTS:', err);
                                 });
+
+                                if (followUpTimerRef.current) {
+                                    clearTimeout(followUpTimerRef.current);
+                                }
+                                followUpTimerRef.current = setTimeout(() => {
+                                    if (isFollowUpRef.current) {
+                                        console.log('⏳ Follow-up window expired (silence timeout), returning to idle');
+                                        isFollowUpRef.current = false;
+                                        if (isVoiceActiveRef.current) {
+                                            toggleVoice().catch(() => {});
+                                        }
+                                        setRemoteOrbState('idle');
+                                    }
+                                    followUpTimerRef.current = null;
+                                }, 7500);
                             }
                         }, 900);
                     }
@@ -1947,6 +2030,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             if (data?.detected) {
                 clearOrbError();
                 setWakeWordDetected(true);
+                playEarcon('wake');
                 setTimeout(() => setWakeWordDetected(false), 6000);
             }
         });
@@ -1954,10 +2038,17 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         newSocket.on('wake_word_detected', (data: any) => {
             clearOrbError();
             setWakeWordDetected(true);
+            playEarcon('wake');
             if (data?.wake_word) {
                 addSystemLog('info', `Wake word heard: "${data.wake_word}"`);
             }
             setTimeout(() => setWakeWordDetected(false), 7000);
+        });
+
+        newSocket.on('play_earcon', (data: any) => {
+            if (data?.type && (data.type === 'wake' || data.type === 'listening' || data.type === 'done' || data.type === 'error')) {
+                playEarcon(data.type);
+            }
         });
 
         // Listen for live settings changes
@@ -2120,6 +2211,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
             if (data.success) {
                 clearOrbError();
+                playEarcon('done');
                 const message = String(data.response || data.message || '').trim();
                 if (message && !isViewingHistoryRef.current) {
                     upsertChatMessage({
@@ -2149,6 +2241,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 const rawErr = String(data.error || data.response || 'Unknown error');
                 const errorMsg = rawErr.startsWith('Error:') ? rawErr : 'Error: ' + rawErr;
                 triggerOrbError(rawErr);
+                playEarcon('error');
                 if (!isViewingHistoryRef.current) {
                     upsertChatMessage({
                         text: errorMsg,
@@ -2673,7 +2766,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             activeRecognitionRef.current = recog;
 
             recog.onstart = () => {
-                console.log('≡ƒÄñ Voice recognition started');
+                console.log('🎤 Voice recognition started');
                 console.log('   Language:', recog.lang);
                 console.log('   Continuous:', recog.continuous);
                 console.log('   Interim Results:', recog.interimResults);
@@ -2681,22 +2774,18 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
                 // Only set active if user didn't manually stop (use ref to avoid stale state)
                 if (!userStoppedRef.current) {
-                    setIsVoiceActive(true);
-                    isVoiceActiveRef.current = true; // Sync ref
-                    setInterimTranscript('');
                     _setIsRecognitionStarted(true);
 
-                    // Start audio level monitoring immediately
-                    console.log('≡ƒÄº Initiating audio level monitoring...');
-                    startAudioLevelMonitoring().catch(err => {
-                        console.error('Γ¥î Audio monitoring failed:', err);
-                        console.log('≡ƒôè Falling back to simulated audio levels');
-                        simulateAudioLevel();
-                    });
+                    // If user manually initiated voice command recording or requireWakeWord is false, activate voice recording UI
+                    if (isVoiceActiveRef.current || !requireWakeWordRef.current) {
+                        setIsVoiceActive(true);
+                        setInterimTranscript('');
+                        startAudioLevelMonitoring().catch(() => simulateAudioLevel());
+                    }
                 } else {
-                    console.log('ΓÜá∩╕Å Recognition started but user stopped - stopping immediately');
+                    console.log('⚠️ Recognition started but user stopped - stopping immediately');
                     _setIsRecognitionStarted(false);
-                    recog.stop();
+                    try { recog.stop(); } catch { /* ignore */ }
                 }
             };
 
@@ -3087,50 +3176,55 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             };
 
             recog.onend = () => {
-                console.log('⏳ Recognition ended, current state:', isVoiceActiveRef.current, 'userStopped:', userStoppedRef.current);
+                console.log('⏳ Recognition ended, current state:', isVoiceActiveRef.current, 'userStopped:', userStoppedRef.current, 'alwaysActive:', alwaysActiveRef.current);
                 _setIsRecognitionStarted(false);
 
                 // Stop audio monitoring when recognition ends
                 stopAudioLevelMonitoring();
 
-                // Only restart if:
-                // 1. User hasn't manually stopped
-                // 2. Voice is still supposed to be active
-                // 3. Not in always-active mode (which handles its own lifecycle)
-                if (!userStoppedRef.current && isVoiceActiveRef.current && !alwaysActiveRef.current) {
-                    console.log('🔄 Recognition ended unexpectedly, restarting in 1000ms...');
+                // Restart if user hasn't manually stopped and (voice is active OR alwaysActive is on)
+                const shouldRestart = !userStoppedRef.current && (isVoiceActiveRef.current || alwaysActiveRef.current);
+                if (shouldRestart) {
+                    console.log('🔄 Recognition ended, restarting wake-word/voice listener in 500ms...');
                     setTimeout(() => {
-                        // Echo prevention: don't restart mic while TTS is speaking or in cooldown
-                        if (ttsSpeakingRef.current) {
-                            console.log('🔇 Skipping recognition restart — TTS still speaking/cooling down');
+                        // Echo prevention: don't restart mic while TTS is speaking or in cooldown, or while MediaRecorder is active
+                        if (ttsSpeakingRef.current || remoteTtsSpeakingRef.current || (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording')) {
+                            console.log('🔇 Skipping recognition restart — TTS speaking or MediaRecorder active');
                             return;
                         }
-                        if (!userStoppedRef.current && isVoiceActiveRef.current && recog) {
+                        if (!userStoppedRef.current && (isVoiceActiveRef.current || alwaysActiveRef.current) && activeRecognitionRef.current) {
                             try {
-                                recog.start();
-                                console.log('✅ Recognition restarted');
-                                 
+                                activeRecognitionRef.current.start();
+                                console.log('✅ Wake-word recognition restarted');
                             } catch (error: any) {
                                 if (!error.message?.includes('already started')) {
-                                    console.error('❌ Failed to restart:', error);
-                                    setIsVoiceActive(false);
-                                    isVoiceActiveRef.current = false;
+                                    console.warn('Recognition restart note:', error?.message || error);
                                 }
                             }
                         }
-                    }, 1000);
+                    }, 500);
                 } else {
                     console.log('🚫 Not restarting - userStopped:', userStoppedRef.current, 'active:', isVoiceActiveRef.current, 'alwaysActive:', alwaysActiveRef.current);
-                    if (!alwaysActiveRef.current) {
-                        setIsVoiceActive(false);
-                        isVoiceActiveRef.current = false;
-                        setInterimTranscript('');
-                    }
+                    setIsVoiceActive(false);
+                    isVoiceActiveRef.current = false;
+                    setInterimTranscript('');
                 }
             };
 
             setRecognition(recog);
-            console.log('✅ Voice recognition initialized (not started)');
+            console.log('✅ Voice recognition initialized');
+
+            // If always-active wake mode is enabled, start listening for "Hey Pulsar"
+            if (alwaysActiveRef.current && !userStoppedRef.current) {
+                try {
+                    recog.start();
+                    console.log('🚀 Background wake-word listener started for "Hey Pulsar"');
+                } catch (err: any) {
+                    if (!err?.message?.includes('already started')) {
+                        console.log('Wake-word standby mode (will activate on user interaction)');
+                    }
+                }
+            }
 
             return () => {
                 console.log('🧹 Cleanup: component unmounting or language changing');
@@ -3483,8 +3577,26 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
             // eslint-disable-next-line no-constant-condition
             if (true) {
                 console.log('▶️ Starting voice recording (MediaRecorder for Faster Whisper)');
+                playEarcon('listening');
+                if (activeRecognitionRef.current) {
+                    try {
+                        activeRecognitionRef.current.abort();
+                    } catch { /* empty */ }
+                }
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    let stream: MediaStream;
+                    try {
+                        stream = await navigator.mediaDevices.getUserMedia({
+                            audio: {
+                                echoCancellation: true,
+                                noiseSuppression: true,
+                                autoGainControl: true,
+                            }
+                        });
+                    } catch (narrowErr) {
+                        console.warn('Standard getUserMedia constraints failed, trying basic audio stream:', narrowErr);
+                        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    }
                     microphoneStreamRef.current = stream;
 
                     const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
@@ -3553,6 +3665,12 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                                     sessionActivitiesRef.current = [];
                                     syncWithBackendSession({ triggerStartupGreetingIfEmpty: false });
                                 }
+                                const wasFollowUp = isFollowUpRef.current;
+                                isFollowUpRef.current = false;
+                                if (followUpTimerRef.current) {
+                                    clearTimeout(followUpTimerRef.current);
+                                    followUpTimerRef.current = null;
+                                }
                                 streamingMessageIdRef.current = null;
                                 activeSocket.emit('voice_audio_data', {
                                     audio_data: reader.result,
@@ -3560,6 +3678,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                                     language: voiceLanguage,
                                     require_wake_word: false,
                                     manual_click: true,
+                                    is_follow_up: wasFollowUp,
                                     always_active: !!alwaysActiveRef.current,
                                     provider: aiProviderRef.current,
                                     model: aiModelRef.current,
@@ -3780,6 +3899,12 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 ? 'Always wake mode enabled. Say "Hey Pulsar" anytime.'
                 : 'Always active mode enabled.';
             speak(message, voiceLanguage);
+            if (activeRecognitionRef.current && (!mediaRecorderRef.current || mediaRecorderRef.current.state !== 'recording')) {
+                try {
+                    activeRecognitionRef.current.start();
+                    console.log('🚀 Wake-word recognition started on alwaysActive toggle');
+                } catch { /* already started */ }
+            }
         } else {
             if (isVoiceActive) {
                 try {
@@ -3787,6 +3912,11 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 } catch (error) {
                     console.error('❌ Error stopping active voice capture:', error);
                 }
+            }
+            if (activeRecognitionRef.current) {
+                try {
+                    activeRecognitionRef.current.stop();
+                } catch { /* ignore */ }
             }
             speak('Always wake mode disabled.', voiceLanguage);
             setWakeWordDetected(false);
@@ -3876,14 +4006,18 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
         try {
             // Get microphone access
-            const stream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    sampleRate: 16000,
-                    channelCount: 1,
-                    echoCancellation: true,
-                    noiseSuppression: true
-                }
-            });
+            let stream: MediaStream;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                    }
+                });
+            } catch {
+                stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            }
 
             // Create MediaRecorder for audio capture
             const mediaRecorder = new MediaRecorder(stream, {
@@ -4357,6 +4491,24 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         isProcessingCommandRef.current = isProcessingCommand;
     }, [isProcessingCommand]);
 
+    // Resume / activate background wake word on first user gesture if blocked initially by browser policy
+    useEffect(() => {
+        const onFirstInteract = () => {
+            if (alwaysActiveRef.current && !userStoppedRef.current && activeRecognitionRef.current) {
+                try {
+                    activeRecognitionRef.current.start();
+                    console.log('🚀 Wake-word listener activated via user interaction');
+                } catch { /* already started or handled */ }
+            }
+        };
+        window.addEventListener('click', onFirstInteract, { once: true });
+        window.addEventListener('keydown', onFirstInteract, { once: true });
+        return () => {
+            window.removeEventListener('click', onFirstInteract);
+            window.removeEventListener('keydown', onFirstInteract);
+        };
+    }, []);
+
     // Track browser/desktop app visibility, focus & close state for taskbar-adjacent orb overlay
     useEffect(() => {
         const updateVisibility = (forceMinimized?: boolean) => {
@@ -4494,7 +4646,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         socket.emit('orb_state_update', {
             state: localOrbState,
             audio_level: localOrbAudioLevel,
-            webui_mic_active: isVoiceActive,
+            webui_mic_active: appMinimized ? false : isVoiceActive,
             app_minimized: appMinimized,
             error_message: orbError || '',
             source: 'webui',
@@ -4622,7 +4774,10 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
         analyzeCameraFrame,
         checkPresence,
         lastGesture,
-        checkGesture
+        checkGesture,
+
+        // Low-Latency Audio Cues
+        playEarcon
     };
 
     return <DashboardContext.Provider value={value}>{children}</DashboardContext.Provider>;

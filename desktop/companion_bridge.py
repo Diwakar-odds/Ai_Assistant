@@ -156,7 +156,7 @@ class CompanionBridgeClient:
         except Exception:
             pass
         try:
-            from ai_assistant.core.local_command_normalizer import DEFAULT_WAKE_PHRASES
+            from core_ai.core.local_command_normalizer import DEFAULT_WAKE_PHRASES
             return list(DEFAULT_WAKE_PHRASES)
         except Exception:
             return ["hey pulsar", "pulsar", "ok pulsar", "hey assistant"]
@@ -257,7 +257,7 @@ class CompanionBridgeClient:
         # Offline in-process persona fallback ONLY when backend is unreachable
         text = ""
         try:
-            from ai_assistant.core.jarvis_persona import generate_wake_acknowledgment
+            from core_ai.core.jarvis_persona import generate_wake_acknowledgment
             text = generate_wake_acknowledgment(wake_word=wake_word, raw_transcript=raw_transcript)
         except Exception:
             text = ""
@@ -283,7 +283,7 @@ class CompanionBridgeClient:
         try:
             pre_report = None
             try:
-                from ai_assistant.core.jarvis_persona import generate_pre_task_report
+                from core_ai.core.jarvis_persona import generate_pre_task_report
                 pre_report = generate_pre_task_report(command, source="companion_voice")
             except Exception:
                 pre_report = None
@@ -295,7 +295,7 @@ class CompanionBridgeClient:
                 out = dict(res)
                 raw_resp = str(out.get("response", ""))
                 try:
-                    from ai_assistant.core.jarvis_persona import format_post_task_report
+                    from core_ai.core.jarvis_persona import format_post_task_report
                     formatted = format_post_task_report(
                         command=command,
                         raw_result=raw_resp,

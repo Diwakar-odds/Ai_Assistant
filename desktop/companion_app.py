@@ -30,6 +30,31 @@ import numpy as np
 from dotenv import load_dotenv
 from PIL import Image
 
+try:
+    _log_dir = os.path.join(os.path.dirname(__file__), "..", "logs")
+    os.makedirs(_log_dir, exist_ok=True)
+    _log_file = open(os.path.join(_log_dir, "companion_desktop.log"), "a", encoding="utf-8", buffering=1)
+    if sys.stdout is None:
+        sys.stdout = _log_file
+    if sys.stderr is None:
+        sys.stderr = _log_file
+except Exception:
+    pass
+
+# Ensure six / six.moves are initialized before pystray backend loads
+try:
+    import six
+    import six.moves
+except Exception:
+    pass
+
+try:
+    import pystray
+    PYSTRAY_AVAILABLE = True
+except Exception:
+    pystray = None
+    PYSTRAY_AVAILABLE = False
+
 # Windows Per-Monitor DPI Awareness (must happen before GUI metrics/windows)
 try:
     ctypes.windll.shcore.SetProcessDpiAwareness(2)
@@ -46,6 +71,7 @@ else:
 for p in (
     project_root,
     project_root / "backend",
+    project_root / "backend" / "services",
     project_root / "core_ai",
     project_root / "desktop",
 ):
@@ -81,6 +107,27 @@ except Exception:
 MUTEX_NAME = "Local\\Pulsar_Ambient_Mascot_Robot_Mutex"
 APP_LAUNCHER_MUTEX_NAME = "Local\\Pulsar_AI_Desktop_App_Mutex"
 WINDOW_TITLE = "Pulsar 4D Orb Overlay"
+WM_TRAYICON = win32con.WM_USER + 20
+
+class NOTIFYICONDATAW(ctypes.Structure):
+    _fields_ = [
+        ('cbSize', wintypes.DWORD),
+        ('hWnd', wintypes.HWND),
+        ('uID', wintypes.UINT),
+        ('uFlags', wintypes.UINT),
+        ('uCallbackMessage', wintypes.UINT),
+        ('hIcon', wintypes.HICON),
+        ('szTip', wintypes.WCHAR * 128),
+        ('dwState', wintypes.DWORD),
+        ('dwStateMask', wintypes.DWORD),
+        ('szInfo', wintypes.WCHAR * 256),
+        ('uTimeoutOrVersion', wintypes.UINT),
+        ('szInfoTitle', wintypes.WCHAR * 64),
+        ('dwInfoFlags', wintypes.DWORD),
+        ('guidItem', ctypes.c_byte * 16),
+        ('hBalloonIcon', wintypes.HICON),
+    ]
+
 try:
     _env_orb = int(os.environ.get("PULSAR_ORB_SIZE", "136"))
     DEFAULT_ORB_SIZE = max(96, min(320, _env_orb))
@@ -150,15 +197,24 @@ _EXCLUDED_WINDOW_HINTS = (
     "pulsar 4d orb overlay",
     "visual studio code",
     "antigravity",
-    "powershell",
+    "cursor",
+    "launcher",
+    "terminal",
     "command prompt",
-    "windows terminal",
+    "powershell",
     "cmd.exe",
+    "bash",
+    "start.bat",
+    "web.py",
+    "node.exe",
+    "npm",
+    "python",
 )
 
 user32 = ctypes.windll.user32
 gdi32 = ctypes.windll.gdi32
 kernel32 = ctypes.windll.kernel32
+shell32 = ctypes.windll.shell32
 
 
 class BLENDFUNCTION(ctypes.Structure):
@@ -267,9 +323,22 @@ ORB_STATE_CONFIGS: Dict[str, Dict[str, object]] = {
 }
 
 
-def compute_overlay_visibility(overlay_enabled: bool, app_minimized: bool, orb_state: str = "idle") -> bool:
-    """Constant visibility gate: show whenever overlay is enabled and WebUI/app is minimized or hidden."""
-    return bool(overlay_enabled and app_minimized)
+def compute_overlay_visibility(
+    overlay_enabled: bool,
+    app_minimized: bool,
+    orb_state: str = "idle",
+    auto_hide: bool = False,
+) -> bool:
+    """Visibility gate: show whenever overlay is enabled (defaulting to visible at all times unless auto_hide is explicitly set)."""
+    # Active interaction states (listening, speaking, processing) always stay visible
+    # so user gets real-time visual feedback even if orb was manually toggled off!
+    if orb_state in ("listening", "speaking", "processing"):
+        return True
+    if not overlay_enabled:
+        return False
+    if not auto_hide:
+        return True
+    return bool(app_minimized)
 
 
 def get_workarea_bottom_center_coords(
@@ -301,6 +370,13 @@ def detect_webui_window_open() -> bool:
 
     def _callback(hwnd, _lparam):
         if not user32.IsWindowVisible(hwnd) or user32.IsIconic(hwnd):
+            return True
+
+        # Ignore terminal/console window classes (never count console as the WebUI)
+        class_buf = ctypes.create_unicode_buffer(256)
+        user32.GetClassNameW(hwnd, class_buf, 256)
+        class_l = class_buf.value.strip().lower()
+        if any(c in class_l for c in ("console", "cascadia", "pseudoconsole", "terminal")):
             return True
 
         length = user32.GetWindowTextLengthW(hwnd)
@@ -648,14 +724,30 @@ class ParticleOrbRenderer:
         return Image.fromarray(rgba_out)
 
 
+def _attach_interactive_desktop():
+    """Ensure process and GUI thread attach to the user's physical interactive desktop (WinSta0\\Default)."""
+    if sys.platform != "win32":
+        return
+    try:
+        hwinsta = user32.OpenWindowStationW("WinSta0", False, 0x00020000 | 0x037F)
+        if hwinsta:
+            user32.SetProcessWindowStation(hwinsta)
+        hdesk = user32.OpenDesktopW("Default", 0, False, 0x00020000 | 0x01FF)
+        if hdesk:
+            user32.SetThreadDesktop(hdesk)
+    except Exception:
+        pass
+
+
 class AmbientMascotApp:
     """Click-through transparent minimized 4D orb overlay & wake-word daemon."""
 
-    def __init__(self, acquire_mutex: bool = True, port: Optional[int] = None):
+    def __init__(self, acquire_mutex: bool = True, port: Optional[int] = None, parent_pid: Optional[int] = None):
         if acquire_mutex:
             self._acquire_single_instance()
 
         self.port = int(port or os.environ.get("PULSAR_PORT") or os.environ.get("PORT") or 5000)
+        self.parent_pid = parent_pid
         self.w = DEFAULT_ORB_SIZE
         self.h = DEFAULT_ORB_SIZE
         self.x, self.y = get_workarea_bottom_center_coords(self.w, self.h)
@@ -663,14 +755,14 @@ class AmbientMascotApp:
         # Synchronized overlay state (default app_minimized=True until WebUI window detected open)
         self._state_lock = threading.Lock()
         self.overlay_enabled = True
-        self.app_minimized = not detect_webui_window_open()
+        self.app_minimized = True
         self.always_wake_enabled = True
-        self.screen_share_stealth = True
+        self.screen_share_stealth = False
         try:
             from settings_manager import is_screen_share_stealth_enabled
-            self.screen_share_stealth = is_screen_share_stealth_enabled()
+            self.screen_share_stealth = bool(is_screen_share_stealth_enabled())
         except Exception:
-            pass
+            self.screen_share_stealth = False
         try:
             from settings_manager import get_tts_config
             _init_tts = get_tts_config()
@@ -680,7 +772,7 @@ class AmbientMascotApp:
         self.tts_voice_id = str(_init_tts.get("voice_id") or "hi-IN-SwaraNeural").strip() or "hi-IN-SwaraNeural"
         self.constant_alpha = 230
         self.always_on_top = True
-        self.auto_hide_on_dashboard = True
+        self.auto_hide_on_dashboard = False
         self.orb_state = "idle"
         self.audio_level = 0.0
         self.webui_mic_active = False
@@ -701,46 +793,48 @@ class AmbientMascotApp:
         self._active_pyttsx3 = None
         self._last_http_poll = 0.0
         self.tray_icon = None
+        self._tray_registered = False
+        self._tray_nid = None
+        self._tray_hicon = None
+        try:
+            self._wm_taskbar_created = user32.RegisterWindowMessageW("TaskbarCreated")
+        except Exception:
+            self._wm_taskbar_created = 0
 
         self.renderer = ParticleOrbRenderer(size=self.w, num_particles=280)
         self.bridge = CompanionBridgeClient(port=self.port)
 
-        self.voice = CompanionVoiceListener(
-            on_wake=self._on_wake_heard,
-            on_wake_ack=self._on_wake_ack,
-            on_command=self._on_voice_command,
-            on_audio_level=self._on_mic_audio_level,
-            on_wake_ignored=self._on_wake_ignored,
-            is_paused_fn=lambda: (
-                (not self.always_wake_enabled)
-                or (self.orb_state == "processing")
-                or (
-                    self.webui_mic_active
-                    and not (
-                        self.is_tts_speaking
-                        or self.remote_tts_speaking
-                        or (time.time() < self._remote_tts_cooldown_until)
-                    )
-                )
-            ),
-            is_capture_aborted_fn=lambda: (
-                (not self.always_wake_enabled)
-                or self.webui_mic_active
-            ),
-            get_wake_phrases_fn=self.bridge.get_wake_words,
-            is_tts_speaking_fn=lambda: bool(
-                self.is_tts_speaking
-                or self.remote_tts_speaking
-                or (time.time() < self._remote_tts_cooldown_until)
-            ),
-            on_barge_in=self._on_barge_in,
-        )
-        self.voice.start()
-
-        self._init_hotkeys()
-        if acquire_mutex and os.environ.get("PULSAR_NO_TRAY") != "1":
-            self._init_tray()
+        # 1. Create Win32 transparent glowing orb window IMMEDIATELY on line 1
+        # Instant window registration and display (< 20ms) ensures zero race conditions with backend
         self._create_window()
+
+        # 2. Hotkeys (Pause / F8)
+        self._init_hotkeys()
+
+        # 3. System Tray Menu (Fallback if native Win32 tray registration failed)
+        if os.environ.get("PULSAR_NO_TRAY") != "1" and not getattr(self, "_tray_registered", False):
+            self._init_tray()
+
+        # 4. In-Process Voice Listener (Unified wake word & streaming microphone capture)
+        self.voice = None
+        if os.environ.get("PULSAR_DISABLE_VOICE") != "1":
+            try:
+                self.voice = CompanionVoiceListener(
+                    on_wake=self._on_wake_heard,
+                    on_wake_ack=self._on_wake_ack,
+                    on_command=self._on_voice_command,
+                    on_audio_level=self._on_mic_audio_level,
+                    on_wake_ignored=self._on_wake_ignored,
+                    on_barge_in=self._on_barge_in,
+                    is_paused_fn=lambda: not self.always_wake_enabled or self.webui_mic_active,
+                    is_tts_speaking_fn=lambda: self.is_tts_speaking or self.remote_tts_speaking,
+                )
+                self.voice.start()
+                print("[OVERLAY] In-process voice listener active (listening for 'Hey Pulsar').")
+            except Exception as e:
+                print(f"[OVERLAY] In-process voice listener note: {e}")
+
+        # 5. Socket.IO Real-time synchronization
         self._start_socket_sync()
         threading.Thread(
             target=self._sync_initial_settings,
@@ -748,13 +842,58 @@ class AmbientMascotApp:
             name="CompanionInitialSettingsSync",
         ).start()
         self._start_window_autodetect()
+        self._start_watchdog_thread(parent_pid=self.parent_pid)
+
+    def _start_watchdog_thread(self, parent_pid: Optional[int] = None):
+        """
+        Monitors parent process if explicitly provided.
+        Automatically terminates companion, frees microphone, and stops tray
+        if parent process exits. (Companion never self-terminates purely on HTTP timeout).
+        """
+        if not parent_pid:
+            return  # In-process or standalone mode needs no parent watchdog
+
+        def _watchdog_loop():
+            # Grace period for initial boot
+            time.sleep(5.0)
+            while not self._stop_event.is_set():
+                try:
+                    import psutil
+                    if not psutil.pid_exists(parent_pid):
+                        try:
+                            print(f"[OVERLAY] Parent process {parent_pid} terminated. Exiting companion.")
+                        except Exception:
+                            pass
+                        self.close()
+                        os._exit(0)
+                except Exception:
+                    pass
+                time.sleep(3.0)
+
+        threading.Thread(target=_watchdog_loop, daemon=True, name="CompanionParentWatchdog").start()
 
     def _acquire_single_instance(self):
         self._mutex = kernel32.CreateMutexW(None, True, MUTEX_NAME)
         err = kernel32.GetLastError()
         if err in (183, 5) or not self._mutex:  # ERROR_ALREADY_EXISTS or ERROR_ACCESS_DENIED
-            print("[OVERLAY] Minimized 4D Orb overlay is already running. Exiting duplicate.")
-            sys.exit(0)
+            # Verify if an existing visible overlay window is actually alive on desktop
+            existing_hwnd = user32.FindWindowW("PulsarTransparentOrbOverlayClass", WINDOW_TITLE)
+            if existing_hwnd and user32.IsWindow(existing_hwnd):
+                print("[OVERLAY] Active 4D Orb overlay window already running on desktop. Exiting duplicate.")
+                try:
+                    user32.ShowWindow(existing_hwnd, win32con.SW_SHOWNA)
+                except Exception:
+                    pass
+                sys.exit(0)
+            else:
+                # Stale mutex from a previous crash/orphaned PID without active window: reclaim mutex cleanly
+                print("[OVERLAY] Stale companion mutex detected with no active window. Reclaiming single-instance lock.")
+                if self._mutex:
+                    try:
+                        kernel32.CloseHandle(self._mutex)
+                    except Exception:
+                        pass
+                self._mutex = kernel32.CreateMutexW(None, True, MUTEX_NAME)
 
     def _is_app_launcher_running(self) -> bool:
         try:
@@ -767,19 +906,54 @@ class AmbientMascotApp:
             pass
         return False
 
+    def trigger_manual_listen(self):
+        """Trigger voice listening either via local voice listener or backend socket/REST API."""
+        if self.voice:
+            try:
+                self.voice.trigger_manual_listen()
+                return
+            except Exception:
+                pass
+        if self.sio and self.sio_connected:
+            try:
+                self.sio.emit("start_listening", {})
+                return
+            except Exception:
+                pass
+        try:
+            self.bridge.session.post(f"{self.bridge.base_url}/api/voice/listen", timeout=1.0)
+        except Exception:
+            pass
+
     def _init_tray(self):
-        """Expose a lightweight System Tray menu when companion runs standalone outside app_launcher."""
-        if self._is_app_launcher_running():
+        """Expose a clean System Tray menu in the Windows notification area."""
+        if not PYSTRAY_AVAILABLE or pystray is None:
+            print("[OVERLAY] pystray unavailable in environment; system tray icon omitted.")
             return
 
         def _start_tray():
             try:
-                import pystray
                 import webbrowser
 
-                tray_img = self.renderer.render_frame(state="idle", audio_level=15.0, dt=0.03).resize(
-                    (64, 64), Image.Resampling.LANCZOS
-                )
+                # Prioritize high-contrast official icon for crisp visibility in Windows 11 dark taskbar tray
+                icon_candidates = [
+                    project_root / "desktop" / "assets" / "icon.ico",
+                    project_root / "frontend" / "web-app" / "public" / "icon.ico",
+                    Path(sys.executable).parent / "icon.ico",
+                    Path(sys.executable).parent / "assets" / "icon.ico",
+                ]
+                icon_path = next((p for p in icon_candidates if p.exists()), None)
+                tray_img = None
+                if icon_path:
+                    try:
+                        tray_img = Image.open(icon_path)
+                    except Exception:
+                        tray_img = None
+
+                if not tray_img:
+                    tray_img = self.renderer.render_frame(state="idle", audio_level=25.0, dt=0.03).resize(
+                        (64, 64), Image.Resampling.LANCZOS
+                    )
 
                 def on_open_dashboard(icon, item):
                     try:
@@ -811,14 +985,29 @@ class AmbientMascotApp:
                                 win32gui.ShowWindow(self.hwnd, win32con.SW_HIDE)
                                 self._currently_visible = False
                             else:
-                                win32gui.ShowWindow(self.hwnd, win32con.SW_SHOWNA)
-                                self._currently_visible = True
+                                should_show = compute_overlay_visibility(
+                                    True,
+                                    self.app_minimized,
+                                    self.orb_state,
+                                    auto_hide=self.auto_hide_on_dashboard,
+                                )
+                                if should_show:
+                                    win32gui.ShowWindow(self.hwnd, win32con.SW_SHOWNA)
+                                    self._currently_visible = True
                         except Exception:
                             pass
                     try:
                         self.bridge.session.post(
-                            f"{self.bridge.base_url}/api/settings/system",
-                            json={"desktopOverlay": new_val},
+                            f"{self.bridge.base_url}/api/settings/update",
+                            json={"category": "system", "settings": {"desktopOverlay": new_val}},
+                            timeout=2.0,
+                        )
+                    except Exception:
+                        pass
+                    try:
+                        self.bridge.session.post(
+                            f"{self.bridge.base_url}/api/desktop/overlay/state",
+                            json={"overlay_enabled": new_val, "source": "companion_tray"},
                             timeout=2.0,
                         )
                     except Exception:
@@ -846,7 +1035,7 @@ class AmbientMascotApp:
 
                 menu = pystray.Menu(
                     pystray.MenuItem("Open Pulsar Dashboard", on_open_dashboard, default=True),
-                    pystray.MenuItem("Listen Now (F8)", lambda i, m: self.voice.trigger_manual_listen()),
+                    pystray.MenuItem("Listen Now (F8)", lambda i, m: self.trigger_manual_listen()),
                     pystray.MenuItem("Stop Speaking", on_stop_speaking),
                     pystray.MenuItem(
                         lambda item: "Pause Voice Wake" if self.always_wake_enabled else "Resume Voice Wake",
@@ -863,7 +1052,8 @@ class AmbientMascotApp:
                     pystray.Menu.SEPARATOR,
                     pystray.MenuItem("Quit Pulsar Companion", on_quit),
                 )
-                self.tray_icon = pystray.Icon("PulsarCompanionOrb", tray_img, "Pulsar AI Companion", menu)
+                self.tray_icon = pystray.Icon("PulsarAssistant", tray_img, "Pulsar AI Assistant", menu)
+                print("[TRAY] Pulsar AI Assistant system tray icon registered.")
                 self.tray_icon.run()
             except Exception as e:
                 print(f"[OVERLAY] Tray icon unavailable: {e}")
@@ -881,7 +1071,7 @@ class AmbientMascotApp:
                             self.orb_state = "error"
                             self._error_until = time.time() + 2.5
                     elif key == keyboard.Key.f8:
-                        self.voice.trigger_manual_listen()
+                        self.trigger_manual_listen()
 
                 with keyboard.Listener(on_press=on_press) as listener:
                     listener.join()
@@ -891,6 +1081,7 @@ class AmbientMascotApp:
         threading.Thread(target=_hook, daemon=True).start()
 
     def _create_window(self):
+        _attach_interactive_desktop()
         wc = win32gui.WNDCLASS()
         wc.lpfnWndProc = self._wndproc
         wc.lpszClassName = "PulsarTransparentOrbOverlayClass"
@@ -926,13 +1117,145 @@ class AmbientMascotApp:
         # Apply screen-share stealth (WDA_EXCLUDEFROMCAPTURE) just like Parakeet AI
         self._apply_capture_affinity()
 
-        # Synchronized to visibility gate (overlay_enabled & app_minimized) on first 33ms tick
-        win32gui.ShowWindow(self.hwnd, win32con.SW_HIDE)
-        self._currently_visible = False
+        # Render first frame immediately so layered window buffer is initialized
+        frame = self.renderer.render_frame(state=self.orb_state, audio_level=self.audio_level, dt=0.033)
+        apply_layered_image(self.hwnd, frame, self.x, self.y, constant_alpha=self.constant_alpha)
+
+        # Synchronize visibility immediately on launch
+        should_show = compute_overlay_visibility(
+            self.overlay_enabled,
+            self.app_minimized,
+            self.orb_state,
+            auto_hide=self.auto_hide_on_dashboard,
+        )
+        if should_show:
+            win32gui.ShowWindow(self.hwnd, win32con.SW_SHOWNA)
+            top_flag = win32con.HWND_TOPMOST if self.always_on_top else win32con.HWND_NOTOPMOST
+            win32gui.SetWindowPos(
+                self.hwnd,
+                top_flag,
+                self.x,
+                self.y,
+                self.w,
+                self.h,
+                win32con.SWP_NOACTIVATE | win32con.SWP_NOMOVE | win32con.SWP_NOSIZE,
+            )
+            self._currently_visible = True
+            print(f"[OVERLAY] Transparent click-through 4D Orb active & visible at ({self.x}, {self.y}) [size={self.w}px].")
+        else:
+            win32gui.ShowWindow(self.hwnd, win32con.SW_HIDE)
+            self._currently_visible = False
+            print(f"[OVERLAY] Transparent 4D Orb initialized (hidden, waiting for dashboard minimize) at ({self.x}, {self.y}).")
 
         # 33 ms (~30 FPS) animation + visibility check timer
         user32.SetTimer(self.hwnd, 1, 33, None)
-        print(f"[OVERLAY] Transparent click-through 4D Orb ready at ({self.x}, {self.y}) [size={self.w}px].")
+
+        # Register Native Win32 System Tray Icon directly on this HWND
+        self._init_native_tray()
+
+    def _init_native_tray(self):
+        """Register native Win32 system tray notification icon directly on self.hwnd with zero external dependencies."""
+        if os.environ.get("PULSAR_NO_TRAY") == "1":
+            return
+        try:
+            ico_candidates = [
+                project_root / "desktop" / "assets" / "icon.ico",
+                project_root / "frontend" / "web-app" / "public" / "icon.ico",
+                Path(sys.executable).parent / "icon.ico",
+            ]
+            ico_path = next((str(p) for p in ico_candidates if p.exists()), None)
+            hicon = None
+            if ico_path:
+                try:
+                    hicon = user32.LoadImageW(None, ico_path, win32con.IMAGE_ICON, 16, 16, win32con.LR_LOADFROMFILE)
+                except Exception:
+                    hicon = None
+            if not hicon:
+                hicon = user32.LoadIconW(0, win32con.IDI_APPLICATION)
+
+            self._tray_hicon = hicon
+            self._tray_nid = NOTIFYICONDATAW()
+            self._tray_nid.cbSize = 976
+            self._tray_nid.hWnd = self.hwnd
+            self._tray_nid.uID = 1001
+            self._tray_nid.uFlags = 0x0001 | 0x0002 | 0x0004  # NIF_MESSAGE | NIF_ICON | NIF_TIP
+            self._tray_nid.uCallbackMessage = WM_TRAYICON
+            self._tray_nid.hIcon = hicon
+            self._tray_nid.szTip = "Pulsar AI Assistant"
+
+            res = shell32.Shell_NotifyIconW(0, ctypes.byref(self._tray_nid))  # NIM_ADD
+            if res:
+                self._tray_registered = True
+                print("[TRAY] Pulsar AI Assistant system tray icon registered.")
+            else:
+                err = kernel32.GetLastError()
+                print(f"[TRAY] Native tray registration note: {err}")
+        except Exception as e:
+            print(f"[TRAY] Native tray error: {e}")
+
+    def _show_tray_context_menu(self):
+        """Display native Win32 popup menu on system tray right-click."""
+        try:
+            import webbrowser
+            pt = wintypes.POINT()
+            user32.GetCursorPos(ctypes.byref(pt))
+
+            # Required by Win32 before TrackPopupMenu to ensure menu dismisses properly
+            user32.SetForegroundWindow(self.hwnd)
+
+            hmenu = win32gui.CreatePopupMenu()
+            win32gui.AppendMenu(hmenu, win32con.MF_STRING, 1001, "🌌 Open Pulsar Dashboard")
+            win32gui.AppendMenu(hmenu, win32con.MF_STRING, 1002, "🎤 Listen Now (F8)")
+            win32gui.AppendMenu(hmenu, win32con.MF_STRING, 1003, "🛑 Stop Speaking")
+            win32gui.AppendMenu(
+                hmenu,
+                win32con.MF_STRING,
+                1004,
+                "🔮 Hide Floating Orb" if self.overlay_enabled else "🔮 Show Floating Orb"
+            )
+            win32gui.AppendMenu(
+                hmenu,
+                win32con.MF_STRING,
+                1005,
+                "Pause Voice Wake" if self.always_wake_enabled else "Resume Voice Wake"
+            )
+            win32gui.AppendMenu(hmenu, win32con.MF_SEPARATOR, 0, "")
+            win32gui.AppendMenu(hmenu, win32con.MF_STRING, 1006, "✕ Quit Pulsar Companion")
+
+            cmd = win32gui.TrackPopupMenu(
+                hmenu,
+                win32con.TPM_RETURNCMD | win32con.TPM_NONOTIFY | win32con.TPM_RIGHTBUTTON,
+                pt.x,
+                pt.y,
+                0,
+                self.hwnd,
+                None,
+            )
+            win32gui.DestroyMenu(hmenu)
+
+            if cmd == 1001:
+                webbrowser.open(f"http://127.0.0.1:{self.port}")
+            elif cmd == 1002:
+                self.trigger_manual_listen()
+            elif cmd == 1003:
+                self._on_barge_in("tray_stop")
+            elif cmd == 1004:
+                with self._state_lock:
+                    new_val = not self.overlay_enabled
+                    self.overlay_enabled = new_val
+                if new_val:
+                    win32gui.ShowWindow(self.hwnd, win32con.SW_SHOWNA)
+                    self._currently_visible = True
+                else:
+                    win32gui.ShowWindow(self.hwnd, win32con.SW_HIDE)
+                    self._currently_visible = False
+            elif cmd == 1005:
+                with self._state_lock:
+                    self.always_wake_enabled = not self.always_wake_enabled
+            elif cmd == 1006:
+                self.close()
+        except Exception as e:
+            print(f"[TRAY] Context menu error: {e}")
 
     def _apply_capture_affinity(self) -> bool:
         """
@@ -969,13 +1292,14 @@ class AmbientMascotApp:
         def _watch():
             while not self._stop_event.is_set():
                 try:
-                    webui_open = detect_webui_window_open()
-                    if self._last_webui_open is None or webui_open != self._last_webui_open:
-                        self._last_webui_open = webui_open
-                        _push_vis(not webui_open)
+                    if self.auto_hide_on_dashboard:
+                        webui_open = detect_webui_window_open()
+                        if self._last_webui_open is None or webui_open != self._last_webui_open:
+                            self._last_webui_open = webui_open
+                            _push_vis(not webui_open)
                 except Exception:
                     pass
-                time.sleep(0.40)
+                time.sleep(0.50)
 
         threading.Thread(target=_watch, daemon=True, name="OrbWindowWatcher").start()
 
@@ -1048,14 +1372,18 @@ class AmbientMascotApp:
             if ov:
                 self._apply_remote_snapshot(ov)
             self._sync_initial_settings()
-            try:
-                webui_open = detect_webui_window_open()
-                self._last_webui_open = webui_open
+            if self.auto_hide_on_dashboard:
+                try:
+                    webui_open = detect_webui_window_open()
+                    self._last_webui_open = webui_open
+                    with self._state_lock:
+                        self.app_minimized = not webui_open
+                    sio.emit("app_visibility", {"minimized": not webui_open, "source": "companion_autodetect", "force": True})
+                except Exception:
+                    pass
+            else:
                 with self._state_lock:
-                    self.app_minimized = not webui_open
-                sio.emit("app_visibility", {"minimized": not webui_open, "source": "companion_autodetect", "force": True})
-            except Exception:
-                pass
+                    self.app_minimized = True
 
         @sio.event
         def disconnect():
@@ -1365,7 +1693,7 @@ class AmbientMascotApp:
         if not raw_text or self.remote_tts_speaking:
             return
         try:
-            from ai_assistant.voice.text_cleaner import clean_text_for_tts
+            from core_ai.voice.text_cleaner import clean_text_for_tts
             clean_text = clean_text_for_tts(raw_text) or raw_text
         except Exception:
             clean_text = raw_text
@@ -1406,8 +1734,8 @@ class AmbientMascotApp:
             try:
                 try:
                     import sounddevice as sd
-                    from ai_assistant.voice.text_cleaner import prepare_text_for_kitten_tts
-                    from ai_assistant.voice.tts_output_service import (
+                    from core_ai.voice.text_cleaner import prepare_text_for_kitten_tts
+                    from core_ai.voice.tts_output_service import (
                         BLOCK_SAMPLES,
                         TARGET_SAMPLE_RATE,
                         load_kitten_mini_model,
@@ -1450,7 +1778,7 @@ class AmbientMascotApp:
                             pass
 
                         import pyttsx3
-                        from ai_assistant.voice.tts_output_service import configure_sapi5_voice
+                        from core_ai.voice.tts_output_service import configure_sapi5_voice
 
                         engine = pyttsx3.init()
                         self._active_pyttsx3 = engine
@@ -1494,8 +1822,9 @@ class AmbientMascotApp:
                 minimized = self.app_minimized
                 state = self.orb_state
                 level = self.audio_level
+                auto_hide = self.auto_hide_on_dashboard
 
-            should_show = compute_overlay_visibility(enabled, minimized, state)
+            should_show = compute_overlay_visibility(enabled, minimized, state, auto_hide=auto_hide)
             if not should_show:
                 try:
                     win32gui.ShowWindow(hwnd, win32con.SW_HIDE)
@@ -1513,24 +1842,50 @@ class AmbientMascotApp:
                 self._currently_visible = False
                 return 0
 
-            # Keep aligned cleanly above taskbar on work area bottom-center
-            self.x, self.y = get_workarea_bottom_center_coords(self.w, self.h)
-            frame = self.renderer.render_frame(state=state, audio_level=level, dt=0.033)
-            apply_layered_image(hwnd, frame, self.x, self.y, constant_alpha=self.constant_alpha)
+            try:
+                # Keep aligned cleanly above taskbar on work area bottom-center
+                self.x, self.y = get_workarea_bottom_center_coords(self.w, self.h)
+                frame = self.renderer.render_frame(state=state, audio_level=level, dt=0.033)
+                apply_layered_image(hwnd, frame, self.x, self.y, constant_alpha=self.constant_alpha)
 
-            if not self._currently_visible:
-                win32gui.ShowWindow(hwnd, win32con.SW_SHOWNA)
-                top_flag = win32con.HWND_TOPMOST if self.always_on_top else win32con.HWND_NOTOPMOST
-                win32gui.SetWindowPos(
-                    hwnd,
-                    top_flag,
-                    self.x,
-                    self.y,
-                    self.w,
-                    self.h,
-                    win32con.SWP_NOACTIVATE | win32con.SWP_NOMOVE | win32con.SWP_NOSIZE,
-                )
-                self._currently_visible = True
+                now = time.time()
+                if (not self._currently_visible) or (now - getattr(self, "_last_topmost_refresh", 0.0) > 1.5):
+                    self._last_topmost_refresh = now
+                    win32gui.ShowWindow(hwnd, win32con.SW_SHOWNA)
+                    top_flag = win32con.HWND_TOPMOST if self.always_on_top else win32con.HWND_NOTOPMOST
+                    win32gui.SetWindowPos(
+                        hwnd,
+                        top_flag,
+                        self.x,
+                        self.y,
+                        self.w,
+                        self.h,
+                        win32con.SWP_NOACTIVATE | win32con.SWP_SHOWWINDOW,
+                    )
+                    self._currently_visible = True
+            except Exception:
+                pass
+            return 0
+
+        if msg == WM_TRAYICON:
+            if lparam == win32con.WM_LBUTTONUP:
+                with self._state_lock:
+                    new_val = not self.overlay_enabled
+                    self.overlay_enabled = new_val
+                if new_val:
+                    win32gui.ShowWindow(hwnd, win32con.SW_SHOWNA)
+                    self._currently_visible = True
+                else:
+                    win32gui.ShowWindow(hwnd, win32con.SW_HIDE)
+                    self._currently_visible = False
+                return 0
+            elif lparam in (win32con.WM_RBUTTONUP, win32con.WM_CONTEXTMENU):
+                self._show_tray_context_menu()
+                return 0
+
+        if msg == getattr(self, "_wm_taskbar_created", -1) and getattr(self, "_wm_taskbar_created", 0):
+            if getattr(self, "_tray_nid", None):
+                shell32.Shell_NotifyIconW(0, ctypes.byref(self._tray_nid))
             return 0
 
         if msg == win32con.WM_CLOSE:
@@ -1538,6 +1893,13 @@ class AmbientMascotApp:
             return 0
 
         if msg == win32con.WM_DESTROY:
+            if getattr(self, "_tray_registered", False) and getattr(self, "_tray_nid", None):
+                try:
+                    shell32.Shell_NotifyIconW(2, ctypes.byref(self._tray_nid))
+                    self._tray_registered = False
+                except Exception:
+                    pass
+            print(f"[OVERLAY] WM_DESTROY received on hwnd {hwnd}!")
             self._stop_event.set()
             win32gui.PostQuitMessage(0)
             return 0
@@ -1547,8 +1909,15 @@ class AmbientMascotApp:
     def close(self):
         self._stop_event.set()
         self._tts_abort_event.set()
+        if getattr(self, "_tray_registered", False) and getattr(self, "_tray_nid", None):
+            try:
+                shell32.Shell_NotifyIconW(2, ctypes.byref(self._tray_nid))
+                self._tray_registered = False
+            except Exception:
+                pass
         try:
-            self.voice.stop()
+            if self.voice:
+                self.voice.stop()
             if self.tray_icon:
                 try:
                     self.tray_icon.stop()
@@ -1562,28 +1931,115 @@ class AmbientMascotApp:
             pass
 
     def run(self):
+        _attach_interactive_desktop()
         win32gui.PumpMessages()
 
 
-def _parse_companion_port(argv=None) -> int:
+# ============================================================
+# In-Process Launcher (1 Process, 1 PID, 1 Port Architecture)
+# ============================================================
+_IN_PROCESS_APP: Optional["AmbientMascotApp"] = None
+_IN_PROCESS_THREAD: Optional[threading.Thread] = None
+
+
+def get_in_process_app() -> Optional["AmbientMascotApp"]:
+    global _IN_PROCESS_APP
+    return _IN_PROCESS_APP
+
+
+def is_in_process_running() -> bool:
+    global _IN_PROCESS_APP
+    if _IN_PROCESS_APP and getattr(_IN_PROCESS_APP, "hwnd", None):
+        return bool(user32.IsWindow(_IN_PROCESS_APP.hwnd))
+    return False
+
+
+def start_in_process(port: int = 5000) -> Optional["AmbientMascotApp"]:
+    """
+    Launch 4D Glowing Orb desktop overlay in-process on a dedicated daemon thread.
+    Guarantees 1 Process, 1 PID, 1 Port (5000) with zero orphaned subprocesses.
+    """
+    global _IN_PROCESS_APP, _IN_PROCESS_THREAD
+
+    # If already running with an active window, restore / show it
+    if _IN_PROCESS_APP and getattr(_IN_PROCESS_APP, "hwnd", None):
+        if user32.IsWindow(_IN_PROCESS_APP.hwnd):
+            user32.ShowWindow(_IN_PROCESS_APP.hwnd, win32con.SW_SHOWNA)
+            _IN_PROCESS_APP._currently_visible = True
+            with _IN_PROCESS_APP._state_lock:
+                _IN_PROCESS_APP.overlay_enabled = True
+            return _IN_PROCESS_APP
+
+    ready_event = threading.Event()
+
+    def _worker():
+        global _IN_PROCESS_APP
+        try:
+            _IN_PROCESS_APP = AmbientMascotApp(
+                acquire_mutex=False,
+                port=port,
+                parent_pid=None
+            )
+            ready_event.set()
+            _IN_PROCESS_APP.run()
+        except Exception as e:
+            print(f"[OVERLAY] In-process companion failed to start: {e}")
+            ready_event.set()
+
+    _IN_PROCESS_THREAD = threading.Thread(
+        target=_worker,
+        daemon=True,
+        name="PulsarInProcessCompanionThread"
+    )
+    _IN_PROCESS_THREAD.start()
+
+    # Wait briefly for window initialization (takes < 50ms)
+    ready_event.wait(timeout=2.0)
+    return _IN_PROCESS_APP
+
+
+def stop_in_process():
+    global _IN_PROCESS_APP, _IN_PROCESS_THREAD
+    if _IN_PROCESS_APP:
+        try:
+            _IN_PROCESS_APP.close()
+        except Exception:
+            pass
+        _IN_PROCESS_APP = None
+
+
+def _parse_companion_args(argv=None) -> Tuple[int, Optional[int]]:
     args = list(sys.argv[1:] if argv is None else argv)
+    port = 5000
+    parent_pid = None
     for idx, token in enumerate(args):
         if token == "--port" and idx + 1 < len(args) and str(args[idx + 1]).isdigit():
-            return int(args[idx + 1])
-        if token == "--companion" and idx + 1 < len(args) and str(args[idx + 1]).isdigit():
-            return int(args[idx + 1])
-        if str(token).isdigit():
-            return int(token)
+            port = int(args[idx + 1])
+        elif token == "--companion" and idx + 1 < len(args) and str(args[idx + 1]).isdigit():
+            port = int(args[idx + 1])
+        elif token == "--parent-pid" and idx + 1 < len(args) and str(args[idx + 1]).isdigit():
+            parent_pid = int(args[idx + 1])
+        elif str(token).isdigit():
+            port = int(token)
     for env_key in ("PULSAR_PORT", "PORT"):
         val = os.environ.get(env_key, "")
         if str(val).isdigit():
-            return int(val)
-    return 5000
+            port = int(val)
+            break
+    if not parent_pid:
+        env_pid = os.environ.get("PULSAR_PARENT_PID", "")
+        if env_pid.isdigit():
+            parent_pid = int(env_pid)
+    return port, parent_pid
 
 
-def main(port: Optional[int] = None):
-    resolved_port = int(port) if port else _parse_companion_port()
-    app = AmbientMascotApp(acquire_mutex=True, port=resolved_port)
+def main(port: Optional[int] = None, parent_pid: Optional[int] = None):
+    resolved_port, resolved_parent_pid = _parse_companion_args()
+    if port:
+        resolved_port = int(port)
+    if parent_pid:
+        resolved_parent_pid = int(parent_pid)
+    app = AmbientMascotApp(acquire_mutex=True, port=resolved_port, parent_pid=resolved_parent_pid)
     app.run()
 
 

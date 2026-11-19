@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pulsar 4D Orb</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: transparent !important;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  canvas {
+    display: block;
+    width: 240px;
+    height: 240px;
+    background: transparent !important;
+  }
+</style>
+</head>
+<body>
+<canvas id="orbCanvas" width="240" height="240"></canvas>
+<script src="/socket.io/socket.io.js" onerror="console.log('Local socket.io script not loaded; using direct API')"></script>
+<script>
+const canvas = document.getElementById('orbCanvas');
+const ctx = canvas.getContext('2d');
+
+const NUM_PARTICLES = 220;
+const particles = [];
+let currentState = 'idle';
+let currentLevel = 0.0;
+let lastTime = performance.now();
+let frameCount = 0;
+let lastFpsUpdate = performance.now();
+let fps = 60;
+
+// State Color Palettes [R, G, B]
+const PALETTES = {
+  idle:      { core: [0, 243, 255], outer: [139, 92, 246], halo: 'rgba(0, 243, 255, 0.15)' },
+  listening: { core: [0, 255, 200], outer: [56, 189, 248], halo: 'rgba(0, 255, 200, 0.35)' },
+  speaking:  { core: [236, 72, 153], outer: [168, 85, 247], halo: 'rgba(236, 72, 153, 0.35)' },
+  thinking:  { core: [245, 158, 11], outer: [239, 68, 68],  halo: 'rgba(245, 158, 11, 0.25)' },
+  error:     { core: [239, 68, 68],  outer: [185, 28, 28],  halo: 'rgba(239, 68, 68, 0.40)' },
+  offline:   { core: [100, 116, 139], outer: [71, 85, 105], halo: 'rgba(100, 116, 139, 0.10)' }
+};
+
+// Initialize Fibonacci spherical particle distribution
+for (let i = 0; i < NUM_PARTICLES; i++) {
+  const phi = Math.acos(1 - 2 * (i + 0.5) / NUM_PARTICLES);
+  const theta = Math.PI * (1 + Math.sqrt(5)) * (i + 0.5);
+  particles.push({
+    x: Math.sin(phi) * Math.cos(theta),
+    y: Math.sin(phi) * Math.sin(theta),
+    z: Math.cos(phi),
+    baseSize: 1.2 + Math.random() * 2.2,
+    speed: 0.4 + Math.random() * 0.8,
+    phase: Math.random() * Math.PI * 2
+  });
+}
+
+let rotX = 0, rotY = 0, rotZ = 0;
+
+function render(now) {
+  requestAnimationFrame(render);
+  const dt = (now - lastTime) / 1000.0;
+  lastTime = now;
+
+  frameCount++;
+  if (now - lastFpsUpdate >= 1000) {
+    fps = frameCount;
+    frameCount = 0;
+    lastFpsUpdate = now;
+  }
+
+  ctx.clearRect(0, 0, 240, 240);
+
+  const cx = 120, cy = 120;
+  const p = PALETTES[currentState] || PALETTES.idle;
+  
+  // Speed shifts by state
+  const rotSpeed = currentState === 'thinking' ? 2.5 : (currentState === 'speaking' ? 1.4 : 0.8);
+  rotX += dt * 0.7 * rotSpeed;
+  rotY += dt * 1.1 * rotSpeed;
+  rotZ += dt * 0.4 * rotSpeed;
+
+  const baseRadius = 55 + currentLevel * 32.0;
+
+  // 1. Draw soft pulsing central glow halo
+  const glowRad = baseRadius * (1.1 + Math.sin(now * 0.003) * 0.08);
+  const grad = ctx.createRadialGradient(cx, cy, 10, cx, cy, glowRad);
+  grad.addColorStop(0, p.halo);
+  grad.addColorStop(0.6, p.halo.replace(/[^,]+(?=\))/, '0.08'));
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(cx, cy, glowRad, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 2. Project & Render 3D Wireframe Particles
+  ctx.globalCompositeOperation = 'lighter';
+  
+  const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
+  const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+  const cosZ = Math.cos(rotZ), sinZ = Math.sin(rotZ);
+
+  for (let i = 0; i < NUM_PARTICLES; i++) {
+    const pt = particles[i];
+    
+    // Pulse individual particle radially with level
+    const vibr = Math.sin(now * 0.008 * pt.speed + pt.phase) * (currentLevel * 14.0);
+    const r = baseRadius + vibr;
+
+    // 3D rotation
+    let px = pt.x * r, py = pt.y * r, pz = pt.z * r;
+    
+    // Y rotation
+    let x1 = px * cosY + pz * sinY;
+    let z1 = -px * sinY + pz * cosY;
+    // X rotation
+    let y2 = py * cosX - z1 * sinX;
+    let z2 = py * sinX + z1 * cosX;
+    // Z rotation
+    let x3 = x1 * cosZ - y2 * sinZ;
+    let y3 = x1 * sinZ + y2 * cosZ;
+
+    // Perspective projection
+    const fov = 300;
+    const scale = fov / (fov + z2 + 80);
+    const screenX = cx + x3 * scale;
+    const screenY = cy + y3 * scale;
+
+    if (scale <= 0) continue;
+
+    // Depth-based brightness & size
+    const normDepth = Math.max(0.1, Math.min(1.0, (z2 + baseRadius) / (2 * baseRadius)));
+    const size = pt.baseSize * scale * (1.0 + currentLevel * 0.6);
+    
+    // Interpolate core to outer color based on depth
+    const red = Math.round(p.core[0] * normDepth + p.outer[0] * (1 - normDepth));
+    const green = Math.round(p.core[1] * normDepth + p.outer[1] * (1 - normDepth));
+    const blue = Math.round(p.core[2] * normDepth + p.outer[2] * (1 - normDepth));
+    const alpha = (0.35 + 0.65 * normDepth) * (0.8 + currentLevel * 0.2);
+
+    ctx.fillStyle = `rgba(${red}, ${green}, ${blue}, ${alpha.toFixed(2)})`;
+    ctx.beginPath();
+    ctx.arc(screenX, screenY, Math.max(0.8, size), 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+// Global API called directly from Python Qt Host
+window.setOrbState = function(state, level) {
+  if (state) currentState = state;
+  if (level !== undefined && level !== null) {
+    currentLevel = Math.max(0.0, Math.min(1.0, Number(level)));
+  }
+};
+
+window.getFps = function() {
+  return fps;
+};
+
+// Auto-connect to Socket.IO if available
+if (typeof io !== 'undefined') {
+  try {
+    const socket = io();
+    socket.on('orb_state', function(data) {
+      if (data) {
+        if (data.state) currentState = data.state;
+        if (data.level !== undefined && data.level !== null) {
+          currentLevel = Math.max(0.0, Math.min(1.0, Number(data.level)));
+        }
+      }
+    });
+  } catch (err) {
+    console.log('[Orb] Socket.IO listener error:', err);
+  }
+}
+
+requestAnimationFrame(render);
+</script>
+</body>
+</html>
