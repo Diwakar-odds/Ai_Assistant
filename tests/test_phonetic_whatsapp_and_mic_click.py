@@ -11,9 +11,9 @@ root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(root / "core_ai" / "src"))
 sys.path.insert(0, str(root / "backend"))
 
-from ai_assistant.core.local_command_normalizer import normalize_hinglish_devanagari
-from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
-from ai_assistant.ai.intent_router import IntentRouter
+from core_ai.core.local_command_normalizer import normalize_hinglish_devanagari
+from core_ai.voice.vocabulary_registry import get_vocabulary_registry
+from core_ai.ai.intent_router import IntentRouter
 
 
 class TestPhoneticWhatsAppAndMic(unittest.TestCase):

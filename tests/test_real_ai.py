@@ -1,4 +1,4 @@
-from ai_assistant.modules.conversational_ai import AdvancedConversationalAI
+from core_ai.modules.conversational_ai import AdvancedConversationalAI
 
 print("Creating AI instance...")
 ai = AdvancedConversationalAI()

@@ -11,9 +11,9 @@ project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 import unittest
-from ai_assistant.ai.multi_step_parser import MultiStepCommandParser, TaskStep
-from ai_assistant.core.conversation_context import ContextManager, ExecutionState
-from ai_assistant.core.task_chain_orchestrator import TaskChainOrchestrator
+from core_ai.ai.multi_step_parser import MultiStepCommandParser, TaskStep
+from core_ai.core.conversation_context import ContextManager, ExecutionState
+from core_ai.core.task_chain_orchestrator import TaskChainOrchestrator
 
 
 class TestMultiStepParser(unittest.TestCase):

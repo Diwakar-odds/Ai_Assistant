@@ -5,9 +5,8 @@ import sys
 
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-sys.path.append(r"c:\users\hp\appdata\roaming\python\python39\site-packages")
 
-from ai_assistant.agents.video.visual_verifier import VisualVerifier
+from core_ai.agents.video.visual_verifier import VisualVerifier
 
 def create_dummy_screen_and_template():
     """Create a synthetic screen image and a template to find within it"""

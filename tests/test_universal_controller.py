@@ -10,7 +10,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from ai_assistant.core.universal_app_controller import get_universal_controller
+from core_ai.core.universal_app_controller import get_universal_controller
 import logging
 
 # Setup logging
@@ -78,7 +78,7 @@ def test_app_discovery_integration():
             break
         
         if app_name.lower() == 'list':
-            from ai_assistant.modules.app_discovery import app_discovery
+            from core_ai.modules.app_discovery import app_discovery
             apps = app_discovery.get_all_apps()
             print(f"\nInstalled apps (showing first 20):")
             for i, (name, path) in enumerate(list(apps.items())[:20]):

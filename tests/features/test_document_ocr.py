@@ -27,7 +27,7 @@ import pytest
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from ai_assistant.vision.document_ocr import (
+from core_ai.vision.document_ocr import (
     check_ocr_dependencies,
     extract_text_from_image,
     extract_text_from_pdf,

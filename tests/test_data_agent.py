@@ -5,8 +5,8 @@ import sys
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from ai_assistant.agents.loader import AgentLoader
-from ai_assistant.agents.models import Task
+from core_ai.agents.loader import AgentLoader
+from core_ai.agents.models import Task
 
 async def main():
     print("Testing Data Analyst Agent...")

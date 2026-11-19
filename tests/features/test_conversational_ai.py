@@ -10,7 +10,7 @@ import tempfile
 import sqlite3
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch
-from ai_assistant.ai import conversational_ai
+from core_ai.ai import conversational_ai
 
 
 class TestConversationalAI(unittest.TestCase):

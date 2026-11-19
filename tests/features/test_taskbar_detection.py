@@ -19,7 +19,7 @@ import json
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from ai_assistant.automation.taskbar_detection import (
+from core_ai.automation.taskbar_detection import (
     TaskbarDetector,
     detect_taskbar_apps,
     can_see_taskbar

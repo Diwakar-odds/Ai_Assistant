@@ -17,8 +17,8 @@ logger = logging.getLogger("ChainTest")
 # Ensure proper path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from ai_assistant.core.chain_of_actions_manager import get_chain_manager
-from ai_assistant.core.action_chain_models import ChainStatus
+from core_ai.core.chain_of_actions_manager import get_chain_manager
+from core_ai.core.action_chain_models import ChainStatus
 
 async def progress_callback(progress):
     """Callback to print progress updates"""

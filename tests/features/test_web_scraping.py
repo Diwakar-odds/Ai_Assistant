@@ -22,7 +22,7 @@ import json
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from ai_assistant.integrations.web_scraping import (
+from core_ai.integrations.web_scraping import (
     get_weather_info,
     get_weather_forecast,
     get_latest_news,

@@ -14,12 +14,12 @@ for p in (
     if sp not in sys.path:
         sys.path.insert(0, sp)
 
-from ai_assistant.ai.user_dna import UserDNA
-from ai_assistant.ai.memory_retrieval import MemoryRetrieval, is_memory_query
-from ai_assistant.core.local_command_normalizer import normalize_hinglish_devanagari
-from ai_assistant.ai.intent_router import IntentRouter
-from ai_assistant.core.jarvis_persona import build_persona_system_prompt
-from ai_assistant.ai.llm_provider import GGUFProvider
+from core_ai.ai.user_dna import UserDNA
+from core_ai.ai.memory_retrieval import MemoryRetrieval, is_memory_query
+from core_ai.core.local_command_normalizer import normalize_hinglish_devanagari
+from core_ai.ai.intent_router import IntentRouter
+from core_ai.core.jarvis_persona import build_persona_system_prompt
+from core_ai.ai.llm_provider import GGUFProvider
 
 
 class TestMemoryAndRoutingFixes(unittest.TestCase):

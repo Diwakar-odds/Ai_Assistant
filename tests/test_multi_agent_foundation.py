@@ -9,19 +9,19 @@ print("Path added.")
 
 try:
     print("Importing agents.models...")
-    from ai_assistant.agents.models import Task, TaskResult
+    from core_ai.agents.models import Task, TaskResult
     print("Imported agents.models.")
     
     print("Importing agents.base_agent...")
-    from ai_assistant.agents.base_agent import BaseAgent
+    from core_ai.agents.base_agent import BaseAgent
     print("Imported agents.base_agent.")
     
     print("Importing agents.registry...")
-    from ai_assistant.agents.registry import AgentRegistry
+    from core_ai.agents.registry import AgentRegistry
     print("Imported agents.registry.")
     
     print("Importing core.multi_agent_coordinator...")
-    from ai_assistant.core.multi_agent_coordinator import MultiAgentCoordinator
+    from core_ai.core.multi_agent_coordinator import MultiAgentCoordinator
     print("Imported core.multi_agent_coordinator.")
     
 except Exception as e:

@@ -19,11 +19,11 @@ for p in (str(REPO_ROOT), str(CORE_SRC), str(BACKEND_DIR)):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-from ai_assistant.agents.base_agent import BaseAgent
-from ai_assistant.agents.loader import AgentLoader, get_global_registry
-from ai_assistant.agents.models import AgentStatus, Task, TaskResult
-from ai_assistant.agents.registry import AgentRegistry
-from ai_assistant.core.multi_agent_coordinator import (
+from core_ai.agents.base_agent import BaseAgent
+from core_ai.agents.loader import AgentLoader, get_global_registry
+from core_ai.agents.models import AgentStatus, Task, TaskResult
+from core_ai.agents.registry import AgentRegistry
+from core_ai.core.multi_agent_coordinator import (
     MultiAgentCoordinator,
     get_multi_agent_coordinator,
     reset_multi_agent_coordinator,
@@ -159,7 +159,7 @@ class TestRegistryAndLoader(unittest.TestCase):
 
 class TestIndividualAgents(unittest.TestCase):
     def test_data_analyst_agent_creates_real_chart_and_stats(self):
-        from ai_assistant.agents.data.data_analyst_agent import DataAnalystAgent
+        from core_ai.agents.data.data_analyst_agent import DataAnalystAgent
         from PIL import Image
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -181,7 +181,7 @@ class TestIndividualAgents(unittest.TestCase):
             self.assertTrue(ver.is_valid)
 
     def test_database_agent_read_and_confirmation_gate(self):
-        from ai_assistant.agents.data.database_agent import DatabaseAgent
+        from core_ai.agents.data.database_agent import DatabaseAgent
 
         with tempfile.TemporaryDirectory() as tmp:
             db_path = os.path.join(tmp, "test.db")
@@ -221,7 +221,7 @@ class TestIndividualAgents(unittest.TestCase):
             self.assertTrue(res_ok.success, res_ok.error)
 
     def test_creative_agent_real_png_and_offline_wav(self):
-        from ai_assistant.agents.creative.creative_agent import CreativeAgent
+        from core_ai.agents.creative.creative_agent import CreativeAgent
 
         with tempfile.TemporaryDirectory() as tmp:
             agent = CreativeAgent(config={"output_dir": tmp})
@@ -246,7 +246,7 @@ class TestIndividualAgents(unittest.TestCase):
             self.assertTrue(asyncio.run(agent.verify(wav_res)).is_valid)
 
     def test_audio_agent_music_sfx_and_denoise(self):
-        from ai_assistant.agents.audio.audio_agent import AudioAgent
+        from core_ai.agents.audio.audio_agent import AudioAgent
 
         with tempfile.TemporaryDirectory() as tmp:
             agent = AudioAgent(config={"output_dir": tmp})
@@ -264,7 +264,7 @@ class TestIndividualAgents(unittest.TestCase):
             self.assertTrue(os.path.exists(clean_res.output_path))
 
     def test_productivity_agent_real_pdf_and_conversion(self):
-        from ai_assistant.agents.productivity.productivity_agent import ProductivityAgent
+        from core_ai.agents.productivity.productivity_agent import ProductivityAgent
         import PyPDF2
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -295,9 +295,9 @@ class TestIndividualAgents(unittest.TestCase):
             self.assertTrue(os.path.exists(conv_res.output_path))
 
     def test_writer_and_research_agents_mocked(self):
-        from ai_assistant.agents.research.deep_research_agent import DeepResearchAgent
-        from ai_assistant.agents.research.research_agent import ResearchAgent
-        from ai_assistant.agents.writer.writer_agent import WriterAgent
+        from core_ai.agents.research.deep_research_agent import DeepResearchAgent
+        from core_ai.agents.research.research_agent import ResearchAgent
+        from core_ai.agents.writer.writer_agent import WriterAgent
 
         with tempfile.TemporaryDirectory() as tmp:
             writer = WriterAgent(config={"llm": _MockLLM("# Final Article\nClean mocked output."), "output_dir": tmp})
@@ -342,14 +342,14 @@ class TestIndividualAgents(unittest.TestCase):
             self.assertTrue(os.path.exists(dr_res.output_path))
 
     def test_communication_file_web_student_video_autonomous(self):
-        from ai_assistant.agents.communication.communication_agent import CommunicationAgent
-        from ai_assistant.agents.core.autonomous_agent import AutonomousAgent
-        from ai_assistant.agents.file.file_manager_agent import FileManagerAgent
-        from ai_assistant.agents.student.student_agent import StudentAgent
-        from ai_assistant.agents.video.training_mode import TrainingMode
-        from ai_assistant.agents.video.video_agent import VideoAgent
-        from ai_assistant.agents.video.visual_verifier import VisualVerifier
-        from ai_assistant.agents.web.web_agent import WebAgent
+        from core_ai.agents.communication.communication_agent import CommunicationAgent
+        from core_ai.agents.core.autonomous_agent import AutonomousAgent
+        from core_ai.agents.file.file_manager_agent import FileManagerAgent
+        from core_ai.agents.student.student_agent import StudentAgent
+        from core_ai.agents.video.training_mode import TrainingMode
+        from core_ai.agents.video.video_agent import VideoAgent
+        from core_ai.agents.video.visual_verifier import VisualVerifier
+        from core_ai.agents.web.web_agent import WebAgent
 
         with tempfile.TemporaryDirectory() as tmp:
             # 1. CommunicationAgent: confirmation gate + mocked send + LLM draft

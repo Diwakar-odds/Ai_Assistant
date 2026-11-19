@@ -10,7 +10,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 src_path = os.path.abspath(os.path.join(current_dir, '../src'))
 sys.path.insert(0, src_path)
 
-from ai_assistant.services.backend.blueprints.preferences import create_blueprint
+from core_ai.services.backend.blueprints.preferences import create_blueprint
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

@@ -7,9 +7,9 @@ import base64
 # Ensure core_ai is in the path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../core_ai/src')))
 
-from ai_assistant.core.assistant import ModernAssistant
-from ai_assistant.core.learning_loop import LearningLoop
-from ai_assistant.core.situation_awareness import SituationAwareness
+from core_ai.core.assistant import ModernAssistant
+from core_ai.core.learning_loop import LearningLoop
+from core_ai.core.situation_awareness import SituationAwareness
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("JARVIS_E2E")

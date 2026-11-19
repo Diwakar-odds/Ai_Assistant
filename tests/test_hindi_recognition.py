@@ -11,8 +11,8 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import speech_recognition as sr
-from ai_assistant.voice.advanced_speech_recognizer import AdvancedSpeechRecognizer
-from ai_assistant.multilingual import MultilingualSupport, Language
+from core_ai.voice.advanced_speech_recognizer import AdvancedSpeechRecognizer
+from core_ai.multilingual import MultilingualSupport, Language
 
 def test_recognition():
     """Interactive test for speech recognition"""

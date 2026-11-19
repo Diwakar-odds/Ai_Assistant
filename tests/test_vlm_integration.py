@@ -17,8 +17,8 @@ def test_vlm_provider():
     print("=" * 60)
     
     try:
-        from ai_assistant.vision.vlm_provider import VLMProvider, VLMResponse
-        from ai_assistant.vision.gemini_vision_provider import GeminiVisionProvider
+        from core_ai.vision.vlm_provider import VLMProvider, VLMResponse
+        from core_ai.vision.gemini_vision_provider import GeminiVisionProvider
         
         print("✅ VLM modules imported successfully")
         
@@ -40,7 +40,7 @@ def test_multimodal_integration():
     print("=" * 60)
     
     try:
-        from ai_assistant.multimodal import MultiModalAI
+        from core_ai.multimodal import MultiModalAI
         
         vlm = MultiModalAI(use_new_architecture=True)
         print("✅ MultiModalAI initialized with new architecture")
@@ -68,7 +68,7 @@ def test_screen_analysis():
     print("=" * 60)
     
     try:
-        from ai_assistant.multimodal import MultiModalAI
+        from core_ai.multimodal import MultiModalAI
         
         vlm = MultiModalAI(use_new_architecture=True)
         
@@ -97,7 +97,7 @@ def test_visual_automation():
     print("=" * 60)
     
     try:
-        from ai_assistant.automation.visual_automation import VisualAutomationEngine
+        from core_ai.automation.visual_automation import VisualAutomationEngine
         
         engine = VisualAutomationEngine(safety_mode=True)
         print("✅ VisualAutomationEngine initialized")

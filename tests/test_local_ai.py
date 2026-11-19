@@ -14,8 +14,8 @@ for p in (str(CORE_SRC), str(BACKEND_DIR)):
 
 class TestLocalGGUFSetup(unittest.TestCase):
     def test_gguf_manager_imports(self):
-        from ai_assistant.ai.gguf_model_manager import GGUFModelManager, get_gguf_manager, llama_cpp_available
-        from ai_assistant.ai.llm_provider import GGUFProvider, LLMFactory
+        from core_ai.ai.gguf_model_manager import GGUFModelManager, get_gguf_manager, llama_cpp_available
+        from core_ai.ai.llm_provider import GGUFProvider, LLMFactory
 
         self.assertIsNotNone(GGUFModelManager)
         self.assertIsNotNone(GGUFProvider)

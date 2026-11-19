@@ -4,7 +4,7 @@ Comprehensive test for Intent Recognizer with ALL apps
 import sys
 sys.path.insert(0, 'f:\\bn\\assitant')
 
-from ai_assistant.ai.intent_recognizer import IntentRecognizer
+from core_ai.ai.intent_recognizer import IntentRecognizer
 
 recognizer = IntentRecognizer()
 

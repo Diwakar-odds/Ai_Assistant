@@ -29,7 +29,7 @@ def test_security_frameworks():
     # 1. Test Encryption System
     print("1️⃣ Testing Encryption System...")
     try:
-        from ai_assistant.core.encryption import SecureEncryption, DatabaseEncryption
+        from core_ai.core.encryption import SecureEncryption, DatabaseEncryption
         
         # Test basic encryption
         encryptor = SecureEncryption()
@@ -55,7 +55,7 @@ def test_security_frameworks():
     # 2. Test Audit Logging
     print("\n2️⃣ Testing Audit Logging System...")
     try:
-        from ai_assistant.core.audit_logger import AuditLogger, EventType, SeverityLevel
+        from core_ai.core.audit_logger import AuditLogger, EventType, SeverityLevel
         
         # Create test audit logger
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -81,7 +81,7 @@ def test_security_frameworks():
     # 3. Test Access Control
     print("\n3️⃣ Testing Access Control System...")
     try:
-        from ai_assistant.core.access_control import AccessControlManager, Permission, Role
+        from core_ai.core.access_control import AccessControlManager, Permission, Role
         
         # Create test access control manager
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -111,7 +111,7 @@ def test_security_frameworks():
     # 4. Test Input Validation
     print("\n4️⃣ Testing Input Validation System...")
     try:
-        from ai_assistant.core.input_validation import InputValidator, ValidationRule
+        from core_ai.core.input_validation import InputValidator, ValidationRule
         
         validator = InputValidator()
         
@@ -140,10 +140,10 @@ def test_security_frameworks():
     # 5. Test Integration
     print("\n5️⃣ Testing Security Integration...")
     try:
-        from ai_assistant.core.encryption import SecureEncryption
-        from ai_assistant.core.audit_logger import AuditLogger, EventType
-        from ai_assistant.core.access_control import AccessControlManager, Permission
-        from ai_assistant.core.input_validation import InputValidator
+        from core_ai.core.encryption import SecureEncryption
+        from core_ai.core.audit_logger import AuditLogger, EventType
+        from core_ai.core.access_control import AccessControlManager, Permission
+        from core_ai.core.input_validation import InputValidator
         
         # Create integrated security test
         with tempfile.TemporaryDirectory() as temp_dir:

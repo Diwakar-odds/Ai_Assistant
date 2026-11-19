@@ -11,9 +11,9 @@ project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 import logging
-from ai_assistant.core.task_chain_orchestrator import get_orchestrator
-from ai_assistant.core.conversation_context import get_context_manager
-from ai_assistant.ai.multi_step_parser import MultiStepCommandParser
+from core_ai.core.task_chain_orchestrator import get_orchestrator
+from core_ai.core.conversation_context import get_context_manager
+from core_ai.ai.multi_step_parser import MultiStepCommandParser
 
 # Setup logging
 logging.basicConfig(

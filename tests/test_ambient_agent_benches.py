@@ -179,7 +179,7 @@ def test_bench_4_ui_hit_testing():
     # 4.2 Notification Card
     notif = {
         "type": "whatsapp",
-        "title": "💬 Message from Diwakar",
+        "title": "💬 Message from Alex",
         "body": "Hey bro, check the latest update",
         "actions": ["Show", "Reply", "Dismiss"]
     }

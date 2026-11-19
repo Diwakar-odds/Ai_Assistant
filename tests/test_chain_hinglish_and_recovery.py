@@ -6,13 +6,13 @@ import sys
 sys.path.insert(0, os.path.abspath("core_ai/src"))
 sys.path.insert(0, os.path.abspath("backend"))
 
-from ai_assistant.ai.multi_step_parser import MultiStepCommandParser
-from ai_assistant.ai.intent_router import IntentRouter
-from ai_assistant.automation.file_automation import FileAutomation
-from ai_assistant.core.chain_recovery_manager import get_chain_recovery_manager, ChainRecoveryManager
-from ai_assistant.core.command_brain import get_executive_brain
-from ai_assistant.integrations.orchestrator_integration import should_use_orchestrator
-from ai_assistant.core.intent_executor import get_intent_executor
+from core_ai.ai.multi_step_parser import MultiStepCommandParser
+from core_ai.ai.intent_router import IntentRouter
+from core_ai.automation.file_automation import FileAutomation
+from core_ai.core.chain_recovery_manager import get_chain_recovery_manager, ChainRecoveryManager
+from core_ai.core.command_brain import get_executive_brain
+from core_ai.integrations.orchestrator_integration import should_use_orchestrator
+from core_ai.core.intent_executor import get_intent_executor
 
 
 class TestChainHinglishAndRecovery(unittest.TestCase):

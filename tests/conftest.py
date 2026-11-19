@@ -15,7 +15,7 @@ sys.path.insert(0, str(project_root / "backend"))
 @pytest.fixture
 def assistant():
     """Create ModernAssistant instance for testing"""
-    from ai_assistant.core.assistant import ModernAssistant
+    from core_ai.core.assistant import ModernAssistant
     return ModernAssistant()
 
 @pytest.fixture

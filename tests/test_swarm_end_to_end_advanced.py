@@ -23,18 +23,18 @@ for p in (str(REPO_ROOT), str(CORE_SRC), str(BACKEND_DIR)):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-from ai_assistant.agents.base_agent import BaseAgent
-from ai_assistant.agents.models import AgentStatus, Task, TaskResult
-from ai_assistant.agents.registry import AgentRegistry
-from ai_assistant.core.multi_agent_coordinator import MultiAgentCoordinator
-from ai_assistant.core.swarm_planner import (
+from core_ai.agents.base_agent import BaseAgent
+from core_ai.agents.models import AgentStatus, Task, TaskResult
+from core_ai.agents.registry import AgentRegistry
+from core_ai.core.multi_agent_coordinator import MultiAgentCoordinator
+from core_ai.core.swarm_planner import (
     AGENT_CAPABILITY_CONTRACTS,
     SwarmPlanner,
     WorkflowPlan,
     WorkflowStep,
     WorkflowWave,
 )
-from ai_assistant.core.workflow_memory import WorkflowMemory
+from core_ai.core.workflow_memory import WorkflowMemory
 from flask import Flask
 from backend.routes import register_all_routes
 

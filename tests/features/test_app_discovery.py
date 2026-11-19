@@ -9,7 +9,7 @@ import json
 import tempfile
 import sqlite3
 from unittest.mock import Mock, patch, MagicMock
-from ai_assistant.automation import app_discovery
+from core_ai.automation import app_discovery
 
 
 class TestAppDiscovery(unittest.TestCase):

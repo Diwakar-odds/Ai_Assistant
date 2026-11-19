@@ -14,9 +14,9 @@ import os
 # Add parent directory to path
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
-from ai_assistant.automation.task_planner import TaskPlanner, TaskPlan
-from ai_assistant.automation.browser_automation import BrowserAutomation, YouTubeAutomation
-from ai_assistant.automation.app_automation import StickyNotesAutomation, WhatsAppAutomation
+from core_ai.automation.task_planner import TaskPlanner, TaskPlan
+from core_ai.automation.browser_automation import BrowserAutomation, YouTubeAutomation
+from core_ai.automation.app_automation import StickyNotesAutomation, WhatsAppAutomation
 
 # Setup logging
 logging.basicConfig(

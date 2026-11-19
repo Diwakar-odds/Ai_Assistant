@@ -1,6 +1,6 @@
 
 try:
-    import ai_assistant.modules.core
+    import core_ai.modules.core
     print("Successfully imported ai_assistant.modules.core")
 except Exception as e:
     print(f"Failed to import: {e}")

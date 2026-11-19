@@ -4,10 +4,9 @@ import sys
 
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-sys.path.append(r"c:\users\hp\appdata\roaming\python\python39\site-packages")
 
-from ai_assistant.agents.loader import AgentLoader
-from ai_assistant.workflow.orchestrator import WorkflowOrchestrator
+from core_ai.agents.loader import AgentLoader
+from core_ai.workflow.orchestrator import WorkflowOrchestrator
 
 async def main():
     print("Testing Workflow Orchestration...")

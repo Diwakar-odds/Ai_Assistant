@@ -14,7 +14,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(PROJECT_ROOT / "backend"))
 sys.path.insert(0, str(PROJECT_ROOT / "core_ai" / "src"))
 
-from ai_assistant.core.speech_text_crisper import (
+from core_ai.core.speech_text_crisper import (
     record_recent_tts,
     is_recent_tts_echo,
     is_hallucination_or_garbage,

@@ -8,7 +8,7 @@ import os
 import sqlite3
 import tempfile
 import shutil
-from ai_assistant.ai import memory
+from core_ai.ai import memory
 
 
 class TestMemoryModule(unittest.TestCase):

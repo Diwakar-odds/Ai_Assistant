@@ -4,9 +4,9 @@ import os
 import asyncio
 from typing import Dict, Any
 
-from ai_assistant.nlp.unified_intent_classifier import UnifiedIntentClassifier
-from ai_assistant.core.chain_of_actions_manager import ChainOfActionsManager
-from ai_assistant.core.action_chain_models import ActionType
+from core_ai.nlp.unified_intent_classifier import UnifiedIntentClassifier
+from core_ai.core.chain_of_actions_manager import ChainOfActionsManager
+from core_ai.core.action_chain_models import ActionType
 
 def load_dataset():
     data_path = os.path.join(os.path.dirname(__file__), "data", "test_commands_dataset.json")

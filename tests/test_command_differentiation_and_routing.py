@@ -16,11 +16,11 @@ for p in (
     if sp not in sys.path:
         sys.path.insert(0, sp)
 
-from ai_assistant.ai.intent_router import IntentRouter
-from ai_assistant.ai.multi_step_parser import MultiStepCommandParser
-from ai_assistant.core.local_command_normalizer import normalize_hinglish_devanagari
-from ai_assistant.core.command_brain import CommandBrain, BrainResponse
-from ai_assistant.core.emergency_stop import trigger_emergency_stop
+from core_ai.ai.intent_router import IntentRouter
+from core_ai.ai.multi_step_parser import MultiStepCommandParser
+from core_ai.core.local_command_normalizer import normalize_hinglish_devanagari
+from core_ai.core.command_brain import CommandBrain, BrainResponse
+from core_ai.core.emergency_stop import trigger_emergency_stop
 
 
 class TestCommandDifferentiationAndRouting(unittest.TestCase):

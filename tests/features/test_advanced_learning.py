@@ -16,7 +16,7 @@ def test_feedback_learning():
     print("1. Testing Advanced Feedback Learning System")
     print("=" * 60)
     
-    from ai_assistant.ai.advanced_feedback_learning import AdaptiveLearningEngine
+    from core_ai.ai.advanced_feedback_learning import AdaptiveLearningEngine
     
     engine = AdaptiveLearningEngine()
     
@@ -58,7 +58,7 @@ def test_intent_classification():
     print("2. Testing Intent Classification & NER")
     print("=" * 60)
     
-    from ai_assistant.ai.intent_classification import IntentClassifier
+    from core_ai.ai.intent_classification import IntentClassifier
     
     classifier = IntentClassifier()
     
@@ -94,7 +94,7 @@ def test_adaptive_prompts():
     print("3. Testing Adaptive Prompt Engineering")
     print("=" * 60)
     
-    from ai_assistant.ai.adaptive_prompts import PromptOptimizer
+    from core_ai.ai.adaptive_prompts import PromptOptimizer
     
     optimizer = PromptOptimizer()
     
@@ -131,7 +131,7 @@ def test_multimodal_learning():
     print("4. Testing Multi-Modal Learning Integration")
     print("=" * 60)
     
-    from ai_assistant.ai.multimodal_learning import MultiModalLearningEngine
+    from core_ai.ai.multimodal_learning import MultiModalLearningEngine
     
     engine = MultiModalLearningEngine()
     

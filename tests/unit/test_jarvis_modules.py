@@ -37,7 +37,7 @@ class TestUserDNA(unittest.TestCase):
             return_value=self.test_db
         )
         self.patcher.start()
-        from ai_assistant.ai.user_dna import UserDNA
+        from core_ai.ai.user_dna import UserDNA
         self.dna = UserDNA(db_path=self.test_db)
 
     def tearDown(self):
@@ -82,14 +82,14 @@ class TestUserDNA(unittest.TestCase):
 
     def test_get_full_profile_populated(self):
         """Full profile should return all stored traits."""
-        self.dna.update_trait("name", "Diwakar")
+        self.dna.update_trait("name", "Alex")
         self.dna.update_trait("role", "Developer")
         self.dna.update_trait("skills", ["Python", "AI"])
 
         profile = self.dna.get_full_profile()
 
         self.assertEqual(len(profile), 3)
-        self.assertEqual(profile["name"], "Diwakar")
+        self.assertEqual(profile["name"], "Alex")
         self.assertEqual(profile["role"], "Developer")
         self.assertIn("Python", profile["skills"])
 
@@ -125,7 +125,7 @@ class TestEmotionalIntelligence(unittest.TestCase):
     """Test sentiment analysis and adaptive prompt modifiers (Pillar 4)."""
 
     def setUp(self):
-        from ai_assistant.ai.emotional_intelligence import EmotionalIntelligence
+        from core_ai.ai.emotional_intelligence import EmotionalIntelligence
         self.ei = EmotionalIntelligence()
 
     def test_detect_frustrated(self):
@@ -193,7 +193,7 @@ class TestSelfHealingEngine(unittest.TestCase):
     """Test autonomous diagnostics and healing (Pillar 3)."""
 
     def setUp(self):
-        from ai_assistant.core.self_healing_engine import SelfHealingEngine
+        from core_ai.core.self_healing_engine import SelfHealingEngine
         self.engine = SelfHealingEngine()
 
     def tearDown(self):
@@ -285,8 +285,8 @@ class TestHealthMonitor(unittest.TestCase):
     """Test the background health monitoring daemon (Pillar 3)."""
 
     def setUp(self):
-        from ai_assistant.core.self_healing_engine import SelfHealingEngine
-        from ai_assistant.core.health_monitor import HealthMonitor
+        from core_ai.core.self_healing_engine import SelfHealingEngine
+        from core_ai.core.health_monitor import HealthMonitor
         self.engine = SelfHealingEngine()
         self.monitor = HealthMonitor(self.engine)
 
@@ -337,7 +337,7 @@ class TestRelationshipManager(unittest.TestCase):
             return_value=self.test_db
         )
         self.patcher.start()
-        from ai_assistant.core.relationship_manager import RelationshipManager
+        from core_ai.core.relationship_manager import RelationshipManager
         self.rm = RelationshipManager()
 
     def tearDown(self):
@@ -387,7 +387,7 @@ class TestRelationshipManager(unittest.TestCase):
             self.rm.increment_interaction()
         expected_trust = self.rm.get_trust_level()
 
-        from ai_assistant.core.relationship_manager import RelationshipManager
+        from core_ai.core.relationship_manager import RelationshipManager
         rm2 = RelationshipManager()
         self.assertAlmostEqual(rm2.get_trust_level(), expected_trust)
 
@@ -415,7 +415,7 @@ class TestLearningLoop(unittest.TestCase):
         self.patcher_dna.start()
         self.patcher_rm.start()
 
-        from ai_assistant.core.learning_loop import LearningLoop
+        from core_ai.core.learning_loop import LearningLoop
         self.loop = LearningLoop()
 
     def tearDown(self):
@@ -477,7 +477,7 @@ class TestAutonomousActions(unittest.TestCase):
     """Test background autonomous task execution (Pillar 6)."""
 
     def setUp(self):
-        from ai_assistant.core.autonomous_actions import AutonomousActions
+        from core_ai.core.autonomous_actions import AutonomousActions
         self.actions = AutonomousActions()
 
     def test_initialization(self):

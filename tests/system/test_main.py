@@ -76,7 +76,7 @@ class TestInterfaceSelection:
     def test_web_interface_import(self):
         """Test that web interface can be imported."""
         try:
-            from ai_assistant.services import modern_web_backend
+            from core_ai.services import modern_web_backend
             assert hasattr(modern_web_backend, 'app')
             assert hasattr(modern_web_backend, 'socketio')
         except ImportError:
@@ -86,7 +86,7 @@ class TestInterfaceSelection:
     def test_cli_interface_import(self):
         """Test that CLI interface can be imported."""
         try:
-            from ai_assistant.apps import cli_app
+            from core_ai.apps import cli_app
             # Check for main or run function
             assert hasattr(cli_app, 'main') or hasattr(cli_app, 'run')
         except ImportError:

@@ -13,7 +13,7 @@ from unittest.mock import patch, MagicMock, mock_open
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from ai_assistant.auth.pin_auth import PINAuth
+from core_ai.auth.pin_auth import PINAuth
 
 
 class TestPINHashing:

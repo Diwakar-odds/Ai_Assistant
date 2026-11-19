@@ -5,8 +5,8 @@ import sys
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from ai_assistant.agents.productivity.productivity_agent import ProductivityAgent
-from ai_assistant.agents.models import Task
+from core_ai.agents.productivity.productivity_agent import ProductivityAgent
+from core_ai.agents.models import Task
 
 async def main():
     print("Testing Productivity Agent...")

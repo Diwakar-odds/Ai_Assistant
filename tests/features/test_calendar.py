@@ -12,7 +12,7 @@ import datetime
 # Add parent directory to path to import ai_assistant
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from ai_assistant.integrations import google_calendar as cal_module
+from core_ai.integrations import google_calendar as cal_module
 
 
 class TestCalendarManager(unittest.TestCase):

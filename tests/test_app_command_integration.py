@@ -19,7 +19,7 @@ def test_app_commands():
     # Test 1: Import detector
     print("\n[TEST 1] Importing app command detector...")
     try:
-        from ai_assistant.apps.app_command_detector import detect_app_command
+        from core_ai.apps.app_command_detector import detect_app_command
         print("[SUCCESS] App command detector imported")
     except ImportError as e:
         print(f"[FAIL] Could not import detector: {e}")
@@ -46,7 +46,7 @@ def test_app_commands():
     # Test 3: Import Universal Controller
     print("\n[TEST 3] Importing Universal App Controller...")
     try:
-        from ai_assistant.core.universal_app_controller import get_universal_controller
+        from core_ai.core.universal_app_controller import get_universal_controller
         controller = get_universal_controller()
         print("[SUCCESS] Universal App Controller loaded")
     except ImportError as e:
@@ -56,7 +56,7 @@ def test_app_commands():
     # Test 4: Check discovered apps
     print("\n[TEST 4] Checking discovered apps...")
     try:
-        from ai_assistant.modules.app_discovery import app_discovery
+        from core_ai.modules.app_discovery import app_discovery
         all_apps = app_discovery.get_all_apps()
         print(f"[INFO] {len(all_apps)} apps discovered")
         
@@ -74,7 +74,7 @@ def test_app_commands():
     try:
         # We can't fully test this without running the server
         # but we can check if the methods exist
-        from ai_assistant.services.modern_web_backend import ModernAssistant
+        from core_ai.services.modern_web_backend import ModernAssistant
         
         # Check if methods exist
         if hasattr(ModernAssistant, 'detect_app_command'):

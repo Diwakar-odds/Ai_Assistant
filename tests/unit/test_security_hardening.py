@@ -15,14 +15,14 @@ sys.path[0:0] = [
     str(PROJECT_ROOT / "core_ai" / "src" / "ai_assistant"),
 ]
 
-from ai_assistant.automation.task_planner import (  # noqa: E402
+from core_ai.automation.task_planner import (  # noqa: E402
     Action,
     ActionType,
     PlanValidator,
     TaskPlan,
     TaskPlanner,
 )
-from ai_assistant.integrations.web_scraping import _validate_public_http_url  # noqa: E402
+from core_ai.integrations.web_scraping import _validate_public_http_url  # noqa: E402
 
 
 @pytest.mark.parametrize(

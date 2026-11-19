@@ -5,7 +5,7 @@ import shutil
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from ai_assistant.core.memory_manager import MemoryManager
+from core_ai.core.memory_manager import MemoryManager
 
 def test_memory():
     print("Testing Memory Manager...")

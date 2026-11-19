@@ -25,9 +25,9 @@ for p in (
     if sp not in sys.path:
         sys.path.insert(0, sp)
 
-from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
-from ai_assistant.core.local_command_normalizer import is_noise_fragment
-from ai_assistant.core.jarvis_persona import (
+from core_ai.voice.vocabulary_registry import get_vocabulary_registry
+from core_ai.core.local_command_normalizer import is_noise_fragment
+from core_ai.core.jarvis_persona import (
     generate_wake_acknowledgment,
     generate_pre_task_report,
     format_post_task_report,

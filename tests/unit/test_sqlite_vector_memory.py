@@ -42,7 +42,7 @@ class TestSQLiteVectorMemory(unittest.TestCase):
 
     def test_user_dna_vector_storage_and_search(self):
         """Verify UserDNA stores float16 BLOB embeddings and searches semantically."""
-        from ai_assistant.ai.user_dna import UserDNA
+        from core_ai.ai.user_dna import UserDNA
 
         dna = UserDNA(db_path=self.dna_db_path)
         dna.update_trait("friend_name", "Anshuman")
@@ -66,7 +66,7 @@ class TestSQLiteVectorMemory(unittest.TestCase):
     def test_conversation_vectors_persistence_and_search(self):
         """Verify conversation turns are stored as vectors and retrieved in <5ms."""
         import time
-        from ai_assistant.ai.memory_retrieval import persist_turn_to_conversation_ai, MemoryRetrieval
+        from core_ai.ai.memory_retrieval import persist_turn_to_conversation_ai, MemoryRetrieval
 
         # Persist a couple of substantive conversation turns
         ok1 = persist_turn_to_conversation_ai(
@@ -109,7 +109,7 @@ class TestSQLiteVectorMemory(unittest.TestCase):
 
     def test_unified_context_hybrid_injection(self):
         """Verify retrieve_unified_context injects vector-recalled memories into prompt."""
-        from ai_assistant.ai.memory_retrieval import persist_turn_to_conversation_ai, MemoryRetrieval
+        from core_ai.ai.memory_retrieval import persist_turn_to_conversation_ai, MemoryRetrieval
 
         persist_turn_to_conversation_ai(
             user_text="My brother loves playing football on weekends",

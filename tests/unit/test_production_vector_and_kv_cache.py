@@ -27,7 +27,7 @@ class TestProductionVectorAndKVCache(unittest.TestCase):
 
     def test_shared_embedder_normalization(self):
         """Verify that shared embedder produces unit-length (L2 norm = 1.0) vectors."""
-        from ai_assistant.ai.shared_embedder import encode_text, cosine_similarity
+        from core_ai.ai.shared_embedder import encode_text, cosine_similarity
 
         vec1 = encode_text("open visual studio code", normalize=True)
         self.assertIsNotNone(vec1)
@@ -47,7 +47,7 @@ class TestProductionVectorAndKVCache(unittest.TestCase):
     def test_intent_vector_matcher_load_and_speed(self):
         """Verify Tier 1.5 matcher loads in <10ms and classifies variations accurately."""
         import time
-        from ai_assistant.ai.intent_vector_matcher import IntentVectorMatcher
+        from core_ai.ai.intent_vector_matcher import IntentVectorMatcher
 
         matcher = IntentVectorMatcher()
         self.assertTrue(matcher.is_available(), "IntentVectorMatcher should have loaded intent_embeddings.npz")
@@ -64,7 +64,7 @@ class TestProductionVectorAndKVCache(unittest.TestCase):
 
     def test_conversational_guardrail_prevents_false_positives(self):
         """Verify that conversational queries do NOT trigger false command matches."""
-        from ai_assistant.ai.intent_router import IntentRouter
+        from core_ai.ai.intent_router import IntentRouter
 
         router = IntentRouter()
         
@@ -81,7 +81,7 @@ class TestProductionVectorAndKVCache(unittest.TestCase):
 
     def test_intent_router_tier_1_5_dispatch(self):
         """Verify that IntentRouter seamlessly routes through Tier 1.5 when Tier 1 misses."""
-        from ai_assistant.ai.intent_router import IntentRouter
+        from core_ai.ai.intent_router import IntentRouter
 
         router = IntentRouter()
 
@@ -93,7 +93,7 @@ class TestProductionVectorAndKVCache(unittest.TestCase):
 
     def test_gguf_instantiate_q8_kv_params(self):
         """Verify that GGUFModelManager requests Q8_0 KV cache and flash_attn."""
-        from ai_assistant.ai.gguf_model_manager import GGUFModelManager, GGML_TYPE_Q8_0
+        from core_ai.ai.gguf_model_manager import GGUFModelManager, GGML_TYPE_Q8_0
         
         # Verify constant is present
         self.assertEqual(GGML_TYPE_Q8_0, 8)

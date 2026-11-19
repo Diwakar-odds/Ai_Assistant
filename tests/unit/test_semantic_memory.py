@@ -28,7 +28,7 @@ class TestSemanticMemory(unittest.TestCase):
         self.patcher_enc = patch('ai_assistant.ai.memory.get_encrypted_db', return_value=None)
         self.patcher_enc.start()
         
-        import ai_assistant.ai.memory as memory
+        import core_ai.ai.memory as memory
         # Force re-initialization of pool
         memory._memory_pool.database = self.test_db
         memory.setup_memory()

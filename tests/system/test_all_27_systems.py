@@ -21,7 +21,7 @@ def test_all_systems():
     
     # Test 1: Active Learning
     try:
-        from ai_assistant.ai.active_learning import ActiveLearner
+        from core_ai.ai.active_learning import ActiveLearner
         al = ActiveLearner()
         stats = al.get_stats()
         systems_tested.append("✅ Active Learning")
@@ -32,7 +32,7 @@ def test_all_systems():
     
     # Test 2: Explainability
     try:
-        from ai_assistant.ai.explainability import ExplainabilityEngine
+        from core_ai.ai.explainability import ExplainabilityEngine
         xai = ExplainabilityEngine()
         stats = xai.get_stats()
         systems_tested.append("✅ Explainability")
@@ -43,7 +43,7 @@ def test_all_systems():
     
     # Test 3: Behavior Clustering
     try:
-        from ai_assistant.ai.behavior_clustering import BehaviorClusterer
+        from core_ai.ai.behavior_clustering import BehaviorClusterer
         bc = BehaviorClusterer()
         stats = bc.get_stats()
         systems_tested.append("✅ Behavior Clustering")
@@ -54,7 +54,7 @@ def test_all_systems():
     
     # Test 4: Conversation Clustering
     try:
-        from ai_assistant.ai.conversation_clustering import ConversationClusterer
+        from core_ai.ai.conversation_clustering import ConversationClusterer
         cc = ConversationClusterer()
         stats = cc.get_stats()
         systems_tested.append("✅ Conversation Clustering")
@@ -65,7 +65,7 @@ def test_all_systems():
     
     # Test 5: LLM Bandit
     try:
-        from ai_assistant.ai.llm_bandit import LLMBandit
+        from core_ai.ai.llm_bandit import LLMBandit
         bandit = LLMBandit()
         stats = bandit.get_stats()
         systems_tested.append("✅ LLM Bandit")
@@ -76,7 +76,7 @@ def test_all_systems():
     
     # Test 6: Model Compression
     try:
-        from ai_assistant.ai.model_compression import ModelCompressor
+        from core_ai.ai.model_compression import ModelCompressor
         mc = ModelCompressor()
         stats = mc.get_stats()
         systems_tested.append("✅ Model Compression")
@@ -87,7 +87,7 @@ def test_all_systems():
     
     # Test 7: Workflow Scheduler
     try:
-        from ai_assistant.ai.workflow_scheduler import WorkflowScheduler
+        from core_ai.ai.workflow_scheduler import WorkflowScheduler
         ws = WorkflowScheduler()
         stats = ws.get_stats()
         systems_tested.append("✅ Workflow Scheduler")
@@ -98,7 +98,7 @@ def test_all_systems():
     
     # Test 8: Contrastive Learning
     try:
-        from ai_assistant.ai.contrastive_learning import ContrastiveLearner
+        from core_ai.ai.contrastive_learning import ContrastiveLearner
         cl = ContrastiveLearner()
         stats = cl.get_stats()
         systems_tested.append("✅ Contrastive Learning")
@@ -109,7 +109,7 @@ def test_all_systems():
     
     # Test 9: Self-Supervised Learning
     try:
-        from ai_assistant.ai.self_supervised_learning import SelfSupervisedLearner
+        from core_ai.ai.self_supervised_learning import SelfSupervisedLearner
         ssl = SelfSupervisedLearner()
         stats = ssl.get_stats()
         systems_tested.append("✅ Self-Supervised Learning")
@@ -120,7 +120,7 @@ def test_all_systems():
     
     # Test 10: Causal Inference
     try:
-        from ai_assistant.ai.causal_inference import CausalInference
+        from core_ai.ai.causal_inference import CausalInference
         ci = CausalInference()
         stats = ci.get_stats()
         systems_tested.append("✅ Causal Inference")
@@ -131,7 +131,7 @@ def test_all_systems():
     
     # Test 11: Query Cache
     try:
-        from ai_assistant.ai.query_cache import QuerySimilarityCache
+        from core_ai.ai.query_cache import QuerySimilarityCache
         qc = QuerySimilarityCache()
         stats = qc.get_stats()
         systems_tested.append("✅ Query Cache")
@@ -142,7 +142,7 @@ def test_all_systems():
     
     # Test 12: Command Sequences
     try:
-        from ai_assistant.ai.command_sequences import CommandMarkovChain
+        from core_ai.ai.command_sequences import CommandMarkovChain
         cs = CommandMarkovChain()
         stats = cs.get_stats()
         systems_tested.append("✅ Command Sequences")
@@ -153,7 +153,7 @@ def test_all_systems():
     
     # Test 13: Historical RAG
     try:
-        from ai_assistant.ai.historical_rag import HistoricalRAG
+        from core_ai.ai.historical_rag import HistoricalRAG
         rag = HistoricalRAG()
         stats = rag.get_stats()
         systems_tested.append("✅ Historical RAG")
@@ -164,7 +164,7 @@ def test_all_systems():
     
     # Test 14: Command Predictor
     try:
-        from ai_assistant.ai.command_predictor import CommandSuccessPredictor
+        from core_ai.ai.command_predictor import CommandSuccessPredictor
         cp = CommandSuccessPredictor()
         stats = cp.get_stats()
         systems_tested.append("✅ Command Predictor")
@@ -175,7 +175,7 @@ def test_all_systems():
     
     # Test 15: Anomaly Detection
     try:
-        from ai_assistant.ai.anomaly_detection import AnomalyDetector
+        from core_ai.ai.anomaly_detection import AnomalyDetector
         ad = AnomalyDetector()
         stats = ad.get_stats()
         systems_tested.append("✅ Anomaly Detection")
@@ -186,7 +186,7 @@ def test_all_systems():
     
     # Test 16: Knowledge Graph
     try:
-        from ai_assistant.ai.enhanced_learning import PersonalKnowledgeGraph
+        from core_ai.ai.enhanced_learning import PersonalKnowledgeGraph
         kg = PersonalKnowledgeGraph(db_path="data/test_knowledge_graph.db")
         stats = kg.get_stats()
         systems_tested.append("✅ Knowledge Graph")
@@ -201,7 +201,7 @@ def test_all_systems():
     
     # Test 17: Full RL System (PPO)
     try:
-        from ai_assistant.ai.full_rl_system import PPOAgent
+        from core_ai.ai.full_rl_system import PPOAgent
         ppo = PPOAgent(state_dim=10, action_dim=4)
         stats = ppo.get_stats()
         systems_tested.append("✅ PPO Agent (RL)")
@@ -212,7 +212,7 @@ def test_all_systems():
     
     # Test 18: Meta-Learning (MAML)
     try:
-        from ai_assistant.ai.meta_learning import MAMLLearner
+        from core_ai.ai.meta_learning import MAMLLearner
         maml = MAMLLearner(input_dim=10, hidden_dim=5, output_dim=2)
         stats = maml.get_stats()
         systems_tested.append("✅ MAML Meta-Learning")
@@ -223,7 +223,7 @@ def test_all_systems():
     
     # Test 19: Federated Learning
     try:
-        from ai_assistant.ai.federated_learning import FederatedServer
+        from core_ai.ai.federated_learning import FederatedServer
         fed = FederatedServer(input_dim=10, output_dim=5)
         stats = fed.get_stats()
         systems_tested.append("✅ Federated Learning")
@@ -234,7 +234,7 @@ def test_all_systems():
     
     # Test 20: Graph Neural Networks
     try:
-        from ai_assistant.ai.graph_neural_networks import GraphNeuralNetwork
+        from core_ai.ai.graph_neural_networks import GraphNeuralNetwork
         gnn = GraphNeuralNetwork()
         stats = gnn.get_stats()
         systems_tested.append("✅ Graph Neural Networks")
@@ -245,7 +245,7 @@ def test_all_systems():
     
     # Test 21: Domain Embeddings
     try:
-        from ai_assistant.ai.domain_embeddings import DomainAdaptedEmbeddings
+        from core_ai.ai.domain_embeddings import DomainAdaptedEmbeddings
         de = DomainAdaptedEmbeddings()
         stats = de.get_stats()
         systems_tested.append("✅ Domain Embeddings")
@@ -256,7 +256,7 @@ def test_all_systems():
     
     # Test 22: Smart Command Prediction
     try:
-        from ai_assistant.ai.smart_command_prediction import SmartCommandPredictor
+        from core_ai.ai.smart_command_prediction import SmartCommandPredictor
         scp = SmartCommandPredictor()
         stats = scp.get_stats()
         systems_tested.append("✅ Smart Command Prediction")
@@ -267,7 +267,7 @@ def test_all_systems():
     
     # Test 23: Adaptive Voice
     try:
-        from ai_assistant.ai.adaptive_voice import AdaptiveVoiceRecognition
+        from core_ai.ai.adaptive_voice import AdaptiveVoiceRecognition
         av = AdaptiveVoiceRecognition()
         stats = av.get_stats()
         systems_tested.append("✅ Adaptive Voice")
@@ -278,7 +278,7 @@ def test_all_systems():
     
     # Test 24: Workflow Recommender
     try:
-        from ai_assistant.ai.workflow_recommender import WorkflowRecommender
+        from core_ai.ai.workflow_recommender import WorkflowRecommender
         wr = WorkflowRecommender()
         stats = wr.get_stats()
         systems_tested.append("✅ Workflow Recommender")
@@ -289,7 +289,7 @@ def test_all_systems():
     
     # Test 25: Context-Aware Response
     try:
-        from ai_assistant.ai.context_aware_response import ContextAwareResponseGenerator
+        from core_ai.ai.context_aware_response import ContextAwareResponseGenerator
         car = ContextAwareResponseGenerator()
         stats = car.get_stats()
         systems_tested.append("✅ Context-Aware Response")

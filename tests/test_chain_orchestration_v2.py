@@ -22,15 +22,15 @@ for p in (str(REPO_ROOT), str(CORE_SRC), str(BACKEND_DIR)):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-from ai_assistant.ai.multi_step_parser import MultiStepCommandParser, TaskStep
-from ai_assistant.core.action_chain_models import ActionChain, Action, ActionType, ChainStatus
-from ai_assistant.core.chain_of_actions_manager import ChainOfActionsManager, get_chain_manager
-from ai_assistant.core.task_chain_orchestrator import (
+from core_ai.ai.multi_step_parser import MultiStepCommandParser, TaskStep
+from core_ai.core.action_chain_models import ActionChain, Action, ActionType, ChainStatus
+from core_ai.core.chain_of_actions_manager import ChainOfActionsManager, get_chain_manager
+from core_ai.core.task_chain_orchestrator import (
     ChainExecutionContext,
     TaskChainOrchestrator,
     get_orchestrator,
 )
-from ai_assistant.core.command_brain import (
+from core_ai.core.command_brain import (
     ExecutiveBrain,
     get_executive_brain,
     EXECUTIVE_STOP_KEYWORDS,

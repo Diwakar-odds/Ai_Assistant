@@ -34,35 +34,35 @@ for p in (
         sys.path.insert(0, sp)
 
 # Core imports
-from ai_assistant.ai.intent_router import IntentRouter
-from ai_assistant.ai.memory import search_memory, get_conversation_summary
-from ai_assistant.ai.memory_retrieval import (
+from core_ai.ai.intent_router import IntentRouter
+from core_ai.ai.memory import search_memory, get_conversation_summary
+from core_ai.ai.memory_retrieval import (
     MemoryRetrieval,
     retrieve_unified_historical_context,
     persist_turn_to_conversation_ai,
 )
-from ai_assistant.ai.multi_step_parser import MultiStepCommandParser
-from ai_assistant.automation.browser_profiles import (
+from core_ai.ai.multi_step_parser import MultiStepCommandParser
+from core_ai.automation.browser_profiles import (
     extract_profile_from_text,
     resolve_chrome_profile,
 )
-from ai_assistant.automation.taskbar_detection import TaskbarDetector
-from ai_assistant.core.command_brain import CommandBrain, CommandClassification
-from ai_assistant.core.conversation_context import (
+from core_ai.automation.taskbar_detection import TaskbarDetector
+from core_ai.core.command_brain import CommandBrain, CommandClassification
+from core_ai.core.conversation_context import (
     ContextManager,
     ExecutionState,
 )
-from ai_assistant.core.jarvis_persona import (
+from core_ai.core.jarvis_persona import (
     build_persona_system_prompt,
     format_post_task_report,
 )
-from ai_assistant.core.local_command_normalizer import (
+from core_ai.core.local_command_normalizer import (
     is_barge_in_stop_command,
     parse_voice_control_command,
     execute_voice_control_command,
 )
-from ai_assistant.core.task_chain_orchestrator import TaskChainOrchestrator
-from ai_assistant.integrations.music import control_media_player
+from core_ai.core.task_chain_orchestrator import TaskChainOrchestrator
+from core_ai.integrations.music import control_media_player
 from backend.utils.chat_session_store import ChatSessionStore
 
 
@@ -280,11 +280,11 @@ class TestFix6BrowserProfilesResolution(unittest.TestCase):
 
     def test_college_profile_resolution(self):
         resolved = resolve_chrome_profile("mere college ki chrome profile kholo")
-        self.assertEqual(resolved, "Profile 5")
+        self.assertEqual(resolved, "Profile 2")
 
     def test_extract_profile_from_text(self):
-        profile, action = extract_profile_from_text("Open Rancho profile")
-        self.assertEqual(profile.lower(), "rancho")
+        profile, action = extract_profile_from_text("Open Work profile")
+        self.assertEqual(profile.lower(), "work")
 
         profile2, _ = extract_profile_from_text("mere college ki chrome profile kholo")
         self.assertEqual(profile2.lower(), "college")
@@ -297,12 +297,12 @@ class TestFix7MultiStepPreambleFiltering(unittest.TestCase):
         self.parser = MultiStepCommandParser()
 
     def test_preamble_removal_with_comma(self):
-        cmd = "i want to research on smtg , open rancho chrome profile"
+        cmd = "i want to research on smtg , open work chrome profile"
         steps = self.parser.parse_command(cmd)
         self.assertGreater(len(steps), 0)
         # First step should NOT be an unknown dummy step
         self.assertEqual(steps[0].intent, "open_app")
-        self.assertIn("rancho", str(steps[0].params.get("profile", "")).lower())
+        self.assertIn("work", str(steps[0].params.get("profile", "")).lower())
 
     def test_collapse_duplicate_taskbar_queries(self):
         cmd = "check taskbar and tell me which apps are currently open"
@@ -344,7 +344,7 @@ class TestFix8TaskbarDetection(unittest.TestCase):
         self.assertGreaterEqual(len(lines), 2)
 
     def test_system_py_has_no_double_escaped_newlines(self):
-        system_file = PROJECT_ROOT / "core_ai" / "src" / "ai_assistant" / "core" / "system.py"
+        system_file = PROJECT_ROOT / "core_ai" / "core" / "system.py"
         content = system_file.read_text(encoding="utf-8")
         # Ensure there are no literal double-escaped '\\n' sequences inside string literals
         self.assertNotIn('\\\\n', content)
@@ -364,8 +364,8 @@ class TestFix9MemoryAndUnifiedRAG(unittest.TestCase):
 
             # Persist turns using the official thread-safe helper
             ok1 = persist_turn_to_conversation_ai(
-                "who is abhishek?",
-                "Abhishek is a software engineer and good friend.",
+                "who is alex?",
+                "Alex is a software engineer and good friend.",
                 session_id="s_old",
                 db_path=str(db_path),
             )
@@ -382,11 +382,11 @@ class TestFix9MemoryAndUnifiedRAG(unittest.TestCase):
             # Initialize MemoryRetrieval on this test DB and isolated data_dir
             retriever = MemoryRetrieval(db_path=str(db_path), data_dir=tmp_dir)
 
-            # Query who is abhishek
-            res = retriever.search_memory("who is abhishek", limit=3)
+            # Query who is alex
+            res = retriever.search_memory("who is alex", limit=3)
             self.assertGreater(len(res), 0)
             flattened = retriever._flatten_messages(res[0].get("messages", []))
-            self.assertIn("Abhishek", flattened)
+            self.assertIn("Alex", flattened)
 
             # Persist another turn and verify immediate searchability
             persist_turn_to_conversation_ai(
@@ -400,12 +400,12 @@ class TestFix9MemoryAndUnifiedRAG(unittest.TestCase):
             self.assertIn("Bhopal", retriever._flatten_messages(res2[0].get("messages", [])))
 
             # Unified context retrieval
-            unified = retriever.retrieve_unified_context("who is abhishek?", max_chars=1000, current_session_id="s_curr")
-            self.assertIn("Abhishek", unified)
+            unified = retriever.retrieve_unified_context("who is alex?", max_chars=1000, current_session_id="s_curr")
+            self.assertIn("Alex", unified)
 
             # Module-level wrapper
-            mod_unified = retrieve_unified_historical_context("who is abhishek?", db_path=str(db_path), max_chars=1000)
-            self.assertIn("Abhishek", mod_unified)
+            mod_unified = retrieve_unified_historical_context("who is alex?", db_path=str(db_path), max_chars=1000)
+            self.assertIn("Alex", mod_unified)
         finally:
             shutil.rmtree(tmp_dir, ignore_errors=True)
 

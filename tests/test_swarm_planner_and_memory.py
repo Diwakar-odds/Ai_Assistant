@@ -17,19 +17,19 @@ for p in (
     if sp not in sys.path:
         sys.path.insert(0, sp)
 
-from ai_assistant.core.swarm_planner import (
+from core_ai.core.swarm_planner import (
     SwarmPlanner,
     WorkflowStep,
     WorkflowWave,
     WorkflowPlan,
     AGENT_CAPABILITY_CONTRACTS,
 )
-from ai_assistant.core.workflow_memory import WorkflowMemory
-from ai_assistant.agents.registry import AgentRegistry
-from ai_assistant.agents.loader import AgentLoader
-from ai_assistant.agents.base_agent import BaseAgent
-from ai_assistant.agents.models import Task, TaskResult
-from ai_assistant.core.multi_agent_coordinator import MultiAgentCoordinator
+from core_ai.core.workflow_memory import WorkflowMemory
+from core_ai.agents.registry import AgentRegistry
+from core_ai.agents.loader import AgentLoader
+from core_ai.agents.base_agent import BaseAgent
+from core_ai.agents.models import Task, TaskResult
+from core_ai.core.multi_agent_coordinator import MultiAgentCoordinator
 
 
 class TestSwarmPlannerAndMemory(unittest.TestCase):

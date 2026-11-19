@@ -74,7 +74,7 @@ class TestSingleProcessAudioFixes(unittest.TestCase):
 
     def test_manual_mic_click_accepts_command_without_wake_word(self):
         """Verify that when manual_click=True / require_wake_word=False, speech without wake word is accepted."""
-        from ai_assistant.core.speech_text_crisper import filter_and_crisp_speech_transcript
+        from core_ai.core.speech_text_crisper import filter_and_crisp_speech_transcript
         
         # User manually clicks mic and says "what is running on screen?" (no wake word)
         res = filter_and_crisp_speech_transcript(
@@ -88,7 +88,7 @@ class TestSingleProcessAudioFixes(unittest.TestCase):
 
     def test_manual_mic_click_accepts_hindi_command_without_wake_word(self):
         """Verify Hindi command spoken directly after mic click is accepted."""
-        from ai_assistant.core.speech_text_crisper import filter_and_crisp_speech_transcript
+        from core_ai.core.speech_text_crisper import filter_and_crisp_speech_transcript
         
         res = filter_and_crisp_speech_transcript(
             "स्क्रीन पर क्या चल रहा है",
@@ -100,7 +100,7 @@ class TestSingleProcessAudioFixes(unittest.TestCase):
 
     def test_manual_mic_click_strips_wake_word_if_user_spoke_it(self):
         """Verify that if user says 'Hey Pulsar open chrome' after mic click, wake word is stripped and command passes."""
-        from ai_assistant.core.speech_text_crisper import filter_and_crisp_speech_transcript
+        from core_ai.core.speech_text_crisper import filter_and_crisp_speech_transcript
         
         res = filter_and_crisp_speech_transcript(
             "hey pulsar open chrome",

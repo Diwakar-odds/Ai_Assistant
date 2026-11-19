@@ -24,7 +24,7 @@ print("Testing LLM Provider...")
 print("=" * 70)
 
 try:
-    from ai_assistant.modules.llm_provider import UnifiedChatInterface
+    from core_ai.modules.llm_provider import UnifiedChatInterface
     
     print("\n📡 Initializing LLM provider...")
     chat = UnifiedChatInterface(use_fallback=True)

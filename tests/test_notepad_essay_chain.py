@@ -58,7 +58,7 @@ def main():
     )
     
     try:
-        from ai_assistant.ai.llm_provider import UnifiedChatInterface
+        from core_ai.ai.llm_provider import UnifiedChatInterface
         
         chat = UnifiedChatInterface(provider="gguf", use_fallback=False)
         print(f"   Using Provider: {chat.provider_name} | Model: {chat.model}")

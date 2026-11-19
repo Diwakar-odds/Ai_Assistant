@@ -58,11 +58,11 @@ class TestPriority2Decomposition(unittest.TestCase):
 
     def test_assistant_decomposition(self):
         """Test ModernAssistant and its composed managers."""
-        from ai_assistant.core.assistant import ModernAssistant
-        from ai_assistant.core.voice_manager import VoiceManager
-        from ai_assistant.core.ai_processor import AIProcessor
-        from ai_assistant.core.automation_handler import AutomationHandler
-        from ai_assistant.core.system_monitor import SystemMonitor
+        from core_ai.core.assistant import ModernAssistant
+        from core_ai.core.voice_manager import VoiceManager
+        from core_ai.core.ai_processor import AIProcessor
+        from core_ai.core.automation_handler import AutomationHandler
+        from core_ai.core.system_monitor import SystemMonitor
 
         assistant = ModernAssistant()
         self.assertIsInstance(assistant.voice_mgr, VoiceManager)
@@ -78,7 +78,7 @@ class TestPriority2Decomposition(unittest.TestCase):
 
     def test_automation_engine_decomposition(self):
         """Test SmartAutomationEngine, models, storage, runner, scheduler."""
-        from ai_assistant.automation.automation_engine import (
+        from core_ai.automation.automation_engine import (
             SmartAutomationEngine, Workflow, WorkflowTask, TaskType, WorkflowStatus
         )
         engine = SmartAutomationEngine()
@@ -95,7 +95,7 @@ class TestPriority2Decomposition(unittest.TestCase):
     def test_database_migrations(self):
         """Test SQLite MigrationManager and schema versioning."""
         import tempfile
-        from ai_assistant.core.db_migrations import MigrationManager, DEFAULT_MIGRATIONS
+        from core_ai.core.db_migrations import MigrationManager, DEFAULT_MIGRATIONS
 
         tf = tempfile.NamedTemporaryFile(suffix='.db', delete=False)
         temp_db = tf.name
@@ -118,7 +118,7 @@ class TestPriority2Decomposition(unittest.TestCase):
 
     def test_logging_consolidation(self):
         """Test unified logger creation."""
-        from ai_assistant.utils.logging_config import get_logger, SessionManager
+        from core_ai.utils.logging_config import get_logger, SessionManager
         log = get_logger('test_logger')
         self.assertIsNotNone(log)
         self.assertIsNotNone(SessionManager.get_current_date())
@@ -129,20 +129,20 @@ class TestPriority3BacklogItems(unittest.TestCase):
 
     def test_ai_module_aliases(self):
         """Test that deduplicated AI modules forward to primary classes."""
-        from ai_assistant.ai.query_cache import QueryCache
-        from ai_assistant.ai.semantic_cache import SemanticCache
+        from core_ai.ai.query_cache import QueryCache
+        from core_ai.ai.semantic_cache import SemanticCache
         self.assertIs(QueryCache, SemanticCache)
 
-        from ai_assistant.ai.intent_recognizer import IntentRecognizer
-        from ai_assistant.ai.intent_classification import IntentClassifier
+        from core_ai.ai.intent_recognizer import IntentRecognizer
+        from core_ai.ai.intent_classification import IntentClassifier
         self.assertIs(IntentRecognizer, IntentClassifier)
 
-        from ai_assistant.ai.gguf_model_manager import GGUFModelManager, get_gguf_manager
+        from core_ai.ai.gguf_model_manager import GGUFModelManager, get_gguf_manager
         self.assertIs(get_gguf_manager(), GGUFModelManager())
 
     def test_service_container_di(self):
         """Test ServiceContainer registration, resolution, and override."""
-        from ai_assistant.core.container import get_container
+        from core_ai.core.container import get_container
         container = get_container()
         container.register_singleton("config_service", {"env": "test", "version": 4})
         self.assertEqual(container.resolve("config_service")["version"], 4)

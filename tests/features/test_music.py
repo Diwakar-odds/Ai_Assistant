@@ -11,7 +11,7 @@ import os
 # Add parent directory to path to import modules
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from ai_assistant.integrations import music
+from core_ai.integrations import music
 
 
 class TestSpotifyController(unittest.TestCase):

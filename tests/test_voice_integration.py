@@ -12,7 +12,7 @@ import asyncio
 from pathlib import Path
 
 # Import voice service
-from ai_assistant.services.voice_service import get_voice_service, VoiceService
+from core_ai.services.voice_service import get_voice_service, VoiceService
 
 
 class TestVoiceService(unittest.TestCase):
@@ -133,21 +133,21 @@ class TestVoiceAPI(unittest.TestCase):
         print("\n🧪 API Test 1: GET /api/voice/status")
         # This would require the Flask app to be running
         # For now, we'll just validate the endpoint exists
-        from ai_assistant.api.voice_api import voice_api
+        from core_ai.api.voice_api import voice_api
         self.assertIsNotNone(voice_api)
         print("✅ Voice API blueprint exists")
     
     def test_02_api_voices(self):
         """Test /api/voice/voices endpoint"""
         print("\n🧪 API Test 2: GET /api/voice/voices")
-        from ai_assistant.api.voice_api import voice_api
+        from core_ai.api.voice_api import voice_api
         self.assertIsNotNone(voice_api)
         print("✅ Voices endpoint registered")
     
     def test_03_api_speak(self):
         """Test /api/voice/speak endpoint"""
         print("\n🧪 API Test 3: POST /api/voice/speak")
-        from ai_assistant.api.voice_api import voice_api
+        from core_ai.api.voice_api import voice_api
         self.assertIsNotNone(voice_api)
         print("✅ Speak endpoint registered")
 

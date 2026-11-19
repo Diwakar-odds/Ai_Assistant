@@ -8,7 +8,7 @@ import os
 import time
 from unittest.mock import Mock, patch, MagicMock
 from PIL import Image
-from ai_assistant.vision import multimodal
+from core_ai.vision import multimodal
 
 
 class TestMultiModalAI(unittest.TestCase):

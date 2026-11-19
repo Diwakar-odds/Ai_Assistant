@@ -13,10 +13,10 @@ sys.path.insert(0, os.path.join(project_root, 'scripts', 'learning'))
 def test_imports():
     """Verify that all required modules can be imported."""
     try:
-        from ai_assistant.integrations.web_scraping import WebScrapingManager
-        from ai_assistant.ai.historical_rag import HistoricalRAG
-        from ai_assistant.ai.enhanced_learning import PersonalKnowledgeGraph
-        from ai_assistant.ai.memory import save_to_memory, search_memory
+        from core_ai.integrations.web_scraping import WebScrapingManager
+        from core_ai.ai.historical_rag import HistoricalRAG
+        from core_ai.ai.enhanced_learning import PersonalKnowledgeGraph
+        from core_ai.ai.memory import save_to_memory, search_memory
         from online_learning_trainer import OnlineLearningTrainer
     except Exception as e:
         pytest.fail(f"Import failed: {e}")

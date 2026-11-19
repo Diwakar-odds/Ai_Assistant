@@ -11,11 +11,11 @@ repo_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(repo_root / 'backend'))
 sys.path.insert(0, str(repo_root / 'core_ai' / 'src'))
 
-from ai_assistant.core.command_brain import CommandBrain, get_executive_brain, CommandClassification, BrainState
-from ai_assistant.core.task_chain_orchestrator import TaskChainOrchestrator, get_orchestrator, ExecutionResult
-from ai_assistant.core.conversation_context import get_context_manager, ExecutionState
-from ai_assistant.ai.multi_step_parser import MultiStepCommandParser, TaskStep
-from ai_assistant.core.emergency_stop import trigger_emergency_stop, is_emergency_stop_listener_active
+from core_ai.core.command_brain import CommandBrain, get_executive_brain, CommandClassification, BrainState
+from core_ai.core.task_chain_orchestrator import TaskChainOrchestrator, get_orchestrator, ExecutionResult
+from core_ai.core.conversation_context import get_context_manager, ExecutionState
+from core_ai.ai.multi_step_parser import MultiStepCommandParser, TaskStep
+from core_ai.core.emergency_stop import trigger_emergency_stop, is_emergency_stop_listener_active
 
 
 class TestSystemOrchestrationAndEmergencyStop(unittest.TestCase):
@@ -51,19 +51,19 @@ class TestSystemOrchestrationAndEmergencyStop(unittest.TestCase):
         self.assertFalse(res.success)
         self.assertIn("Emergency stop", res.message)
 
-    def test_03_compound_chain_parsing_rancho_youtube(self):
-        """Verify compound command: 'Open Rancho profile and search YouTube for Coke Studio'"""
-        cmd = "Open Rancho profile and search YouTube for Coke Studio"
+    def test_03_compound_chain_parsing_work_youtube(self):
+        """Verify compound command: 'Open Work profile and search YouTube for Coke Studio'"""
+        cmd = "Open Work profile and search YouTube for Coke Studio"
         steps = self.parser.parse_command(cmd)
         
         self.assertEqual(len(steps), 2)
         
-        # Step 1: open_app with target Rancho
+        # Step 1: open_app with target Work
         step1 = steps[0]
         self.assertEqual(step1.step, 1)
         self.assertEqual(step1.intent, 'open_app')
-        self.assertIn(step1.params.get('target').lower(), ['rancho', 'rancho profile'])
-        self.assertEqual(step1.params.get('profile'), 'rancho')
+        self.assertIn(step1.params.get('target').lower(), ['work', 'work profile'])
+        self.assertEqual(step1.params.get('profile'), 'work')
         self.assertEqual(step1.dependencies, [])
         
         # Step 2: youtube_search with query Coke Studio and inherited profile
@@ -71,11 +71,11 @@ class TestSystemOrchestrationAndEmergencyStop(unittest.TestCase):
         self.assertEqual(step2.step, 2)
         self.assertIn(step2.intent, ['youtube_search', 'search_web'])
         self.assertEqual(step2.params.get('query').lower(), 'coke studio')
-        self.assertEqual(step2.params.get('profile'), 'rancho')
+        self.assertEqual(step2.params.get('profile'), 'work')
         self.assertEqual(step2.dependencies, [1])
 
     def test_04_context_profile_inheritance(self):
-        """Verify that Step 2 inherits Rancho profile from context established by Step 1"""
+        """Verify that Step 2 inherits Work profile from context established by Step 1"""
         self.ctx.set_var('current_app', 'chrome')
         self.ctx.set_var('current_browser_profile', 'Profile 9')
         

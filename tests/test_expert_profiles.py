@@ -4,10 +4,9 @@ import sys
 
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-sys.path.append(r"c:\users\hp\appdata\roaming\python\python39\site-packages")
 
-from ai_assistant.agents.video.video_agent import VideoAgent
-from ai_assistant.agents.models import Task
+from core_ai.agents.video.video_agent import VideoAgent
+from core_ai.agents.models import Task
 
 async def main():
     print("Testing Video Agent Expert Profiles...")

@@ -29,7 +29,7 @@ for p in (
     if sp not in sys.path:
         sys.path.insert(0, sp)
 
-from ai_assistant.core.local_command_normalizer import (
+from core_ai.core.local_command_normalizer import (
     is_barge_in_stop_command,
     match_and_strip_wake_phrase,
     parse_voice_control_command,
