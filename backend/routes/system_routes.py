@@ -19,8 +19,8 @@ except ImportError:
     PSUTIL_AVAILABLE = False
 
 try:
-    from ai_assistant.automation.app_discovery import get_apps_for_web, refresh_app_database
-    from ai_assistant.automation.automation_tools_new import (
+    from core_ai.automation.app_discovery import get_apps_for_web, refresh_app_database
+    from core_ai.automation.automation_tools_new import (
         smart_open_application, get_spotify_status,
         spotify_play_pause, spotify_next_track, spotify_previous_track
     )
@@ -598,19 +598,19 @@ def api_sessions_new():
 
         # Cancel any in-flight turn, brain execution, TTS speech, and cached LLM conversations before switching sessions
         try:
-            from ai_assistant.core.jarvis_persona import get_lifecycle_coordinator
+            from core_ai.core.jarvis_persona import get_lifecycle_coordinator
             get_lifecycle_coordinator().cancel_all(reason="new_session")
         except Exception:
             pass
         try:
-            from ai_assistant.core.command_brain import get_executive_brain
+            from core_ai.core.command_brain import get_executive_brain
             brain = get_executive_brain()
             if brain.is_busy():
                 brain._cancel_all_active(reason="new_session", emit_notice=False)
         except Exception:
             pass
         try:
-            from ai_assistant.voice.tts_output_service import get_tts_service
+            from core_ai.voice.tts_output_service import get_tts_service
             get_tts_service().stop(reason="new_session")
         except Exception:
             pass
@@ -641,7 +641,7 @@ def api_sessions_new():
 
         greeting = ""
         try:
-            from ai_assistant.core.jarvis_persona import generate_session_greeting
+            from core_ai.core.jarvis_persona import generate_session_greeting
             greeting = str(generate_session_greeting(kind="new_session", language_hint=lang_hint) or "").strip()
         except Exception:
             greeting = "Naya session ready hai Boss — batayein kis cheez pe kaam karein?"
@@ -656,7 +656,7 @@ def api_sessions_new():
         spoken = False
         if speak_flag and greeting:
             try:
-                from ai_assistant.voice.tts_output_service import get_tts_service
+                from core_ai.voice.tts_output_service import get_tts_service
                 spoken = bool(get_tts_service().speak(greeting, interrupt=True, wait=False, source=source))
             except Exception:
                 pass
@@ -690,13 +690,67 @@ def api_sessions_clear():
 COMPANION_PROCESS = None
 
 
+def _is_companion_running() -> bool:
+    """Check if desktop 4D Orb overlay process or window is currently active."""
+    try:
+        import win32gui
+        hwnd = win32gui.FindWindowW("PulsarTransparentOrbOverlayClass", "Pulsar 4D Orb Overlay")
+        if hwnd and win32gui.IsWindow(hwnd):
+            return True
+    except Exception:
+        pass
+    try:
+        import psutil
+        cur_pid = os.getpid()
+        for p in psutil.process_iter(['pid', 'name', 'cmdline']):
+            p_name = (p.info.get('name') or '').lower()
+            if p_name in ('python.exe', 'pythonw.exe'):
+                cmdline = p.info.get('cmdline') or []
+                if cmdline and not ('-c' in cmdline):
+                    if any('companion_app.py' in str(arg).lower() for arg in cmdline) and p.info['pid'] != cur_pid:
+                        return True
+    except Exception:
+        pass
+    return False
+
+
+def _kill_stale_companion_processes():
+    """Kill any zombie or detached companion_app.py processes that don't have an active window."""
+    try:
+        import win32gui
+        hwnd = win32gui.FindWindowW("PulsarTransparentOrbOverlayClass", "Pulsar 4D Orb Overlay")
+        if hwnd and win32gui.IsWindow(hwnd):
+            return  # Active window exists, don't kill!
+    except Exception:
+        pass
+    try:
+        import psutil
+        cur_pid = os.getpid()
+        for p in psutil.process_iter(['pid', 'name', 'cmdline']):
+            p_name = (p.info.get('name') or '').lower()
+            if p_name in ('python.exe', 'pythonw.exe'):
+                cmdline = p.info.get('cmdline') or []
+                if cmdline and not ('-c' in cmdline):
+                    if any('companion_app.py' in str(arg).lower() for arg in cmdline) and p.info['pid'] != cur_pid:
+                        try:
+                            p.kill()
+                        except Exception:
+                            pass
+    except Exception:
+        pass
+
+
 def spawn_companion_process(port=5000):
     global COMPANION_PROCESS
     if os.environ.get('PULSAR_DISABLE_COMPANION') == '1':
         return False, "Companion disabled via PULSAR_DISABLE_COMPANION"
-    if COMPANION_PROCESS is not None and COMPANION_PROCESS.poll() is None:
-        logger.info("[COMPANION] Companion process is already running (PID %s)", COMPANION_PROCESS.pid)
-        return True, "Companion already active"
+
+    if _is_companion_running():
+        logger.info("[COMPANION] Active companion overlay already running.")
+        return True, "Companion already running"
+
+    # Kill any stale/orphaned companion processes from previous runs before spawning
+    _kill_stale_companion_processes()
 
     is_frozen = bool(getattr(sys, 'frozen', False))
     try:
@@ -705,22 +759,29 @@ def spawn_companion_process(port=5000):
         env['PULSAR_PORT'] = str(port)
         env['PULSAR_DASHBOARD_URL'] = f'http://127.0.0.1:{port}'
 
-        creationflags = 0
-        if sys.platform == 'win32':
-            creationflags = subprocess.CREATE_NO_WINDOW
-
         if is_frozen:
-            cmd = [sys.executable, '--companion', str(port)]
+            cmd = [sys.executable, '--companion', str(port), '--parent-pid', str(os.getpid())]
             cwd_path = str(Path(sys.executable).parent)
+            creationflags = 0
         else:
             project_root = Path(__file__).resolve().parent.parent.parent
+            venv_pyw = project_root / 'venv' / 'Scripts' / 'pythonw.exe'
             venv_py = project_root / 'venv' / 'Scripts' / 'python.exe'
-            py_exe = str(venv_py) if venv_py.exists() else sys.executable
+            if venv_pyw.exists():
+                py_exe = str(venv_pyw)
+                creationflags = 0
+            elif venv_py.exists():
+                py_exe = str(venv_py)
+                creationflags = subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
+            else:
+                py_exe = sys.executable
+                creationflags = subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
+
             script_path = str(project_root / 'desktop' / 'companion_app.py')
             if not os.path.exists(script_path):
                 logger.error("[COMPANION] Script not found at %s", script_path)
                 return False, f"Script not found at {script_path}"
-            cmd = [py_exe, script_path, str(port)]
+            cmd = [py_exe, script_path, str(port), '--parent-pid', str(os.getpid())]
             cwd_path = str(project_root)
 
         COMPANION_PROCESS = subprocess.Popen(
@@ -729,6 +790,22 @@ def spawn_companion_process(port=5000):
             env=env,
             creationflags=creationflags
         )
+
+        # Bind child process to Win32 Job Object with KILL_ON_JOB_CLOSE so Windows automatically
+        # terminates companion and releases mic when the backend or terminal closes
+        if sys.platform == 'win32':
+            try:
+                import win32job
+                global _PULSAR_JOB_OBJECT
+                if '_PULSAR_JOB_OBJECT' not in globals() or _PULSAR_JOB_OBJECT is None:
+                    _PULSAR_JOB_OBJECT = win32job.CreateJobObject(None, "")
+                    ext_info = win32job.QueryInformationJobObject(_PULSAR_JOB_OBJECT, win32job.JobObjectExtendedLimitInformation)
+                    ext_info['BasicLimitInformation']['LimitFlags'] |= win32job.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+                    win32job.SetInformationJobObject(_PULSAR_JOB_OBJECT, win32job.JobObjectExtendedLimitInformation, ext_info)
+                win32job.AssignProcessToJobObject(_PULSAR_JOB_OBJECT, COMPANION_PROCESS._handle)
+            except Exception as j_err:
+                logger.debug(f"[COMPANION] Win32 Job Object binding note: {j_err}")
+
         logger.info("[COMPANION] Spawned floating companion process (PID %s, port=%s)", COMPANION_PROCESS.pid, port)
         return True, "Companion started"
     except Exception as e:
@@ -741,13 +818,14 @@ def stop_companion_process():
     if COMPANION_PROCESS is not None:
         try:
             COMPANION_PROCESS.terminate()
-            COMPANION_PROCESS.wait(timeout=2.0)
+            COMPANION_PROCESS.wait(timeout=1.0)
         except Exception:
             try:
                 COMPANION_PROCESS.kill()
             except Exception:
                 pass
         COMPANION_PROCESS = None
+    _kill_stale_companion_processes()
 
 
 @system_bp.route('/api/desktop/companion/toggle', methods=['GET', 'POST', 'OPTIONS'])
@@ -765,8 +843,51 @@ def api_desktop_companion_toggle():
         except Exception as e:
             logger.warning(f"Bridge toggle failed: {e}")
 
+    # If running under Paradigm B (Headless Core), update orb_state cleanly without importing GUI
+    if os.environ.get("PULSAR_DISABLE_COMPANION") == "1":
+        try:
+            from pulsar.core.orb_state import set_orb_state, get_orb_state
+            cur = get_orb_state()
+            new_state = "idle" if cur.get("state") != "idle" else "listening"
+            set_orb_state(state=new_state, force=True)
+            return jsonify({"success": True, "active": True, "mode": "pulsar_core_orb", "state": new_state})
+        except Exception:
+            return jsonify({"success": True, "active": True, "mode": "pulsar_core_orb"})
+
     port = int(os.environ.get('PORT', 5000))
-    success, msg = spawn_companion_process(port=port)
+    is_spawn = request.path.endswith('/spawn')
+    # Strictly unified in-process companion (1 Process, 1 PID, 1 Port)
+    try:
+        import desktop.companion_app as companion_overlay
+        app = companion_overlay.get_in_process_app()
+        if not app or not getattr(app, "hwnd", None) or not companion_overlay.is_in_process_running():
+            app = companion_overlay.start_in_process(port=port)
+
+        if app and getattr(app, "hwnd", None):
+            import win32gui, win32con
+            if win32gui.IsWindow(app.hwnd):
+                with app._state_lock:
+                    new_val = True if is_spawn else (not app.overlay_enabled)
+                    app.overlay_enabled = new_val
+                if new_val:
+                    win32gui.ShowWindow(app.hwnd, win32con.SW_SHOWNA)
+                    top_flag = win32con.HWND_TOPMOST if app.always_on_top else win32con.HWND_NOTOPMOST
+                    win32gui.SetWindowPos(
+                        app.hwnd,
+                        top_flag,
+                        app.x, app.y, app.w, app.h,
+                        win32con.SWP_NOACTIVATE | win32con.SWP_NOMOVE | win32con.SWP_NOSIZE
+                    )
+                    win32gui.BringWindowToTop(app.hwnd)
+                    app._currently_visible = True
+                else:
+                    win32gui.ShowWindow(app.hwnd, win32con.SW_HIDE)
+                    app._currently_visible = False
+                return jsonify({"success": True, "active": new_val, "mode": "in_process"})
+    except Exception as e:
+        logger.warning(f"In-process companion toggle error: {e}")
+
+    return jsonify({"success": True, "active": True, "mode": "in_process"})
 
     try:
         from voice_service import update_overlay_state
@@ -778,7 +899,7 @@ def api_desktop_companion_toggle():
 
     if update_overlay_state:
         try:
-            update_overlay_state(app_minimized=True, source="system_route")
+            update_overlay_state(overlay_enabled=True, app_minimized=True, source="system_route")
             req_data = request.get_json(force=True, silent=True) or {}
             if req_data.get('activate'):
                 update_overlay_state(state='listening', source='toggle')
@@ -806,12 +927,29 @@ def api_desktop_companion_restore():
 def api_desktop_companion_status():
     if request.method == 'OPTIONS':
         return ('', 204)
+    if os.environ.get("PULSAR_DISABLE_COMPANION") == "1":
+        return jsonify({"active": True, "mode": "pulsar_core_orb"})
     global COMPANION_PROCESS
     is_active = False
-    if getattr(sys, '_active_desktop_bridge', None):
-        is_active = True
-    elif COMPANION_PROCESS is not None and COMPANION_PROCESS.poll() is None:
-        is_active = True
+    try:
+        import desktop.companion_app as companion_overlay
+        if companion_overlay.is_in_process_running():
+            is_active = True
+    except Exception:
+        pass
+    if not is_active:
+        if getattr(sys, '_active_desktop_bridge', None):
+            is_active = True
+        elif COMPANION_PROCESS is not None and COMPANION_PROCESS.poll() is None:
+            is_active = True
+        else:
+            try:
+                import win32gui
+                hwnd = win32gui.FindWindowW("PulsarTransparentOrbOverlayClass", "Pulsar 4D Orb Overlay")
+                if hwnd and win32gui.IsWindow(hwnd):
+                    is_active = True
+            except Exception:
+                pass
     return jsonify({"active": is_active})
 
 
@@ -835,6 +973,7 @@ def api_desktop_overlay_state():
             error_message=data.get('error_message'),
             source=data.get('source', 'api'),
             webui_mic_active=data.get('webui_mic_active'),
+            overlay_enabled=data.get('overlay_enabled'),
         )
         return jsonify({"success": True, "overlay": state})
 
@@ -848,7 +987,7 @@ def execute_companion_voice_command(data: dict) -> dict:
     """Execute a companion / in-process voice command through Agent Brain and Unified Persona."""
     try:
         from agent_brain import get_agent_brain
-        from ai_assistant.core.jarvis_persona import (
+        from core_ai.core.jarvis_persona import (
             get_lifecycle_coordinator,
             should_speak_for_request,
         )
@@ -861,7 +1000,7 @@ def execute_companion_voice_command(data: dict) -> dict:
         include_screen = data.get('include_screen', False)
         source = str(data.get('source', 'COMPANION_MASCOT') or 'COMPANION_MASCOT')
 
-        from ai_assistant.core.local_command_normalizer import is_noise_fragment
+        from core_ai.core.local_command_normalizer import is_noise_fragment
         if is_noise_fragment(command):
             logger.info(f"Dropped noise/hallucination fragment in companion command: '{command}'")
             return {'success': True, 'response': '', 'tts': '', 'silent': True, 'dropped_noise': True}
@@ -883,7 +1022,7 @@ def execute_companion_voice_command(data: dict) -> dict:
 
         tts_svc = None
         try:
-            from ai_assistant.voice.tts_output_service import get_tts_service
+            from core_ai.voice.tts_output_service import get_tts_service
             tts_svc = get_tts_service()
             if command:
                 tts_svc.stop(reason='agent_command_barge_in')
@@ -1121,8 +1260,8 @@ def api_agent_confirm():
         res = brain.confirm_action_by_id(action_id, confirmed)
         is_ok = bool(res.get('success', True)) if isinstance(res, dict) else True
         try:
-            from ai_assistant.core.jarvis_persona import format_post_task_report, should_speak_for_request
-            from ai_assistant.voice.tts_output_service import get_tts_service
+            from core_ai.core.jarvis_persona import format_post_task_report, should_speak_for_request
+            from core_ai.voice.tts_output_service import get_tts_service
             raw_msg = str((res.get('tts') or res.get('response')) or '') if isinstance(res, dict) else ''
             formatted_msg = format_post_task_report(
                 command=f"confirm {action_id}" if confirmed else f"cancel {action_id}",

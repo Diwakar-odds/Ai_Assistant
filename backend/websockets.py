@@ -59,7 +59,7 @@ except Exception:
         chat_session_lock = threading.Lock()
         chat_sessions = {}
         try:
-            from ai_assistant.ai.llm_provider import UnifiedChatInterface, LLMFactory, is_local_provider
+            from core_ai.ai.llm_provider import UnifiedChatInterface, LLMFactory, is_local_provider
             LLM_PROVIDER_AVAILABLE = True
         except Exception:
             UnifiedChatInterface = None
@@ -78,13 +78,13 @@ except Exception:
                 return (provider or "").strip().lower() in ("gguf", "local", "offline")
 
 try:
-    from ai_assistant.automation.automation_engine import SmartAutomationEngine  # noqa: F401
+    from core_ai.automation.automation_engine import SmartAutomationEngine  # noqa: F401
     AUTOMATION_AVAILABLE = True
 except Exception:
     AUTOMATION_AVAILABLE = False
 
 try:
-    from ai_assistant.multilingual import Language
+    from core_ai.multilingual import Language
 except Exception:
     Language = None
 
@@ -224,10 +224,10 @@ def handle_chat_stream(data):
                         use_fallback=(not is_local_provider(cur_provider)),
                     )
                     try:
-                        from ai_assistant.core.jarvis_persona import build_persona_system_prompt
+                        from core_ai.core.jarvis_persona import build_persona_system_prompt
                         sys_prompt = build_persona_system_prompt(provider=cur_provider, model=cur_model, surface="chat")
                     except Exception:
-                        sys_prompt = "You are Pulsar, an intelligent and helpful AI companion created by Diwakar."
+                        sys_prompt = "You are Pulsar, an intelligent and helpful AI companion."
                     chat_sessions[session_id].set_system_message(sys_prompt)
                 else:
                     emit('chat_stream_error', {'error': 'LLM provider not available'})
@@ -318,7 +318,7 @@ def handle_analyze_gesture(data):
             return
             
         try:
-            from ai_assistant.vision.gesture_recognition import gesture_recognition_sys
+            from core_ai.vision.gesture_recognition import gesture_recognition_sys
             gesture = gesture_recognition_sys.detect_gesture(image_data)
             
             if gesture:
@@ -345,7 +345,7 @@ def handle_analyze_presence(data):
         # 1. Local Face Identification
         person_name = None
         try:
-            from ai_assistant.vision.facial_recognition import facial_recognition_sys
+            from core_ai.vision.facial_recognition import facial_recognition_sys
             person_name = facial_recognition_sys.identify_person(image_data)
         except Exception as e:
             logger.error(f"Local face recognition error: {e}")
@@ -435,7 +435,7 @@ def handle_execute_workflow(data):
             return
         
         if AUTOMATION_AVAILABLE:
-            from ai_assistant.automation.automation_engine import SmartAutomationEngine
+            from core_ai.automation.automation_engine import SmartAutomationEngine
             automation_engine = SmartAutomationEngine()
             result = automation_engine.execute_workflow_by_name(workflow_name)
             
@@ -498,7 +498,7 @@ def handle_tts_request(data):
 
     interrupt = bool(data.get('interrupt', True)) if isinstance(data, dict) else True
     try:
-        from ai_assistant.voice.tts_output_service import get_tts_service
+        from core_ai.voice.tts_output_service import get_tts_service
         success = get_tts_service().speak(text, interrupt=interrupt, source='websocket_tts')
         emit('tts_response', {'success': bool(success), 'text': text, 'unified': True})
         return
@@ -653,7 +653,7 @@ def broadcast_agent_event(event_type: str, data: dict):
 def handle_emergency_stop_socket(data=None):
     """Handle emergency stop WebSocket event"""
     try:
-        from ai_assistant.core.emergency_stop import trigger_emergency_stop
+        from core_ai.core.emergency_stop import trigger_emergency_stop
         reason = (data or {}).get('reason', 'Triggered via WebSocket') if isinstance(data, dict) else 'Triggered via WebSocket'
         res = trigger_emergency_stop(reason=reason)
         emit('emergency_stop_confirmed', {'success': True, 'result': res})

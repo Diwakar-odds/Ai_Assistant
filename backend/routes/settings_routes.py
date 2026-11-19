@@ -9,10 +9,10 @@ from settings_manager import (
     get_settings_file, get_logs_root, complete_onboarding_settings,
 )
 try:
-    from ai_assistant.utils.multilingual import Language
+    from core_ai.utils.multilingual import Language
 except Exception:
     Language = None
-# from ai_assistant.multilingual import Language
+# from core_ai.multilingual import Language
 from .common import (
     logger, api_logger, limiter, assistant, validate_input, sanitize_command,
     get_current_context, jwt_required, create_access_token, get_jwt_identity, verify_jwt_in_request,
@@ -20,7 +20,7 @@ from .common import (
 )
 
 try:
-    from ai_assistant.core.enhanced_integration import get_enhanced_ai
+    from core_ai.core.enhanced_integration import get_enhanced_ai
     enhanced_ai = get_enhanced_ai()
     ENHANCED_AI_AVAILABLE = enhanced_ai is not None
 except Exception:
@@ -78,7 +78,7 @@ def api_translate_text():
         if not text:
             return jsonify({"error": "Text required"}), 400
         
-        from ai_assistant.utils.multilingual import Language
+        from core_ai.utils.multilingual import Language
         translated = assistant.multilingual.translate_text(text, Language(target_language))
         
         return jsonify({
@@ -245,7 +245,7 @@ def api_get_all_settings():
         settings_file.parent.mkdir(parents=True, exist_ok=True)
         
         # Load secure keys
-        from ai_assistant.utils.secure_storage import get_secure_key, save_secure_key
+        from core_ai.utils.secure_storage import get_secure_key, save_secure_key
         
         google_gemini_key = get_secure_key('googleGemini')
         open_ai_key = get_secure_key('openAI')
@@ -324,6 +324,19 @@ def api_update_settings():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+@settings_bp.route('/api/settings/system', methods=['POST', 'OPTIONS'])
+def api_update_system_settings():
+    """Direct alias for updating system settings (used by desktop companion and tray)."""
+    if request.method == 'OPTIONS':
+        return ('', 204)
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+        result = update_settings_and_sync('system', data)
+        return jsonify(result if isinstance(result, dict) else {"success": True, "settings": result})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @settings_bp.route('/api/settings/complete_onboarding', methods=['POST'])
 @jwt_required(optional=True)
 def api_complete_onboarding():
@@ -364,7 +377,7 @@ def api_reset_settings():
             try:
                 invalidate_cache()
                 reset_all_llm_sessions()
-                from ai_assistant.ai.network_aware_llm import reload_global_config
+                from core_ai.ai.network_aware_llm import reload_global_config
                 reload_global_config()
             except Exception:
                 pass
@@ -393,7 +406,7 @@ def api_reset_settings():
             try:
                 invalidate_cache()
                 reset_all_llm_sessions()
-                from ai_assistant.ai.network_aware_llm import reload_global_config
+                from core_ai.ai.network_aware_llm import reload_global_config
                 reload_global_config()
             except Exception:
                 pass
@@ -462,7 +475,7 @@ def api_import_settings():
         try:
             invalidate_cache()
             reset_all_llm_sessions()
-            from ai_assistant.ai.network_aware_llm import reload_global_config
+            from core_ai.ai.network_aware_llm import reload_global_config
             reload_global_config()
         except Exception:
             pass
@@ -945,7 +958,7 @@ def api_voice_dictionary():
         return ('', 204)
 
     try:
-        from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+        from core_ai.voice.vocabulary_registry import get_vocabulary_registry
         reg = get_vocabulary_registry()
 
         if request.method == 'POST':

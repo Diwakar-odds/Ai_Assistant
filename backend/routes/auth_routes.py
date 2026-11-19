@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request, send_from_directory, render_templ
 import os, json, sys, time, sqlite3
 from datetime import datetime
 from werkzeug.security import generate_password_hash
-from ai_assistant.core.database_config import get_db_path, get_db_path_str
+from core_ai.core.database_config import get_db_path, get_db_path_str
 from .common import (
     logger, api_logger, limiter, USERS_DB, validate_input, get_assistant,
     jwt_required, create_access_token, get_jwt_identity, verify_jwt_in_request,
@@ -38,7 +38,7 @@ def get_user_preferences():
 def get_user_profile_status():
     """Check if the user profile is set up."""
     try:
-        from ai_assistant.core.database_config import get_db_path
+        from core_ai.core.database_config import get_db_path
         import sqlite3
         import json
         
@@ -86,8 +86,8 @@ def get_user_profile_status():
 def setup_user_profile():
     """Setup or update the user profile."""
     try:
-        from ai_assistant.ai.enhanced_learning import PersonalKnowledgeGraph
-        from ai_assistant.core.database_config import get_db_path
+        from core_ai.ai.enhanced_learning import PersonalKnowledgeGraph
+        from core_ai.core.database_config import get_db_path
         
         data = request.get_json()
         if not data:
@@ -119,7 +119,7 @@ def setup_user_profile():
         
         # Use direct KG methods if available, else manual DB insert
         # Re-import to be safe
-        from ai_assistant.ai.enhanced_learning import PersonalKnowledgeGraph
+        from core_ai.ai.enhanced_learning import PersonalKnowledgeGraph
         kg = PersonalKnowledgeGraph(str(db_path))
         
         # Add User Node

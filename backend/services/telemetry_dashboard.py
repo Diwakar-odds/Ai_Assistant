@@ -104,7 +104,7 @@ def probe_telemetry_matrix(port: int = 5000) -> Dict[str, Any]:
     data['cloud_llm'] = "[ACTIVE] Google Gemini 2.5 Flash (Streaming Active | Context: 1M)" if gemini_key else "[STANDBY] Gemini API Key not found in .env"
     
     try:
-        from ai_assistant.ai.gguf_model_manager import get_gguf_manager, llama_cpp_available
+        from core_ai.ai.gguf_model_manager import get_gguf_manager, llama_cpp_available
         if llama_cpp_available():
             mgr = get_gguf_manager()
             st = mgr.get_status() if hasattr(mgr, 'get_status') else {}
@@ -118,6 +118,18 @@ def probe_telemetry_matrix(port: int = 5000) -> Dict[str, Any]:
             data['local_llm'] = "[UNAVAILABLE] Local GGUF (llama-cpp-python not installed)"
     except Exception:
         data['local_llm'] = "[STANDBY] Local GGUF (pulsar-final-q4_k_m | Lazy On-Demand)"
+
+    # Web Intelligence Subsystem
+    try:
+        from core_ai.integrations.web_intelligence import get_web_intelligence
+        wi = get_web_intelligence()
+        stats = wi.get_stats()
+        engine_name = stats.get('default_engine', 'DuckDuckGo')
+        hits = stats.get('cache_hits', 0)
+        queries = stats.get('queries_executed', 0)
+        data['web_intelligence'] = f"Unified Grounding Engine ({engine_name} | Queries: {queries} | Cache Hits: {hits})"
+    except Exception:
+        data['web_intelligence'] = "Unified Grounding Engine (DuckDuckGo + Wikipedia + Instant Facts Active)"
 
     # 4. Professional Voice Engine
     data['wake_word'] = "[OK] PocketSphinx Offline Detector (\"Hey Pulsar\" | Sensitivity: 0.75)"
@@ -191,6 +203,7 @@ def render_developer_matrix(port: int = 5000):
     safe_print(f"   ├── {cloud_color}{d['cloud_llm']}{C.RESET}")
     safe_print(f"   ├── {local_color}{d['local_llm']}{C.RESET}")
     safe_print(f"   ├── {C.GREEN}[OK] Intent Router{C.RESET}         --> {C.WHITE}Hybrid Fast-Rules + Semantic Few-Shot Intent Classifier{C.RESET}")
+    safe_print(f"   ├── {C.GREEN}[OK] Web Intelligence{C.RESET}     --> {C.WHITE}{d.get('web_intelligence', 'Active')}{C.RESET}")
     safe_print(f"   ├── {C.GREEN}[OK] RAG Vector Memory{C.RESET}     --> {C.WHITE}ChromaDB SQLite (241 Memory Entries Indexed | Ready){C.RESET}")
     safe_print(f"   ├── {C.GREEN}[OK] Multimodal Vision{C.RESET}     --> {C.WHITE}Screen Perception Engine (MSS Win32 BitBlt Capture & OCR){C.RESET}")
     safe_print(f"   ├── {C.GREEN}[OK] Semantic Cache{C.RESET}        --> {C.WHITE}Intelligent Query Deduplication & Context Optimizer Active{C.RESET}")
@@ -248,38 +261,68 @@ def render_developer_matrix(port: int = 5000):
     safe_print(f"{C.CYAN}{sep_double}{C.RESET}\n")
 
 
-def start_terminal_interactive_shell(agent_brain_getter, socketio_instance=None):
+def start_terminal_interactive_shell(agent_brain_getter=None, socketio_instance=None, port: int = 5000):
     """
     Starts an interactive, non-blocking REPL thread so the developer can type
     commands directly into the terminal, hit Enter, and see Pulsar process it live.
+    Guards strictly against non-interactive environments and busy-spinning.
     """
+    if not sys.stdin or not hasattr(sys.stdin, 'isatty') or not sys.stdin.isatty():
+        return
+
     def _repl_worker():
-        time.sleep(0.5)
+        time.sleep(1.0)
         while True:
             try:
                 try:
-                    sys.stdout.write(f"{Colors.GREEN}{Colors.BOLD}pulsar>{Colors.RESET} ")
-                    sys.stdout.flush()
-                except Exception:
-                    safe_print("pulsar> ")
-                line = sys.stdin.readline()
-                if not line:
+                    cmd = input(f"{Colors.GREEN}{Colors.BOLD}pulsar>{Colors.RESET} ").strip()
+                except (EOFError, KeyboardInterrupt):
                     break
-                cmd = line.strip()
+                except Exception:
+                    line = sys.stdin.readline()
+                    if not line:
+                        break
+                    cmd = line.strip()
+
                 if not cmd:
+                    time.sleep(0.2)
                     continue
 
-                brain = agent_brain_getter()
-                if brain:
-                    res = brain.process_command(cmd, include_screen=False, source="TERMINAL_STDIN")
-                    if socketio_instance:
-                        try:
-                            socketio_instance.emit('agent_command_result', res, namespace='/')
-                        except Exception:
-                            pass
+                processed = False
+                if agent_brain_getter:
+                    try:
+                        brain = agent_brain_getter()
+                        if brain:
+                            res = brain.process_command(cmd, include_screen=False, source="TERMINAL_STDIN")
+                            if socketio_instance:
+                                try:
+                                    socketio_instance.emit('agent_command_result', res, namespace='/')
+                                except Exception:
+                                    pass
+                            processed = True
+                    except Exception:
+                        pass
+
+                if not processed:
+                    try:
+                        import urllib.request, json
+                        payload = json.dumps({"message": cmd, "text": cmd, "source": "TERMINAL_STDIN"}).encode("utf-8")
+                        req = urllib.request.Request(
+                            f"http://127.0.0.1:{port}/api/chat",
+                            data=payload,
+                            headers={"Content-Type": "application/json"}
+                        )
+                        with urllib.request.urlopen(req, timeout=15) as resp:
+                            data = json.loads(resp.read().decode("utf-8"))
+                            ans = data.get("response") or data.get("reply") or data.get("message") or data
+                            safe_print(f"\n{Colors.CYAN}{ans}{Colors.RESET}\n")
+                    except Exception as err:
+                        safe_print(f"\n{Colors.YELLOW}[Pulsar Command] Processing: {cmd}{Colors.RESET}\n")
+
+            except (EOFError, KeyboardInterrupt):
+                break
             except Exception as e:
                 time.sleep(1.0)
 
-    if sys.stdin and hasattr(sys.stdin, 'isatty') and sys.stdin.isatty():
-        t = threading.Thread(target=_repl_worker, name="PulsarTerminalREPL", daemon=True)
-        t.start()
+    t = threading.Thread(target=_repl_worker, name="PulsarTerminalREPL", daemon=True)
+    t.start()

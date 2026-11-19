@@ -47,7 +47,7 @@ for _p in (str(backend_dir), str(core_ai_src), str(shared_dir), str(project_root
 from settings_manager import get_env_file
 
 try:
-    from ai_assistant.core.local_command_normalizer import ensure_project_ffmpeg_in_path
+    from core_ai.core.local_command_normalizer import ensure_project_ffmpeg_in_path
     ensure_project_ffmpeg_in_path(project_root)
 except Exception:
     pass
@@ -91,7 +91,7 @@ import logging
 
 # Import secure secrets manager
 try:
-    from ai_assistant.core.secrets_manager import get_secrets_manager, SecretsValidationError
+    from core_ai.core.secrets_manager import get_secrets_manager, SecretsValidationError
     SECRETS_MANAGER_AVAILABLE = True
 except ImportError:
     SECRETS_MANAGER_AVAILABLE = False
@@ -125,7 +125,7 @@ if ai_assistant_dir not in sys.path:
 # Ensure legacy databases are migrated early
 try:
     sys.path.insert(0, os.path.join(ai_assistant_dir, 'core_ai', 'src'))
-    from ai_assistant.core.database_config import migrate_legacy_databases
+    from core_ai.core.database_config import migrate_legacy_databases
     migrate_legacy_databases()
     sys.path.pop(0)
 except Exception as e:
@@ -133,8 +133,8 @@ except Exception as e:
 
 # Import Multi-Agent System
 try:
-    from ai_assistant.core.chain_of_actions_manager import get_chain_manager, ChainOfActionsManager
-    from ai_assistant.core.progress_tracker import get_progress_tracker
+    from core_ai.core.chain_of_actions_manager import get_chain_manager, ChainOfActionsManager
+    from core_ai.core.progress_tracker import get_progress_tracker
     MULTI_AGENT_AVAILABLE = True
 except ImportError as e:
     MULTI_AGENT_AVAILABLE = False
@@ -143,9 +143,9 @@ except ImportError as e:
 # Import automation tools
 try:
     # Try importing from ai_assistant package first
-    from ai_assistant.automation import automation_tools_new as automation_tools
+    from core_ai.automation import automation_tools_new as automation_tools
     # Import app discovery scheduler functions
-    from ai_assistant.automation.app_discovery import (
+    from core_ai.automation.app_discovery import (
         start_auto_refresh_after_startup, start_periodic_refresh
     )
     AUTOMATION_AVAILABLE = True
@@ -154,7 +154,7 @@ except ImportError as e:
     print(f"  Automation tools import failed: {e}")
     # Try fallback import from modules directly
     try:
-        from ai_assistant.automation.app_discovery import (
+        from core_ai.automation.app_discovery import (
             get_apps_for_web, refresh_app_database, 
             start_auto_refresh_after_startup, start_periodic_refresh
         )
@@ -172,7 +172,7 @@ def _get_learning_router_lazy():
     global learning_router, LEARNING_ROUTER_AVAILABLE
     if learning_router is None and LEARNING_ROUTER_AVAILABLE:
         try:
-            from ai_assistant.ai.auto_learning_router import LearningDataRouter
+            from core_ai.ai.auto_learning_router import LearningDataRouter
             learning_router = LearningDataRouter()
             logger.info("✅ Learning router initialized - AI will learn from all interactions")
         except Exception as e:
@@ -189,7 +189,7 @@ def _get_memory_retriever_lazy():
     global memory_retriever, SMART_MEMORY_AVAILABLE
     if memory_retriever is None and SMART_MEMORY_AVAILABLE:
         try:
-            from ai_assistant.ai.memory_retrieval import MemoryRetrieval
+            from core_ai.ai.memory_retrieval import MemoryRetrieval
             memory_retriever = MemoryRetrieval()
             logger.info("✅ Smart memory retrieval initialized - AI can answer from past conversations")
         except Exception as e:
@@ -229,7 +229,7 @@ def _get_enhanced_ai_lazy():
     global enhanced_ai
     if enhanced_ai is None and ENHANCED_AI_AVAILABLE:
         try:
-            from ai_assistant.core.enhanced_integration import get_enhanced_ai
+            from core_ai.core.enhanced_integration import get_enhanced_ai
             enhanced_ai = get_enhanced_ai()
             logger.info("✅ Enhanced AI initialized (semantic cache, routing, streaming, emotion, verification)")
         except Exception as e:
@@ -241,7 +241,7 @@ def _get_usage_analyzer_lazy():
     global usage_analyzer
     if usage_analyzer is None and USAGE_ANALYZER_AVAILABLE:
         try:
-            from ai_assistant.ai.usage_pattern_analyzer import UsagePatternAnalyzer
+            from core_ai.ai.usage_pattern_analyzer import UsagePatternAnalyzer
             usage_analyzer = UsagePatternAnalyzer()
             logger.info("✅ Usage pattern analyzer initialized")
         except Exception as e:
@@ -301,14 +301,14 @@ def initialize_heavy_ai_models():
         ai_models_status = "Loading Voice Engines..."
         global vad_detector, noise_reducer
         try:
-            from ai_assistant.voice.voice_activity_detection import VoiceActivityDetector
+            from core_ai.voice.voice_activity_detection import VoiceActivityDetector
             vad_detector = VoiceActivityDetector()
             logger.info("✅ Voice Activity Detector initialized in background")
         except Exception as e:
             logger.warning(f"⚠️ VAD module not available: {e}")
             
         try:
-            from ai_assistant.voice.noise_reduction import NoiseReductionSystem
+            from core_ai.voice.noise_reduction import NoiseReductionSystem
             noise_reducer = NoiseReductionSystem()
             logger.info("✅ Noise Reduction initialized in background")
         except Exception as e:
@@ -316,7 +316,7 @@ def initialize_heavy_ai_models():
 
         # Pre-warm neural offline TTS fallback (KittenTTS mini-0.8) so first wake/command speaks instantly
         try:
-            from ai_assistant.voice.tts_output_service import get_tts_service, load_kitten_mini_model
+            from core_ai.voice.tts_output_service import get_tts_service, load_kitten_mini_model
             get_tts_service()
             load_kitten_mini_model()
             logger.info("✅ KittenTTS mini-0.8 pre-warmed in background")
@@ -671,7 +671,7 @@ def sanitize_command(command):
 # This reduces this file from 4946 lines to ~3700 lines while maintaining
 # all functionality. The class can now be reused by other modules.
 
-from ai_assistant.core.assistant import ModernAssistant, set_socketio
+from core_ai.core.assistant import ModernAssistant, set_socketio
 
 # Inject SocketIO instance into the assistant module for system monitoring
 set_socketio(socketio)
@@ -1201,7 +1201,7 @@ try:
                 logger.error(f'Stats broadcast error: {e}')
                 
             try:
-                from ai_assistant.core.command_brain import get_executive_brain
+                from core_ai.core.command_brain import get_executive_brain
                 brain = get_executive_brain()
                 brain_status = {
                     'is_busy': brain.is_busy(),
@@ -1240,7 +1240,7 @@ try:
         }
         try:
             # Mood from EmotionalIntelligence
-            from ai_assistant.ai.emotional_intelligence import EmotionalIntelligence
+            from core_ai.ai.emotional_intelligence import EmotionalIntelligence
             ei = EmotionalIntelligence()
             trend = ei.get_mood_trend(days=1)
             if trend and isinstance(trend, str):
@@ -1265,7 +1265,7 @@ try:
 
         try:
             # Active project from ProjectManager
-            from ai_assistant.core.project_manager import ProjectManager
+            from core_ai.core.project_manager import ProjectManager
             pm = ProjectManager()
             projects = pm.get_all_projects('active')
             if projects:
@@ -1277,7 +1277,7 @@ try:
 
         try:
             # Pending task from CommitmentTracker
-            from ai_assistant.core.commitment_tracker import CommitmentTracker
+            from core_ai.core.commitment_tracker import CommitmentTracker
             ct = CommitmentTracker()
             pending = ct.get_pending()
             if pending:
@@ -1293,7 +1293,7 @@ try:
 
             if active_provider == "gguf" or os.getenv('USE_LOCAL_LLM', 'false').lower() == 'true':
                 try:
-                    from ai_assistant.ai.gguf_model_manager import GGUFModelManager
+                    from core_ai.ai.gguf_model_manager import GGUFModelManager
                     manager = GGUFModelManager()
                     m_path = getattr(manager, 'model_path', None)
                     if m_path:
@@ -1360,7 +1360,7 @@ def jarvis_hud():
         }
 
         try:
-            from ai_assistant.ai.emotional_intelligence import EmotionalIntelligence
+            from core_ai.ai.emotional_intelligence import EmotionalIntelligence
             ei = EmotionalIntelligence()
             trend = ei.get_mood_trend(days=1)
             if trend and isinstance(trend, str):
@@ -1384,7 +1384,7 @@ def jarvis_hud():
             pass
 
         try:
-            from ai_assistant.core.project_manager import ProjectManager
+            from core_ai.core.project_manager import ProjectManager
             pm = ProjectManager()
             projects = pm.get_all_projects('active')
             if projects:
@@ -1498,7 +1498,7 @@ def handle_frontend_command(data):
 
         logger.info(f"📥 [SOCKET.IO] Command: '{command[:40]}' (provider={provider}, model={model}, offline={offline_mode})")
 
-        from ai_assistant.core.jarvis_persona import (
+        from core_ai.core.jarvis_persona import (
             get_lifecycle_coordinator,
             should_speak_for_request,
         )
@@ -1613,7 +1613,7 @@ def start_server(host=None, port=None):
         
         # Initialize secure keys from OS Credential Store into environment
         try:
-            from ai_assistant.utils.secure_storage import get_secure_key
+            from core_ai.utils.secure_storage import get_secure_key
             env_map = {
                 "googleGemini": "GOOGLE_GEMINI_API_KEY",
                 "openAI": "OPENAI_API_KEY",
@@ -1680,25 +1680,13 @@ def start_server(host=None, port=None):
         companion_active = False
         if os.environ.get('PULSAR_DISABLE_COMPANION') != '1':
             try:
-                from routes.system_routes import spawn_companion_process
-                ok, _ = spawn_companion_process(port=port)
-                if ok:
-                    companion_active = True
-                    logger.info("✅ Ambient Floating Orb active on desktop screen")
+                import desktop.companion_app as companion_overlay
+                if not companion_overlay.is_in_process_running():
+                    companion_overlay.start_in_process(port=port)
+                companion_active = True
+                logger.info("✅ Ambient Floating Orb active on desktop screen")
             except Exception as e:
-                logger.warning(f"⚠️ Could not spawn companion: {e}")
-
-        # Start in-process voice listener when standalone / companion disabled
-        if not companion_active:
-            try:
-                try:
-                    from voice_service import start_inprocess_voice_listener
-                except ImportError:
-                    from backend.voice_service import start_inprocess_voice_listener
-                start_inprocess_voice_listener(socketio)
-                logger.info("✅ In-process wake-word voice listener started (single-process active)")
-            except Exception as e:
-                logger.warning(f"⚠️ Could not start in-process voice listener: {e}")
+                logger.warning(f"⚠️ Could not start in-process companion: {e}")
 
         # Disable console banners that might crash when sys.stdout is None
         try:

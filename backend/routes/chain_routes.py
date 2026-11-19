@@ -26,8 +26,8 @@ from .common import (
 chain_bp = Blueprint("chain", __name__)
 
 try:
-    from ai_assistant.core.chain_of_actions_manager import ChainOfActionsManager, get_chain_manager
-    from ai_assistant.core.progress_tracker import get_progress_tracker
+    from core_ai.core.chain_of_actions_manager import ChainOfActionsManager, get_chain_manager
+    from core_ai.core.progress_tracker import get_progress_tracker
     MULTI_AGENT_AVAILABLE = True
 except ImportError as e:
     MULTI_AGENT_AVAILABLE = False
@@ -44,7 +44,7 @@ def _get_chain_optimizer():
     with _optimizer_lock:
         if _chain_optimizer is None:
             try:
-                from ai_assistant.core.chain_optimizer import ChainOptimizer
+                from core_ai.core.chain_optimizer import ChainOptimizer
                 _chain_optimizer = ChainOptimizer()
             except Exception as exc:
                 logger.warning(f"ChainOptimizer unavailable: {exc}")
@@ -125,7 +125,7 @@ def ensure_chain_progress_subscribed() -> None:
                 logger.debug(f"Could not subscribe ChainOfActionsManager progress: {exc}")
 
         try:
-            from ai_assistant.core.command_brain import get_executive_brain
+            from core_ai.core.command_brain import get_executive_brain
             brain = get_executive_brain()
             for attr in ("subscribe_progress", "subscribe_events", "set_progress_callback"):
                 fn = getattr(brain, attr, None)
@@ -317,7 +317,7 @@ def resolve_chain_snapshot(chain_id: str) -> Optional[Dict[str, Any]]:
             pass
 
     try:
-        from ai_assistant.core.command_brain import get_executive_brain
+        from core_ai.core.command_brain import get_executive_brain
         brain = get_executive_brain()
         active_map = getattr(brain, "_active_chains", {}) or {}
         if chain_id in active_map:
@@ -354,7 +354,7 @@ def list_active_chains_dto() -> List[Dict[str, Any]]:
             pass
 
     try:
-        from ai_assistant.core.command_brain import get_executive_brain
+        from core_ai.core.command_brain import get_executive_brain
         brain = get_executive_brain()
         for cid, ch in (getattr(brain, "_active_chains", {}) or {}).items():
             if cid not in merged:
@@ -458,7 +458,7 @@ def _cancel_chain_everywhere(chain_id: str) -> tuple[bool, Optional[Dict[str, An
     found = False
     if MULTI_AGENT_AVAILABLE:
         try:
-            from ai_assistant.core.action_chain_models import ChainStatus
+            from core_ai.core.action_chain_models import ChainStatus
             mgr = get_chain_manager()
             if chain_id in mgr.active_chains:
                 found = True
@@ -479,7 +479,7 @@ def _cancel_chain_everywhere(chain_id: str) -> tuple[bool, Optional[Dict[str, An
             logger.warning(f"Manager cancel failed for {chain_id}: {exc}")
 
     try:
-        from ai_assistant.core.command_brain import get_executive_brain
+        from core_ai.core.command_brain import get_executive_brain
         brain = get_executive_brain()
         active_map = getattr(brain, "_active_chains", {}) or {}
         if chain_id in active_map:
@@ -494,7 +494,7 @@ def _cancel_chain_everywhere(chain_id: str) -> tuple[bool, Optional[Dict[str, An
                     mc.is_running = False
                     if hasattr(mc, "status"):
                         try:
-                            from ai_assistant.core.action_chain_models import ChainStatus
+                            from core_ai.core.action_chain_models import ChainStatus
                             mc.status = ChainStatus.CANCELLED
                         except Exception:
                             mc.status = "cancelled"
@@ -574,7 +574,7 @@ def create_chain():
             }), 200
 
         if wait:
-            from ai_assistant.integrations.orchestrator_integration import process_with_orchestrator
+            from core_ai.integrations.orchestrator_integration import process_with_orchestrator
             sig = inspect.signature(process_with_orchestrator)
             kwargs: Dict[str, Any] = {}
             if "wait" in sig.parameters:
@@ -599,7 +599,7 @@ def create_chain():
             ok = bool(orch_res.get("success", False))
             return jsonify(payload), (200 if ok else 500)
 
-        from ai_assistant.core.command_brain import get_executive_brain
+        from core_ai.core.command_brain import get_executive_brain
         brain = get_executive_brain()
         brain_sig = inspect.signature(brain.receive_command)
         extra_kw: Dict[str, Any] = {}
@@ -734,12 +734,12 @@ def pause_chain(chain_id: str):
             if hasattr(mgr, "pause_chain"):
                 mgr.pause_chain(chain_id)
             else:
-                from ai_assistant.core.action_chain_models import ChainStatus
+                from core_ai.core.action_chain_models import ChainStatus
                 paused_val = getattr(ChainStatus, "PAUSED", ChainStatus.WAITING_CONFIRMATION)
                 mgr.active_chains[chain_id].status = paused_val
 
         try:
-            from ai_assistant.core.command_brain import get_executive_brain
+            from core_ai.core.command_brain import get_executive_brain
             brain = get_executive_brain()
             active_map = getattr(brain, "_active_chains", {}) or {}
             if chain_id in active_map:
@@ -800,7 +800,7 @@ def clear_chains():
             except Exception:
                 pass
         try:
-            from ai_assistant.core.command_brain import get_executive_brain
+            from core_ai.core.command_brain import get_executive_brain
             brain = get_executive_brain()
             if hasattr(brain, "_active_chains"):
                 brain._active_chains.clear()
@@ -838,7 +838,7 @@ def delete_single_chain(chain_id: str):
             except Exception:
                 pass
         try:
-            from ai_assistant.core.command_brain import get_executive_brain
+            from core_ai.core.command_brain import get_executive_brain
             brain = get_executive_brain()
             if hasattr(brain, "_active_chains"):
                 brain._active_chains.pop(chain_id, None)
@@ -916,13 +916,13 @@ def resume_chain(chain_id: str):
                 if inspect.isawaitable(res):
                     run_async(res)
             else:
-                from ai_assistant.core.action_chain_models import ChainStatus
+                from core_ai.core.action_chain_models import ChainStatus
                 ch.status = ChainStatus.EXECUTING
                 if user_input is not None and isinstance(getattr(ch, "context", None), dict):
                     ch.context["user_input"] = user_input
 
         try:
-            from ai_assistant.core.command_brain import get_executive_brain
+            from core_ai.core.command_brain import get_executive_brain
             brain = get_executive_brain()
             active_map = getattr(brain, "_active_chains", {}) or {}
             if chain_id in active_map:
@@ -1029,7 +1029,7 @@ def executive_emergency_stop():
     if request.method == "OPTIONS":
         return ("", 204)
     try:
-        from ai_assistant.core.emergency_stop import trigger_emergency_stop
+        from core_ai.core.emergency_stop import trigger_emergency_stop
         data = request.get_json(silent=True) or {}
         reason = data.get("reason", "Triggered from Web UI / REST")
         active_before = list_active_chains_dto()

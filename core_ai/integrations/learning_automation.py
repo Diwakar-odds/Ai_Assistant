@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 # Try to import learning integration
 try:
-    from ai_assistant.integrations.learning_integration import get_learning_assistant
+    from core_ai.integrations.learning_integration import get_learning_assistant
     LEARNING_AVAILABLE = True
 except ImportError:
     LEARNING_AVAILABLE = False
@@ -148,7 +148,7 @@ def log_automation_workflow(workflow_name: str, steps: list, success: bool):
 
 
 # Example usage:
-# from ai_assistant.integrations.learning_automation import with_learning
+# from core_ai.integrations.learning_automation import with_learning
 # 
 # @with_learning
 # def my_automation_function(arg1, arg2):

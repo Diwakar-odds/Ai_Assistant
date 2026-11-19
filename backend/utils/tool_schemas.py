@@ -15,11 +15,23 @@ tool_schemas = [
     },
     {
         "name": "search_google",
-        "description": "Search Google for a query.",
+        "description": "Open Google in the user's web browser for a query.",
         "parameters": {
             "type": "object",
             "properties": {
                 "query": {"type": "string", "description": "Search query."}
+            },
+            "required": ["query"]
+        }
+    },
+    {
+        "name": "web_search",
+        "description": "Search the live web headlessly for real-time information, gold/crypto/stock prices, weather, sports scores, and latest news.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Search query or factual question."},
+                "max_results": {"type": "integer", "description": "Maximum number of results to return (default 5)."}
             },
             "required": ["query"]
         }

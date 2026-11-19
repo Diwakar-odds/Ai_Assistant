@@ -10,7 +10,7 @@ from .common import (
 )
 
 try:
-    from ai_assistant.core.enhanced_integration import get_enhanced_ai
+    from core_ai.core.enhanced_integration import get_enhanced_ai
     enhanced_ai = get_enhanced_ai()
     ENHANCED_AI_AVAILABLE = enhanced_ai is not None
 except Exception:
@@ -18,13 +18,13 @@ except Exception:
     ENHANCED_AI_AVAILABLE = False
 
 try:
-    from ai_assistant.ai.auto_learning_router import AutoLearningRouter
+    from core_ai.ai.auto_learning_router import AutoLearningRouter
     LEARNING_ROUTER_AVAILABLE = True
 except Exception:
     LEARNING_ROUTER_AVAILABLE = False
 
 try:
-    from ai_assistant.ai.usage_pattern_analyzer import UsagePatternAnalyzer
+    from core_ai.ai.usage_pattern_analyzer import UsagePatternAnalyzer
     usage_analyzer = UsagePatternAnalyzer()
     USAGE_ANALYZER_AVAILABLE = True
 except Exception:
@@ -32,7 +32,7 @@ except Exception:
     USAGE_ANALYZER_AVAILABLE = False
 
 try:
-    from ai_assistant.ai.llm_provider import UnifiedChatInterface, LLMFactory, is_local_provider
+    from core_ai.ai.llm_provider import UnifiedChatInterface, LLMFactory, is_local_provider
     LLM_PROVIDER_AVAILABLE = True
 except Exception:
     UnifiedChatInterface = None
@@ -51,13 +51,13 @@ except Exception:
         return (provider or "").strip().lower() in ("gguf", "local", "offline")
 
 try:
-    from ai_assistant.automation.automation_engine import SmartAutomationEngine
+    from core_ai.automation.automation_engine import SmartAutomationEngine
     AUTOMATION_AVAILABLE = True
 except Exception:
     AUTOMATION_AVAILABLE = False
 
 try:
-    from ai_assistant.ai.memory import save_to_memory, search_memory
+    from core_ai.ai.memory import save_to_memory, search_memory
 except Exception:
     def save_to_memory(speaker, content): return "Saved"
     def search_memory(query, limit=10): return []
@@ -85,12 +85,12 @@ def _maybe_speak_http_command(data: dict, response_text: str, success: bool = Tr
     if not response_text:
         return
     try:
-        from ai_assistant.core.jarvis_persona import should_speak_for_request
+        from core_ai.core.jarvis_persona import should_speak_for_request
         if not should_speak_for_request(data, intent=intent, default_for_chat=False):
             return
         if not success and not (data.get('speak') or str(data.get('source', '')).lower() == 'voice'):
             return
-        from ai_assistant.voice.tts_output_service import get_tts_service
+        from core_ai.voice.tts_output_service import get_tts_service
         get_tts_service().speak(response_text, interrupt=interrupt, source=str(data.get('source', 'http_command')))
     except Exception:
         pass
@@ -145,7 +145,7 @@ def api_chat():
         # === PRIORITY 0: Voice / Mode Control Commands (Zero LLM calls) ===
         if message and not image_data:
             try:
-                from ai_assistant.core.local_command_normalizer import (
+                from core_ai.core.local_command_normalizer import (
                     parse_voice_control_command,
                     execute_voice_control_command,
                 )
@@ -190,7 +190,7 @@ def api_chat():
         # === Pending Task Chain Recovery Check (Zero LLM calls) ===
         if message and not image_data:
             try:
-                from ai_assistant.core.task_chain_orchestrator import get_chain_recovery_manager
+                from core_ai.core.task_chain_orchestrator import get_chain_recovery_manager
                 recovery_mgr = get_chain_recovery_manager()
                 if recovery_mgr.has_pending_recovery():
                     if recovery_mgr.is_affirmative(message):
@@ -252,7 +252,7 @@ def api_chat():
 
         # === NEW: Multi-step Task Chain Orchestration ===
         try:
-            from ai_assistant.integrations.orchestrator_integration import should_use_orchestrator, process_with_orchestrator
+            from core_ai.integrations.orchestrator_integration import should_use_orchestrator, process_with_orchestrator
             
             if should_use_orchestrator(message):
                 logger.info(f" Multi-step command detected: {message}")
@@ -379,7 +379,7 @@ def api_chat():
         
         # Apply learning-enhanced response generation
         try:
-            from ai_assistant.integrations.learning_integration import get_learning_assistant
+            from core_ai.integrations.learning_integration import get_learning_assistant
             learning_assistant = get_learning_assistant(current_user)
             if learning_assistant.systems_active:
                 # Enhance message with context-aware generation
@@ -409,7 +409,7 @@ def api_chat():
             
             resp_text = str(response.get("response", ""))
             try:
-                from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+                from core_ai.voice.vocabulary_registry import get_vocabulary_registry
                 resp_text = get_vocabulary_registry().enforce_grammar_and_tone(resp_text)
             except Exception:
                 pass
@@ -430,7 +430,7 @@ def api_chat():
                 )
                 if resp_ok and raw_user_message and store.get_current_session().get('id') == sess_id:
                     try:
-                        from ai_assistant.ai.memory_retrieval import persist_turn_to_conversation_ai
+                        from core_ai.ai.memory_retrieval import persist_turn_to_conversation_ai
                         threading.Thread(
                             target=persist_turn_to_conversation_ai,
                             args=(raw_user_message, resp_text),
@@ -530,7 +530,7 @@ def api_command():
 
         # === PRIORITY 0: Voice / Mode Control Commands (Zero LLM calls) ===
         try:
-            from ai_assistant.core.local_command_normalizer import (
+            from core_ai.core.local_command_normalizer import (
                 parse_voice_control_command,
                 execute_voice_control_command,
             )
@@ -575,7 +575,7 @@ def api_command():
 
         # === Pending Task Chain Recovery Check (Zero LLM calls) ===
         try:
-            from ai_assistant.core.task_chain_orchestrator import get_chain_recovery_manager
+            from core_ai.core.task_chain_orchestrator import get_chain_recovery_manager
             recovery_mgr = get_chain_recovery_manager()
             if recovery_mgr.has_pending_recovery():
                 if recovery_mgr.is_affirmative(command):
@@ -638,7 +638,7 @@ def api_command():
 
         # === NEW: Multi-step Task Chain Orchestration ===
         try:
-            from ai_assistant.integrations.orchestrator_integration import should_use_orchestrator, process_with_orchestrator
+            from core_ai.integrations.orchestrator_integration import should_use_orchestrator, process_with_orchestrator
             
             if should_use_orchestrator(command):
                 logger.info(f" Multi-step command detected: {command}")
@@ -726,7 +726,7 @@ def api_command():
                 'offline_mode': offline_mode,
             }
 
-            from ai_assistant.core.jarvis_persona import get_lifecycle_coordinator, should_speak_for_request
+            from core_ai.core.jarvis_persona import get_lifecycle_coordinator, should_speak_for_request
             coordinator = get_lifecycle_coordinator()
             wants_speak = should_speak_for_request(data, default_for_chat=False)
             turn_id = coordinator.begin_turn(command, source=src_str, speak=wants_speak)
@@ -1075,7 +1075,7 @@ def api_chat_stream():
 
         # Priority-0 voice/barge-in/mode control guard so stop phrases never hit streaming LLM
         try:
-            from ai_assistant.core.local_command_normalizer import (
+            from core_ai.core.local_command_normalizer import (
                 parse_voice_control_command,
                 execute_voice_control_command,
             )
@@ -1158,7 +1158,7 @@ def api_chat_stream():
                 # Refresh persona system prompt + cross-session historical RAG context on EVERY turn
                 rag_ctx = ""
                 try:
-                    from ai_assistant.ai.memory_retrieval import retrieve_unified_historical_context
+                    from core_ai.ai.memory_retrieval import retrieve_unified_historical_context
                     rag_ctx = retrieve_unified_historical_context(
                         message,
                         current_session_id=active_sess_id,
@@ -1168,7 +1168,7 @@ def api_chat_stream():
                     logger.debug(f"Historical RAG lookup skipped in stream: {rag_err}")
 
                 try:
-                    from ai_assistant.core.jarvis_persona import build_persona_system_prompt
+                    from core_ai.core.jarvis_persona import build_persona_system_prompt
                     sys_prompt = build_persona_system_prompt(
                         provider=cur_provider,
                         model=cur_model,
@@ -1176,7 +1176,7 @@ def api_chat_stream():
                         extra_context=rag_ctx,
                     )
                 except Exception:
-                    sys_prompt = "You are Pulsar, an intelligent and helpful AI companion created by Diwakar."
+                    sys_prompt = "You are Pulsar, an intelligent and helpful AI companion."
                     if rag_ctx:
                         sys_prompt = f"{sys_prompt}\n{rag_ctx}"
                 if hasattr(chat, 'set_system_message'):
@@ -1268,7 +1268,7 @@ def api_chat_stream():
                 # Send completion stats
                 if full_response.strip():
                     try:
-                        from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+                        from core_ai.voice.vocabulary_registry import get_vocabulary_registry
                         full_response = get_vocabulary_registry().enforce_grammar_and_tone(full_response)
                     except Exception:
                         pass
@@ -1284,7 +1284,7 @@ def api_chat_stream():
                         expected_session_id=active_sess_id,
                     )
                     try:
-                        from ai_assistant.ai.memory_retrieval import persist_turn_to_conversation_ai
+                        from core_ai.ai.memory_retrieval import persist_turn_to_conversation_ai
                         threading.Thread(
                             target=persist_turn_to_conversation_ai,
                             args=(message, full_response),
@@ -1465,7 +1465,7 @@ def api_get_workflows():
         if not AUTOMATION_AVAILABLE:
             return jsonify({"workflows": []})
         
-        from ai_assistant.automation.automation_engine import SmartAutomationEngine
+        from core_ai.automation.automation_engine import SmartAutomationEngine
         automation_engine = SmartAutomationEngine()
         workflows = automation_engine.get_available_workflows()
         
@@ -1488,7 +1488,7 @@ def api_execute_workflow():
         if not workflow_name:
             return jsonify({"error": "Workflow name required"}), 400
         
-        from ai_assistant.automation.automation_engine import SmartAutomationEngine
+        from core_ai.automation.automation_engine import SmartAutomationEngine
         automation_engine = SmartAutomationEngine()
         result = automation_engine.execute_workflow_by_name(workflow_name)
         

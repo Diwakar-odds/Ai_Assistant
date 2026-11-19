@@ -9,7 +9,7 @@ taskbar_bp = Blueprint('taskbar', __name__)
 def api_detect_taskbar():
     """Detect and analyze taskbar applications"""
     try:
-        from ai_assistant.automation.app_discovery import detect_taskbar_apps
+        from core_ai.automation.app_discovery import detect_taskbar_apps
         
         result = detect_taskbar_apps()
         
@@ -27,7 +27,7 @@ def api_detect_taskbar():
 def api_taskbar_capabilities():
     """Check taskbar detection capabilities"""
     try:
-        from ai_assistant.automation.app_discovery import can_see_taskbar
+        from core_ai.automation.app_discovery import can_see_taskbar
         
         result = can_see_taskbar()
         
@@ -46,7 +46,7 @@ def api_taskbar_capabilities():
 def api_find_app_in_taskbar():
     """Find a specific application in taskbar"""
     try:
-        from ai_assistant.automation.app_discovery import TaskbarDetector
+        from core_ai.automation.app_discovery import TaskbarDetector
         
         data = request.get_json()
         app_name = data.get('app_name')
@@ -72,7 +72,7 @@ def api_find_app_in_taskbar():
 def api_get_running_apps():
     """Get list of running applications"""
     try:
-        from ai_assistant.automation.app_discovery import TaskbarDetector
+        from core_ai.automation.app_discovery import TaskbarDetector
         
         detector = TaskbarDetector()
         result = detector.get_running_applications()

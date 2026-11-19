@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 # Try to import the Executive Brain (primary)
 try:
-    from ai_assistant.core.command_brain import get_executive_brain
+    from core_ai.core.command_brain import get_executive_brain
     BRAIN_AVAILABLE = True
     logger.info("✅ Executive Brain available")
 except ImportError:
@@ -19,7 +19,7 @@ except ImportError:
 
 # Fallback: direct orchestrator (legacy)
 try:
-    from ai_assistant.core.task_chain_orchestrator import get_orchestrator
+    from core_ai.core.task_chain_orchestrator import get_orchestrator
     ORCHESTRATOR_AVAILABLE = True
     logger.info("✅ Task Chain Orchestrator available (fallback)")
 except ImportError:
@@ -51,7 +51,7 @@ def should_use_orchestrator(command: str) -> bool:
     ]
 
     try:
-        from ai_assistant.core.local_command_normalizer import contains_any_sequential_keyword
+        from core_ai.core.local_command_normalizer import contains_any_sequential_keyword
         if contains_any_sequential_keyword(command, sequential_keywords):
             return True
     except Exception:
@@ -65,7 +65,7 @@ def should_use_orchestrator(command: str) -> bool:
         return True
 
     try:
-        from ai_assistant.ai.multi_step_parser import MultiStepCommandParser
+        from core_ai.ai.multi_step_parser import MultiStepCommandParser
         parser = MultiStepCommandParser()
         if parser.is_multi_step(command):
             return True

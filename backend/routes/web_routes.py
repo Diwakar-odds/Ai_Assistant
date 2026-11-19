@@ -8,7 +8,7 @@ web_bp = Blueprint('web', __name__)
 def api_get_weather():
     """Get weather information for a location"""
     try:
-        from ai_assistant.integrations.web_scraping import get_weather_info
+        from core_ai.integrations.web_scraping import get_weather_info
         
         location = request.args.get('location', 'New York')
         api_key = request.args.get('api_key')
@@ -30,7 +30,7 @@ def api_get_weather():
 def api_get_news():
     """Get latest news headlines"""
     try:
-        from ai_assistant.integrations.web_scraping import get_latest_news
+        from core_ai.integrations.web_scraping import get_latest_news
         
         category = request.args.get('category', 'general')
         country = request.args.get('country', 'us')
@@ -53,7 +53,7 @@ def api_get_news():
 def api_get_stock():
     """Get stock price information"""
     try:
-        from ai_assistant.integrations.web_scraping import get_stock_price
+        from core_ai.integrations.web_scraping import get_stock_price
         
         symbol = request.args.get('symbol', 'AAPL')
         
@@ -74,7 +74,7 @@ def api_get_stock():
 def api_get_crypto():
     """Get cryptocurrency price information"""
     try:
-        from ai_assistant.integrations.web_scraping import get_crypto_price
+        from core_ai.integrations.web_scraping import get_crypto_price
         
         symbol = request.args.get('symbol', 'bitcoin')
         
@@ -96,7 +96,7 @@ def api_get_crypto():
 def api_scrape_website():
     """Scrape website content"""
     try:
-        from ai_assistant.integrations.web_scraping import scrape_website_content
+        from core_ai.integrations.web_scraping import scrape_website_content
         
         data = request.get_json()
         url = data.get('url')
@@ -123,7 +123,7 @@ def api_scrape_website():
 def api_get_trending():
     """Get trending topics from various platforms"""
     try:
-        from ai_assistant.integrations.web_scraping import get_trending_topics
+        from core_ai.integrations.web_scraping import get_trending_topics
         
         platform = request.args.get('platform', 'general')
         

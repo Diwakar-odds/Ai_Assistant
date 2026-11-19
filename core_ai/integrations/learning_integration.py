@@ -1,4 +1,4 @@
-from ai_assistant.core.database_config import get_db_path_str
+from core_ai.core.database_config import get_db_path_str
 """
 Learning Systems Integration Module
 Integrates all 27 learning systems into the main assistant workflow
@@ -20,19 +20,19 @@ logger = logging.getLogger(__name__)
 
 # Try to import all learning systems
 try:
-    from ai_assistant.ai.smart_command_prediction import SmartCommandPredictor
-    from ai_assistant.ai.context_aware_response import ContextAwareResponseGenerator
-    from ai_assistant.ai.adaptive_voice import AdaptiveVoiceRecognition
-    from ai_assistant.ai.workflow_recommender import WorkflowRecommender
-    from ai_assistant.ai.anomaly_detection import AnomalyDetector
-    from ai_assistant.ai.behavior_clustering import BehaviorClusterer
-    from ai_assistant.ai.conversation_clustering import ConversationClusterer
-    from ai_assistant.ai.active_learning import ActiveLearner
-    from ai_assistant.ai.explainability import ExplainabilityEngine
-    from ai_assistant.ai.llm_bandit import LLMBandit
-    from ai_assistant.ai.causal_inference import CausalInference
-    from ai_assistant.ai.enhanced_learning import PersonalKnowledgeGraph
-    from ai_assistant.ai.full_rl_system import PPOAgent
+    from core_ai.ai.smart_command_prediction import SmartCommandPredictor
+    from core_ai.ai.context_aware_response import ContextAwareResponseGenerator
+    from core_ai.ai.adaptive_voice import AdaptiveVoiceRecognition
+    from core_ai.ai.workflow_recommender import WorkflowRecommender
+    from core_ai.ai.anomaly_detection import AnomalyDetector
+    from core_ai.ai.behavior_clustering import BehaviorClusterer
+    from core_ai.ai.conversation_clustering import ConversationClusterer
+    from core_ai.ai.active_learning import ActiveLearner
+    from core_ai.ai.explainability import ExplainabilityEngine
+    from core_ai.ai.llm_bandit import LLMBandit
+    from core_ai.ai.causal_inference import CausalInference
+    from core_ai.ai.enhanced_learning import PersonalKnowledgeGraph
+    from core_ai.ai.full_rl_system import PPOAgent
     LEARNING_SYSTEMS_AVAILABLE = True
     logger.info("✅ Learning systems loaded successfully")
 except ImportError as e:

@@ -253,7 +253,7 @@ DEFAULTS = {
             "alwaysOnTop": True,
             "size": "medium",
             "opacity": 90,
-            "autoHide": True
+            "autoHide": False
         },
         "notifications": {
             "desktop": True,
@@ -569,7 +569,7 @@ def get_api_key(provider: str) -> Optional[str]:
     
     # Try OS Keyring
     try:
-        from ai_assistant.utils.secure_storage import get_secure_key
+        from core_ai.utils.secure_storage import get_secure_key
         keyring_map = {
             'gemini': 'googleGemini',
             'openai': 'openAI',
@@ -829,7 +829,7 @@ def update_settings_and_sync(
 
         # Secure storage intercept for API keys
         if category == 'security' and 'apiKeys' in payload_copy and isinstance(payload_copy['apiKeys'], dict):
-            from ai_assistant.utils.secure_storage import save_secure_key, delete_secure_key, get_secure_key
+            from core_ai.utils.secure_storage import save_secure_key, delete_secure_key, get_secure_key
             api_keys = payload_copy['apiKeys']
             env_map = {
                 "googleGemini": ["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"],
@@ -968,7 +968,7 @@ def update_settings_and_sync(
 
     if category in ('ai', 'security'):
         try:
-            from ai_assistant.ai.network_aware_llm import reload_global_config
+            from core_ai.ai.network_aware_llm import reload_global_config
             reload_global_config()
             logger.info("Global LLM config hot-reloaded due to settings change")
         except Exception as e:

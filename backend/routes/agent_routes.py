@@ -97,11 +97,11 @@ def get_agent_registry_and_coordinator():
     with _init_lock:
         if _registry_singleton is None:
             try:
-                from ai_assistant.agents.registry import get_global_registry
+                from core_ai.agents.registry import get_global_registry
                 _registry_singleton = get_global_registry()
             except Exception:
-                from ai_assistant.agents.registry import AgentRegistry
-                from ai_assistant.agents.loader import AgentLoader
+                from core_ai.agents.registry import AgentRegistry
+                from core_ai.agents.loader import AgentLoader
 
                 reg = AgentRegistry()
                 if hasattr(AgentLoader, "load_all_agents"):
@@ -112,10 +112,10 @@ def get_agent_registry_and_coordinator():
 
         if _coordinator_singleton is None:
             try:
-                from ai_assistant.core.multi_agent_coordinator import get_multi_agent_coordinator
+                from core_ai.core.multi_agent_coordinator import get_multi_agent_coordinator
                 _coordinator_singleton = get_multi_agent_coordinator(_registry_singleton)
             except Exception:
-                from ai_assistant.core.multi_agent_coordinator import MultiAgentCoordinator
+                from core_ai.core.multi_agent_coordinator import MultiAgentCoordinator
                 _coordinator_singleton = MultiAgentCoordinator(_registry_singleton)
 
         if not _events_subscribed and _coordinator_singleton is not None:
@@ -314,7 +314,7 @@ def _build_task_obj(
     agent_id: Optional[str] = None,
     capability: Optional[str] = None,
 ):
-    from ai_assistant.agents.models import Task
+    from core_ai.agents.models import Task
 
     sig = inspect.signature(Task)
     kwargs: Dict[str, Any] = {
@@ -863,7 +863,7 @@ def api_list_workflow_recipes():
     if request.method == "OPTIONS":
         return ("", 204)
     try:
-        from ai_assistant.core.workflow_memory import get_workflow_memory
+        from core_ai.core.workflow_memory import get_workflow_memory
         recipes = get_workflow_memory().list_all_recipes()
         return jsonify({"success": True, "recipes": recipes, "count": len(recipes)})
     except Exception as exc:
@@ -886,7 +886,7 @@ def api_synthesize_workflow():
         if not goal:
             return jsonify({"success": False, "error": "Field 'goal' is required"}), 400
 
-        from ai_assistant.core.swarm_planner import SwarmPlanner
+        from core_ai.core.swarm_planner import SwarmPlanner
         registry, coordinator = get_agent_registry_and_coordinator()
         planner = SwarmPlanner(registry=registry, llm_provider=getattr(coordinator, "llm", None))
         
@@ -908,7 +908,7 @@ def api_clear_workflow_memory():
     if request.method == "OPTIONS":
         return ("", 204)
     try:
-        from ai_assistant.core.workflow_memory import get_workflow_memory
+        from core_ai.core.workflow_memory import get_workflow_memory
         get_workflow_memory().clear_memory()
         return jsonify({"success": True, "message": "Workflow memory cleared successfully"})
     except Exception as exc:

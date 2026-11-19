@@ -18,7 +18,7 @@ from settings_manager import (
 logger = get_logger(__name__, log_category="app")
 
 try:
-    from ai_assistant.voice.tts_output_service import (
+    from core_ai.voice.tts_output_service import (
         ensure_espeak_environment,
         get_tts_service,
         load_kitten_mini_model,
@@ -58,28 +58,28 @@ _voice_service_import_time = _time_module.time()
 
 # Import all voice modules
 try:
-    from ai_assistant.voice.wake_word_detector import get_wake_word_manager, WakeWordDetectionMode
+    from core_ai.voice.wake_word_detector import get_wake_word_manager, WakeWordDetectionMode
     WAKE_WORD_AVAILABLE = True
 except (ImportError, OSError):
     WAKE_WORD_AVAILABLE = False
     logging.warning("Wake word detector not available")
 
 try:
-    from ai_assistant.voice.neural_voice_engine import get_neural_voice_engine, VoiceGender, SpeakingStyle
+    from core_ai.voice.neural_voice_engine import get_neural_voice_engine, VoiceGender, SpeakingStyle
     NEURAL_TTS_AVAILABLE = True
-except ImportError:
+except Exception as _neural_tts_err:
     NEURAL_TTS_AVAILABLE = False
-    logging.warning("Neural TTS not available")
+    logging.warning(f"Neural TTS not available: {_neural_tts_err}")
 
 try:
-    from ai_assistant.voice.voice_activity_detection import create_vad_detector, VADSensitivity
+    from core_ai.voice.voice_activity_detection import create_vad_detector, VADSensitivity
     VAD_AVAILABLE = True
 except ImportError:
     VAD_AVAILABLE = False
     logging.warning("VAD not available")
 
 try:
-    from ai_assistant.voice.advanced_voice import (
+    from core_ai.voice.advanced_voice import (
         VoiceProfileManager,
         ContinuousListeningManager,
         voice_command_registry
@@ -90,14 +90,14 @@ except ImportError:
     logging.warning("Advanced voice features not available")
 
 try:
-    from ai_assistant.voice.advanced_speech_recognizer import AdvancedSpeechRecognizer
+    from core_ai.voice.advanced_speech_recognizer import AdvancedSpeechRecognizer
     ADVANCED_STT_AVAILABLE = True
 except ImportError:
     ADVANCED_STT_AVAILABLE = False
     logging.warning("Advanced STT not available")
 
 try:
-    from ai_assistant.voice.echo_guard import get_echo_guard, reset_echo_guard, band_energies
+    from core_ai.voice.echo_guard import get_echo_guard, reset_echo_guard, band_energies
     ECHO_GUARD_AVAILABLE = True
 except ImportError:
     ECHO_GUARD_AVAILABLE = False
@@ -287,7 +287,7 @@ class VoiceServiceManager:
     def speak_greeting(self, wake_word: str = "hey pulsar"):
         """Speak a natural, non-repetitive greeting after wake word."""
         try:
-            from ai_assistant.core.jarvis_persona import generate_wake_acknowledgment
+            from core_ai.core.jarvis_persona import generate_wake_acknowledgment
             greeting = generate_wake_acknowledgment(wake_word=wake_word)
         except Exception:
             greeting = ""
@@ -619,7 +619,7 @@ def generate_voice_preview(voice_id: str, text: str) -> str:
     """Generate voice preview audio data URI (in-memory, accurate WAV/MP3 MIME, offline fallback)."""
     import asyncio
     import base64
-    from ai_assistant.voice.text_cleaner import clean_text_for_tts, prepare_text_for_kitten_tts
+    from core_ai.voice.text_cleaner import clean_text_for_tts, prepare_text_for_kitten_tts
 
     clean_sample = clean_text_for_tts(text) or text
     vid_str = str(voice_id or "hi-IN-SwaraNeural").strip()
@@ -684,7 +684,7 @@ def generate_voice_preview(voice_id: str, text: str) -> str:
 
 @voice_bp.route('/settings', methods=['GET'])
 def api_get_voice_settings():
-    from ai_assistant.voice.voice_settings_manager import get_settings_manager
+    from core_ai.voice.voice_settings_manager import get_settings_manager
     manager = get_settings_manager()
     return jsonify({
         'success': True,
@@ -694,7 +694,7 @@ def api_get_voice_settings():
 @voice_bp.route('/settings', methods=['POST'])
 def api_save_voice_settings():
     from flask import request
-    from ai_assistant.voice.voice_settings_manager import get_settings_manager
+    from core_ai.voice.voice_settings_manager import get_settings_manager
     data = request.json
     manager = get_settings_manager()
     manager.save_settings(data)
@@ -865,7 +865,7 @@ def api_tts_speak():
     engine = data.get("engine")
 
     try:
-        from ai_assistant.core.speech_text_crisper import record_recent_tts
+        from core_ai.core.speech_text_crisper import record_recent_tts
         record_recent_tts(text)
     except Exception:
         pass
@@ -891,7 +891,7 @@ def api_tts_stop():
     data = request.get_json(force=True, silent=True) or {}
     reason = str(data.get("reason", "api_stop"))
     try:
-        from ai_assistant.core.jarvis_persona import get_lifecycle_coordinator
+        from core_ai.core.jarvis_persona import get_lifecycle_coordinator
         get_lifecycle_coordinator().cancel_all(reason=reason)
     except Exception:
         pass
@@ -942,7 +942,7 @@ def api_wake_ack():
     message = ""
     detected_lang = "hinglish"
     try:
-        from ai_assistant.core.jarvis_persona import (
+        from core_ai.core.jarvis_persona import (
             detect_language_hint,
             generate_session_greeting,
             generate_wake_acknowledgment,
@@ -1005,7 +1005,7 @@ def api_wake_ack():
     finished = False
     if speak_flag and message and _is_tts_enabled() and TTS_SERVICE_AVAILABLE and (kind != "startup" or created_startup):
         try:
-            from ai_assistant.core.speech_text_crisper import record_recent_tts
+            from core_ai.core.speech_text_crisper import record_recent_tts
             record_recent_tts(message)
         except Exception:
             pass
@@ -1288,13 +1288,13 @@ def _default_automation_callback(action, param):
     """Execute automation actions"""
     try:
         if action == 'open_application':
-            from ai_assistant.core.core import open_application
+            from core_ai.core.core import open_application
             return open_application(param)
         elif action == 'close_application':
-            from ai_assistant.core.core import close_application
+            from core_ai.core.core import close_application
             return close_application(param)
         elif action == 'get_running_apps':
-            from ai_assistant.core.system import get_running_processes
+            from core_ai.core.system import get_running_processes
             return get_running_processes()
     except Exception as e:
         return f"Action error: {str(e)}"
@@ -1306,7 +1306,7 @@ def get_conv_ai(automation_callback=None):
     if _conv_ai_instance is None:
         with _conv_ai_lock:
             if _conv_ai_instance is None:
-                from ai_assistant.ai.conversational_ai import AdvancedConversationalAI
+                from core_ai.ai.conversational_ai import AdvancedConversationalAI
                 cb = automation_callback or _default_automation_callback
                 _conv_ai_instance = AdvancedConversationalAI(automation_callback=cb)
     if automation_callback and _conv_ai_instance:
@@ -1357,9 +1357,18 @@ def _note_tts_output_to_echo_guard(audio_b64: str) -> None:
         logger.debug(f"[EchoGuard] note_output failed (non-fatal): {e}")
 
 
+_last_tts_finish_time = 0.0
+
+def is_in_follow_up_window() -> bool:
+    """Return True if within the 7.5s active multi-turn conversation window after assistant speech."""
+    global _last_tts_finish_time
+    return (_time_module.time() - _last_tts_finish_time) < 7.5
+
 def set_tts_active(active: bool, cooldown_ms: int = 10000):
     """Mark TTS as active — backward-compatible wrapper with EchoGuard sync + 0.85s tail."""
-    global _tts_cooldown_until
+    global _tts_cooldown_until, _last_tts_finish_time
+    if not active:
+        _last_tts_finish_time = _time_module.time()
     if ECHO_GUARD_AVAILABLE:
         if active:
             _tts_cooldown_until = _time_module.time() + (cooldown_ms / 1000)
@@ -1508,6 +1517,7 @@ def update_overlay_state(
     source: Optional[str] = None,
     webui_mic_active: Optional[bool] = None,
     tts_speaking: Optional[bool] = None,
+    overlay_enabled: Optional[bool] = None,
     broadcast: bool = True,
 ) -> Dict[str, Any]:
     """Update orb overlay state and broadcast to all connected SocketIO clients."""
@@ -1546,10 +1556,18 @@ def update_overlay_state(
         if source is not None:
             _OVERLAY_STATE['source'] = str(source)
         _OVERLAY_STATE['updated_at'] = time.time()
-        try:
-            _OVERLAY_STATE['overlay_enabled'] = is_desktop_overlay_enabled()
-        except Exception:
-            pass
+        if overlay_enabled is not None:
+            _OVERLAY_STATE['overlay_enabled'] = bool(overlay_enabled)
+            try:
+                from settings_manager import save_settings
+                save_settings('system', {'desktopOverlay': bool(overlay_enabled)})
+            except Exception:
+                pass
+        else:
+            try:
+                _OVERLAY_STATE['overlay_enabled'] = is_desktop_overlay_enabled()
+            except Exception:
+                pass
         snap = dict(_OVERLAY_STATE)
 
     if broadcast and _socketio:
@@ -1764,7 +1782,7 @@ def process_live_stream_buffer(pcm_buffer, config):
         else "Hey Pulsar, OK Pulsar. Open WhatsApp, Chrome, YouTube Music, VS Code, take a screenshot."
     )
     try:
-        from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+        from core_ai.voice.vocabulary_registry import get_vocabulary_registry
         kw = get_vocabulary_registry().get_whisper_prompt_keywords()
         if kw:
             stream_prompt = f"{stream_prompt} ({kw})"
@@ -1784,13 +1802,13 @@ def process_live_stream_buffer(pcm_buffer, config):
 
     if text:
         try:
-            from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+            from core_ai.voice.vocabulary_registry import get_vocabulary_registry
             text = get_vocabulary_registry().normalize_stt_transcript(text)
         except Exception:
             pass
         logger.info(f"[STREAM-VAD] Transcribed: {text}")
         try:
-            from ai_assistant.core.speech_text_crisper import filter_and_crisp_speech_transcript
+            from core_ai.core.speech_text_crisper import filter_and_crisp_speech_transcript
             crisp_res = filter_and_crisp_speech_transcript(text, require_wake_word=False, check_echo=True)
             if not crisp_res.get("valid"):
                 logger.info(f"[STREAM-VAD] Discarded noise/echo: '{text}' ({crisp_res.get('rejection_reason')})")
@@ -1834,8 +1852,21 @@ def _tts_overlay_callback(speaking: bool, level: float, source: str) -> None:
     set_tts_active(speaking)
     next_state = 'speaking' if speaking else 'idle'
     if not speaking:
+        global _last_tts_finish_time
+        _last_tts_finish_time = _time_module.time()
+        if _socketio:
+            try:
+                _socketio.emit('follow_up_window_start', {
+                    'window_seconds': 7.5,
+                    'timestamp': _last_tts_finish_time
+                })
+            except Exception:
+                pass
         try:
-            from ai_assistant.core.jarvis_persona import get_lifecycle_coordinator
+            try:
+                from core_ai.core.jarvis_persona import get_lifecycle_coordinator
+            except ImportError:
+                from core_ai.core.jarvis_persona import get_lifecycle_coordinator
             if get_lifecycle_coordinator().has_executing_turn():
                 # Keep orb active in processing state while task continues after pre-report speech
                 next_state = 'processing'
@@ -1861,7 +1892,7 @@ def handle_voice_stop(data=None):
     """Stop ongoing TTS playback and cancel active lifecycle turns on user barge-in or gesture stop."""
     reason = str((data or {}).get('reason', 'socket_stop')) if isinstance(data, dict) else 'socket_stop'
     try:
-        from ai_assistant.core.jarvis_persona import get_lifecycle_coordinator
+        from core_ai.core.jarvis_persona import get_lifecycle_coordinator
         get_lifecycle_coordinator().cancel_all(reason=reason)
     except Exception:
         pass
@@ -1983,7 +2014,7 @@ def reset_llm_sessions():
 
 def _resolve_request_provider_model(data: dict) -> tuple[str, str]:
     """Normalize provider/model/offline_mode from a command payload or settings."""
-    from ai_assistant.ai.llm_provider import LLMFactory, is_local_provider
+    from core_ai.ai.llm_provider import LLMFactory, is_local_provider
     raw_prov = str((data or {}).get('provider') or '').strip().lower()
     offline_mode = bool((data or {}).get('offline_mode', False))
     prov = LLMFactory.normalize_provider(raw_prov) if raw_prov else ''
@@ -1999,7 +2030,7 @@ def _resolve_request_provider_model(data: dict) -> tuple[str, str]:
 
 def get_persistent_chat_session(provider: str, model: str):
     global _persistent_chat_session
-    from ai_assistant.ai.llm_provider import UnifiedChatInterface, LLMFactory, is_local_provider
+    from core_ai.ai.llm_provider import UnifiedChatInterface, LLMFactory, is_local_provider
 
     raw_prov = str(provider or '').strip().lower()
     norm_prov = (
@@ -2089,7 +2120,7 @@ def handle_command(data):
         is_voice_src = any(t in source.lower() for t in ('voice', 'companion', 'whisper', 'google'))
         if is_voice_src and command_text:
             try:
-                from ai_assistant.core.speech_text_crisper import (
+                from core_ai.core.speech_text_crisper import (
                     is_hallucination_or_garbage,
                     is_recent_tts_echo,
                     crisp_speech_transcript,
@@ -2143,7 +2174,7 @@ def handle_command(data):
 
         # Auto-extract personal facts into living UserDNA (name, friend, exam, location, etc.)
         try:
-            from ai_assistant.ai.user_dna import UserDNA
+            from core_ai.ai.user_dna import UserDNA
             UserDNA().extract_facts_from_text(command_text)
         except Exception as dna_err:
             logger.debug(f"UserDNA fact extraction skipped: {dna_err}")
@@ -2151,7 +2182,7 @@ def handle_command(data):
         if TTS_SERVICE_AVAILABLE:
             get_tts_service().stop(reason='new_command')
 
-        from ai_assistant.core.jarvis_persona import (
+        from core_ai.core.jarvis_persona import (
             get_lifecycle_coordinator,
             should_speak_for_request,
             generate_conversational_greeting,
@@ -2169,7 +2200,7 @@ def handle_command(data):
         # VOICE / MODE CONTROL (Zero LLM calls)
         # ============================================
         try:
-            from ai_assistant.core.local_command_normalizer import (
+            from core_ai.core.local_command_normalizer import (
                 parse_voice_control_command,
                 execute_voice_control_command,
             )
@@ -2236,7 +2267,7 @@ def handle_command(data):
         # PENDING TASK CHAIN RECOVERY (Zero LLM calls)
         # ============================================
         try:
-            from ai_assistant.core.task_chain_orchestrator import get_chain_recovery_manager
+            from core_ai.core.task_chain_orchestrator import get_chain_recovery_manager
             recovery_mgr = get_chain_recovery_manager()
             if recovery_mgr.has_pending_recovery():
                 if recovery_mgr.is_affirmative(command_text):
@@ -2335,7 +2366,7 @@ def handle_command(data):
         # PRIORITY 0: Executive Brain (Central Routing)
         # ============================================
         try:
-            from ai_assistant.core.command_brain import get_executive_brain
+            from core_ai.core.command_brain import get_executive_brain
             brain = get_executive_brain()
             brain_response = brain.receive_command(
                 command_text,
@@ -2521,7 +2552,7 @@ def handle_command(data):
         response_text = ""
         if LLM_PROVIDER_AVAILABLE and not used_local_tools:
             try:
-                from ai_assistant.ai.llm_provider import LLMFactory, is_local_provider
+                from core_ai.ai.llm_provider import LLMFactory, is_local_provider
                 preferred_provider, preferred_model = req_provider, req_model
                 
                 print(f" Initializing Chat with Provider: {preferred_provider}, Model: {preferred_model}")
@@ -2537,7 +2568,7 @@ def handle_command(data):
 
                 rag_ctx = ""
                 try:
-                    from ai_assistant.ai.memory_retrieval import retrieve_unified_historical_context
+                    from core_ai.ai.memory_retrieval import retrieve_unified_historical_context
                     rag_ctx = retrieve_unified_historical_context(
                         command_text,
                         current_session_id=sess_id,
@@ -2623,7 +2654,7 @@ def handle_command(data):
                             try:
                                 gguf_path = resolve_local_model_path('models/pulsar-final-q4_k_m.gguf')
                                 if gguf_path.exists():
-                                    from ai_assistant.ai.llm_provider import UnifiedChatInterface
+                                    from core_ai.ai.llm_provider import UnifiedChatInterface
                                     logger.warning(f"[VOICE] Cloud provider {provider_name} failed ({ch_str[:80]}), switching stream to local GGUF")
                                     fb_chat = UnifiedChatInterface(provider='gguf', model='pulsar-final-q4_k_m', use_fallback=False)
                                     provider_name = 'gguf'
@@ -2727,7 +2758,7 @@ def handle_command(data):
                         lr.route_conversation(speaker='user', content=command_text, input_mode=source)
                         lr.route_conversation(speaker='assistant', content=response_text, input_mode=source)
                     try:
-                        from ai_assistant.knowledge.interaction_learner import record_turn_and_learn_async
+                        from core_ai.knowledge.interaction_learner import record_turn_and_learn_async
                         record_turn_and_learn_async(command_text, response_text, source=source)
                     except Exception:
                         pass
@@ -2817,7 +2848,7 @@ def handle_command(data):
                         except Exception:
                             pass
                     try:
-                        from ai_assistant.ai.memory_retrieval import persist_turn_to_conversation_ai
+                        from core_ai.ai.memory_retrieval import persist_turn_to_conversation_ai
                         threading.Thread(
                             target=persist_turn_to_conversation_ai,
                             args=(command_text, formatted_resp),
@@ -3066,6 +3097,11 @@ def handle_voice_audio(data):
 
     logger.info(f"[VOICE] Received voice_audio_data! Length: {len(audio_data)}, Language: {language}")
     print(f"[VOICE] Received voice audio data (length: {len(audio_data)}, lang: {language})")
+    try:
+        from core_ai.voice.audio_ducking import duck_audio
+        duck_audio()
+    except Exception:
+        pass
     
     def process_and_emit():
         try:
@@ -3099,11 +3135,27 @@ def handle_voice_audio(data):
             if result.get('success') and result.get('transcript'):
                 transcript = result.get('transcript', '').strip()
                 try:
-                    from ai_assistant.voice.vocabulary_registry import get_vocabulary_registry
+                    from core_ai.voice.vocabulary_registry import get_vocabulary_registry
                     transcript = get_vocabulary_registry().normalize_stt_transcript(transcript)
                 except Exception:
                     pass
                 logger.info(f"[VOICE] Processed audio. Transcript: '{transcript}'")
+
+                # Speculative prefetch for fast app launch
+                try:
+                    from core_ai.ai.intent_router import IntentRouter
+                    spec_match = IntentRouter()._fast_match(transcript)
+                    if spec_match and spec_match.intent_name == "open_app":
+                        app_target = str(spec_match.parameters.get("target") or "").lower()
+                        if app_target:
+                            try:
+                                from core_ai.automation.app_discovery import app_discovery
+                            except ImportError:
+                                from core_ai.automation.app_discovery import app_discovery
+                            import threading
+                            threading.Thread(target=app_discovery.find_app, args=(app_target,), daemon=True).start()
+                except Exception:
+                    pass
 
                 store = None
                 sess_id = None
@@ -3117,15 +3169,18 @@ def handle_voice_audio(data):
                     pass
                 
                 require_wake_word = data.get('require_wake_word')
-                if data.get('manual_click'):
+                if data.get('manual_click') or data.get('is_follow_up'):
                     require_wake_word = False
                 elif require_wake_word is None:
-                    if data.get('always_active') is False:
+                    if is_in_follow_up_window():
+                        logger.info("[FOLLOW-UP] Inside multi-turn conversation window (<7.5s) — wake word bypassed")
+                        require_wake_word = False
+                    elif data.get('always_active') is False:
                         require_wake_word = False
                     else:
                         require_wake_word = is_wake_word_enabled()
 
-                from ai_assistant.core.speech_text_crisper import filter_and_crisp_speech_transcript, record_recent_tts
+                from core_ai.core.speech_text_crisper import filter_and_crisp_speech_transcript, record_recent_tts
                 crisp_res = filter_and_crisp_speech_transcript(
                     transcript,
                     require_wake_word=require_wake_word,
@@ -3164,7 +3219,7 @@ def handle_voice_audio(data):
                     # User only spoke the wake word — respond with a fresh dynamic acknowledgment
                     logger.info("[WAKE-WORD] User only called wake word with no query")
                     try:
-                        from ai_assistant.core.jarvis_persona import generate_wake_acknowledgment
+                        from core_ai.core.jarvis_persona import generate_wake_acknowledgment
                         reply = generate_wake_acknowledgment(wake_word=matched_wake, raw_transcript=transcript)
                     except Exception:
                         reply = ""
@@ -3195,6 +3250,53 @@ def handle_voice_audio(data):
                         'skip_tts': True
                     })
                     return
+
+                # ── Smart Intent-Gated Barge-In ──
+                is_tts_playing = (TTS_SERVICE_AVAILABLE and get_tts_service().is_speaking) or is_tts_active()
+                if is_tts_playing:
+                    candidate_check = clean_command or transcript
+                    try:
+                        from core_ai.core.local_command_normalizer import is_barge_in_stop_command
+                    except ImportError:
+                        from core_ai.core.local_command_normalizer import is_barge_in_stop_command
+                    if is_barge_in_stop_command(candidate_check):
+                        logger.info(f"[VOICE-BARGE-IN] Stop command '{candidate_check}' during TTS — stopping speech")
+                        if TTS_SERVICE_AVAILABLE:
+                            get_tts_service().stop(reason="user_barge_in_stop")
+                        set_tts_active(False)
+                        stop_ack = "जी, रुक गई।" if any('\u0900' <= ch <= '\u097F' for ch in candidate_check) or any(k in candidate_check.lower() for k in ("chup", "ruk", "shant", "bas")) else "Okay, stopped."
+                        update_overlay_state(state='idle', transcript=candidate_check, source='barge_in_stop')
+                        safe_emit('command_response', {
+                            'success': True,
+                            'response': stop_ack,
+                            'source': 'voice_barge_in',
+                            'is_barge_ack': True,
+                            'session_id': sess_id,
+                            'skip_tts': True,
+                        })
+                        return
+
+                    is_high_intent = False
+                    try:
+                        from core_ai.ai.intent_router import IntentRouter
+                        router = IntentRouter()
+                        fast_res = router._fast_match(candidate_check)
+                        if fast_res and fast_res.confidence >= 0.70:
+                            is_high_intent = True
+                        else:
+                            vm_res = router.vector_matcher.match(candidate_check) if hasattr(router, 'vector_matcher') and router.vector_matcher else None
+                            is_high_intent = bool(vm_res and vm_res.similarity >= 0.70)
+                    except Exception:
+                        is_high_intent = False
+
+                    if not is_high_intent and not matched_wake:
+                        logger.info(f"[VOICE-BARGE-IN-GATE] Discarding non-intent noise '{transcript}' during active TTS playback")
+                        return
+                    else:
+                        logger.info(f"[VOICE-BARGE-IN] Intentional barge-in command '{candidate_check}' during TTS — interrupting playback")
+                        if TTS_SERVICE_AVAILABLE:
+                            get_tts_service().stop(reason="user_barge_in_command")
+                        set_tts_active(False)
 
                 if matched_wake and clean_command and store is not None:
                     try:
@@ -3254,6 +3356,12 @@ def handle_voice_audio(data):
             _schedule_overlay_idle(3.5, snap['updated_at'])
             if _socketio:
                 _socketio.emit('voice_response', {'success': False, 'error': True, 'response': str(e)})
+        finally:
+            try:
+                from core_ai.voice.audio_ducking import unduck_audio
+                unduck_audio()
+            except Exception:
+                pass
 
     if _socketio:
         _socketio.start_background_task(process_and_emit)
@@ -3338,7 +3446,7 @@ class InProcessVoiceManager:
         """Microphone heard wake word: stop TTS, wake UI orb, emit events."""
         logger.info(f"[InProcessVoice] Wake word detected: '{wake_word}'")
         try:
-            from ai_assistant.voice.tts_output_service import get_tts_service
+            from core_ai.voice.tts_output_service import get_tts_service
             get_tts_service().stop(reason="inprocess_voice_wake")
         except Exception:
             pass
@@ -3367,7 +3475,7 @@ class InProcessVoiceManager:
             return
         ack_text = ""
         try:
-            from ai_assistant.core.jarvis_persona import generate_wake_acknowledgment
+            from core_ai.core.jarvis_persona import generate_wake_acknowledgment
             ack_text = generate_wake_acknowledgment(wake_word=wake_word)
         except Exception:
             ack_text = "सुन रही हूँ— रेडी हूँ, बताओ क्या टास्क संभालना है?"
@@ -3391,8 +3499,8 @@ class InProcessVoiceManager:
             pass
 
         try:
-            from ai_assistant.voice.tts_output_service import get_tts_service
-            from ai_assistant.core.speech_text_crisper import record_recent_tts
+            from core_ai.voice.tts_output_service import get_tts_service
+            from core_ai.core.speech_text_crisper import record_recent_tts
             if ack_text:
                 record_recent_tts(ack_text)
                 get_tts_service().speak(ack_text, interrupt=True, wait=False, source="wake_greeting")
@@ -3416,7 +3524,7 @@ class InProcessVoiceManager:
         threading.Thread(target=self._execute_command_worker, args=(command,), daemon=True).start()
 
     def _execute_command_worker(self, command: str):
-        from ai_assistant.core.local_command_normalizer import is_noise_fragment
+        from core_ai.core.local_command_normalizer import is_noise_fragment
         if is_noise_fragment(command):
             logger.info(f"[InProcessVoice] Dropped noise fragment: '{command}'")
             try:
@@ -3469,7 +3577,7 @@ class InProcessVoiceManager:
 
     def _on_barge_in(self, phrase: str = ""):
         try:
-            from ai_assistant.voice.tts_output_service import get_tts_service
+            from core_ai.voice.tts_output_service import get_tts_service
             get_tts_service().stop(reason="inprocess_voice_barge_in")
         except Exception:
             pass
@@ -3595,7 +3703,7 @@ class SilentMeetingRecorder:
 
             # Enforce 100% strict silent mode
             try:
-                from ai_assistant.voice.tts_output_service import set_meeting_silent_mode
+                from core_ai.voice.tts_output_service import set_meeting_silent_mode
                 set_meeting_silent_mode(True)
             except Exception as e:
                 logger.warning(f"Could not engage TTS silent mode: {e}")
@@ -3706,7 +3814,7 @@ class SilentMeetingRecorder:
 
         # Unmute assistant speech
         try:
-            from ai_assistant.voice.tts_output_service import set_meeting_silent_mode
+            from core_ai.voice.tts_output_service import set_meeting_silent_mode
             set_meeting_silent_mode(False)
         except Exception as e:
             logger.warning(f"Could not restore TTS mode: {e}")

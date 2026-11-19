@@ -1,6 +1,6 @@
 # Setup centralized logging
 try:
-    from ai_assistant.utils.logging_config import get_logger
+    from core_ai.utils.logging_config import get_logger
 except ImportError:
     try:
         from utils.logging_config import get_logger
@@ -596,7 +596,7 @@ def get_system_volume() -> str:
     Get current system volume level (thread-safe COM via core.py).
     """
     try:
-        from ai_assistant.core.core import get_system_volume as _core_get_system_volume
+        from core_ai.core.core import get_system_volume as _core_get_system_volume
         return _core_get_system_volume()
     except ImportError:
         return "❌ pycaw/core volume control module unavailable."
@@ -610,7 +610,7 @@ def set_system_volume(level: int) -> str:
         level: Volume level (0-100)
     """
     try:
-        from ai_assistant.core.core import set_system_volume as _core_set_system_volume
+        from core_ai.core.core import set_system_volume as _core_set_system_volume
         return _core_set_system_volume(max(0, min(100, int(level))))
     except ImportError:
         return "❌ pycaw/core volume control module unavailable."

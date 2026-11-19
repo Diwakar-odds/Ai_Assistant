@@ -53,7 +53,7 @@ for _p in (
         sys.path.insert(0, _p)
 
 try:
-    from ai_assistant.core.local_command_normalizer import ensure_project_ffmpeg_in_path
+    from core_ai.core.local_command_normalizer import ensure_project_ffmpeg_in_path
     ensure_project_ffmpeg_in_path(project_root)
 except Exception:
     pass
@@ -144,27 +144,27 @@ class AgentBrain:
     def _init_submodules(self):
         """Warm up heavy submodules asynchronously"""
         try:
-            from ai_assistant.vision.multimodal import MultiModalAI
+            from core_ai.vision.multimodal import MultiModalAI
             self.multimodal_ai = MultiModalAI()
             logger.info("✅ MultiModalAI loaded into Agent Brain")
         except Exception as e:
             logger.warning(f"Could not load MultiModalAI: {e}")
 
         try:
-            from ai_assistant.automation.app_automation import AppAutomation
+            from core_ai.automation.app_automation import AppAutomation
             self.app_automation = AppAutomation()
             logger.info("✅ AppAutomation loaded into Agent Brain")
         except Exception as e:
             logger.warning(f"Could not load AppAutomation: {e}")
 
         try:
-            from ai_assistant.integrations.email_handler import GmailManager
+            from core_ai.integrations.email_handler import GmailManager
             self.gmail_manager = GmailManager()
         except Exception:
             pass
 
         try:
-            from ai_assistant.integrations.google_calendar import CalendarManager
+            from core_ai.integrations.google_calendar import CalendarManager
             self.calendar_manager = CalendarManager()
         except Exception:
             pass
@@ -206,7 +206,7 @@ class AgentBrain:
     def _ensure_multimodal_ai(self):
         """Lazy-initialize MultiModalAI safely so vision actions never hit None."""
         if self.multimodal_ai is None:
-            from ai_assistant.vision.multimodal import MultiModalAI
+            from core_ai.vision.multimodal import MultiModalAI
             self.multimodal_ai = MultiModalAI()
         return self.multimodal_ai
 
@@ -257,13 +257,13 @@ class AgentBrain:
             pref_m = str(pref.get('model') or '').strip()
             if pref_m:
                 try:
-                    from ai_assistant.ai.llm_provider import LLMFactory
+                    from core_ai.ai.llm_provider import LLMFactory
                     return LLMFactory.sanitize_model_for_provider(active_p, pref_m)
                 except Exception:
                     return pref_m
         try:
             from settings_manager import get_model, get_default_model_for_provider
-            from ai_assistant.ai.llm_provider import LLMFactory
+            from core_ai.ai.llm_provider import LLMFactory
             candidate = get_model() or get_default_model_for_provider(active_p)
             return LLMFactory.sanitize_model_for_provider(active_p, candidate)
         except Exception:
@@ -299,7 +299,7 @@ class AgentBrain:
         logger.info(f"🧠 Agent Brain processing command: '{command}' (include_screen={include_screen}, source={source})")
 
         try:
-            from ai_assistant.ai.user_dna import UserDNA
+            from core_ai.ai.user_dna import UserDNA
             UserDNA().extract_facts_from_text(command)
         except Exception:
             pass
@@ -370,7 +370,7 @@ class AgentBrain:
                 resp_text = str(res.get("response") or "")
                 if resp_text:
                     try:
-                        from ai_assistant.knowledge.interaction_learner import record_turn_and_learn_async
+                        from core_ai.knowledge.interaction_learner import record_turn_and_learn_async
                         record_turn_and_learn_async(command, resp_text, source=source, active_window=window_info)
                     except Exception:
                         pass
@@ -393,7 +393,7 @@ class AgentBrain:
     # -------------------------------------------------------------
     def _try_fast_dispatch(self, command: str) -> Optional[Dict[str, Any]]:
         try:
-            from ai_assistant.core.local_command_normalizer import (
+            from core_ai.core.local_command_normalizer import (
                 match_and_strip_wake_phrase,
                 parse_voice_control_command,
                 execute_voice_control_command,
@@ -403,7 +403,7 @@ class AgentBrain:
             cmd_to_run = cleaned_cmd if matched_wake else command.strip()
 
             try:
-                from ai_assistant.core.speech_text_crisper import crisp_speech_transcript
+                from core_ai.core.speech_text_crisper import crisp_speech_transcript
                 crisped_cmd = crisp_speech_transcript(cmd_to_run)
                 if crisped_cmd:
                     cmd_to_run = crisped_cmd
@@ -412,7 +412,7 @@ class AgentBrain:
 
             if matched_wake and not cmd_to_run:
                 try:
-                    from ai_assistant.core.jarvis_persona import generate_wake_acknowledgment
+                    from core_ai.core.jarvis_persona import generate_wake_acknowledgment
                     wake_msg = generate_wake_acknowledgment(wake_word=matched_wake, raw_transcript=command)
                 except Exception:
                     wake_msg = "Haan Boss, bolo — sun rahi hoon."
@@ -435,15 +435,15 @@ class AgentBrain:
                     "voice_control": True,
                 }
 
-            from ai_assistant.core.conversation_context import get_context_manager
-            from ai_assistant.core.local_command_normalizer import resolve_contextual_toggle_command
+            from core_ai.core.conversation_context import get_context_manager
+            from core_ai.core.local_command_normalizer import resolve_contextual_toggle_command
             ctx = get_context_manager()
 
             # Check bare contextual toggle follow-up (e.g. "off कर दो" right after "Bluetooth on कर दो")
             resolved_ctx = resolve_contextual_toggle_command(cmd_to_run, ctx)
             if resolved_ctx:
                 iname, iparams = resolved_ctx
-                from ai_assistant.core.intent_executor import get_intent_executor
+                from core_ai.core.intent_executor import get_intent_executor
                 exec_res = get_intent_executor().execute(iname, iparams, context_manager=ctx)
                 res_val = exec_res.get("result")
                 msg = (
@@ -459,8 +459,8 @@ class AgentBrain:
                     "intent": iname,
                 }
 
-            from ai_assistant.ai.intent_router import IntentRouter
-            from ai_assistant.core.local_command_normalizer import normalize_hinglish_devanagari
+            from core_ai.ai.intent_router import IntentRouter
+            from core_ai.core.local_command_normalizer import normalize_hinglish_devanagari
             router = IntentRouter()
             norm_cmd = normalize_hinglish_devanagari(cmd_to_run).strip()
             intent_res = router._fast_match(cmd_to_run)
@@ -468,10 +468,10 @@ class AgentBrain:
                 intent_res = router._fast_match(norm_cmd)
             if not intent_res:
                 try:
-                    from ai_assistant.ai.intent_router import IntentVectorMatcher
+                    from core_ai.ai.intent_router import IntentVectorMatcher
                     v_res = IntentVectorMatcher().match(cmd_to_run) or (IntentVectorMatcher().match(norm_cmd) if norm_cmd != cmd_to_run else None)
                     if v_res and v_res.intent_name in router.intents:
-                        from ai_assistant.ai.intent_router import IntentResult
+                        from core_ai.ai.intent_router import IntentResult
                         intent_res = IntentResult(
                             intent_name=v_res.intent_name,
                             parameters=v_res.parameters,
@@ -485,16 +485,7 @@ class AgentBrain:
                 iname = intent_res.intent_name
                 iparams = intent_res.parameters or {}
 
-                # High-consequence confirmation gates
-                if iname == "send_message":
-                    contact = iparams.get("contact", "contact")
-                    return self._create_pending_confirmation(
-                        cmd_to_run,
-                        "communication",
-                        "whatsapp_message",
-                        iparams,
-                        {"summary": f"send WhatsApp message to {contact}"},
-                    )
+                # High-consequence confirmation gates (shutdown / restart)
                 if iname == "system_control" and str(iparams.get("action", "")).lower() in ("shutdown", "restart"):
                     sys_act = str(iparams.get("action", "")).lower()
                     return self._create_pending_confirmation(
@@ -512,9 +503,10 @@ class AgentBrain:
                     "list_running_apps", "check_taskbar", "open_settings",
                     "youtube_search", "youtube_history", "search_web",
                     "play_media", "media_control", "system_control",
+                    "send_message", "send_file",
                 }
                 if iname in local_executor_intents:
-                    from ai_assistant.core.intent_executor import get_intent_executor
+                    from core_ai.core.intent_executor import get_intent_executor
                     exec_res = get_intent_executor().execute(iname, iparams, context_manager=ctx)
                     res_val = exec_res.get("result")
                     if isinstance(res_val, dict):
@@ -529,7 +521,7 @@ class AgentBrain:
 
                     tts_speech = msg[:180]
                     try:
-                        from ai_assistant.core.jarvis_persona import format_post_task_report
+                        from core_ai.core.jarvis_persona import format_post_task_report
                         target_entity = (
                             iparams.get("query")
                             or iparams.get("target")
@@ -698,15 +690,15 @@ Return strict JSON only:
         except Exception as e:
             logger.debug(f"LLM classification fallback ({e})")
             try:
-                from ai_assistant.ai.intent_router import IntentRouter
+                from core_ai.ai.intent_router import IntentRouter
                 router = IntentRouter()
                 router_res = router._fast_match(command)
                 if not router_res:
                     try:
-                        from ai_assistant.ai.intent_router import IntentVectorMatcher
+                        from core_ai.ai.intent_router import IntentVectorMatcher
                         v_res = IntentVectorMatcher().match(command)
                         if v_res and v_res.intent_name in router.intents:
-                            from ai_assistant.ai.intent_router import IntentResult
+                            from core_ai.ai.intent_router import IntentResult
                             router_res = IntentResult(
                                 intent_name=v_res.intent_name,
                                 parameters=v_res.parameters,
@@ -974,26 +966,10 @@ CORRECTED VERSION:
         """Sends WhatsApp messages, checks Gmail inbox, and queries Google Calendar"""
         c_action = action.lower()
 
-        # WhatsApp Message
-        if "whatsapp" in c_action or "whatsapp" in str(params).lower():
-            contact = params.get("contact") or params.get("name") or "friend"
-            message = params.get("message") or params.get("text") or "Hello"
-            try:
-                from ai_assistant.integrations.whatsapp import send_whatsapp_message
-                res = send_whatsapp_message(contact, message)
-                return {
-                    "success": True,
-                    "response": f"Sent WhatsApp message to {contact}: \"{message}\"",
-                    "tts": f"Sent WhatsApp message to {contact}.",
-                    "card": {"type": "whatsapp", "title": f"💬 WhatsApp to {contact}", "body": message}
-                }
-            except Exception as e:
-                return {"success": False, "response": f"Could not send WhatsApp message: {e}"}
-
         # Gmail Check
         if "email" in c_action or "mail" in c_action:
             try:
-                from ai_assistant.integrations.email_handler import GmailManager
+                from core_ai.integrations.email_handler import GmailManager
                 gm = GmailManager()
                 unread = gm.get_unread_count()
                 summary = gm.get_inbox_summary(max_emails=3)
@@ -1004,12 +980,41 @@ CORRECTED VERSION:
                     "card": {"type": "email", "title": f"📧 Inbox ({unread} unread)", "body": summary}
                 }
             except Exception as e:
-                return {"success": False, "response": f"Could not access Gmail: {e}"}
+                return {"success": False, "response": f"Could not check email: {e}"}
+
+        # WhatsApp Message (default communication channel for messaging/texts)
+        contact = (
+            params.get("contact")
+            or params.get("recipient")
+            or params.get("contact_name")
+            or params.get("to")
+            or params.get("name")
+            or "friend"
+        )
+        message = (
+            params.get("message")
+            or params.get("text")
+            or params.get("body")
+            or params.get("msg")
+            or ""
+        )
+        try:
+            from core_ai.integrations.whatsapp import send_whatsapp_message
+            res = send_whatsapp_message(contact, message)
+            ok = "✅" in res
+            return {
+                "success": ok,
+                "response": res,
+                "tts": f"Sent WhatsApp message to {contact}." if message else f"Opened WhatsApp chat for {contact}.",
+                "card": {"type": "whatsapp", "title": f"💬 WhatsApp to {contact}", "body": message or "Chat Opened"}
+            }
+        except Exception as e:
+            return {"success": False, "response": f"Could not send WhatsApp message: {e}"}
 
         # Calendar Events
         if "calendar" in c_action or "meeting" in c_action:
             try:
-                from ai_assistant.integrations.google_calendar import CalendarManager
+                from core_ai.integrations.google_calendar import CalendarManager
                 cal = CalendarManager()
                 events = cal.get_upcoming_events(days_ahead=3)
                 return {
@@ -1035,8 +1040,8 @@ CORRECTED VERSION:
         # Song/Artist playback with specific query
         if action == "play_media" or query:
             try:
-                from ai_assistant.core.intent_executor import get_intent_executor
-                from ai_assistant.core.conversation_context import get_context_manager
+                from core_ai.core.intent_executor import get_intent_executor
+                from core_ai.core.conversation_context import get_context_manager
                 exec_res = get_intent_executor().execute("play_media", params, context_manager=get_context_manager())
                 res_val = exec_res.get("result") or exec_res.get("message")
                 q_name = query or "म्यूजिक"
@@ -1062,7 +1067,7 @@ CORRECTED VERSION:
 
         if "next" in action or "skip" in action:
             try:
-                from ai_assistant.integrations.music import spotify_next_track
+                from core_ai.integrations.music import spotify_next_track
                 spotify_next_track()
             except Exception:
                 pass
@@ -1071,7 +1076,7 @@ CORRECTED VERSION:
 
         elif "prev" in action or "previous" in action:
             try:
-                from ai_assistant.integrations.music import spotify_previous_track
+                from core_ai.integrations.music import spotify_previous_track
                 spotify_previous_track()
             except Exception:
                 pass
@@ -1080,7 +1085,7 @@ CORRECTED VERSION:
 
         elif "pause" in action or "stop" in action:
             try:
-                from ai_assistant.integrations.music import spotify_play_pause
+                from core_ai.integrations.music import spotify_play_pause
                 spotify_play_pause()
             except Exception:
                 pass
@@ -1089,7 +1094,7 @@ CORRECTED VERSION:
 
         elif "resume" in action or "play" in action or "play_pause" in action:
             try:
-                from ai_assistant.integrations.music import spotify_play_pause
+                from core_ai.integrations.music import spotify_play_pause
                 spotify_play_pause()
             except Exception:
                 pass
@@ -1119,8 +1124,8 @@ CORRECTED VERSION:
             elif action == "unmute":
                 vol_params["action"] = "unmute"
             try:
-                from ai_assistant.core.intent_executor import get_intent_executor
-                from ai_assistant.core.conversation_context import get_context_manager
+                from core_ai.core.intent_executor import get_intent_executor
+                from core_ai.core.conversation_context import get_context_manager
                 res = get_intent_executor().execute("volume_control", vol_params, context_manager=get_context_manager())
                 msg = str(res.get("result") or res.get("error") or f"Executed {action}")
                 ok = bool(res.get("success", False)) and not msg.startswith(("❌", "Error"))
@@ -1141,7 +1146,7 @@ CORRECTED VERSION:
                 pass
             app_name = params.get("app_name") or params.get("target") or params.get("name") or "browser"
             try:
-                from ai_assistant.core.intent_executor import get_intent_executor
+                from core_ai.core.intent_executor import get_intent_executor
                 res = get_intent_executor().execute("open_app", {"app_name": app_name})
                 r_val = res.get("result")
                 msg = r_val.get("message") if isinstance(r_val, dict) else (str(r_val) if r_val else str(res.get("error") or ""))
@@ -1165,7 +1170,7 @@ CORRECTED VERSION:
                 pass
             app_name = params.get("app_name") or params.get("target") or params.get("name") or ""
             try:
-                from ai_assistant.core.intent_executor import get_intent_executor
+                from core_ai.core.intent_executor import get_intent_executor
                 res = get_intent_executor().execute("close_app", {"app_name": app_name})
                 msg = str(res.get("result") or res.get("error") or f"Closed {app_name}")
                 return {"success": bool(res.get("success", False)), "response": msg, "tts": msg[:120]}
@@ -1212,8 +1217,8 @@ CORRECTED VERSION:
             if exec_intent == "system_control":
                 exec_params.setdefault("action", action)
             try:
-                from ai_assistant.core.intent_executor import get_intent_executor
-                from ai_assistant.core.conversation_context import get_context_manager
+                from core_ai.core.intent_executor import get_intent_executor
+                from core_ai.core.conversation_context import get_context_manager
                 res = get_intent_executor().execute(exec_intent, exec_params, context_manager=get_context_manager())
                 r_val = res.get("result")
                 msg = r_val.get("message") if isinstance(r_val, dict) else str(r_val or res.get("error") or f"Executed {action}")
@@ -1256,7 +1261,7 @@ CORRECTED VERSION:
             is_local_req = active_provider in ("gguf", "local", "offline")
             if not summary and (is_local_req or active_provider in ("gemini", "openai")):
                 try:
-                    from ai_assistant.ai.llm_provider import UnifiedChatInterface
+                    from core_ai.ai.llm_provider import UnifiedChatInterface
                     target_prov = active_provider if active_provider in ("gguf", "openai", "local", "offline") else "gguf"
                     target_mod = active_model if target_prov == active_provider else "pulsar-final-q4_k_m"
                     chat_iface = UnifiedChatInterface(
@@ -1272,7 +1277,7 @@ CORRECTED VERSION:
 
             if not summary:
                 try:
-                    from ai_assistant.core.core import search_google
+                    from core_ai.core.core import search_google
                     summary = search_google(query)
                 except Exception:
                     summary = f"Opened/completed background lookup for: {query}"
@@ -1292,7 +1297,7 @@ CORRECTED VERSION:
                 logger.warning(f"Background notification push failed: {e}")
 
             try:
-                from ai_assistant.core.jarvis_persona import get_lifecycle_coordinator
+                from core_ai.core.jarvis_persona import get_lifecycle_coordinator
                 get_lifecycle_coordinator().speak_proactive_report(
                     title=query,
                     summary=summary or "",
@@ -1321,7 +1326,7 @@ CORRECTED VERSION:
         active_model = self._get_active_model_name()
 
         try:
-            from ai_assistant.core.jarvis_persona import build_persona_system_prompt
+            from core_ai.core.jarvis_persona import build_persona_system_prompt
             system_context = build_persona_system_prompt(
                 provider=active_provider,
                 model=active_model,
@@ -1375,7 +1380,7 @@ CORRECTED VERSION:
         # --- ROUTE 2: Local GGUF ---
         elif active_provider in ('gguf', 'local', 'offline'):
             try:
-                from ai_assistant.ai.llm_provider import UnifiedChatInterface, LLMFactory
+                from core_ai.ai.llm_provider import UnifiedChatInterface, LLMFactory
                 target_m = LLMFactory.sanitize_model_for_provider('gguf', active_model)
                 chat_iface = UnifiedChatInterface(provider='gguf', model=target_m, use_fallback=False)
                 chat_iface.set_system_message(system_context)
@@ -1413,7 +1418,7 @@ CORRECTED VERSION:
         is_local_req = active_provider in ('gguf', 'local', 'offline')
         if not reply and not is_local_req:
             try:
-                from ai_assistant.ai.llm_provider import UnifiedChatInterface
+                from core_ai.ai.llm_provider import UnifiedChatInterface
                 logger.info("Falling back to local GGUF model after cloud provider failure...")
                 chat_iface = UnifiedChatInterface(provider='gguf', model='pulsar-final-q4_k_m', use_fallback=False)
                 chat_iface.set_system_message(system_context)

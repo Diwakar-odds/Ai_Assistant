@@ -169,7 +169,7 @@ def resolve_contact_search_name(contact_name: str) -> str:
     """
     Resolve contact aliases to their actual display/search name in WhatsApp.
     Supports case-insensitive, normalized, phonetic Soundex, and fuzzy string matching.
-    e.g. 'nikky' / 'nicky' / 'niki' -> 'Niky', 'mom' / 'maa' / 'ammi' -> 'Mom', 'diwakar' -> 'Myself'
+    e.g. 'nikky' / 'nicky' / 'niki' -> 'Niky', 'mom' / 'maa' / 'ammi' -> 'Mom', 'self' / 'me' -> 'Myself'
     """
     if not contact_name:
         return ""
@@ -448,6 +448,7 @@ def check_whatsapp_search_results(search_name: str) -> bool:
     """
     Verify if WhatsApp found matches for search_name.
     Returns False if 'No chats, contacts or messages found' is shown.
+    Strictly bounded (0.5s max) to guarantee near-instant message dispatch.
     """
     ensure_default_desktop()
     if not PYWINAUTO_AVAILABLE:
@@ -458,9 +459,12 @@ def check_whatsapp_search_results(search_name: str) -> bool:
         return True
 
     try:
-        app = pywinauto.Application(backend="uia").connect(handle=wa_hwnd)
+        t0 = time.time()
+        app = pywinauto.Application(backend="uia").connect(handle=wa_hwnd, timeout=0.5)
         w = app.window(handle=wa_hwnd)
-        for elem in w.descendants():
+        for elem in w.descendants(control_type="Text"):
+            if time.time() - t0 > 0.5:
+                break
             try:
                 name = elem.element_info.name
                 if not name:
@@ -473,6 +477,41 @@ def check_whatsapp_search_results(search_name: str) -> bool:
     except Exception:
         pass
     return True
+
+
+def get_whatsapp_active_chat_recipient(timeout: float = 1.0) -> Optional[str]:
+    """
+    Inspects WhatsApp Desktop window to find who the currently active chat is with.
+    In Windows WhatsApp, the message input box has automation name:
+    'Type a message to <Recipient>' (e.g. 'Type a message to Niki' or 'Type a message to +91 73078 41241').
+    Returns the recipient name or phone string if verified, or None.
+    """
+    ensure_default_desktop()
+    if not PYWINAUTO_AVAILABLE:
+        return None
+
+    wa_hwnd = find_whatsapp_window()
+    if not wa_hwnd:
+        return None
+
+    try:
+        t0 = time.time()
+        app = pywinauto.Application(backend="uia").connect(handle=wa_hwnd, timeout=0.5)
+        w = app.window(handle=wa_hwnd)
+        for e in w.descendants(control_type="Edit"):
+            if time.time() - t0 > timeout:
+                break
+            try:
+                name = e.element_info.name or ""
+                if "Type a message to" in name:
+                    parts = name.split("Type a message to", 1)
+                    if len(parts) > 1 and parts[1].strip():
+                        return parts[1].strip()
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return None
 
 
 def send_whatsapp_message(contact_name: str, message: str = "") -> str:
@@ -494,12 +533,33 @@ def send_whatsapp_message(contact_name: str, message: str = "") -> str:
     if PYAUTOGUI_AVAILABLE:
         pyautogui.FAILSAFE = True
 
-    # Check if contact is an international phone number with digits
+    # Check if contact is or maps to a valid real phone number (non-dummy)
+    phone_to_use = None
     clean_digits = ''.join(c for c in contact_name if c.isdigit() or c == '+')
-    if len(clean_digits) >= 11 and clean_digits.startswith('+'):
+    if len(clean_digits) >= 11 and clean_digits.startswith('+') and not clean_digits.replace('+', '').startswith('000'):
+        phone_to_use = clean_digits
+    else:
+        contacts = load_contacts()
+        target_clean = contact_name.lower().strip()
+        target_entry = contacts.get(target_clean)
+        if not target_entry:
+            for k, v in contacts.items():
+                if isinstance(v, dict):
+                    if v.get("search_name", "").lower() == target_clean or target_clean in [a.lower() for a in v.get("aliases", [])]:
+                        target_entry = v
+                        break
+        if target_entry and isinstance(target_entry, dict):
+            mapped_phone = str(target_entry.get("phone") or "").strip()
+            digits = ''.join(c for c in mapped_phone if c.isdigit() or c == '+')
+            # Only use if valid non-dummy phone number (not +910000000000 or similar)
+            num_part = digits.replace('+91', '').replace('+', '')
+            if len(digits) >= 10 and not num_part.startswith('000'):
+                phone_to_use = digits
+
+    if phone_to_use:
         try:
             encoded_msg = urllib.parse.quote(message) if message else ""
-            url = f"whatsapp://send?phone={clean_digits}&text={encoded_msg}"
+            url = f"whatsapp://send?phone={phone_to_use}&text={encoded_msg}"
             os.startfile(url)
 
             # Wait for WhatsApp to open and validate number
@@ -507,7 +567,7 @@ def send_whatsapp_message(contact_name: str, message: str = "") -> str:
             focus_whatsapp_window(timeout=2.5)
 
             # Detect if WhatsApp showed an invalid number dialog
-            err_result = check_and_dismiss_whatsapp_error_dialog(clean_digits, timeout=2.5)
+            err_result = check_and_dismiss_whatsapp_error_dialog(phone_to_use, timeout=2.5)
             if err_result:
                 return err_result
 
@@ -515,8 +575,8 @@ def send_whatsapp_message(contact_name: str, message: str = "") -> str:
             if message and PYAUTOGUI_AVAILABLE:
                 time.sleep(0.5)
                 pyautogui.press('enter')
-                return f"✅ Sent WhatsApp message to {clean_digits}: '{message}'"
-            return f"✅ Opened WhatsApp chat for {clean_digits}"
+                return f"✅ Sent WhatsApp message to {search_name} ({phone_to_use}): '{message}'"
+            return f"✅ Opened WhatsApp chat for {search_name} ({phone_to_use})"
         except Exception as e:
             logger.error(f"Failed to open phone URL: {e}")
             return f"❌ Failed to open WhatsApp phone URL: {e}"
@@ -563,6 +623,39 @@ def send_whatsapp_message(contact_name: str, message: str = "") -> str:
             time.sleep(0.3)
             pyautogui.press('enter')
             time.sleep(0.8)
+
+            # Step 6b: Active Recipient Verification Guard (Prevents sending to wrong person or group)
+            active_recipient = get_whatsapp_active_chat_recipient(timeout=1.0)
+            if active_recipient:
+                recip_clean = active_recipient.lower().strip()
+                target_clean = search_name.lower().strip()
+                # Check if target name matches active chat recipient
+                is_match = (
+                    target_clean in recip_clean
+                    or recip_clean in target_clean
+                    or any(part in recip_clean for part in target_clean.split())
+                )
+                if not is_match:
+                    # Also check against contacts.json aliases or phone
+                    contacts = load_contacts()
+                    target_entry = contacts.get(target_clean) or next(
+                        (v for v in contacts.values() if v.get("search_name", "").lower() == target_clean),
+                        None
+                    )
+                    if target_entry:
+                        aliases = [a.lower() for a in target_entry.get("aliases", [])]
+                        phone = str(target_entry.get("phone", "")).lower()
+                        if any(a in recip_clean for a in aliases) or (phone and phone in recip_clean):
+                            is_match = True
+
+                if not is_match:
+                    pyautogui.press('esc')
+                    time.sleep(0.2)
+                    pyautogui.press('esc')
+                    logger.warning(
+                        f"Recipient Guard Aborted: Expected chat with '{search_name}', but active chat opened was '{active_recipient}'"
+                    )
+                    return f"⚠️ Safety Guard: WhatsApp opened '{active_recipient}' instead of '{search_name}'. Message was NOT sent to protect your privacy."
 
             # Step 7: Send message or report chat opened
             if message:

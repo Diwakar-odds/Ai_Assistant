@@ -18,7 +18,7 @@ import asyncio
 from typing import Dict, List, Optional, Any
 
 try:
-    from ai_assistant.integrations.mcp_manager import get_mcp_manager
+    from core_ai.integrations.mcp_manager import get_mcp_manager
     MCP_AVAILABLE = True
 except ImportError:
     MCP_AVAILABLE = False

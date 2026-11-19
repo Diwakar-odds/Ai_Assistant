@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request, send_from_directory, render_templ
 import os, json, sys, time
 from datetime import datetime
 from pathlib import Path
-from ai_assistant.core.database_config import get_db_path, get_db_path_str
+from core_ai.core.database_config import get_db_path, get_db_path_str
 from .common import logger, api_logger, jwt_required, get_jwt_identity, limiter
 
 try:
@@ -189,7 +189,7 @@ def api_smart_command_predict():
         if not LEARNING_SYSTEMS_AVAILABLE:
             return jsonify({"error": "Learning systems not available"}), 503
         
-        from ai_assistant.ai.smart_command_prediction import SmartCommandPredictor
+        from core_ai.ai.smart_command_prediction import SmartCommandPredictor
         predictor = SmartCommandPredictor()
         
         data = request.get_json()
@@ -218,7 +218,7 @@ def api_context_generate():
         if not LEARNING_SYSTEMS_AVAILABLE:
             return jsonify({"error": "Learning systems not available"}), 503
         
-        from ai_assistant.ai.context_aware_response import ContextAwareResponseGenerator
+        from core_ai.ai.context_aware_response import ContextAwareResponseGenerator
         generator = ContextAwareResponseGenerator()
         
         data = request.get_json()
@@ -246,7 +246,7 @@ def api_workflow_recommend():
         if not LEARNING_SYSTEMS_AVAILABLE:
             return jsonify({"error": "Learning systems not available"}), 503
         
-        from ai_assistant.ai.workflow_recommender import WorkflowRecommender
+        from core_ai.ai.workflow_recommender import WorkflowRecommender
         recommender = WorkflowRecommender()
         
         data = request.get_json()
@@ -274,7 +274,7 @@ def api_anomaly_detect():
         if not LEARNING_SYSTEMS_AVAILABLE:
             return jsonify({"error": "Learning systems not available"}), 503
         
-        from ai_assistant.ai.anomaly_detection import AnomalyDetector
+        from core_ai.ai.anomaly_detection import AnomalyDetector
         detector = AnomalyDetector()
         
         data = request.get_json()
@@ -301,7 +301,7 @@ def api_causal_query():
         if not LEARNING_SYSTEMS_AVAILABLE:
             return jsonify({"error": "Learning systems not available"}), 503
         
-        from ai_assistant.ai.causal_inference import CausalInference
+        from core_ai.ai.causal_inference import CausalInference
         causal = CausalInference()
         
         data = request.get_json()
@@ -332,7 +332,7 @@ def api_knowledge_graph_query():
         if not LEARNING_SYSTEMS_AVAILABLE:
             return jsonify({"error": "Learning systems not available"}), 503
         
-        from ai_assistant.ai.enhanced_learning import PersonalKnowledgeGraph
+        from core_ai.ai.enhanced_learning import PersonalKnowledgeGraph
         kg = PersonalKnowledgeGraph(db_path=get_db_path_str("knowledge_graph"))
         
         data = request.get_json()
@@ -363,7 +363,7 @@ def api_adaptive_voice_log():
         if not LEARNING_SYSTEMS_AVAILABLE:
             return jsonify({"error": "Learning systems not available"}), 503
         
-        from ai_assistant.ai.adaptive_voice import AdaptiveVoiceRecognition
+        from core_ai.ai.adaptive_voice import AdaptiveVoiceRecognition
         voice = AdaptiveVoiceRecognition()
         
         data = request.get_json()
@@ -392,7 +392,7 @@ def api_rl_select_action():
         if not LEARNING_SYSTEMS_AVAILABLE:
             return jsonify({"error": "Learning systems not available"}), 503
         
-        from ai_assistant.ai.full_rl_system import PPOAgent
+        from core_ai.ai.full_rl_system import PPOAgent
         agent = PPOAgent(state_dim=10, action_dim=5)
         
         data = request.get_json()

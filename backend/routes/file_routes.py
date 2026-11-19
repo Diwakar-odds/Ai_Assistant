@@ -9,7 +9,7 @@ file_bp = Blueprint('file', __name__)
 def api_organize_files():
     """Organize files by type in a directory"""
     try:
-        from ai_assistant.utils.file_ops import organize_files_by_type
+        from core_ai.utils.file_ops import organize_files_by_type
         
         data = request.get_json()
         directory = data.get('directory')
@@ -39,7 +39,7 @@ def api_organize_files():
 def api_find_duplicates():
     """Find duplicate files in a directory"""
     try:
-        from ai_assistant.utils.file_ops import find_duplicate_files
+        from core_ai.utils.file_ops import find_duplicate_files
         
         data = request.get_json()
         directory = data.get('directory')
@@ -65,7 +65,7 @@ def api_find_duplicates():
 def api_search_files():
     """Search for files with advanced filtering"""
     try:
-        from ai_assistant.utils.file_ops import smart_file_search
+        from core_ai.utils.file_ops import smart_file_search
         
         data = request.get_json()
         directory = data.get('directory')
@@ -93,7 +93,7 @@ def api_search_files():
 def api_batch_rename():
     """Batch rename files using patterns"""
     try:
-        from ai_assistant.utils.file_ops import batch_rename_files
+        from core_ai.utils.file_ops import batch_rename_files
         
         data = request.get_json()
         directory = data.get('directory')
@@ -122,7 +122,7 @@ def api_batch_rename():
 def api_analyze_directory():
     """Analyze directory structure and contents"""
     try:
-        from ai_assistant.utils.file_ops import analyze_directory_structure
+        from core_ai.utils.file_ops import analyze_directory_structure
         
         data = request.get_json()
         directory = data.get('directory')
@@ -147,7 +147,7 @@ def api_analyze_directory():
 def api_ocr_check_dependencies():
     """Check OCR dependencies status"""
     try:
-        from ai_assistant.vision.document_ocr import check_ocr_dependencies
+        from core_ai.vision.document_ocr import check_ocr_dependencies
         
         result = check_ocr_dependencies()
         
@@ -166,7 +166,7 @@ def api_ocr_check_dependencies():
 def api_extract_text_image():
     """Extract text from image using OCR"""
     try:
-        from ai_assistant.vision.document_ocr import extract_text_from_image
+        from core_ai.vision.document_ocr import extract_text_from_image
         
         data = request.get_json()
         image_path = data.get('image_path')
@@ -193,7 +193,7 @@ def api_extract_text_image():
 def api_extract_text_pdf():
     """Extract text from PDF document"""
     try:
-        from ai_assistant.vision.document_ocr import extract_text_from_pdf
+        from core_ai.vision.document_ocr import extract_text_from_pdf
         
         data = request.get_json()
         pdf_path = data.get('pdf_path')
@@ -219,7 +219,7 @@ def api_extract_text_pdf():
 def api_analyze_document():
     """Analyze document structure and metadata"""
     try:
-        from ai_assistant.vision.document_ocr import analyze_document_structure
+        from core_ai.vision.document_ocr import analyze_document_structure
         
         data = request.get_json()
         file_path = data.get('file_path')
@@ -244,7 +244,7 @@ def api_analyze_document():
 def api_extract_key_information():
     """Extract key information from text"""
     try:
-        from ai_assistant.vision.document_ocr import extract_key_information
+        from core_ai.vision.document_ocr import extract_key_information
         
         data = request.get_json()
         text = data.get('text')

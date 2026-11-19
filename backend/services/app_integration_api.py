@@ -432,7 +432,7 @@ def play_hardware_tts():
         return jsonify({'success': False, 'error': 'No text provided'}), 400
 
     try:
-        from ai_assistant.voice.tts_output_service import get_tts_service
+        from core_ai.voice.tts_output_service import get_tts_service
         queued = get_tts_service().speak(
             text,
             interrupt=bool(data.get('interrupt', True)),

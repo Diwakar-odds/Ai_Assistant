@@ -83,7 +83,7 @@ class NotificationMonitor:
         time.sleep(10)
         while self.is_running:
             try:
-                from ai_assistant.integrations.email_handler import GmailManager
+                from core_ai.integrations.email_handler import GmailManager
                 gm = GmailManager()
                 unread_str = gm.get_unread_count()
                 # Parse numeric unread count
@@ -120,7 +120,7 @@ class NotificationMonitor:
         time.sleep(15)
         while self.is_running:
             try:
-                from ai_assistant.integrations.google_calendar import CalendarManager
+                from core_ai.integrations.google_calendar import CalendarManager
                 cal = CalendarManager()
                 events_str = cal.get_upcoming_events(days_ahead=1)
                 

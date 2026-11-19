@@ -6,7 +6,7 @@ from .common import logger, limiter, BACKGROUND_INIT
 local_ai_bp = Blueprint('local_ai', __name__)
 
 try:
-    from ai_assistant.ai.gguf_model_manager import get_gguf_manager, llama_cpp_available
+    from core_ai.ai.gguf_model_manager import get_gguf_manager, llama_cpp_available
     GGUF_AVAILABLE = bool(llama_cpp_available())
 except Exception:
     get_gguf_manager = None
@@ -158,7 +158,7 @@ def local_ai_chat():
             }), 503
 
         gguf_st = _get_gguf_status()
-        from ai_assistant.ai.llm_provider import GGUFProvider, LLMFactory
+        from core_ai.ai.llm_provider import GGUFProvider, LLMFactory
 
         raw_target = req_model or gguf_st.get('loaded_model') or (
             get_model() if (get_provider() or '').lower() == 'gguf' else 'pulsar-final-q4_k_m'
@@ -168,7 +168,7 @@ def local_ai_chat():
         start_time = time.time()
         gguf = GGUFProvider(model=target_model)
         msgs = [
-            {"role": "system", "content": "You are Pulsar, a smart, concise AI assistant created by Diwakar."},
+            {"role": "system", "content": "You are Pulsar, a smart, concise AI assistant."},
             {"role": "user", "content": message},
         ]
         response = gguf.generate_response(msgs, temperature=temperature, max_tokens=max_tokens)
@@ -228,7 +228,7 @@ def local_ai_load_model():
     try:
         data = request.json or {}
         raw_name = str(data.get('model_name') or data.get('model') or 'pulsar-final-q4_k_m').strip()
-        from ai_assistant.ai.llm_provider import LLMFactory
+        from core_ai.ai.llm_provider import LLMFactory
         model_name = LLMFactory.sanitize_model_for_provider('gguf', raw_name)
 
         if not GGUF_AVAILABLE or get_gguf_manager is None:

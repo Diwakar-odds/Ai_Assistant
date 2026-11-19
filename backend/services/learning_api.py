@@ -15,31 +15,31 @@ import json
 
 # Import learning systems
 try:
-    from ai_assistant.ai.active_learning import ActiveLearner
-    from ai_assistant.ai.explainability import ExplainabilityEngine
-    from ai_assistant.ai.behavior_clustering import BehaviorClusterer
-    from ai_assistant.ai.conversation_clustering import ConversationClusterer
-    from ai_assistant.ai.llm_bandit import LLMBandit
-    from ai_assistant.ai.model_compression import ModelCompressor
-    from ai_assistant.ai.workflow_scheduler import WorkflowScheduler
-    from ai_assistant.ai.contrastive_learning import ContrastiveLearner
-    from ai_assistant.ai.self_supervised_learning import SelfSupervisedLearner
-    from ai_assistant.ai.causal_inference import CausalInference
-    from ai_assistant.ai.query_cache import QuerySimilarityCache
-    from ai_assistant.ai.command_sequences import CommandMarkovChain
-    from ai_assistant.ai.historical_rag import HistoricalRAG
-    from ai_assistant.ai.command_predictor import CommandSuccessPredictor
-    from ai_assistant.ai.anomaly_detection import AnomalyDetector
-    from ai_assistant.ai.enhanced_learning import PersonalKnowledgeGraph
-    from ai_assistant.ai.full_rl_system import PPOAgent, RLEnvironmentWrapper
-    from ai_assistant.ai.meta_learning import MAMLLearner
-    from ai_assistant.ai.federated_learning import FederatedServer, FederatedClient
-    from ai_assistant.ai.graph_neural_networks import GraphNeuralNetwork
-    from ai_assistant.ai.domain_embeddings import DomainAdaptedEmbeddings
-    from ai_assistant.ai.smart_command_prediction import SmartCommandPredictor
-    from ai_assistant.ai.adaptive_voice import AdaptiveVoiceRecognition
-    from ai_assistant.ai.workflow_recommender import WorkflowRecommender
-    from ai_assistant.ai.context_aware_response import ContextAwareResponseGenerator
+    from core_ai.ai.active_learning import ActiveLearner
+    from core_ai.ai.explainability import ExplainabilityEngine
+    from core_ai.ai.behavior_clustering import BehaviorClusterer
+    from core_ai.ai.conversation_clustering import ConversationClusterer
+    from core_ai.ai.llm_bandit import LLMBandit
+    from core_ai.ai.model_compression import ModelCompressor
+    from core_ai.ai.workflow_scheduler import WorkflowScheduler
+    from core_ai.ai.contrastive_learning import ContrastiveLearner
+    from core_ai.ai.self_supervised_learning import SelfSupervisedLearner
+    from core_ai.ai.causal_inference import CausalInference
+    from core_ai.ai.query_cache import QuerySimilarityCache
+    from core_ai.ai.command_sequences import CommandMarkovChain
+    from core_ai.ai.historical_rag import HistoricalRAG
+    from core_ai.ai.command_predictor import CommandSuccessPredictor
+    from core_ai.ai.anomaly_detection import AnomalyDetector
+    from core_ai.ai.enhanced_learning import PersonalKnowledgeGraph
+    from core_ai.ai.full_rl_system import PPOAgent, RLEnvironmentWrapper
+    from core_ai.ai.meta_learning import MAMLLearner
+    from core_ai.ai.federated_learning import FederatedServer, FederatedClient
+    from core_ai.ai.graph_neural_networks import GraphNeuralNetwork
+    from core_ai.ai.domain_embeddings import DomainAdaptedEmbeddings
+    from core_ai.ai.smart_command_prediction import SmartCommandPredictor
+    from core_ai.ai.adaptive_voice import AdaptiveVoiceRecognition
+    from core_ai.ai.workflow_recommender import WorkflowRecommender
+    from core_ai.ai.context_aware_response import ContextAwareResponseGenerator
     LEARNING_SYSTEMS_AVAILABLE = True
 except ImportError as e:
     print(f"Learning systems import error: {e}")
