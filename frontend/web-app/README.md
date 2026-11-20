@@ -1,7 +1,7 @@
 # 🎨 PULSAR Frontend Web & Desktop App
 
 ## 📌 Overview
-The **Pulsar Frontend** is a modern, responsive web application and native desktop shell (via Tauri) built using React 18, TypeScript, Vite, Tailwind CSS, Framer Motion, and Three.js. It interfaces directly with the Python backend via REST APIs, Server-Sent Events (SSE) for streaming chat generation, and Socket.IO for real-time multi-agent telemetry.
+The **Pulsar Frontend** is a modern, responsive web application and native desktop shell (via Tauri & PySide6) built using React 18, TypeScript, Vite, Tailwind CSS, Framer Motion, and Three.js. It interfaces directly with the Python backend via REST APIs, Server-Sent Events (SSE) for streaming chat generation, and Socket.IO for real-time multi-agent telemetry.
 
 * **Working Directory:** [`frontend/web-app/`](file:///d:/Projects/Ai_Assistant/frontend/web-app/)
 * **Dev Server URL:** `http://localhost:5173`
@@ -20,17 +20,34 @@ frontend/web-app/
 ├── tsconfig.json               # TypeScript compiler options
 ├── src/                        # React source code
 │   ├── components/             # Reusable UI components
-│   │   ├── agents/             # Multi-Agent status matrix & task logs
-│   │   ├── chat/               # Streaming chat interface with SSE
-│   │   ├── audio/              # Real-time visualizer & microphone input
-│   │   ├── vision/             # Screen capture & OCR visualizer
-│   │   └── automation/         # Workflow and live taskbar status monitors
-│   ├── hooks/                  # Custom React hooks (useWebSocket, useAuth, useAudio)
-│   ├── context/                # Global state (Auth, Theme, AgentContext)
+│   │   ├── CenterColumn/       # Central interactive chat view & VoiceButton
+│   │   ├── DetailViews/        # Deep-dive views (Chat, Voice, Settings, Agents)
+│   │   ├── LeftColumn/         # Sidebar navigation & active session list
+│   │   ├── RightColumn/        # Conversation tracker, telemetry & system monitors
+│   │   └── Modals/             # PIN login, OnboardingModal, & Confirmation prompts
+│   ├── contexts/               # React Context Providers
+│   │   └── DashboardContext.tsx# Central global state (voice, orb, settings, agents)
+│   ├── hooks/                  # Custom React hooks (useSpatialGestures, useAudio)
 │   ├── services/               # API clients (axios / fetch with JWT interceptors)
-│   └── App.tsx                 # Main application view & router
+│   └── App.tsx                 # Master layout & responsive column split
 └── public/                     # Static assets, manifests, icons
 ```
+
+---
+
+## 🌟 Key Visual & UI Features
+
+### 1. Three.js 4D Particle Orb State Sync
+* Embedded WebGL canvas that renders a fluid 4D particle mesh.
+* Dynamically shifts color and particle vibration between `idle`, `listening`, `thinking`, `speaking`, and `error` in response to backend Socket.IO events.
+
+### 2. Multi-Session Conversation Manager
+* Create, rename, delete, and switch between multiple conversational threads.
+* Auto-persisted via `backend/utils/chat_session_store.py` with full markdown rendering and copy-to-clipboard code blocks.
+
+### 3. Real-Time Telemetry & Agent Matrix
+* Live CPU, RAM, GPU temperature, and disk usage gauges.
+* Dynamic agent status cards showing which of the 14 multi-agent cores is currently active, pending, or idle.
 
 ---
 
@@ -69,17 +86,7 @@ The application will launch at `http://localhost:5173`. Any changes in `src/` au
 
 ---
 
-## 🔌 Real-Time Telemetry & WebSocket Events
-
-The frontend subscribes to real-time agent lifecycle and system metrics:
-* `agent.started`: Agent assigned to task (triggers status pulse in UI).
-* `agent.progress`: Step percentage and intermediate outputs.
-* `agent.completed`: Task finished; delivers artifact links (PDF, charts, audio).
-* `system.telemetry`: Live CPU, RAM, and GPU temperature metrics.
-
----
-
 ## 📚 Related Documentation
-* [14 Multi-Agent Cores Specification](file:///d:/Projects/Ai_Assistant/docs/agents/)
 * [Subsystem Capabilities & Architecture](file:///d:/Projects/Ai_Assistant/docs/capabilities/)
-* [API Reference](file:///d:/Projects/Ai_Assistant/docs/api/)
+* [Pulsar Standalone 3-Tier Architecture](file:///d:/Projects/Ai_Assistant/docs/architecture/PULSAR_STANDALONE_ARCHITECTURE.md)
+* [Backend Services Guide](file:///d:/Projects/Ai_Assistant/backend/README.md)

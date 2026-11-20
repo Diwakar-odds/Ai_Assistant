@@ -8,11 +8,11 @@ Welcome to the centralized, categorized documentation repository for **PULSAR (`
 
 ```text
 docs/
-├── agents/             ⭐ Exhaustive specifications for all 14 registered AI agents
-├── capabilities/       ⭐ In-depth guides for Voice, Vision, Automation, NLP, and MCP
-├── architecture/       🏛️ Multi-agent coordinator, state machines, and database schemas
-├── api/                🔌 Complete REST & WebSocket API references
-├── setup/              🛠️ Environment setup, dependencies, hardware specs, and packaging
+├── agents/             ⭐ Specifications for all 14 registered AI agents
+├── capabilities/       ⭐ In-depth guides for Web Intelligence, Voice, Vision, Automation, NLP, and MCP
+├── architecture/       🏛️ Pulsar Standalone, Zero-Hardcoded Storage, Multi-Agent Swarm, and SQLite Schemas
+├── api/                🔌 Complete REST, WebSocket, and IPC API references
+├── setup/              🛠️ Environment setup, dependencies, Packaging & Distribution, and Developer Guide
 ├── security/           🛡️ Security architecture, PIN authentication, and vulnerability audit
 └── archive_reports/    🗄️ Historical point-in-time reports, snapshots, and legacy notes
 ```
@@ -46,22 +46,22 @@ Every agent has a dedicated document covering identity, class hierarchy, declare
 
 Deep architectural dives into core features operating across the platform:
 
+* 🌐 **Web Intelligence & Real-Time Search:** [WEB_INTELLIGENCE_AND_SEARCH.md](capabilities/WEB_INTELLIGENCE_AND_SEARCH.md)  
+  *Autonomous 4-mode classifier (`BACKGROUND_GROUNDING`, `BROWSER_ACTION`, `DEEP_RESEARCH`, `DIRECT_CHAT`), multi-engine fallback (DuckDuckGo, Instant Facts, SerpApi, Tavily, Wikipedia), tiered TTL caching, and LLM prompt grounding.*
 * 🎙️ **Voice & Speech Engine:** [VOICE_AND_SPEECH_ENGINE.md](capabilities/VOICE_AND_SPEECH_ENGINE.md)  
-  *Vosk offline ASR, Whisper, EchoGuard loop suppression, Voice Activity Detection, Neural TTS.*
+  *Reference-counted Windows CoreAudio ducking (-65%), faster-whisper STT, Vosk offline ASR, EchoGuard acoustic loop suppression, speech text crisper, Hinglish vocabulary registry, and EdgeTTS/KittenTTS synthesis.*
 * 👁️ **Vision & OCR System:** [VISION_AND_OCR_SYSTEM.md](capabilities/VISION_AND_OCR_SYSTEM.md)  
   *Tesseract OCR, Gemini Vision, local VLM, facial recognition & MediaPipe hand gestures.*
 * 🖥️ **Desktop & GUI Automation:** [DESKTOP_AND_GUI_AUTOMATION.md](capabilities/DESKTOP_AND_GUI_AUTOMATION.md)  
-  *Pywinauto UI control, window manager, live taskbar analysis, closed-loop visual verification.*
-* ⚡ **Smart Workflows & Chains:** [SMART_WORKFLOWS_AND_CHAINS.md](capabilities/SMART_WORKFLOWS_AND_CHAINS.md)  
-  *Multi-agent DAG scheduling, step dependency pipelining, and self-healing automation.*
+  *Windows COM automation, screen-share stealth mode exclusion (`SetWindowDisplayAffinity`), floating 4D particle orb overlay, window manager, live taskbar analysis, and debounced emergency stop.*
+* ⚡ **Smart Workflows, Swarm Planner & DAG Memory:** [SMART_WORKFLOWS_AND_CHAINS.md](capabilities/SMART_WORKFLOWS_AND_CHAINS.md)  
+  *Dynamic Swarm Meta-Planner, Workflow Memory DAG Cache (`projects.db`), multi-agent DAG scheduling, compound syntax parsing (`&&`, `->`, Hinglish), and self-healing automation.*
 * 💬 **Offline NLP & Intent Matching:** [OFFLINE_NLP_AND_INTENTS.md](capabilities/OFFLINE_NLP_AND_INTENTS.md)  
-  *Fine-tuned offline transformer model, sub-millisecond intent tables, zero-latency local routing.*
+  *27 system intent categories, local command normalizer, Hinglish intent classifier, zero-latency local routing.*
 * 🕸️ **Personal Knowledge Graph:** [PERSONAL_KNOWLEDGE_GRAPH.md](capabilities/PERSONAL_KNOWLEDGE_GRAPH.md)  
   *Entity-relationship memory in SQLite, edge weight reinforcement, adaptive preference recall.*
 * 🤖 **Local AI & Model Switching:** [LOCAL_AI_AND_MODEL_SWITCHING.md](capabilities/LOCAL_AI_AND_MODEL_SWITCHING.md)  
-  *Ollama / GGUF local inference gateway vs. Gemini / OpenAI cloud routing with automatic failover.*
-* 🌐 **Browser Automation & Scraping:** [BROWSER_AUTOMATION_AND_SCRAPING.md](capabilities/BROWSER_AUTOMATION_AND_SCRAPING.md)  
-  *Persistent cookie/session profiles, dynamic waiting, and anti-bot stealth.*
+  *Native GGUF CPU/GPU execution via `llama-cpp-python` (Llama 3.1 8B Instruct Q4_K_M), strict intent routing, and network-aware cloud failover to Gemini/OpenRouter/Groq.*
 * 🔌 **Model Context Protocol (MCP):** [MCP_AND_EXTERNAL_INTEGRATIONS.md](capabilities/MCP_AND_EXTERNAL_INTEGRATIONS.md)  
   *Connecting standardized local and remote tool servers via STDIO/SSE.*
 
@@ -69,42 +69,45 @@ Deep architectural dives into core features operating across the platform:
 
 ## 🏛️ 3. Core Architecture (`docs/architecture/`)
 
-* [DATABASE_SCHEMAS.md](architecture/DATABASE_SCHEMAS.md): Relational schemas for `personal_knowledge`, `memory`, and `users`.
-* [ADVANCED_LEARNING_SYSTEMS.md](architecture/ADVANCED_LEARNING_SYSTEMS.md): Machine learning paradigms and continuous learning loops.
-* [ONLINE_LEARNING_ARCHITECTURE.md](architecture/ONLINE_LEARNING_ARCHITECTURE.md): Data routing, observation buffers, and memory persistence.
-* [FINE_TUNING_STRATEGY.md](architecture/FINE_TUNING_STRATEGY.md): LoRA fine-tuning pipelines and training datasets.
-* [COMPLETE_MULTI_AGENT_IMPLEMENTATION_PLAN.md](architecture/COMPLETE_MULTI_AGENT_IMPLEMENTATION_PLAN.md): Multi-Agent coordinator design.
+* 🌌 [PULSAR_STANDALONE_ARCHITECTURE.md](architecture/PULSAR_STANDALONE_ARCHITECTURE.md): Strict Paradigm B dual-mode binary design, Win32 Kernel Job Object supervision (`JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`), Single-Instance Mutex, Token Security, Parent Watchdog, and 4D Orb Window.
+* 🗄️ [STORAGE_AND_PATHS_ARCHITECTURE.md](architecture/STORAGE_AND_PATHS_ARCHITECTURE.md): Enterprise Zero-Hardcoded Storage Architecture, dynamic `%APPDATA%\PulsarAI\` path resolution, SQLite WAL mode concurrency, and crash recovery.
+* 🤖 [COMPLETE_MULTI_AGENT_IMPLEMENTATION_PLAN.md](architecture/COMPLETE_MULTI_AGENT_IMPLEMENTATION_PLAN.md): Multi-Agent coordinator design and agent dispatch state machine.
+* 🗃️ [DATABASE_SCHEMAS.md](architecture/DATABASE_SCHEMAS.md): Relational schemas for `personal_knowledge`, `historical_rag`, `commitments`, and `projects`.
+* 🧠 [ADVANCED_LEARNING_SYSTEMS.md](architecture/ADVANCED_LEARNING_SYSTEMS.md): The 27 machine learning paradigms and continuous learning loops.
+* 🔄 [ONLINE_LEARNING_ARCHITECTURE.md](architecture/ONLINE_LEARNING_ARCHITECTURE.md): Data routing, observation buffers, and memory persistence.
+* 🎯 [FINE_TUNING_STRATEGY.md](architecture/FINE_TUNING_STRATEGY.md): LoRA fine-tuning pipelines and 2.5M command dataset generation.
 
 ---
 
 ## 🔌 4. API Reference (`docs/api/`)
 
-* [API_REFERENCE_COMPLETE.md](api/API_REFERENCE_COMPLETE.md): Complete REST endpoint catalog.
+* [API_REFERENCE_COMPLETE.md](api/API_REFERENCE_COMPLETE.md): Complete REST endpoint catalog across all 27 systems.
 * [CHAIN_OF_ACTIONS_API.md](api/CHAIN_OF_ACTIONS_API.md): Specification for `/api/chain/*` DAG endpoints.
 * [MODEL_SELECTION_API.md](api/MODEL_SELECTION_API.md): Dynamic model switching and LLM status endpoints.
 * [WEB_BACKEND_INTEGRATION.md](api/WEB_BACKEND_INTEGRATION.md): Telemetry, health checks, and WebSocket streams.
 
 ---
 
-## 🛠️ 5. Setup & Developer Environment (`docs/setup/`)
+## 🛠️ 5. Setup, Packaging & Distribution (`docs/setup/`)
 
-* [DEVELOPER_SETUP.md](setup/DEVELOPER_SETUP.md): Windows environment configuration and toolchain.
-* [INSTALLATION_GUIDE.md](setup/INSTALLATION_GUIDE.md): Step-by-step setup from scratch.
-* [DEPLOYMENT_GUIDE.md](setup/DEPLOYMENT_GUIDE.md): Packaging desktop binaries and running background services.
-* [DEPENDENCY_UPDATE_MANAGEMENT.md](setup/DEPENDENCY_UPDATE_MANAGEMENT.md): Managing Python and npm package upgrades.
+* 📦 [PACKAGING_AND_DISTRIBUTION.md](setup/PACKAGING_AND_DISTRIBUTION.md): Automated distribution pipeline (`scripts/build_distributable_release.py`), native C# Windows 11 Setup Wizard (`PulsarSetup.exe`), PyInstaller specs, and privacy sanitization tools.
+* 💻 [DEVELOPER_SETUP.md](setup/DEVELOPER_SETUP.md): Windows environment configuration and C++ build toolchain.
+* 🚀 [INSTALLATION_GUIDE.md](setup/INSTALLATION_GUIDE.md): Step-by-step developer setup from scratch.
+* 🔄 [DEPENDENCY_UPDATE_MANAGEMENT.md](setup/DEPENDENCY_UPDATE_MANAGEMENT.md): Managing Python and npm package upgrades.
 
 ---
 
 ## 🛡️ 6. Security & Vulnerability Audits (`docs/security/`)
 
-* [SECURITY.md](security/SECURITY.md): Global security policies and disclosure guidelines.
-* [PIN_AUTHENTICATION.md](security/PIN_AUTHENTICATION.md): Secure PIN verification and constant-time comparison.
-* [APP_INTEGRATION_SECURITY.md](security/APP_INTEGRATION_SECURITY.md): Gated confirmation workflows and sandbox boundaries.
+* [SECURITY.md](security/SECURITY.md): Global security policies, sandbox boundaries, and disclosure guidelines.
+* [PIN_AUTHENTICATION.md](security/PIN_AUTHENTICATION.md): Secure constant-time PIN verification and JWT token issuance.
+* [APP_INTEGRATION_SECURITY.md](security/APP_INTEGRATION_SECURITY.md): Gated confirmation workflows for destructive system commands.
 * [AUDIT_AND_VULNERABILITY_REPORT.md](security/AUDIT_AND_VULNERABILITY_REPORT.md): Comprehensive codebase audit tracking bugs, breakpoints, and loose connections.
 
 ---
 
 ## 🔗 Primary Repository Entrypoints
-* 🏠 **[Root Project README](../../README.md)**: Global project architecture and quickstart.
-* 🎨 **[Frontend README](../../frontend/web-app/README.md)**: React 18, Vite, Tailwind, and Tauri client.
-* ⚙️ **[Backend README](../../backend/README.md)**: Flask/FastAPI runtime, routes, and background threads.
+* 🏠 **[Root Project README](../README.md)**: Global project architecture and quickstart.
+* 🌌 **[Pulsar Subsystem README](../pulsar/README.md)**: Standalone desktop companion, 4D Orb, tray app, and host supervisor.
+* 🎨 **[Frontend README](../frontend/web-app/README.md)**: React 18, Vite, Tailwind, Three.js 4D Orb, and Tauri client.
+* ⚙️ **[Backend README](../backend/README.md)**: Modern web backend, route blueprints, service forwarders, and websockets.

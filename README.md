@@ -1,11 +1,12 @@
 <div align="center">
   <h1>🌌 PULSAR</h1>
-  <p><strong>Native OS Automation via Agentic LLM</strong></p>
-  <p><em>An Offline Multi-Modal LLM Assistant for Windows</em></p>
+  <p><strong>Native Windows 10/11 Desktop AI Companion & Autonomous OS Automation Suite</strong></p>
+  <p><em>100% Offline Multi-Modal Intelligence • Paradigm B Dual-Mode Process Architecture • Dynamic Swarm Meta-Planner</em></p>
 
   <p>
     <a href="frontend/web-app/README.md"><strong>🎨 Frontend Guide</strong></a> •
     <a href="backend/README.md"><strong>⚙️ Backend Guide</strong></a> •
+    <a href="pulsar/README.md"><strong>🌌 Pulsar Subsystem Guide</strong></a> •
     <a href="docs/README.md"><strong>📚 Central Documentation Hub</strong></a> •
     <a href="docs/security/AUDIT_AND_VULNERABILITY_REPORT.md"><strong>🛡️ Security & Bug Audit</strong></a>
   </p>
@@ -15,197 +16,395 @@
 
 > ### 🚀 Quick Navigation to Granular Documentation
 > * **14 Dedicated Agent Specs:** [Productivity](docs/agents/01_PRODUCTIVITY_AGENT.md) • [Research](docs/agents/02_RESEARCH_AGENT.md) • [Writer](docs/agents/03_WRITER_AGENT.md) • [Video](docs/agents/04_VIDEO_AGENT.md) • [Creative](docs/agents/05_CREATIVE_AGENT.md) • [Data Analyst](docs/agents/06_DATA_ANALYST_AGENT.md) • [Database](docs/agents/07_DATABASE_AGENT.md) • [Communication](docs/agents/08_COMMUNICATION_AGENT.md) • [Web](docs/agents/09_WEB_AGENT.md) • [Student](docs/agents/10_STUDENT_AGENT.md) • [File Manager](docs/agents/11_FILE_MANAGER_AGENT.md) • [Audio](docs/agents/12_AUDIO_AGENT.md) • [Deep Research](docs/agents/13_DEEP_RESEARCH_AGENT.md) • [Autonomous Learning](docs/agents/14_AUTONOMOUS_LEARNING_AGENT.md)
-> * **Subsystem Engines:** [Voice & Speech](docs/capabilities/VOICE_AND_SPEECH_ENGINE.md) • [Vision & OCR](docs/capabilities/VISION_AND_OCR_SYSTEM.md) • [Desktop & GUI Automation](docs/capabilities/DESKTOP_AND_GUI_AUTOMATION.md) • [Smart Workflows & Chains](docs/capabilities/SMART_WORKFLOWS_AND_CHAINS.md) • [Offline NLP & Intents](docs/capabilities/OFFLINE_NLP_AND_INTENTS.md) • [Personal Knowledge Graph](docs/capabilities/PERSONAL_KNOWLEDGE_GRAPH.md) • [Local AI & Model Switching](docs/capabilities/LOCAL_AI_AND_MODEL_SWITCHING.md) • [Browser Automation](docs/capabilities/BROWSER_AUTOMATION_AND_SCRAPING.md) • [MCP Protocol](docs/capabilities/MCP_AND_EXTERNAL_INTEGRATIONS.md)
+> * **Architecture Deep Dives:** [Pulsar 3-Tier Architecture](docs/architecture/PULSAR_STANDALONE_ARCHITECTURE.md) • [Enterprise Zero-Hardcoded Storage](docs/architecture/STORAGE_AND_PATHS_ARCHITECTURE.md) • [Complete Multi-Agent Implementation](docs/architecture/COMPLETE_MULTI_AGENT_IMPLEMENTATION_PLAN.md) • [Packaging & Windows Distribution](docs/setup/PACKAGING_AND_DISTRIBUTION.md)
+> * **Subsystem Capabilities:** [Web Intelligence & Search](docs/capabilities/WEB_INTELLIGENCE_AND_SEARCH.md) • [Voice & Speech Engine](docs/capabilities/VOICE_AND_SPEECH_ENGINE.md) • [Desktop & GUI Automation](docs/capabilities/DESKTOP_AND_GUI_AUTOMATION.md) • [Smart Workflows & Swarm Planner](docs/capabilities/SMART_WORKFLOWS_AND_CHAINS.md) • [Local GGUF & Dynamic Switching](docs/capabilities/LOCAL_AI_AND_MODEL_SWITCHING.md) • [Vision & OCR](docs/capabilities/VISION_AND_OCR_SYSTEM.md) • [Personal Knowledge Graph](docs/capabilities/PERSONAL_KNOWLEDGE_GRAPH.md) • [MCP Protocol](docs/capabilities/MCP_AND_EXTERNAL_INTEGRATIONS.md)
 
 ---
 
-## Table of Contents
-1. [Project Vision & Key Features](#1-project-vision--key-features)
-2. [Quickstart Guide](#2-quickstart-guide)
-3. [Environment Variables Reference](#3-environment-variables-reference)
-4. [Security Model](#4-security-model)
-5. [API Overview](#5-api-overview)
-6. [Monorepo Architecture Deep Dive](#6-monorepo-architecture-deep-dive)
-7. [The 27 Advanced Learning Systems](#7-the-27-advanced-learning-systems)
-8. [Complete API Reference Guide](#8-complete-api-reference-guide)
-9. [Automated Codebase Documentation](#9-automated-codebase-documentation)
-10. [Desktop Integration & Automation](#10-desktop-integration--automation)
-11. [Comprehensive Setup & Installation](#11-comprehensive-setup--installation)
-12. [Executable Packaging Guide](#12-executable-packaging-guide)
-13. [Troubleshooting & Known Issues](#13-troubleshooting--known-issues)
+## 📑 Master Table of Contents
+1. [Project Vision & 2026 Q3/Q4 Breakthroughs](#1-project-vision--2026-q3q4-breakthroughs)
+2. [User Guide: Quickstart, Everyday Problem Solving & Controls](#2-user-guide-quickstart-everyday-problem-solving--controls)
+3. [Developer Guide: Architecture, Setup & Launch Modes](#3-developer-guide-architecture-setup--launch-modes)
+4. [The 3-Tier Pulsar Standalone Architecture (Paradigm B)](#4-the-3-tier-pulsar-standalone-architecture-paradigm-b)
+5. [Enterprise Zero-Hardcoded Storage Architecture](#5-enterprise-zero-hardcoded-storage-architecture)
+6. [Tiered Web Intelligence Subsystem](#6-tiered-web-intelligence-subsystem)
+7. [Voice Pipeline & Windows Audio Ducking](#7-voice-pipeline--windows-audio-ducking)
+8. [Dynamic Swarm Meta-Planner & Workflow Memory DAG Cache](#8-dynamic-swarm-meta-planner--workflow-memory-dag-cache)
+9. [Anti-Servant JARVIS Persona & Local Command Normalization](#9-anti-servant-jarvis-persona--local-command-normalization)
+10. [Monorepo Directory Map](#10-monorepo-directory-map)
+11. [The 14 Multi-Agent Cores Specification](#11-the-14-multi-agent-cores-specification)
+12. [The 27 Advanced Learning Systems](#12-the-27-advanced-learning-systems)
+13. [Packaging & Standalone Windows Distribution](#13-packaging--standalone-windows-distribution)
+14. [Developer Troubleshooting & Debugging Guide](#14-developer-troubleshooting--debugging-guide)
+15. [Complete API Reference Guide](#15-complete-api-reference-guide)
 
 ---
 
-## 1. Project Vision & Key Features
+## 1. Project Vision & 2026 Q3/Q4 Breakthroughs
 
-PULSAR is not just another chatbot. It is a **native Operating System Automation Suite** designed to act as your personal AI desktop agent. Unlike traditional web-based LLMs that are sandboxed in a browser, PULSAR connects directly to your Windows OS to observe, learn, and execute complex workflows on your behalf.
+PULSAR is not another web-based chat wrapper. It is a **native Operating System Automation Suite & AI Desktop Companion** designed for Windows 10 and Windows 11. Unlike cloud chatbots sandboxed in browser tabs, PULSAR connects directly to the Windows OS kernel to observe, learn, speak, and execute multi-step desktop workflows autonomously.
 
-### Key Capabilities (Why PULSAR?)
-- **Native Windows Automation:** PULSAR can open apps, click buttons, type text, and manage your files directly.
-- **100% Offline & Private:** Powered by a massive 2.5 million line custom fine-tuning dataset, it runs entirely on local models.
-- **GGUF CPU-Inference Architecture:** We utilize a custom fine-tuned, 4-bit quantized Llama 3.1 8B Instruct model (Q4_K_M GGUF format) running natively via `llama-cpp-python` to process and classify user intents seamlessly without a GPU.
-- **Multi-Modal Intelligence:** Features advanced computer vision (to read your screen) and voice integration (Whisper/TTS) so you can speak to it naturally.
-- **Continuous Learning:** Built with 27 distinct machine learning paradigms (including Active Learning and Meta Learning) that adapt to your personal habits and slang (like Hinglish) over time.
-- **Agentic Execution:** It breaks down complex goals into sub-tasks and uses multi-agent negotiation to find the best way to execute them.
-
-PULSAR features over 700 specialized Python modules, 27 distinct machine learning paradigms, and a beautiful React frontend.
-
-### Project JARVIS Upgrades (Phase 1 & 2 Complete)
-Recent integrations have massive upgraded the assistant's autonomy and personality:
-- **Audio-Based Emotion Tracking**: Calculates the intensity of your voice stream to guess if you are frustrated or calm before reading the text transcript.
-- **Context-Switching Watcher**: Actively tracks your OS window states and prepares proactive suggestions if you suddenly switch contexts (e.g. from coding to browsing).
-- **Proactive Diagnostics**: Scans for low disk space, expired backups, and API keys.
-- **Trust-Scaling Personality Engine**: Seamlessly transitions from a formal, robotic AI (Low Trust) to a highly sarcastic companion who drops custom catchphrases (High Trust).
-- **Continuous Dashboard**: Real-time React dashboard visualizing Self-Healing Engine logs and User DNA trust scores.
-- **Zero-Dependency Long-Term Memory (RAG)**: A custom-built Retrieval-Augmented Generation system using SQLite `FTS5` full-text search to persist and recall past conversations with lightning speed and zero extra RAM footprint.
-- **Optimized Voice Loop**: Supercharged real-time voice inference using `faster-whisper` and dynamic chunking for instantaneous transcription.
+### 🌟 Key Architectural Pillars:
+* **100% Offline & Private Default**: Uses quantized **GGUF** models executed natively via `llama-cpp-python` (Llama 3.1 8B Instruct Q4_K_M) on CPU or CUDA/Vulkan GPUs with zero external telemetry leakage.
+* **Paradigm B Dual-Mode Process Isolation**: Separates the native PySide6 GUI Host and floating 4D particle orb from the heavy AI & audio core. Managed under a **Win32 Kernel Job Object** ensuring zero orphaned background processes.
+* **Enterprise Zero-Hardcoded Storage Architecture**: Automatically resolves `%LOCALAPPDATA%\PulsarAI` for databases and `%APPDATA%\PulsarAI\config` for settings, eliminating all machine-specific paths and permission crashes.
+* **Autonomous Tiered Web Intelligence**: Features a 4-mode intent classifier (`BACKGROUND_GROUNDING`, `BROWSER_ACTION`, `DEEP_RESEARCH`, `DIRECT_CHAT`) that silently searches the web (DuckDuckGo, Instant Facts, SerpApi, Tavily, Wikipedia) to ground real-time queries in <400ms without opening disruptive browser windows.
+* **Next-Gen Voice Pipeline**: Reference-counted Windows CoreAudio ducking (-65% volume attenuation during speech turns), faster-whisper STT, Edge-TTS/KittenTTS synthesis, deterministic Hinglish speech text crisper, acoustic echo buffer, and seamless barge-in interruption.
+* **Dynamic Swarm Meta-Planner & Workflow Memory**: Decomposes high-level compound user goals into a Directed Acyclic Graph (DAG) across 14 specialized agents, and caches validated DAGs in SQLite `projects.db` for instant re-execution.
+* **Anti-Servant JARVIS Persona**: Tony Stark's JARVIS-inspired witty, proactive companion who sets boundaries, debounces emergency stops, and speaks natural conversational Hinglish.
+* **Screen-Share Stealth Mode Exclusion**: Uses `SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE)` to keep the 4D Orb and companion dashboard completely invisible to Microsoft Teams, Zoom, Discord, and OBS screen captures.
+* **Windows 11 Fluent Setup Wizard**: Compiles a standalone native C# installer (`PulsarSetup.exe`) and portable bundle (`Pulsar.exe`) with multi-resolution taskbar icon binding and automated data sanitization.
 
 ---
 
-## 2. Quickstart Guide
+## 2. User Guide: Quickstart, Everyday Problem Solving & Controls
 
-> **Note**: PULSAR currently natively supports Windows.
+Whether you downloaded the pre-packaged `PulsarSetup.exe` installer or run the source code, PULSAR is built to be intuitive, responsive, and reliable.
 
-### Prerequisites
-- Python 3.10+
-- Node.js 18+
-- `llama-cpp-python` + a `.gguf` model in `models/` (optional, for running local GGUF LLMs)
-- [Tesseract-OCR](https://github.com/UB-Mannheim/tesseract/wiki) (Add to your System PATH)
-- C++ Build Tools (Required for compiling dependencies)
+### 🚀 Running PULSAR as a User
+1. **Installed Application**: Double-click **Pulsar** from your Windows Start Menu or Desktop.
+2. **Portable Standalone**: Double-click `Pulsar.exe` in `dist_release/Pulsar_AI_Assistant/`.
+3. **From Repository**: Double-click [`start.bat`](file:///d:/Projects/Ai_Assistant/start.bat) in the project root.
 
-### Setup & Run
-1. **Clone & Setup Environment**
-   ```bash
-   git clone <repo-url>
-   cd Ai_Assistant
-   python -m venv venv
-   .\venv\Scripts\activate
-   pip install -r requirements.txt
-   ```
+### 🔮 Interacting with the Floating 4D Particle Orb
+When Pulsar starts, a fluid 4D particle orb appears on your desktop:
+* **Blue Gentle Pulse (`idle`)**: Pulsar is passively monitoring and ready for commands.
+* **Expanding Green Wave (`listening`)**: Pulsar is hearing your voice or microphone stream.
+* **Swirling Golden Galaxy (`thinking`)**: Local GGUF or Swarm planner is processing your task.
+* **Harmonic Magenta Wave (`speaking`)**: Neural TTS is speaking; background PC audio is automatically ducked.
+* **Red Warning Flare (`error`)**: Action was blocked or required permission.
+* **Desktop Controls**:
+  - **Single Click & Drag**: Move the orb anywhere across multi-monitor setups.
+  - **Double Click**: Toggle the main dashboard window open/closed.
+  - **Right Click**: Instant mute / unmute microphone.
 
-2. **Configure Environment Variables**
-   Create a `.env` file in the root directory (see Section 3 for reference).
-
-3. **Start the Backend**
-   ```bash
-   python backend/modern_web_backend.py
-   ```
-
-4. **Start the Frontend**
-   ```bash
-   cd frontend/web-app
-   npm install
-   npm run dev
-   ```
-
----
-
-## 3. Environment Variables Reference
-
-Create a `.env` file in the root directory.
-
-| Variable | Requirement | Description |
-|---|---|---|
-| `OPENAI_API_KEY` | Optional | For falling back to OpenAI models if local LLM is unavailable. |
-| `GOOGLE_GEMINI_API_KEY` | Optional | For utilizing Gemini models for visual and complex reasoning. |
-| `ELEVEN_LABS_API_KEY` | Optional | For premium Text-To-Speech (TTS). |
-| `PIN_HASH` | **Required** | Hashed PIN for authenticating critical endpoints and desktop controls. |
-| `SECURITY_KEY` | **Required** | Secret key for encrypting local data. |
-| `TESSERACT_PATH` | Optional | Path to Tesseract executable (if not in System PATH). |
+### 🎙️ Everyday Voice & Hinglish Commands
+Pulsar recognizes conversational English, Hindi, and colloquial Hinglish:
+* **Factual & Real-Time Queries**:
+  - *"Hey Pulsar, aaj gold ka rate kya hai?"* → Silently searches web and answers with today's live rate.
+  - *"What is the latest score in the India vs Australia match?"* → Instant background grounding.
+  - *"What is the weather outside?"* → Local weather forecast via Instant Facts.
+* **Media & OS Control**:
+  - *"Gaana bajao"* or *"Play lo-fi music on YouTube"* → Ducks volume, launches stream.
+  - *"Awaaz thodi kam karo"* → Windows volume decremented smoothly.
+  - *"Notepad kholo aur meeting points note karo"* → Opens app and writes text.
+* **Multi-Step Compound Goals (The Swarm in Action)**:
+  - *"EV battery manufacturing in India pe research karo, ek chart render karo, aur PDF report generate kar do"* → Swarm Planner breaks this into Deep Research -> Data Analyst -> Productivity Agent, and delivers the finished PDF artifact in seconds.
+  - *"WhatsApp pe Diwakar ko message karo ki meeting 5 baje hai"* → Uses phonetic contact search and drafts WhatsApp message safely.
+* **Emergency Interruption**:
+  - Say *"Ruko"*, *"Stop"*, or press `Ctrl + Alt + Shift + S` at any moment to abort automated actions immediately.
 
 ---
 
-## 4. Security Model
+## 3. Developer Guide: Architecture, Setup & Launch Modes
 
-PULSAR takes security and privacy seriously:
-- **Authentication**: High-risk actions (e.g., executing desktop commands) require PIN-based authentication.
-- **Authorization**: Implements Role-Based Access Control (RBAC).
-- **Data Privacy**: Local LLMs guarantee zero data leakage. When external APIs are used, extensive data anonymization and PII redaction occur.
-- **Encryption**: Sensitive logs and user profiles are stored encrypted using the defined `SECURITY_KEY`.
+### 💻 Developer Prerequisites
+* **Operating System**: Windows 10 or Windows 11 (64-bit).
+* **Python**: Version 3.10.x or 3.11.x (Installed and added to PATH).
+* **Node.js**: Version 18+ or 20+ (with npm).
+* **C++ Build Tools**: Visual Studio C++ Build Tools (Required for `llama-cpp-python` compilation).
+* **Tesseract-OCR**: Installed and added to System PATH (for screen vision & OCR).
+
+### 🛠️ Environment Setup
+```powershell
+# 1. Clone repository and navigate to root
+git clone <repo-url>
+cd Ai_Assistant
+
+# 2. Create and activate virtual environment
+python -m venv venv
+.\venv\Scripts\activate
+
+# 3. Install Python dependencies
+pip install -r config/requirements/requirements.txt
+
+# 4. Install Frontend dependencies
+cd frontend/web-app
+npm install
+cd ../..
+```
+
+### 🚀 Developer Launch Modes
+
+| Mode | Command | What It Runs | Best Used For |
+| :--- | :--- | :--- | :--- |
+| **Full Desktop Companion** | `python -m pulsar.host` | Native PySide6 Host + Headless Core inside Win32 Job Object + System Tray + 4D Orb | Daily development, end-to-end desktop testing |
+| **Tray-Only Stealth Mode** | `python -m pulsar.host --tray` | Starts minimized in Windows Notification Tray with floating 4D Orb active | Testing background voice loop and stealth mode |
+| **Headless Core Only** | `python -m pulsar.core` | FastAPI / Uvicorn server on port 5000 with REST & WebSocket API | API development, route testing, backend profiling |
+| **Web Fullstack Mode** | `python web.py` | Modern web backend on 5000 + serves React UI | Web dashboard testing, browser-only workflows |
+| **Vite Hot-Reload Frontend**| `cd frontend/web-app && npm run dev` | Vite HMR server on port 5173 with proxy to backend port 5000 | Rapid UI styling, component engineering |
+
+### 🧪 Running the Verification Test Benches
+
+PULSAR features rigorous automated test suites validating every architectural tier:
+```powershell
+# Phase 2: Headless Core, health, origin guard, token security, and watchdog
+pytest tests/test_phase2_core_headless.py -v
+
+# Phase 3: Host supervisor, Win32 Job Object, Mutex, Tray, and Orb rendering
+pytest tests/test_phase3_host.py -v
+
+# Phase 4: Zero-GUI audio worker, stream capture, and wake-word matching
+pytest tests/test_phase4_audio.py -v
+
+# Phase 5: Native packaging, shortcuts, AppUserModelID, and pythonw safety
+pytest tests/test_phase5_windows_app.py -v
+
+# Production Storage & Paths: AppData resolution, SQLite WAL mode, crash recovery
+pytest tests/unit/test_production_storage_and_paths.py -v
+
+# Web Intelligence: Classifier modes, multi-engine search, TTL cache, grounding
+pytest tests/test_web_intelligence.py -v
+
+# Swarm Planner & Workflow Memory DAG
+pytest tests/test_swarm_planner_and_memory.py -v
+```
 
 ---
 
-## 5. API Overview
+## 4. The 3-Tier Pulsar Standalone Architecture (Paradigm B)
 
-PULSAR exposes several REST endpoints for frontend integration. Detailed route information can be found in the API Reference below.
+The core architecture follows **Paradigm B: Strict Process Isolation with Win32 Kernel Job Object Supervision**.
 
-- **Authentication**: Most `/api/system/*` and `/api/app/*` routes require authentication via headers.
-- **Data Exchange**: All endpoints accept and return `application/json` unless otherwise specified (like WebSocket events).
+* 📖 **Dedicated Architectural Spec**: [`docs/architecture/PULSAR_STANDALONE_ARCHITECTURE.md`](file:///d:/Projects/Ai_Assistant/docs/architecture/PULSAR_STANDALONE_ARCHITECTURE.md)
+* 📖 **Subsystem Codebase Guide**: [`pulsar/README.md`](file:///d:/Projects/Ai_Assistant/pulsar/README.md)
+
+```
++-----------------------------------------------------------------------------------+
+|                               Windows 10 / 11 Kernel                              |
++-----------------------------------------------------------------------------------+
+       |                                                               |
+       v                                                               v
++---------------------------------------+       +-----------------------------------+
+|       Native Host Process (GUI)       |       |   Headless Core Subprocess (AI)   |
+|   `Pulsar.exe` or `python -m pulsar`  |       |   `Pulsar.exe --core-subprocess`  |
++---------------------------------------+       +-----------------------------------+
+| - PySide6 / QtWebEngine Dashboard     |       | - FastAPI / Uvicorn Server (5000) |
+| - Floating 4D Particle Orb Overlay    |       | - GGUF CPU/GPU Intent Routing     |
+|   (WS_EX_LAYERED, Click-Through)      |  IPC  | - Offline Faster-Whisper STT      |
+| - Screen-Share Stealth Mode Exclusion | <===> | - EdgeTTS & KittenTTS Synthesis   |
+|   (SetWindowDisplayAffinity)          | HTTP/ | - Windows Audio Ducking (pycaw)   |
+| - System Tray Menu & Notification     | Token | - Watchdog Process Supervisor     |
+| - Win32 Job Object Process Guard      |       | - Tiered Web Intelligence Subsys  |
+| - Global Mutex Single-Instance Lock   |       | - Swarm Meta-Planner & DAG Memory |
++---------------------------------------+       +-----------------------------------+
+```
+
+### The Strict Invariant Rule:
+1. **Host Invariant**: The Host process **NEVER** imports `torch`, `llama_cpp`, `faster_whisper`, `sounddevice`, or backend ML models. This guarantees instantaneous application startup (<1 second), low RAM footprint (<60 MB idle), and 100% UI fluidity.
+2. **Core Invariant**: The Core subprocess **NEVER** imports `PySide6`, `QtWebEngine`, or GUI toolkits. It runs strictly headless with zero display dependency.
 
 ---
 
-## 6. Monorepo Architecture Deep Dive
+## 5. Enterprise Zero-Hardcoded Storage Architecture
+
+* 📖 **Dedicated Architectural Spec**: [`docs/architecture/STORAGE_AND_PATHS_ARCHITECTURE.md`](file:///d:/Projects/Ai_Assistant/docs/architecture/STORAGE_AND_PATHS_ARCHITECTURE.md)
+
+PULSAR resolves all paths dynamically via [`core_ai/config/paths.py`](file:///d:/Projects/Ai_Assistant/core_ai/config/paths.py):
+* **Production Mode (`sys.frozen=True` or `PULSAR_ENV=production`)**:
+  - User Data & Databases: `%LOCALAPPDATA%\PulsarAI\`
+  - User Settings & Config: `%APPDATA%\PulsarAI\config\`
+  - Diagnostic Logs: `%LOCALAPPDATA%\PulsarAI\logs\`
+  - Application Code & Bundled Weights: `sys._MEIPASS` or `app_dir` (Strictly Read-Only)
+* **Development Mode (`PULSAR_ENV=dev`)**:
+  - Maps cleanly to repository root `data/`, `config/`, and `logs/`.
+* **High-Concurrency SQLite Pragmas**:
+  - `PRAGMA journal_mode=WAL;` (Write-Ahead Logging allows concurrent reads during writes).
+  - `PRAGMA busy_timeout=5000;` (Waits up to 5s if locked instead of crashing).
+* **Crash Recovery (`core_ai/utils/crash_handler.py`)**:
+  - Automatically captures unhandled exceptions, writes structured crash dumps, and safely restores corrupt databases from timestamped backups in `data/scattered_backups/`.
+
+---
+
+## 6. Tiered Web Intelligence Subsystem
+
+* 📖 **Dedicated Capability Guide**: [`docs/capabilities/WEB_INTELLIGENCE_AND_SEARCH.md`](file:///d:/Projects/Ai_Assistant/docs/capabilities/WEB_INTELLIGENCE_AND_SEARCH.md)
+
+Located in [`core_ai/integrations/web_intelligence/`](file:///d:/Projects/Ai_Assistant/core_ai/integrations/web_intelligence/), the subsystem provides real-time facts across Chat, Voice, and Multi-Agent workflows:
+* **The 4 Operational Modes**:
+  1. `BACKGROUND_GROUNDING`: Real-time prices, scores, news, weather. Silently searches web and injects context into prompt in <400ms.
+  2. `BROWSER_ACTION`: Explicit requests to open websites or automate forms via Selenium/Chrome.
+  3. `DEEP_RESEARCH`: High-complexity synthesis topics dispatched to `deep-research-001`.
+  4. `DIRECT_CHAT`: Standard coding, math reasoning, creative writing; zero network overhead.
+* **Multi-Engine Pool**: DuckDuckGo (Zero API keys required), Instant Facts Connector, Wikipedia REST API, Tavily, and SerpApi.
+* **Tiered TTL Caching**: LRU/TTL cache preventing redundant search queries and rate limits.
+
+---
+
+## 7. Voice Pipeline & Windows Audio Ducking
+
+* 📖 **Dedicated Capability Guide**: [`docs/capabilities/VOICE_AND_SPEECH_ENGINE.md`](file:///d:/Projects/Ai_Assistant/docs/capabilities/VOICE_AND_SPEECH_ENGINE.md)
+
+Located in [`core_ai/voice/`](file:///d:/Projects/Ai_Assistant/core_ai/voice/) and [`pulsar/audio/`](file:///d:/Projects/Ai_Assistant/pulsar/audio/):
+* **Reference-Counted Windows CoreAudio Ducking (`audio_ducking.py`)**: Automatically lowers background music/game audio by ~65% via Windows CoreAudio `IAudioEndpointVolume` when user speaks or AI responds. Smoothly restores original volume when turn ends.
+* **Acoustic EchoGuard (`echo_guard.py`)**: Gated audio ring buffer preventing the microphone from hearing the AI's own voice through PC speakers.
+* **Deterministic Speech Text Crisper (`text_cleaner.py`)**: Strips markdown, URLs, code blocks, and cleans spoken Hinglish before sending to TTS.
+* **Dual STT Engine**: Offline Vosk Kaldi model for instant local keywords, and `faster-whisper` (CTranslate2) for accurate dictation.
+* **Neural Voice Synthesis**: Edge-TTS, KittenTTS, and Windows SAPI5 fallback.
+* **Barge-In Interruption**: Halts speech synthesis in <50ms when user speaks a stop command.
+
+---
+
+## 8. Dynamic Swarm Meta-Planner & Workflow Memory DAG Cache
+
+* 📖 **Dedicated Capability Guide**: [`docs/capabilities/SMART_WORKFLOWS_AND_CHAINS.md`](file:///d:/Projects/Ai_Assistant/docs/capabilities/SMART_WORKFLOWS_AND_CHAINS.md)
+
+Located in [`core_ai/core/swarm_planner.py`](file:///d:/Projects/Ai_Assistant/core_ai/core/swarm_planner.py) and [`core_ai/core/workflow_memory.py`](file:///d:/Projects/Ai_Assistant/core_ai/core/workflow_memory.py):
+* **DAG Decomposition**: Parses complex multi-step goals into Directed Acyclic Graphs with dependency barriers and parallel execution branches.
+* **Workflow Memory**: Persists validated execution plans in SQLite `projects.db`. Repeating a known workflow executes in <10ms without calling LLMs.
+* **Life Interaction Learner (`interaction_learner.py`)**: Observes active application shifts and daily routines to proactively suggest automated workflows.
+
+---
+
+## 9. Anti-Servant JARVIS Persona & Local Command Normalization
+
+Located in [`core_ai/core/jarvis_persona.py`](file:///d:/Projects/Ai_Assistant/core_ai/core/jarvis_persona.py) and [`core_ai/core/local_command_normalizer.py`](file:///d:/Projects/Ai_Assistant/core_ai/core/local_command_normalizer.py):
+* **Tony Stark's JARVIS Persona**: Professional, highly capable, slightly witty companion with boundaries. Does not grovel or apologize excessively.
+* **Local Command Normalization**: Over 1,100 lines of regex and phonetic rules mapping colloquial Hinglish (*"gaana chalao"*, *"awaaz thodi badhao"*, *"screen band karo"*) directly to system action codes with zero LLM latency.
+* **Debounced Emergency Stop (`emergency_stop.py`)**: Halts active automations when user says *"stop"* or *"ruko"*, debouncing rapid repeated inputs.
+
+---
+
+## 10. Monorepo Directory Map
 
 ```text
 Ai_Assistant/
-├── backend/                   # Flask API Gateway & WebSockets
-│   ├── blueprints/            # 11 Modular API Routes (Voice, Apps, Web, etc.)
-│   └── modern_web_backend.py  # Main Server Entrypoint
-├── core_ai/                   # The 27 Learning Systems & OS Automations
-│   └── src/ai_assistant/
-│       ├── agents/            # Multi-Agent Negotiators
-│       ├── ai/                # Core ML Paradigms (Active Learning, Meta Learning, etc.)
-│       ├── automation/        # Visual Automation & OS Scripts
-│       └── voice/             # STT, TTS, and Speaker Diarization
-├── desktop/                   # Native Windows Packaging
-│   ├── build/                 # PyInstaller Temp Artifacts
-│   ├── app_launcher.py        # PyWebView Native Window Renderer
-│   └── build_exe.bat          # High-Optimization Exe Bundler
-├── frontend/                  # React + Vite User Interface
-│   └── web-app/
-│       ├── src/components/    # Beautiful Tailwind/Lucide Components
-│       └── package.json       # React Dependencies
-├── scripts/                   # 70+ Development & Diagnostic Utilities
-├── shared/                    # Centralized State & Storage
-│   ├── config/                # App usage metrics & Discovery JSONs
-│   └── data/                  # Neo4j/SQLite memory graphs & Training JSONLs
-└── tests/                     # Massive Pytest Suite (Unit, E2E, Integration)
+├── pulsar/                     # Standalone Windows Companion Subsystem
+│   ├── frozen_entry.py         # PyInstaller Paradigm B dual-mode binary entrypoint
+│   ├── audio/                  # Zero-GUI headless audio worker & PyAudio ring buffer
+│   ├── core/                   # Headless Core server (FastAPI 5000, 4D orb state, watchdog)
+│   └── host/                   # PySide6 Host (Win32 Job Object, System Tray, 4D Orb Window)
+├── core_ai/                    # The Central AI Brain (Flat Production Architecture)
+│   ├── agents/                 # The 14 Multi-Agent Cores + BaseAgent + Dispatcher
+│   ├── ai/                     # GGUF Model Manager, Intent Router, LLM Providers, User DNA
+│   ├── automation/             # Windows COM Automation, Window Manager, Browser Profiles
+│   ├── config/                 # paths.py (Enterprise Zero-Hardcoded Storage Architecture)
+│   ├── core/                   # Assistant, Command Brain, Swarm Planner, Workflow Memory
+│   ├── integrations/           # Web Intelligence Subsystem, WhatsApp, Research
+│   ├── knowledge/              # Personal Knowledge Graph, Life Interaction Learner
+│   ├── utils/                  # Crash Handler, Logging Config, Dataset Generator
+│   ├── vision/                 # Multimodal Vision, OCR, Facial Recognition
+│   └── voice/                  # Audio Ducking, Text Crisper, EchoGuard, Faster-Whisper, TTS
+├── backend/                    # HTTP Server & Modular Route Blueprints
+│   ├── modern_web_backend.py   # Primary backend runner & WebSocket event loop
+│   ├── routes/                 # Blueprints (agent, chat, chain, file, learning, local_ai, etc.)
+│   ├── services/               # High-level business logic services & forwarders
+│   └── utils/                  # Chat session store, tool schemas, logging
+├── frontend/                   # React 18 User Interface & Desktop Shell
+│   └── web-app/                # Vite, Tailwind CSS, Three.js 4D Orb, Framer Motion, Tauri 2.0
+├── desktop/                    # Desktop launchers, icons, and PyInstaller spec files
+├── dist_release/               # Packaged Windows Releases (PulsarSetup.exe & Pulsar_AI_Assistant/)
+├── docs/                       # Central Documentation Hub (Architecture, Capabilities, Agents, Setup)
+├── models/                     # Offline local model weights (GGUF, Whisper, KittenTTS)
+├── scripts/                    # Build, audit, sanitization, and diagnostic utilities
+├── tests/                      # Comprehensive test benches (Phase 2-5, Storage, Web, Swarm)
+├── main.py                     # CLI launcher entrypoint
+├── web.py                      # Fullstack web launcher
+├── start.bat                   # Windows one-click launcher
+└── pulsar_release.spec         # PyInstaller multi-binary release specification
 ```
 
-- **`frontend/`**: React 18, Vite, TypeScript, Tailwind-inspired CSS.
-- **`backend/`**: Flask API Gateway, WebSockets, 11 Blueprints.
-- **`core_ai/`**: The Brain (Learning systems, Automations, Voice).
-- **`desktop/`**: Native wrappers using `pywebview` and `PyInstaller`.
-- **`shared/`**: Databases (`memory.db`), user metrics, config files.
-- **`scripts/`**: 70+ Development and diagnostic tools.
-- **`tests/`**: Unit, E2E, Integration, and Feature tests.
+---
+
+## 11. The 14 Multi-Agent Cores Specification
+
+PULSAR incorporates 14 specialized, autonomous agent cores governed by [`core_ai/agents/dispatcher.py`](file:///d:/Projects/Ai_Assistant/core_ai/agents/dispatcher.py):
+
+| # | Agent Name | Agent ID | Canonical Specification | Key Focus & Primary Tools |
+|---|---|---|---|---|
+| **01** | Productivity Agent | `productivity-001` | [01_PRODUCTIVITY_AGENT.md](docs/agents/01_PRODUCTIVITY_AGENT.md) | Word (`python-docx`), Excel (`openpyxl`), PowerPoint (`python-pptx`), PDF generation (`reportlab`). |
+| **02** | Research Agent | `research-001` | [02_RESEARCH_AGENT.md](docs/agents/02_RESEARCH_AGENT.md) | Asynchronous DuckDuckGo search, Wikipedia query, URL scraping & text summarization. |
+| **03** | Writer Agent | `writer-001` | [03_WRITER_AGENT.md](docs/agents/03_WRITER_AGENT.md) | Articles, formal emails, essays, grammar proofreading & text restructuring. |
+| **04** | Video Agent | `video-001` | [04_VIDEO_AGENT.md](docs/agents/04_VIDEO_AGENT.md) | MoviePy video clipping, Whisper transcription, audio extraction & desktop editor control. |
+| **05** | Creative Agent | `creative-001` | [05_CREATIVE_AGENT.md](docs/agents/05_CREATIVE_AGENT.md) | Pillow image editing, banner synthesis, procedural filters, SVG & generative visuals. |
+| **06** | Data Analyst Agent | `data-001` | [06_DATA_ANALYST_AGENT.md](docs/agents/06_DATA_ANALYST_AGENT.md) | Pandas dataframes, statistical analysis, CSV/JSON transforms, Matplotlib/Seaborn charts. |
+| **07** | Database Agent | `database-001` | [07_DATABASE_AGENT.md](docs/agents/07_DATABASE_AGENT.md) | SQLite/SQL schemas, query execution, indexing & destructive query confirmation gating. |
+| **08** | Communication Agent | `comm-001` | [08_COMMUNICATION_AGENT.md](docs/agents/08_COMMUNICATION_AGENT.md) | Gmail drafting/dispatch, WhatsApp Web automation & Google/Windows Calendar scheduling. |
+| **09** | Web Agent | `web-001` | [09_WEB_AGENT.md](docs/agents/09_WEB_AGENT.md) | Selenium Chrome automation, DOM element inspection, button clicking & form entry. |
+| **10** | Student Agent | `student-001` | [10_STUDENT_AGENT.md](docs/agents/10_STUDENT_AGENT.md) | Symbolic math with SymPy, interactive study flashcards & local document RAG tutoring. |
+| **11** | File Manager Agent | `file-001` | [11_FILE_MANAGER_AGENT.md](docs/agents/11_FILE_MANAGER_AGENT.md) | Smart directory cleanup, extension sorting, regex batch renaming & zip backups. |
+| **12** | Audio Agent | `audio-001` | [12_AUDIO_AGENT.md](docs/agents/12_AUDIO_AGENT.md) | Procedural SFX synthesis, background noise removal, audio trimming & TTS voiceovers. |
+| **13** | Deep Research Agent | `deep-research-001` | [13_DEEP_RESEARCH_AGENT.md](docs/agents/13_DEEP_RESEARCH_AGENT.md) | Recursive query expansion, multi-source scraping, factual synthesis & whitepaper compilation. |
+| **14** | Autonomous Learning Agent | `autonomous-001` | [14_AUTONOMOUS_LEARNING_AGENT.md](docs/agents/14_AUTONOMOUS_LEARNING_AGENT.md) | Long-term memory consolidation, preference weighting & autonomous skill expansion. |
 
 ---
 
-## 🧠 3. The 27 Advanced Learning Systems
-This project utilizes 27 distinct programmatic learning paradigms:
+## 12. The 27 Advanced Learning Systems
 
-1. **Active Learning**:  Proactively queries the user.
-2. **Advanced Feedback Learning**:  Reinforcement Learning from Human Feedback.
-3. **Auto Learning Router**:  Meta-classifier for routing tasks.
-4. **Contrastive Learning**:  Differentiates similar OS commands.
-5. **Enhanced User Preference Learning**:  Time-decaying weighted cache.
-6. **Federated Learning**:  Secure local weight deltas (LoRA).
-7. **Meta Learning**:  Optimizes internal prompts.
-8. **Multimodal Emotion Learning**:  Fuses audio sentiment with text.
-9. **Self-Supervised Log Learning**:  Ingests background OS logs.
-10. **Online Learning Trainer**:  Retrains local models.
-11. **Contextual Memory Fading**:  Ebbinghaus forgetting curve.
-12. **Semantic Knowledge Graphing**:  Extracts Triples for Neo4j/SQLite.
-13. **Intent Drift Compensation**:  Adapts to user slang (Hinglish).
-14. **Visual Taskbar Analysis**:  Scrapes desktop icon bounding boxes.
-15. **Voice Accent Adaptation**:  Adjusts Whisper parameters.
-16. **API Latency Optimization**:  Epsilon-Greedy bandit algorithm.
-17. **Error State Recovery**:  Code Healing via traceback parsing.
-18. **Cross-Session Continuity**:  Serializes conversation graphs.
-19. **Behavioral Scheduling**:  Pre-warms applications via K-Means.
-20. **Secure Data Pruning**:  Scrubs passwords/PII via NER.
-21. **Automated App Discovery**:  Scans Windows Registry.
-22. **Sentiment Analysis Tracking**:  30-day VADER sentiment tracking.
-23. **Codebase Understanding**:  AST parsing of its own Monorepo.
-24. **Multi-Agent Negotiation**:  Sub-agents debate execution plans.
-25. **Hardware Constraint Learning**:  Monitors CPU/RAM via psutil.
-26. **Custom Dataset Generation**:  Mathematically permutates prompts.
-27. **Zero-Shot Transfer Application**:  Applies web scraping logic to docs.
+PULSAR embeds 27 distinct programmatic learning systems that adapt to your personal habits and slang:
+
+1. **Active Learning**: Proactively queries the user when intent ambiguity exceeds confidence thresholds.
+2. **Advanced Feedback Learning**: Reinforcement Learning from Human Feedback (RLHF) updating decision weights.
+3. **Auto Learning Router**: Dynamic meta-classifier directing tasks to the fastest capable model.
+4. **Contrastive Learning**: Disambiguates similar OS command variations and slang.
+5. **Enhanced User Preference Learning**: Time-decaying weighted cache tracking user choices.
+6. **Federated Learning**: Generates local weight deltas (LoRA) without sharing private data.
+7. **Meta Learning**: Self-optimizes system prompt representations based on task success.
+8. **Multimodal Emotion Learning**: Fuses acoustic pitch and speech tempo with text sentiment.
+9. **Self-Supervised Log Learning**: Analyzes background system execution logs to identify failure patterns.
+10. **Online Learning Trainer**: Incremental parameter updates without catastrophic forgetting.
+11. **Contextual Memory Fading**: Implements the Ebbinghaus forgetting curve for stale episodic memories.
+12. **Semantic Knowledge Graphing**: Extracts Entity-Relation-Entity triples into SQLite graph tables.
+13. **Intent Drift Compensation**: Automatically accommodates evolving user slang (e.g. Hindi/Hinglish).
+14. **Visual Taskbar Analysis**: Recognizes desktop application bounding boxes and notification badges.
+15. **Voice Accent Adaptation**: Dynamically adjusts Whisper acoustic thresholds to user accents.
+16. **API Latency Optimization**: Epsilon-Greedy multi-armed bandit choosing optimal search/API endpoints.
+17. **Error State Recovery**: Automated traceback parsing and self-healing retry strategies.
+18. **Cross-Session Continuity**: Preserves conversation state and unresolved goals across restarts.
+19. **Behavioral Scheduling**: Pre-warms frequently launched apps based on time-of-day clustering.
+20. **Secure Data Pruning**: Uses Named Entity Recognition (NER) to scrub passwords and PII from memory.
+21. **Automated App Discovery**: Scans Windows Registry and Start Menu to map installed applications.
+22. **Sentiment Analysis Tracking**: Tracks 30-day sentiment trajectories to tailor conversational empathy.
+23. **Codebase Understanding**: AST parsing of its own codebase for self-inspection.
+24. **Multi-Agent Negotiation**: Agent debate protocol resolving conflicting subtask execution proposals.
+25. **Hardware Constraint Learning**: Dynamically throttles worker threads based on live CPU/RAM load.
+26. **Custom Dataset Generation**: Permutates commands across dialects for fine-tuning sets.
+27. **Zero-Shot Transfer Application**: Adapts web extraction logic to local document structures.
 
 ---
 
-## 📡 4. Complete API Reference Guide
+## 13. Packaging & Standalone Windows Distribution
+
+* 📖 **Dedicated Packaging Spec**: [`docs/setup/PACKAGING_AND_DISTRIBUTION.md`](file:///d:/Projects/Ai_Assistant/docs/setup/PACKAGING_AND_DISTRIBUTION.md)
+
+Compile a full standalone offline Windows release with a single command:
+```powershell
+python scripts/build_distributable_release.py
+```
+Outputs:
+* `dist_release/PulsarSetup.exe`: Native C# Windows 11 Fluent GUI Setup Wizard registering shortcuts and `AppUserModelID = "Pulsar.AIAssistant.App.v1"`.
+* `dist_release/Pulsar_AI_Assistant/`: Portable standalone directory with `Pulsar.exe`, `UninstallPulsar.exe`, `_internal/`, and bundled offline models.
+* Privacy & Sanitization: Runs `scripts/clean_personal_data_from_dbs.py` and `scripts/audit_hardcoded_data.py` to ensure zero API keys or personal paths are distributed.
+
+---
+
+## 14. Developer Troubleshooting & Debugging Guide
+
+### 📍 Where Are Logs Stored?
+* **Production Mode**: `%LOCALAPPDATA%\PulsarAI\logs\` (e.g. `C:\Users\<User>\AppData\Local\PulsarAI\logs\`).
+* **Development Mode**: `<repo_root>/logs/` (organized by date, e.g. `logs/2026-11-20/`).
+* **Crash Dumps**: `%LOCALAPPDATA%\PulsarAI\logs\crash_dumps\` (detailed JSON stack traces on unhandled exceptions).
+
+### ⚠️ Common Issues & Immediate Fixes
+
+1. **Port 5000 Already in Use**:
+   - *Error*: `OSError: [Errno 10048] Only one usage of each socket address is normally permitted`.
+   - *Fix*: Check for lingering processes with `Get-Process python` or set `PULSAR_PORT=5050` in `.env`.
+2. **Microphone Device Overflow / Not Found**:
+   - *Error*: `PyAudio input stream overflow` or `No Default Input Device Available`.
+   - *Fix*: Ensure microphone permissions are granted in Windows Settings -> Privacy -> Microphone. `mic_stream.py` automatically binds to the default OS recording device.
+3. **Local GGUF Model Not Found**:
+   - *Error*: `FileNotFoundError: No .gguf model found in models/`.
+   - *Fix*: Download `Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf` into `models/` or set `PULSAR_MODELS_DIR` in `.env`. Alternatively, configure a cloud key (`GEMINI_API_KEY`) for hybrid operation.
+4. **SQLite Database Locked**:
+   - *Error*: `sqlite3.OperationalError: database is locked`.
+   - *Fix*: All core databases use WAL mode (`PRAGMA journal_mode=WAL;`) with a 5-second busy timeout. If a zombie process holds an exclusive lock, close background Python tasks.
+5. **Legacy Import Traps (`ai_assistant` vs `core_ai`)**:
+   - *Notice*: The codebase was refactored to a clean, flat architecture (`core_ai/`). Always import from `core_ai.<module>` or `backend.<module>`. Stale imports from `ai_assistant` should be updated to their direct module paths.
+
+---
+
+## 15. Complete API Reference Guide
 
 ### Extracted Flask Routes from `modern_web_backend.py`
 
@@ -345,16 +544,16 @@ This project utilizes 27 distinct programmatic learning paradigms:
 Below is the auto-generated AST documentation of all major Python modules in the system. This provides a deep dive into the inner workings of the AI.
 
 
-### File: `core_ai\src\ai_assistant\agents\base_agent.py`
+### File: `core_ai\agents\base_agent.py`
 - **Class `BaseAgent`**: Base class for all AI agents
   - **Function `__init__()`**: Signature: (self, agent_id, config)
 
-### File: `core_ai\src\ai_assistant\agents\dispatcher.py`
+### File: `core_ai\agents\dispatcher.py`
 - **Class `Dispatcher`**: Dispatches natural language commands to appropriate workflows.
   - **Function `__init__()`**: Signature: (self)
   - **Function `handle()`**: Process a natural language user input and dispatch to appropriate workflow.
 
-### File: `core_ai\src\ai_assistant\agents\loader.py`
+### File: `core_ai\agents\loader.py`
 - **Class `AgentLoader`**: Helper to load agents into the registry using Lazy Loading
   - **Function `register_agent_definitions()`**: Register agent definitions (metadata + lazy factory) without instantiating
   - **Function `_load_productivity()`**: Signature: ()
@@ -372,14 +571,14 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `_load_deep_research()`**: Signature: ()
   - **Function `_load_autonomous()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\agents\models.py`
+### File: `core_ai\agents\models.py`
 - **Class `AgentStatus`**: Core component.
 - **Class `Task`**: Core component.
 - **Class `TaskResult`**: Core component.
 - **Class `VerificationResult`**: Core component.
 - **Class `ProofreadResult`**: Core component.
 
-### File: `core_ai\src\ai_assistant\agents\registry.py`
+### File: `core_ai\agents\registry.py`
 - **Class `AgentMetadata`**: Metadata for a lazy-loaded agent
 - **Class `AgentRegistry`**: Manages all available agents and their capabilities with lazy loading support
   - **Function `__init__()`**: Signature: (self)
@@ -391,48 +590,48 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_all_metadata()`**: Get metadata for ALL agents (active and standby)
   - **Function `find_agents_by_capability()`**: Find agent IDs that have a specific capability
 
-### File: `core_ai\src\ai_assistant\agents\audio\audio_agent.py`
+### File: `core_ai\agents\audio\audio_agent.py`
 - **Class `AudioAgent`**: Handles specific audio tasks (Music, SFX, Audio Processing). Distinct from CreativeAgent (Speech) and VideoAgent (Editing).
   - **Function `__init__()`**: Signature: (self, agent_id, config)
 
-### File: `core_ai\src\ai_assistant\agents\communication\communication_agent.py`
+### File: `core_ai\agents\communication\communication_agent.py`
 - **Class `CommunicationAgent`**: Handles communications (Email, Messaging, Social).
   - **Function `__init__()`**: Signature: (self, agent_id, config)
 
-### File: `core_ai\src\ai_assistant\agents\core\autonomous_agent.py`
+### File: `core_ai\agents\core\autonomous_agent.py`
 - **Class `AutonomousAgent`**: Replicates the 'hermes-agent' autonomous learning loop: 1. Observes conversations 2. Routes them to the LearningDataRouter for persistence 3. Propo...
   - **Function `__init__()`**: Signature: (self, agent_id, config)
   - **Function `passive_observe()`**: Can be called by the main chat loop to constantly feed data  into the agent without explicitly treating it as a task.
 
-### File: `core_ai\src\ai_assistant\agents\creative\creative_agent.py`
+### File: `core_ai\agents\creative\creative_agent.py`
 - **Class `CreativeAgent`**: Agent responsible for generating creative assets: - Images (Thumbnails, B-Roll, Art) - Audio (Voiceovers, Sound Effects)
   - **Function `__init__()`**: Signature: (self, agent_id, config)
 
-### File: `core_ai\src\ai_assistant\agents\file\file_manager_agent.py`
+### File: `core_ai\agents\file\file_manager_agent.py`
 - **Class `FileManagerAgent`**: Handles file organization and operations.
   - **Function `__init__()`**: Signature: (self, agent_id, config)
 
-### File: `core_ai\src\ai_assistant\agents\productivity\productivity_agent.py`
+### File: `core_ai\agents\productivity\productivity_agent.py`
 - **Class `ProductivityAgent`**: Handles office productivity tasks: Word, Excel, PowerPoint
   - **Function `__init__()`**: Signature: (self, agent_id, config)
   - **Function `_identify_task_type()`**: Signature: (self, task)
 
-### File: `core_ai\src\ai_assistant\agents\research\deep_research_agent.py`
+### File: `core_ai\agents\research\deep_research_agent.py`
 - **Class `DeepResearchAgent`**: Replicates the 'last30days-skill' workflow: 1. Topic Analysis 2. Parallel Web Search 3. LLM Synthesis
   - **Function `__init__()`**: Signature: (self, agent_id, config)
   - **Function `_generate_search_queries()`**: Use simple heuristics or LLM to generate targeted search queries
   - **Function `_scrape_text()`**: Helper to scrape text from a URL
   - **Function `_synthesize_results()`**: Use LLM to generate a final markdown brief
 
-### File: `core_ai\src\ai_assistant\agents\research\research_agent.py`
+### File: `core_ai\agents\research\research_agent.py`
 - **Class `ResearchAgent`**: Handles web research, searching, and simple scraping.
   - **Function `__init__()`**: Signature: (self, agent_id, config)
 
-### File: `core_ai\src\ai_assistant\agents\student\student_agent.py`
+### File: `core_ai\agents\student\student_agent.py`
 - **Class `StudentAgent`**: Handles educational tasks (Math, Quizzes, Study).
   - **Function `__init__()`**: Signature: (self, agent_id, config)
 
-### File: `core_ai\src\ai_assistant\agents\video\gui_controller.py`
+### File: `core_ai\agents\video\gui_controller.py`
 - **Class `AppControlInterface`**: Abstract interface for controlling external applications
 - **Class `BaseGUIController`**: Generic GUI Controller using PyAutoGUI
 - **Class `PremiereProController`**: Profile for Adobe Premiere Pro. Maps high-level actions to keyboard shortcuts.
@@ -455,21 +654,21 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `execute_action()`**: Signature: (self, action_name)
   - **Function `get_controller()`**: Signature: (app_name)
 
-### File: `core_ai\src\ai_assistant\agents\video\training_mode.py`
+### File: `core_ai\agents\video\training_mode.py`
 - **Class `TrainingMode`**: Allows 'training' the agent by defining workflows or recording actions. Future: Hook into keyboard hooks to record real-time (requires complex perm...
   - **Function `__init__()`**: Signature: (self, profile_name)
   - **Function `add_action()`**: Add an action to the current training session
   - **Function `save_workflow()`**: Save the trained workflow to disk
   - **Function `load_workflow()`**: Signature: (filename)
 
-### File: `core_ai\src\ai_assistant\agents\video\video_agent.py`
+### File: `core_ai\agents\video\video_agent.py`
 - **Class `VideoAgent`**: Handles video editing, creation, and transcription.
   - **Function `__init__()`**: Signature: (self, agent_id, config)
   - **Function `verifier()`**: Signature: (self)
   - **Function `_load_moviepy()`**: Signature: (self)
   - **Function `_load_whisper()`**: Signature: (self)
 
-### File: `core_ai\src\ai_assistant\agents\video\visual_verifier.py`
+### File: `core_ai\agents\video\visual_verifier.py`
 - **Class `VisualVerifier`**: Provides computer vision capabilities to the agent.
   - **Function `__init__()`**: Signature: (self)
   - **Function `_ensure_libs()`**: Signature: (self)
@@ -477,16 +676,16 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `find_template()`**: Find a template image on the screen. Returns (x, y, w, h) of the match, or None.
   - **Function `verify_state()`**: High-level verification.  In a real scenario, this would look up template paths from the Knowledge Base. For now, it checks generic templates.
 
-### File: `core_ai\src\ai_assistant\agents\web\web_agent.py`
+### File: `core_ai\agents\web\web_agent.py`
 - **Class `WebAgent`**: Handles general web automation (Forms, Interaction, Dynamic Scraping).
   - **Function `__init__()`**: Signature: (self, agent_id, config)
 
-### File: `core_ai\src\ai_assistant\agents\writer\writer_agent.py`
+### File: `core_ai\agents\writer\writer_agent.py`
 - **Class `WriterAgent`**: Handles content generation, writing, and summarization using LLMs.
   - **Function `__init__()`**: Signature: (self, agent_id, config)
   - **Function `_generate_mock_content()`**: Generate plausible mock content for testing
 
-### File: `core_ai\src\ai_assistant\ai\active_learning.py`
+### File: `core_ai\ai\active_learning.py`
 - **Class `ActiveLearner`**: Active learning for sample-efficient model training
   - **Function `example_usage()`**: Demonstrate active learning
   - **Function `__init__()`**: Signature: (self, db_path, uncertainty_threshold)
@@ -504,7 +703,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_labeling_efficiency()`**: Calculate labeling efficiency metrics Shows how much accuracy we get per label
   - **Function `get_stats()`**: Get active learning statistics
 
-### File: `core_ai\src\ai_assistant\ai\adaptive_prompts.py`
+### File: `core_ai\ai\adaptive_prompts.py`
 - **Class `PromptTemplate`**: Prompt template with metadata
 - **Class `PromptExperiment`**: A/B test experiment for prompts
 - **Class `PromptOptimizer`**: Optimizes prompts through reinforcement learning and A/B testing
@@ -525,7 +724,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_optimization_insights()`**: Get insights for prompt optimization
   - **Function `score()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\ai\adaptive_voice.py`
+### File: `core_ai\ai\adaptive_voice.py`
 - **Class `AdaptiveVoiceRecognition`**: Application-level adaptive voice recognition Learns user's voice patterns and improves accuracy
   - **Function `__init__()`**: Signature: (self, db_path)
   - **Function `_init_database()`**: Initialize database
@@ -539,7 +738,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `analyze_accent_patterns()`**: Analyze user's accent patterns
   - **Function `get_stats()`**: Get statistics
 
-### File: `core_ai\src\ai_assistant\ai\advanced_chat_system.py`
+### File: `core_ai\ai\advanced_chat_system.py`
 - **Class `ResponseMode`**: Response generation modes.
 - **Class `TokenCounter`**: Token counter for various models.
 - **Class `ToolSchema`**: Schema for tool/function calling.
@@ -572,7 +771,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `save_to_db()`**: Save conversation to database.
   - **Function `load_from_db()`**: Load conversation from database.
 
-### File: `core_ai\src\ai_assistant\ai\advanced_feedback_learning.py`
+### File: `core_ai\ai\advanced_feedback_learning.py`
 - **Class `FeedbackType`**: Types of feedback
 - **Class `ResponseQuality`**: Quality levels for responses
 - **Class `FeedbackEntry`**: Single feedback entry
@@ -618,7 +817,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `check_drift()`**: Check if concept drift occurred
   - **Function `is_drift_detected()`**: Check if drift was recently detected
 
-### File: `core_ai\src\ai_assistant\ai\anomaly_detection.py`
+### File: `core_ai\ai\anomaly_detection.py`
 - **Class `AnomalyDetector`**: Detects anomalous behavior patterns
   - **Function `example_usage()`**: Demonstrate anomaly detection
   - **Function `__init__()`**: Signature: (self, db_path, contamination)
@@ -639,7 +838,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `acknowledge_alert()`**: Mark alert as acknowledged
   - **Function `get_stats()`**: Get anomaly detection statistics
 
-### File: `core_ai\src\ai_assistant\ai\auto_learning_router.py`
+### File: `core_ai\ai\auto_learning_router.py`
 - **Class `LearningDataRouter`**: Automatically routes new conversation data to appropriate learning systems Integrate this into your chat interface
   - **Function `integrate_with_chat_system()`**: Example of how to integrate the router into BOTH chat and voice systems SAME LEARNING, SAME MEMORY for both interfaces
   - **Function `__init__()`**: Signature: (self)
@@ -655,7 +854,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `_route_to_query_cache()`**: Route to query cache
   - **Function `get_routing_stats()`**: Get statistics about data routing
 
-### File: `core_ai\src\ai_assistant\ai\behavior_clustering.py`
+### File: `core_ai\ai\behavior_clustering.py`
 - **Class `BehaviorClusterer`**: Clusters user behavior patterns
   - **Function `example_usage()`**: Demonstrate behavior clustering
   - **Function `__init__()`**: Signature: (self, db_path, n_clusters)
@@ -670,7 +869,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_cluster_insights()`**: Get insights about all clusters
   - **Function `get_stats()`**: Get clustering statistics
 
-### File: `core_ai\src\ai_assistant\ai\causal_inference.py`
+### File: `core_ai\ai\causal_inference.py`
 - **Class `CausalInference`**: Causal inference for understanding cause-effect
   - **Function `example_usage()`**: Demonstrate causal inference
   - **Function `__init__()`**: Signature: (self, db_path)
@@ -688,7 +887,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `counterfactual()`**: Counterfactual reasoning: what would happen if...?
   - **Function `get_stats()`**: Get causal inference statistics
 
-### File: `core_ai\src\ai_assistant\ai\command_predictor.py`
+### File: `core_ai\ai\command_predictor.py`
 - **Class `CommandSuccessPredictor`**: Predicts command success probability using ML
   - **Function `example_usage()`**: Demonstrate command success prediction
   - **Function `__init__()`**: Signature: (self, db_path)
@@ -703,7 +902,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `train()`**: Train ML model on historical data
   - **Function `get_stats()`**: Get prediction statistics
 
-### File: `core_ai\src\ai_assistant\ai\command_sequences.py`
+### File: `core_ai\ai\command_sequences.py`
 - **Class `CommandMarkovChain`**: Predicts next command using Markov chain models
   - **Function `example_usage()`**: Demonstrate command sequence prediction
   - **Function `__init__()`**: Signature: (self, db_path, order, context_aware)
@@ -719,7 +918,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_stats()`**: Get command sequence statistics (alias for get_accuracy_stats)
   - **Function `clear_old_data()`**: Remove old command sequences
 
-### File: `core_ai\src\ai_assistant\ai\context_aware_response.py`
+### File: `core_ai\ai\context_aware_response.py`
 - **Class `ContextAwareResponseGenerator`**: Application-level context-aware response generation Generates intelligent responses based on conversation context
   - **Function `__init__()`**: Signature: (self, db_path)
   - **Function `_init_database()`**: Initialize database
@@ -735,7 +934,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_personalization_suggestions()`**: Get personalization suggestions based on conversation history
   - **Function `get_stats()`**: Get statistics
 
-### File: `core_ai\src\ai_assistant\ai\contrastive_learning.py`
+### File: `core_ai\ai\contrastive_learning.py`
 - **Class `ContrastiveLearner`**: Contrastive learning for better embeddings
   - **Function `example_usage()`**: Demonstrate contrastive learning
   - **Function `__init__()`**: Signature: (self, db_path, embedding_dim, temperature)
@@ -751,10 +950,10 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `evaluate_embedding_quality()`**: Evaluate embedding quality using retrieval metrics
   - **Function `get_stats()`**: Get learning statistics
 
-### File: `core_ai\src\ai_assistant\ai\conversational_ai.py`
+### File: `core_ai\ai\conversational_ai.py`
   - *(Documentation parsing failed for this file)*
 
-### File: `core_ai\src\ai_assistant\ai\conversational_ai_commands.py`
+### File: `core_ai\ai\conversational_ai_commands.py`
   - **Function `_try_execute_command()`**: Try to execute actionable commands and return result.
   - **Function `_execute_open_command()`**: Execute open application commands.
   - **Function `_execute_close_command()`**: Execute close application commands.
@@ -764,7 +963,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `_execute_volume_command()`**: Execute volume control commands.
   - **Function `_execute_settings_command()`**: Execute system settings commands.
 
-### File: `core_ai\src\ai_assistant\ai\conversation_clustering.py`
+### File: `core_ai\ai\conversation_clustering.py`
 - **Class `ConversationClusterer`**: Clusters conversations by topics
   - **Function `example_usage()`**: Demonstrate conversation clustering
   - **Function `__init__()`**: Signature: (self, db_path, n_clusters, n_topics)
@@ -782,7 +981,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_cluster_conversations()`**: Get conversations in a cluster
   - **Function `get_stats()`**: Get clustering statistics
 
-### File: `core_ai\src\ai_assistant\ai\domain_embeddings.py`
+### File: `core_ai\ai\domain_embeddings.py`
 - **Class `DomainExample`**: Training example for domain adaptation
 - **Class `DomainAdapter`**: Adapter network for domain-specific fine-tuning
 - **Class `DomainAdaptedEmbeddings`**: Domain-adapted embeddings system Fine-tunes pre-trained embeddings for specific domains
@@ -799,7 +998,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `detect_domain()`**: Detect most likely domain for text
   - **Function `get_stats()`**: Get statistics
 
-### File: `core_ai\src\ai_assistant\ai\enhanced_learning.py`
+### File: `core_ai\ai\enhanced_learning.py`
 - **Class `Skill`**: Represents a learned skill
 - **Class `BehaviorPattern`**: Represents a learned behavior pattern
 - **Class `KnowledgeNode`**: Node in the personal knowledge graph
@@ -836,7 +1035,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `generate_insights()`**: Generate insights from the knowledge graph
   - **Function `visualize_graph()`**: Create a visualization of the knowledge graph
 
-### File: `core_ai\src\ai_assistant\ai\explainability.py`
+### File: `core_ai\ai\explainability.py`
 - **Class `ExplainabilityEngine`**: Provides interpretable explanations for predictions
   - **Function `example_usage()`**: Demonstrate explainability
   - **Function `__init__()`**: Signature: (self, db_path)
@@ -851,7 +1050,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_feature_importance_summary()`**: Get aggregate feature importance across all predictions
   - **Function `get_stats()`**: Get explainability statistics
 
-### File: `core_ai\src\ai_assistant\ai\federated_learning.py`
+### File: `core_ai\ai\federated_learning.py`
 - **Class `ClientUpdate`**: Update from a federated learning client
 - **Class `FederatedRound`**: Single round of federated learning
 - **Class `FederatedClient`**: Client in federated learning system Trains on local data without sharing raw data
@@ -882,7 +1081,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `__init__()`**: Signature: (self, noise_scale, clipping_norm)
   - **Function `forward()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\ai\full_rl_system.py`
+### File: `core_ai\ai\full_rl_system.py`
 - **Class `Experience`**: Single experience tuple for RL
 - **Class `Episode`**: Complete episode trajectory
 - **Class `PPOAgent`**: Proximal Policy Optimization agent State-of-the-art policy gradient method with clipped objective
@@ -911,7 +1110,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `act()`**: Signature: ()
   - **Function `evaluate()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\ai\graph_neural_networks.py`
+### File: `core_ai\ai\graph_neural_networks.py`
 - **Class `GraphNeuralNetwork`**: Graph Neural Network system for knowledge graph reasoning
 - **Class `GraphConvLayer`**: Core component.
 - **Class `GraphAttentionLayer`**: Core component.
@@ -935,7 +1134,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `__init__()`**: Signature: (self, node_feature_dim, hidden_dim, output_dim, use_attention, db_path)
   - **Function `forward()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\ai\historical_rag.py`
+### File: `core_ai\ai\historical_rag.py`
 - **Class `HistoricalRAG`**: Retrieval-Augmented Generation using historical interactions
   - **Function `example_usage()`**: Demonstrate historical RAG
   - **Function `__init__()`**: Signature: (self, db_path, model_name, embedding_dim)
@@ -949,7 +1148,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `update_feedback()`**: Update success score based on user feedback
   - **Function `get_stats()`**: Get RAG statistics
 
-### File: `core_ai\src\ai_assistant\ai\intelligent_responder.py`
+### File: `core_ai\ai\intelligent_responder.py`
 - **Class `IntelligentResponder`**: Generates context-aware, mood-sensitive responses
   - **Function `get_responder()`**: Get global responder instance
   - **Function `generate_intelligent_response()`**: Main function to generate intelligent response
@@ -967,7 +1166,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `_command_acknowledgment()`**: Acknowledge commands
   - **Function `_default_response()`**: Default fallback response
 
-### File: `core_ai\src\ai_assistant\ai\intent_classification.py`
+### File: `core_ai\ai\intent_classification.py`
 - **Class `Intent`**: Intent classification result
 - **Class `Entity`**: Named entity
 - **Class `IntentClassifier`**: Intent classification using semantic similarity Learns from user corrections and adaptsto personal vocabulary
@@ -994,7 +1193,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `_remove_overlaps()`**: Remove overlapping entities, keeping highest confidence
   - **Function `add_custom_entity()`**: Add custom entity to knowledge base
 
-### File: `core_ai\src\ai_assistant\ai\intent_recognizer.py`
+### File: `core_ai\ai\intent_recognizer.py`
 - **Class `IntentRecognizer`**: Recognizes user intent from natural language commands. Handles English, Hindi, and Hinglish without requiring LLM training.
   - **Function `__init__()`**: Signature: (self)
   - **Function `normalize_text()`**: Normalize text by removing special characters and extra spaces.
@@ -1006,7 +1205,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `parse_command()`**: Parse a natural language command into structured format.
   - **Function `add_app_alias()`**: Add new app alias dynamically. Useful for learning user-specific app names.
 
-### File: `core_ai\src\ai_assistant\ai\llm_bandit.py`
+### File: `core_ai\ai\llm_bandit.py`
 - **Class `LLMBandit`**: Multi-armed bandit for optimal LLM selection
   - **Function `example_usage()`**: Demonstrate LLM bandit
   - **Function `__init__()`**: Signature: (self, db_path, exploration_rate)
@@ -1020,10 +1219,10 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_performance_summary()`**: Get performance summary for all LLMs
   - **Function `get_stats()`**: Get bandit statistics
 
-### File: `core_ai\src\ai_assistant\ai\llm_provider.py`
+### File: `core_ai\ai\llm_provider.py`
   - *(Documentation parsing failed for this file)*
 
-### File: `core_ai\src\ai_assistant\ai\gguf_model_manager.py`
+### File: `core_ai\ai\gguf_model_manager.py`
 - **Class `GGUFModelManager`**: Manages local GGUF inference via `llama-cpp-python`
   - **Function `get_gguf_manager()`**: Returns singleton GGUF model manager
   - **Function `discover_gguf_models()`**: Discovers available `.gguf` models in `models/`
@@ -1031,7 +1230,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_status()`**: Reports availability, loaded model, and runtime stats
   - **Function `unload_model()`**: Unloads GGUF weights and frees RAM
 
-### File: `core_ai\src\ai_assistant\ai\local_model_manager.py`
+### File: `core_ai\ai\local_model_manager.py`
 - **Class `LocalModelManager`**: Manage tiny local models optimized for low-resource systems Target: 8GB RAM, CPU-only inference and training
   - **Function `demo_local_model()`**: Demo the local model
   - **Function `__init__()`**: Initialize local model manager
@@ -1043,7 +1242,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `list_available_models()`**: List all tiny models suitable for 8GB RAM
   - **Function `check_system_requirements()`**: Check if system meets minimum requirements
 
-### File: `core_ai\src\ai_assistant\ai\memory.py`
+### File: `core_ai\ai\memory.py`
 - **Class `ConnectionPool`**: Simple connection pool for SQLite to reuse connections.
   - **Function `get_encrypted_db()`**: Get encrypted database instance
   - **Function `get_db_connection()`**: Context manager for database connections with automatic cleanup.
@@ -1064,7 +1263,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `return_connection()`**: Return a connection to the pool.
   - **Function `close_all()`**: Close all connections in the pool.
 
-### File: `core_ai\src\ai_assistant\ai\meta_learning.py`
+### File: `core_ai\ai\meta_learning.py`
 - **Class `Task`**: Single task for meta-learning
 - **Class `MetaLearningResult`**: Result of meta-learning episode
 - **Class `MAMLLearner`**: Model-Agnostic Meta-Learning implementation Learn to learn: meta-optimize for fast adaptation
@@ -1087,7 +1286,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `forward()`**: Signature: ()
   - **Function `clone()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\ai\model_compression.py`
+### File: `core_ai\ai\model_compression.py`
 - **Class `ModelCompressor`**: Compress models for efficient deployment
   - **Function `example_usage()`**: Demonstrate model compression
   - **Function `__init__()`**: Signature: (self, db_path)
@@ -1102,7 +1301,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_compression_history()`**: Get history of model compressions
   - **Function `get_stats()`**: Get compression statistics
 
-### File: `core_ai\src\ai_assistant\ai\model_router.py`
+### File: `core_ai\ai\model_router.py`
 - **Class `ModelTier`**: Model capability tiers
 - **Class `ModelConfig`**: Configuration for a model
 - **Class `QueryAnalysis`**: Analysis of a query
@@ -1118,7 +1317,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `_calculate_savings()`**: Calculate cost savings from routing vs always using GPT-4
   - **Function `recommend_model()`**: Recommend model based on constraints
 
-### File: `core_ai\src\ai_assistant\ai\multimodal_learning.py`
+### File: `core_ai\ai\multimodal_learning.py`
 - **Class `MultiModalProfile`**: Unified user profile across modalities
 - **Class `ModalityInteraction`**: Record of multi-modal interaction
 - **Class `CrossModalEmbedder`**: Creates unified embeddings from multiple modalities
@@ -1147,7 +1346,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `predict_user_state()`**: Predict user state from available modalities
   - **Function `get_contextual_insights()`**: Get insights from multi-modal data
 
-### File: `core_ai\src\ai_assistant\ai\multi_step_parser.py`
+### File: `core_ai\ai\multi_step_parser.py`
 - **Class `TaskStep`**: Represents a single step in a task chain.
 - **Class `MultiStepCommandParser`**: Parses complex, multi-step commands into sequential tasks.
   - **Function `parse_multi_step_command()`**: Parse a multi-step command into task steps.
@@ -1162,7 +1361,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `extract_contact_name()`**: Extract contact/recipient name from command.
   - **Function `enhance_step_params()`**: Enhance step parameters with extracted information.
 
-### File: `core_ai\src\ai_assistant\ai\network_aware_llm.py`
+### File: `core_ai\ai\network_aware_llm.py`
 - **Class `OnlineLLMConfig`**: Configuration for online-only LLM providers.
   - **Function `get_optimal_llm_config()`**: Get the optimal LLM configuration.
   - **Function `force_online_mode()`**: Force refresh of online providers.
@@ -1173,7 +1372,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `_test_provider()`**: Quick test of online provider availability.
   - **Function `get_provider_config()`**: Get complete provider configuration.
 
-### File: `core_ai\src\ai_assistant\ai\offline_llm_provider.py`
+### File: `core_ai\ai\offline_llm_provider.py`
 - **Class `OfflineLLMProvider`**: Abstract base class for offline LLM providers.
 - **Class `TransformersProvider`**: Hugging Face Transformers provider for offline local models.
 - **Class `SimpleOfflineProvider`**: Simple fallback provider for basic text matching and rule-based responses.
@@ -1210,7 +1409,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `count_tokens()`**: Count tokens using current provider.
   - **Function `get_provider_info()`**: Get information about available providers.
 
-### File: `core_ai\src\ai_assistant\ai\offline_mode.py`
+### File: `core_ai\ai\offline_mode.py`
 - **Class `OfflineModeManager`**: Manages offline/online mode detection and switching.
   - **Function `get_offline_manager()`**: Get or create the global offline mode manager instance.
   - **Function `__init__()`**: Initialize offline mode manager.
@@ -1229,7 +1428,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `clear_cache()`**: Clear cache files.
   - **Function `get_cache_info()`**: Get information about cached data.
 
-### File: `core_ai\src\ai_assistant\ai\qlora_trainer.py`
+### File: `core_ai\ai\qlora_trainer.py`
 - **Class `TrainingConfig`**: Configuration for QLoRA training optimized for 8GB RAM
 - **Class `QLoRATrainer`**: Train tiny models with QLoRA on 8GB RAM systems Can run on CPU-only (slow but works)
   - **Function `create_sample_training_data()`**: Create a sample training dataset
@@ -1243,7 +1442,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `train()`**: Fine-tune the model with QLoRA
   - **Function `tokenize_function()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\ai\query_cache.py`
+### File: `core_ai\ai\query_cache.py`
 - **Class `QuerySimilarityCache`**: Smart query caching using TF-IDF similarity
   - **Function `example_usage()`**: Demonstrate query caching
   - **Function `__init__()`**: Signature: (self, db_path, similarity_threshold, cache_ttl_hours)
@@ -1260,7 +1459,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_stats()`**: Get cache statistics
   - **Function `invalidate_similar()`**: Invalidate cache entries similar to query (for concept drift)
 
-### File: `core_ai\src\ai_assistant\ai\self_supervised_learning.py`
+### File: `core_ai\ai\self_supervised_learning.py`
 - **Class `SelfSupervisedLearner`**: Self-supervised learning for data-efficient training
   - **Function `example_usage()`**: Demonstrate self-supervised learning
   - **Function `__init__()`**: Signature: (self, db_path, hidden_dim, mask_probability)
@@ -1274,7 +1473,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `save_representation()`**: Save learned representation
   - **Function `get_stats()`**: Get learning statistics
 
-### File: `core_ai\src\ai_assistant\ai\semantic_cache.py`
+### File: `core_ai\ai\semantic_cache.py`
 - **Class `SemanticResponseCache`**: Intelligent response caching with semantic similarity
   - **Function `get_response_cache()`**: Get global response cache instance
   - **Function `cache_response()`**: Cache a response
@@ -1297,7 +1496,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `optimize()`**: Optimize cache by removing old/unused entries
   - **Function `_download_model()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\ai\smart_command_prediction.py`
+### File: `core_ai\ai\smart_command_prediction.py`
 - **Class `SmartCommandPredictor`**: Application-level intelligent command prediction Suggests commands based on context, history, and patterns
   - **Function `__init__()`**: Signature: (self, db_path)
   - **Function `_init_database()`**: Initialize database
@@ -1308,7 +1507,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_popular_commands()`**: Get most popular commands in time range
   - **Function `get_stats()`**: Get statistics
 
-### File: `core_ai\src\ai_assistant\ai\smart_memory_retrieval.py`
+### File: `core_ai\ai\smart_memory_retrieval.py`
 - **Class `SmartMemoryRetrieval`**: Intelligently retrieve information from learned conversations
   - **Function `enhance_response_with_memory()`**: Enhance AI response by checking memory first
   - **Function `__init__()`**: Signature: (self, db_path)
@@ -1322,7 +1521,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `_search_events()`**: Search for upcoming events
   - **Function `_search_general_memory()`**: General memory search based on keywords
 
-### File: `core_ai\src\ai_assistant\ai\streaming_handler.py`
+### File: `core_ai\ai\streaming_handler.py`
 - **Class `StreamProvider`**: Supported streaming providers
 - **Class `StreamChunk`**: A chunk of streamed response
 - **Class `StreamingResponseHandler`**: Handles streaming responses from multiple LLM providers
@@ -1332,7 +1531,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_stats()`**: Get streaming statistics
   - **Function `print_chunk()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\ai\usage_pattern_analyzer.py`
+### File: `core_ai\ai\usage_pattern_analyzer.py`
 - **Class `UsagePatternAnalyzer`**: Analyzes usage patterns for personalized fine-tuning
   - **Function `__init__()`**: Initialize analyzer
   - **Function `analyze_all()`**: Run complete analysis
@@ -1347,7 +1546,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `export_for_finetuning()`**: Export training data for fine-tuning
   - **Function `generate_report()`**: Generate human-readable analysis report
 
-### File: `core_ai\src\ai_assistant\ai\workflow_recommender.py`
+### File: `core_ai\ai\workflow_recommender.py`
 - **Class `WorkflowRecommender`**: Application-level workflow recommendation system Suggests optimal workflows and automation opportunities
   - **Function `__init__()`**: Signature: (self, db_path)
   - **Function `_init_database()`**: Initialize database
@@ -1359,7 +1558,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_workflow_analytics()`**: Get detailed analytics for a workflow
   - **Function `get_stats()`**: Get statistics
 
-### File: `core_ai\src\ai_assistant\ai\workflow_scheduler.py`
+### File: `core_ai\ai\workflow_scheduler.py`
 - **Class `WorkflowScheduler`**: RL-powered workflow scheduler
   - **Function `example_usage()`**: Demonstrate workflow scheduler
   - **Function `__init__()`**: Signature: (self, db_path, learning_rate, discount_factor)
@@ -1376,7 +1575,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `record_execution()`**: Record task execution outcome
   - **Function `get_stats()`**: Get scheduler statistics
 
-### File: `core_ai\src\ai_assistant\api\voice_api.py`
+### File: `core_ai\api\voice_api.py`
   - **Function `get_voice_status()`**: Get voice system status Returns information about available engines and current state
   - **Function `get_voice_config()`**: Get current voice configuration
   - **Function `speak_text()`**: Convert text to speech Body: {     "text": "Text to speak",     "voice": "en-US-AriaNeural" (optional),     "speed": 1.0 (optional),     "volume": ...
@@ -1393,7 +1592,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `health_check()`**: Health check endpoint for voice service
   - **Function `on_wake_word_detected()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\auth\pin_auth.py`
+### File: `core_ai\auth\pin_auth.py`
 - **Class `PINAuth`**: PIN-based authentication system
   - **Function `authenticate()`**: Main authentication function to be called at startup
   - **Function `require_pin_auth()`**: Decorator/helper function to add PIN authentication to any script
@@ -1408,7 +1607,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `_setup_new_pin()`**: Set up a new PIN interactively
   - **Function `change_pin()`**: Change the current PIN
 
-### File: `core_ai\src\ai_assistant\automation\analytics.py`
+### File: `core_ai\automation\analytics.py`
 - **Class `MetricType`**: Types of metrics
 - **Class `AlertLevel`**: Alert severity levels
 - **Class `AnalyticsInterval`**: Analytics collection intervals
@@ -1482,19 +1681,19 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `slow_execution_rule()`**: Signature: ()
   - **Function `queue_buildup_rule()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\automation\app_automation.py`
+### File: `core_ai\automation\app_automation.py`
   - *(Documentation parsing failed for this file)*
 
-### File: `core_ai\src\ai_assistant\automation\app_discovery.py`
+### File: `core_ai\automation\app_discovery.py`
   - *(Documentation parsing failed for this file)*
 
-### File: `core_ai\src\ai_assistant\automation\automation_engine.py`
+### File: `core_ai\automation\automation_engine.py`
   - *(Documentation parsing failed for this file)*
 
-### File: `core_ai\src\ai_assistant\automation\automation_tools_new.py`
+### File: `core_ai\automation\automation_tools_new.py`
   - **Function `__getattr__()`**: Lazy load modules/functions when accessed. This prevents importing all 15+ submodules at startup.
 
-### File: `core_ai\src\ai_assistant\automation\browser_automation.py`
+### File: `core_ai\automation\browser_automation.py`
 - **Class `BrowserConfig`**: Browser configuration
 - **Class `BrowserAutomation`**: Enhanced browser automation with AI-powered element detection
 - **Class `YouTubeAutomation`**: Specialized automation for YouTube with common actions
@@ -1519,10 +1718,10 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `clear_watch_history()`**: Clear watch history
   - **Function `search()`**: Search YouTube
 
-### File: `core_ai\src\ai_assistant\automation\complex_workflows.py`
+### File: `core_ai\automation\complex_workflows.py`
   - *(Documentation parsing failed for this file)*
 
-### File: `core_ai\src\ai_assistant\automation\context_aware.py`
+### File: `core_ai\automation\context_aware.py`
 - **Class `ContextType`**: Types of context information
 - **Class `AdaptationStrategy`**: Strategies for adaptation
 - **Class `LearningMode`**: Machine learning modes
@@ -1596,7 +1795,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `temporal_pattern()`**: Signature: ()
   - **Function `performance_degradation_pattern()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\automation\file_automation.py`
+### File: `core_ai\automation\file_automation.py`
 - **Class `FileAutomation`**: Handles file system interactions and automation
   - **Function `__init__()`**: Initialize file automation
   - **Function `get_standard_folder()`**: Get path to standard user folders
@@ -1605,12 +1804,12 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `move_file()`**: Move a file to a destination folder
   - **Function `copy_file()`**: Copy a file to a destination folder
 
-### File: `core_ai\src\ai_assistant\automation\live_taskbar_analysis.py`
+### File: `core_ai\automation\live_taskbar_analysis.py`
   - **Function `analyze_current_taskbar()`**: Analyze what's currently visible on the taskbar
   - **Function `check_specific_app()`**: Check if a specific application is running
   - **Function `enum_window_callback()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\automation\main_interface.py`
+### File: `core_ai\automation\main_interface.py`
 - **Class `AutomationStatus`**: Overall automation system status
 - **Class `AutomationConfig`**: Automation system configuration
 - **Class `AutomationAPI`**: RESTful API interface for automation system
@@ -1689,7 +1888,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `metrics()`**: Signature: ()
   - **Function `serve()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\automation\orchestrator.py`
+### File: `core_ai\automation\orchestrator.py`
 - **Class `TaskPriority`**: Task execution priority levels
 - **Class `TaskStatus`**: Task execution status
 - **Class `ResourceType`**: System resource types
@@ -1751,7 +1950,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `_init_database()`**: Initialize SQLite database for persistence
   - **Function `_save_task()`**: Save task to database
 
-### File: `core_ai\src\ai_assistant\automation\rule_engine.py`
+### File: `core_ai\automation\rule_engine.py`
 - **Class `RuleType`**: Types of automation rules
 - **Class `ConditionOperator`**: Operators for rule conditions
 - **Class `ActionType`**: Types of rule actions
@@ -1835,7 +2034,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `_delete_rule()`**: Delete rule from database
   - **Function `handle_event()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\automation\security.py`
+### File: `core_ai\automation\security.py`
 - **Class `SecurityLevel`**: Security levels for automation operations
 - **Class `PermissionType`**: Types of permissions
 - **Class `ResourceType`**: Types of protected resources
@@ -1913,7 +2112,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `wrapper()`**: Signature: ()
   - **Function `wrapper()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\automation\smart_automation.py`
+### File: `core_ai\automation\smart_automation.py`
 - **Class `WorkflowStatus`**: Workflow execution status.
 - **Class `TaskType`**: Types of tasks in workflows.
 - **Class `TriggerType`**: Types of workflow triggers.
@@ -1968,10 +2167,10 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `_detect_time_patterns()`**: Detect time-based patterns.
   - **Function `_detect_sequence_patterns()`**: Detect action sequence patterns.
 
-### File: `core_ai\src\ai_assistant\automation\system_automation.py`
+### File: `core_ai\automation\system_automation.py`
   - *(Documentation parsing failed for this file)*
 
-### File: `core_ai\src\ai_assistant\automation\taskbar_detection.py`
+### File: `core_ai\automation\taskbar_detection.py`
 - **Class `TaskbarDetector`**: Detects and analyzes Windows taskbar and running applications.
   - **Function `detect_taskbar_apps()`**: Main function to detect and describe taskbar applications.
   - **Function `can_see_taskbar()`**: Check if the assistant can see and analyze the taskbar.
@@ -1984,10 +2183,10 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `find_specific_app_in_taskbar()`**: Look for a specific application in the taskbar.
   - **Function `enum_window_callback()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\automation\task_planner.py`
+### File: `core_ai\automation\task_planner.py`
   - *(Documentation parsing failed for this file)*
 
-### File: `core_ai\src\ai_assistant\automation\task_scheduler.py`
+### File: `core_ai\automation\task_scheduler.py`
 - **Class `ScheduleType`**: Types of schedule patterns
 - **Class `ScheduleStatus`**: Schedule status
 - **Class `BusinessHours`**: Business hour patterns
@@ -2044,7 +2243,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `_load_tasks()`**: Load tasks from database
   - **Function `_delete_task()`**: Delete task from database
 
-### File: `core_ai\src\ai_assistant\automation\templates.py`
+### File: `core_ai\automation\templates.py`
 - **Class `TemplateCategory`**: Template categories
 - **Class `TemplateType`**: Template types
 - **Class `ParameterType`**: Parameter types for templates
@@ -2101,7 +2300,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `_setup_validators()`**: Setup template validators
   - **Function `_get_category_description()`**: Get description for template category
 
-### File: `core_ai\src\ai_assistant\automation\visual_automation.py`
+### File: `core_ai\automation\visual_automation.py`
 - **Class `VisualAutomationEngine`**: VLM-powered visual automation engine.
   - **Function `click_element()`**: Quick function to click an element by description.
   - **Function `type_into_field()`**: Quick function to type into a field.
@@ -2115,7 +2314,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_action_history()`**: Get recent action history.
   - **Function `clear_history()`**: Clear action history.
 
-### File: `core_ai\src\ai_assistant\automation\visual_verification.py`
+### File: `core_ai\automation\visual_verification.py`
 - **Class `VerificationResult`**: Result of visual verification
 - **Class `VisualAutomationVerifier`**: Verifies automation success using computer vision
   - **Function `get_visual_verifier()`**: Get global verifier instance
@@ -2130,7 +2329,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `_get_unknown_result()`**: Get result for failed verification
   - **Function `get_success_rate()`**: Get verification success statistics
 
-### File: `core_ai\src\ai_assistant\cli\app_manager.py`
+### File: `core_ai\cli\app_manager.py`
   - **Function `register_app_interactive()`**: Interactive app registration process.
   - **Function `list_apps()`**: List all registered apps.
   - **Function `launch_app()`**: Launch an app.
@@ -2139,7 +2338,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `app_status()`**: Show detailed app status.
   - **Function `main()`**: Main CLI entry point.
 
-### File: `core_ai\src\ai_assistant\cli\launch_assistant.py`
+### File: `core_ai\cli\launch_assistant.py`
 - **Class `SystemChecker`**: Comprehensive system compatibility checker
   - **Function `install_missing_dependencies()`**: Install missing critical dependencies
   - **Function `download_voice_models()`**: Download required voice models
@@ -2153,11 +2352,11 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `check_config_files()`**: Check configuration files
   - **Function `run_full_check()`**: Run complete system check
 
-### File: `core_ai\src\ai_assistant\cli\mcp_cli.py`
+### File: `core_ai\cli\mcp_cli.py`
 - **Class `MCPCli`**: CLI interface for MCP management
   - **Function `__init__()`**: Signature: (self)
 
-### File: `core_ai\src\ai_assistant\core\access_control.py`
+### File: `core_ai\core\access_control.py`
 - **Class `Permission`**: System permissions
 - **Class `Role`**: User roles with predefined permission sets
 - **Class `User`**: User with role and permissions
@@ -2189,7 +2388,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `test_system_command()`**: Signature: ()
   - **Function `wrapper()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\core\action_chain_models.py`
+### File: `core_ai\core\action_chain_models.py`
 - **Class `ChainStatus`**: Status of action chain execution
 - **Class `ActionType`**: Types of actions in a chain
 - **Class `Action`**: Single action in a chain
@@ -2206,10 +2405,10 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `to_dict()`**: Convert to dictionary
   - **Function `to_dict()`**: Convert to dictionary
 
-### File: `core_ai\src\ai_assistant\core\app_discovery.py`
+### File: `core_ai\core\app_discovery.py`
   - *(Documentation parsing failed for this file)*
 
-### File: `core_ai\src\ai_assistant\core\app_integrator.py`
+### File: `core_ai\core\app_integrator.py`
 - **Class `AppIntegration`**: Represents an app integration configuration.
 - **Class `SecureAppIntegrator`**: Manages secure integration with third-party applications.
   - **Function `__post_init__()`**: Signature: (self)
@@ -2225,7 +2424,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_app_status()`**: Get detailed status of an integrated application.
   - **Function `auto_start_apps()`**: Auto-start applications that are configured for auto-start.
 
-### File: `core_ai\src\ai_assistant\core\app_security.py`
+### File: `core_ai\core\app_security.py`
 - **Class `SecureAppManager`**: Manages secure app integrations with encryption and access controls.
   - **Function `__init__()`**: Signature: (self, config_dir)
   - **Function `_initialize_encryption()`**: Initialize encryption for sensitive data.
@@ -2239,10 +2438,10 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `list_registered_apps()`**: List all registered apps (without sensitive data).
   - **Function `remove_app()`**: Remove an app and its credentials.
 
-### File: `core_ai\src\ai_assistant\core\assistant.py`
+### File: `core_ai\core\assistant.py`
   - *(Documentation parsing failed for this file)*
 
-### File: `core_ai\src\ai_assistant\core\audit_logger.py`
+### File: `core_ai\core\audit_logger.py`
 - **Class `EventType`**: Types of audit events
 - **Class `SeverityLevel`**: Event severity levels
 - **Class `AuditEvent`**: Audit event structure
@@ -2273,7 +2472,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `cleanup_old_logs()`**: Clean up old audit logs
   - **Function `stop()`**: Stop audit logging
 
-### File: `core_ai\src\ai_assistant\core\auto_updater.py`
+### File: `core_ai\core\auto_updater.py`
 - **Class `Version`**: Semantic version comparison
 - **Class `AutoUpdater`**: Automatic update checker and installer
   - **Function `get_updater()`**: Get singleton updater instance
@@ -2293,13 +2492,13 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `check_for_updates_async()`**: Check for updates in background thread
   - **Function `_check()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\core\backup_manager.py`
+### File: `core_ai\core\backup_manager.py`
 - **Class `BackupManager`**: Core component.
   - **Function `__init__()`**: Signature: (self)
   - **Function `backup_settings()`**: Create a zip backup of the config directory
   - **Function `list_backups()`**: List all available backups
 
-### File: `core_ai\src\ai_assistant\core\biometric_encryption.py`
+### File: `core_ai\core\biometric_encryption.py`
 - **Class `BiometricEncryptionError`**: Base exception for biometric encryption errors
 - **Class `BiometricEncryption`**: Manages encryption/decryption of biometric data with secure key management.
   - **Function `get_biometric_encryptor()`**: Get global BiometricEncryption instance (singleton pattern).
@@ -2314,7 +2513,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `rotate_keys()`**: Rotate encryption keys by re-encrypting all models with new key.
   - **Function `get_encryption_info()`**: Get information about encryption configuration.
 
-### File: `core_ai\src\ai_assistant\core\chain_of_actions_manager.py`
+### File: `core_ai\core\chain_of_actions_manager.py`
 - **Class `ChainOfActionsManager`**: Central manager for chain-of-actions execution
   - **Function `get_chain_manager()`**: Get singleton chain manager
   - **Function `__init__()`**: Initialize manager
@@ -2327,7 +2526,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `_run_browser_task()`**: Signature: ()
   - **Function `_run_app_task()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\core\config_loader.py`
+### File: `core_ai\core\config_loader.py`
 - **Class `ConfigurationError`**: Configuration related errors
 - **Class `Config`**: Configuration manager for AI Assistant
   - **Function `get_config()`**: Get global configuration instance (singleton)
@@ -2341,7 +2540,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `to_dict()`**: Get all configuration as dictionary
   - **Function `reload()`**: Reload configuration from .env file
 
-### File: `core_ai\src\ai_assistant\core\config_validator.py`
+### File: `core_ai\core\config_validator.py`
 - **Class `ConfigValidator`**: Validates application configuration and API keys
   - **Function `validate_config()`**: Validate configuration and optionally exit on failure
   - **Function `quick_check()`**: Quick validation check without detailed output
@@ -2356,10 +2555,10 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `_print_results()`**: Print validation results
   - **Function `get_config()`**: Get configuration value
 
-### File: `core_ai\src\ai_assistant\core\context_optimizer.py`
+### File: `core_ai\core\context_optimizer.py`
   - *(Documentation parsing failed for this file)*
 
-### File: `core_ai\src\ai_assistant\core\conversation_context.py`
+### File: `core_ai\core\conversation_context.py`
 - **Class `ExecutionState`**: States of task execution.
 - **Class `ConversationContext`**: Container for conversation context.
 - **Class `ContextManager`**: Manages conversation context with persistence.
@@ -2391,7 +2590,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `reset()`**: Reset context to initial state.
   - **Function `get_summary()`**: Get context summary.
 
-### File: `core_ai\src\ai_assistant\core\core.py`
+### File: `core_ai\core\core.py`
   - **Function `extract_number()`**: Extract a number from text (supports both digits and words).
   - **Function `write_a_note()`**: Opens Notepad, types a message, and closes it without saving.
   - **Function `open_application()`**: Opens any application on the computer using intelligent discovery.
@@ -2412,7 +2611,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_app_path_from_name()`**: Loads the apps.json file and finds the path for a given app name.
   - **Function `write_to_file()`**: Creates a new text file (like.txt or.md) or a simple PDF and writes the given content to it. :param filename: The name of the file to create (e.g.,...
 
-### File: `core_ai\src\ai_assistant\core\custom_commands.py`
+### File: `core_ai\core\custom_commands.py`
 - **Class `CustomCommandManager`**: Core component.
   - **Function `__init__()`**: Signature: (self, data_dir)
   - **Function `_load_commands()`**: Signature: (self)
@@ -2421,7 +2620,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `remove_alias()`**: Signature: (self, alias)
   - **Function `resolve_command()`**: Returns a list of commands. If it's an alias, returns the mapped commands.
 
-### File: `core_ai\src\ai_assistant\core\database_config.py`
+### File: `core_ai\core\database_config.py`
   - **Function `get_db_path()`**: Get the path to a database file.
   - **Function `get_db_path_str()`**: Get the path to a database file as a string.
   - **Function `list_databases()`**: List all configured databases and their paths.
@@ -2429,7 +2628,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_database_size()`**: Get the size of a database file in bytes.
   - **Function `migrate_legacy_databases()`**: Migrate databases from root directory to data/ directory. This should be called once during application startup.
 
-### File: `core_ai\src\ai_assistant\core\encrypted_database.py`
+### File: `core_ai\core\encrypted_database.py`
 - **Class `EncryptedDatabase`**: Database wrapper that provides transparent encryption for sensitive fields.
   - **Function `create_encrypted_memory_db()`**: Create encrypted database for conversation memory
   - **Function `create_encrypted_conversation_db()`**: Create encrypted database for conversation AI
@@ -2448,7 +2647,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `delete()`**: Delete records (no encryption needed)
   - **Function `migrate_to_encrypted()`**: Migrate existing table data to encrypted format
 
-### File: `core_ai\src\ai_assistant\core\encryption.py`
+### File: `core_ai\core\encryption.py`
 - **Class `EncryptionError`**: Custom exception for encryption-related errors
 - **Class `SecureEncryption`**: Secure encryption/decryption utility for AI Assistant data.
 - **Class `DatabaseEncryption`**: Encryption helper for database fields
@@ -2476,7 +2675,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `encrypt_api_keys()`**: Encrypt API keys while preserving structure
   - **Function `decrypt_api_keys()`**: Decrypt API keys
 
-### File: `core_ai\src\ai_assistant\core\enhanced_integration.py`
+### File: `core_ai\core\enhanced_integration.py`
 - **Class `EnhancedAI`**: Enhanced AI with all optimizations integrated
   - **Function `get_enhanced_ai()`**: Get global enhanced AI instance
   - **Function `__init__()`**: Initialize enhanced AI
@@ -2485,7 +2684,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `optimize()`**: Run optimization on all components
   - **Function `print_chunk()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\core\input_sanitizer.py`
+### File: `core_ai\core\input_sanitizer.py`
 - **Class `InputSanitizer`**: Comprehensive input validation and sanitization
   - **Function `get_input_sanitizer()`**: Get global input sanitizer instance (singleton)
   - **Function `__init__()`**: Signature: (self)
@@ -2504,7 +2703,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `sanitize_dict()`**: Sanitize dictionary by filtering keys and sanitizing values
   - **Function `_sanitize_recursive()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\core\input_validation.py`
+### File: `core_ai\core\input_validation.py`
 - **Class `ValidationError`**: Custom exception for validation failures
 - **Class `InputType`**: Types of input validation
 - **Class `ValidationRule`**: Validation rule configuration
@@ -2535,11 +2734,11 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `validate_command_args()`**: Validate CLI command arguments
   - **Function `validate_file_path()`**: Validate file path for CLI operations
 
-### File: `core_ai\src\ai_assistant\core\interaction.py`
+### File: `core_ai\core\interaction.py`
 - **Class `InteractionManager`**: Manages direct interaction with the human user. Supports asking questions and requesting approval.
   - **Function `__init__()`**: Signature: (self)
 
-### File: `core_ai\src\ai_assistant\core\memory_manager.py`
+### File: `core_ai\core\memory_manager.py`
 - **Class `MemoryManager`**: Manages shared context and memory for the agent system. Persists data to a JSON file.
   - **Function `__init__()`**: Signature: (self, storage_path)
   - **Function `_load()`**: Load memory from disk
@@ -2550,11 +2749,11 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `list_keys()`**: List all keys
   - **Function `clear()`**: Clear all memory
 
-### File: `core_ai\src\ai_assistant\core\multi_agent_coordinator.py`
+### File: `core_ai\core\multi_agent_coordinator.py`
 - **Class `MultiAgentCoordinator`**: Central coordinator for the Multi-Agent System. Handles task routing, agent assignment, and progress tracking.
   - **Function `__init__()`**: Signature: (self, registry)
 
-### File: `core_ai\src\ai_assistant\core\onboarding.py`
+### File: `core_ai\core\onboarding.py`
 - **Class `OnboardingManager`**: Core component.
   - **Function `__init__()`**: Signature: (self, settings_path)
   - **Function `_load_settings()`**: Signature: (self)
@@ -2564,7 +2763,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_onboarding_system_prompt()`**: Signature: (self)
   - **Function `process_onboarding_response()`**: Check if the onboarding is complete based on the LLM response. Returns (cleaned_response, is_complete)
 
-### File: `core_ai\src\ai_assistant\core\performance_optimization.py`
+### File: `core_ai\core\performance_optimization.py`
 - **Class `PerformanceLevel`**: Performance optimization levels
 - **Class `ResourceType`**: System resource types
 - **Class `CacheType`**: Cache implementation types
@@ -2629,7 +2828,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `wrapper()`**: Signature: ()
   - **Function `wrapper()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\core\permission_system.py`
+### File: `core_ai\core\permission_system.py`
 - **Class `PermissionLevel`**: Permission levels for operations
 - **Class `RiskLevel`**: Risk levels for operations
 - **Class `OperationRequest`**: Represents a request to perform an operation
@@ -2656,7 +2855,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `decorator()`**: Signature: ()
   - **Function `wrapper()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\core\privacy_consent.py`
+### File: `core_ai\core\privacy_consent.py`
 - **Class `ConsentType`**: Types of consent that can be requested
 - **Class `ConsentStatus`**: Status of consent
 - **Class `ConsentRecord`**: Record of a single consent decision
@@ -2681,7 +2880,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `decorator()`**: Signature: ()
   - **Function `wrapper()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\core\privacy_protection.py`
+### File: `core_ai\core\privacy_protection.py`
 - **Class `DataSensitivity`**: Data sensitivity classification
 - **Class `ThreatLevel`**: Threat detection levels
 - **Class `PrivacyRule`**: Privacy protection rule
@@ -2701,7 +2900,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `require_confirmation()`**: Check if action requires user confirmation
   - **Function `generate_confirmation_prompt()`**: Generate user-friendly confirmation prompt
 
-### File: `core_ai\src\ai_assistant\core\proactive_anticipator.py`
+### File: `core_ai\core\proactive_anticipator.py`
 - **Class `ProactiveAnticipator`**: Core component.
   - **Function `__init__()`**: Signature: (self, chat_interface)
   - **Function `start()`**: Signature: (self)
@@ -2709,7 +2908,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `_schedule_loop()`**: Signature: (self)
   - **Function `_check_for_proactive_actions()`**: Signature: (self, now)
 
-### File: `core_ai\src\ai_assistant\core\progress_tracker.py`
+### File: `core_ai\core\progress_tracker.py`
 - **Class `PersistentProgressTracker`**: Persistent progress tracker using SQLite. Stores chain execution history and real-time status.
   - **Function `get_progress_tracker()`**: Get singleton progress tracker
   - **Function `__init__()`**: Initialize tracker with database path
@@ -2723,7 +2922,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_recent_chains()`**: Get list of recent execution chains
   - **Function `get_chain_details()`**: Get full details for a chain including actions
 
-### File: `core_ai\src\ai_assistant\core\secrets_manager.py`
+### File: `core_ai\core\secrets_manager.py`
 - **Class `SecretsValidationError`**: Raised when required secrets are missing or invalid.
 - **Class `SecretsManager`**: Centralized secrets management with validation and secure defaults.
   - **Function `get_secrets_manager()`**: Get the global secrets manager instance.
@@ -2740,7 +2939,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `hash_value()`**: Hash a value securely using PBKDF2.
   - **Function `print_setup_instructions()`**: Print instructions for setting up secrets.
 
-### File: `core_ai\src\ai_assistant\core\system.py`
+### File: `core_ai\core\system.py`
   - **Function `get_system_status()`**: Gets comprehensive system status including CPU, RAM, disk, and network info.
   - **Function `get_running_processes()`**: Gets information about currently running processes. :param limit: Number of top processes to show (by CPU usage)
   - **Function `cleanup_temp_files()`**: Cleans up temporary files and system cache.
@@ -2749,7 +2948,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_system_info()`**: Gets detailed system information including OS, hardware, and Python environment.
   - **Function `get_battery_status()`**: Gets detailed battery status if available.
 
-### File: `core_ai\src\ai_assistant\core\task_chain_orchestrator.py`
+### File: `core_ai\core\task_chain_orchestrator.py`
 - **Class `ExecutionResult`**: Result of task chain execution.
 - **Class `TaskChainOrchestrator`**: Orchestrates execution of multi-step task chains.
   - **Function `get_orchestrator()`**: Get singleton orchestrator.
@@ -2766,7 +2965,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `resume()`**: Resume paused execution.
   - **Function `cancel()`**: Cancel current execution.
 
-### File: `core_ai\src\ai_assistant\core\tool_executor.py`
+### File: `core_ai\core\tool_executor.py`
 - **Class `ToolType`**: Tool execution type.
 - **Class `ToolResult`**: Result from tool execution.
 - **Class `ToolExecutor`**: Executes tools/functions called by LLM.
@@ -2786,10 +2985,10 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `clear_history()`**: Clear execution history.
   - **Function `evaluate()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\core\universal_app_controller.py`
+### File: `core_ai\core\universal_app_controller.py`
   - *(Documentation parsing failed for this file)*
 
-### File: `core_ai\src\ai_assistant\core\voice_access_control.py`
+### File: `core_ai\core\voice_access_control.py`
 - **Class `Role`**: User roles with hierarchical permissions
 - **Class `Permission`**: Granular permissions for voice operations
 - **Class `User`**: User account with role and permissions
@@ -2817,7 +3016,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `decorator()`**: Signature: ()
   - **Function `wrapper()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\core\voice_audit_logger.py`
+### File: `core_ai\core\voice_audit_logger.py`
 - **Class `AuditEventType`**: Types of events that can be audited
 - **Class `AuditSeverity`**: Severity levels for audit events
 - **Class `AuditEvent`**: Single audit log entry
@@ -2841,7 +3040,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_resource_audit_trail()`**: Get audit trail for a specific resource (e.g., speaker).
   - **Function `get_recent_events()`**: Get recent audit events.
 
-### File: `core_ai\src\ai_assistant\core\services\ai_service_manager.py`
+### File: `core_ai\core\services\ai_service_manager.py`
 - **Class `AIServiceManager`**: Manages AI services with lazy initialization
   - **Function `__init__()`**: Initialize AI service manager
   - **Function `multimodal_ai()`**: Get multimodal AI service (lazy loaded)
@@ -2849,7 +3048,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `llm_chat()`**: Get LLM chat service (lazy loaded)
   - **Function `get_status()`**: Get initialization status of all AI services
 
-### File: `core_ai\src\ai_assistant\core\services\command_processor.py`
+### File: `core_ai\core\services\command_processor.py`
 - **Class `CommandProcessor`**: Process user commands with multilingual support
   - **Function `__init__()`**: Initialize command processor
   - **Function `process_command()`**: Main command processing entry point
@@ -2857,7 +3056,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `clear_history()`**: Clear conversation history
   - **Function `get_history()`**: Get recent conversation history
 
-### File: `core_ai\src\ai_assistant\core\services\initialization_service.py`
+### File: `core_ai\core\services\initialization_service.py`
 - **Class `InitializationService`**: Manages initialization of assistant services
   - **Function `__init__()`**: Initialize service manager
   - **Function `initialize_memory()`**: Initialize memory system
@@ -2866,7 +3065,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_status()`**: Get initialization status
   - **Function `init()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\core\services\monitoring_service.py`
+### File: `core_ai\core\services\monitoring_service.py`
 - **Class `MonitoringService`**: System monitoring and statistics service
   - **Function `__init__()`**: Initialize monitoring service
   - **Function `get_real_time_system_stats()`**: Get real-time system statistics
@@ -2874,7 +3073,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_process_info()`**: Get current process information
   - **Function `monitor()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\core\services\voice_service_manager.py`
+### File: `core_ai\core\services\voice_service_manager.py`
 - **Class `VoiceServiceManager`**: Manages voice services with lazy initialization
   - **Function `__init__()`**: Initialize voice service manager
   - **Function `voice_recognizer()`**: Get voice recognizer (lazy loaded)
@@ -2885,7 +3084,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `speak()`**: Speak text using TTS
   - **Function `get_status()`**: Get initialization status of all voice services
 
-### File: `core_ai\src\ai_assistant\integrations\email_handler.py`
+### File: `core_ai\integrations\email_handler.py`
 - **Class `GmailManager`**: Manages Gmail API authentication and operations
   - **Function `setup_email_auth()`**: Sets up Gmail API authentication. Returns status message. User needs to run this once to authenticate.
   - **Function `get_gmail_service()`**: Helper function to get authenticated Gmail service.
@@ -2907,7 +3106,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_service()`**: Get authenticated Gmail service, initialize if needed
   - **Function `is_authenticated()`**: Check if Gmail is authenticated
 
-### File: `core_ai\src\ai_assistant\integrations\google_calendar.py`
+### File: `core_ai\integrations\google_calendar.py`
 - **Class `CalendarManager`**: Manages Google Calendar API authentication and operations
   - **Function `setup_calendar_auth()`**: Sets up Google Calendar authentication. Returns status message. User needs to run this once to authenticate.
   - **Function `get_calendar_service()`**: Helper function to get authenticated calendar service.
@@ -2924,7 +3123,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_service()`**: Get authenticated calendar service, initialize if needed
   - **Function `is_authenticated()`**: Check if calendar is authenticated
 
-### File: `core_ai\src\ai_assistant\integrations\learning_automation.py`
+### File: `core_ai\integrations\learning_automation.py`
   - **Function `with_learning()`**: Decorator to add learning capabilities to automation functions Logs execution for learning and provides intelligent suggestions
   - **Function `get_smart_suggestion()`**: Get smart suggestion based on current task
   - **Function `predict_next_action()`**: Predict next action based on command history
@@ -2932,7 +3131,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `log_automation_workflow()`**: Log complete automation workflow for learning
   - **Function `wrapper()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\integrations\learning_integration.py`
+### File: `core_ai\integrations\learning_integration.py`
 - **Class `LearningAssistant`**: Intelligent assistant that learns from interactions Integrates all 27 learning systems into a unified interface
   - **Function `get_learning_assistant()`**: Get or create learning assistant instance
   - **Function `initialize_learning_integration()`**: Initialize learning systems integration
@@ -2953,7 +3152,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `update_context()`**: Update current context
   - **Function `get_session_stats()`**: Get statistics for current session
 
-### File: `core_ai\src\ai_assistant\integrations\mcp_client.py`
+### File: `core_ai\integrations\mcp_client.py`
 - **Class `MCPServerConfig`**: Configuration for an MCP server connection
 - **Class `MCPClient`**: Client for interacting with Model Context Protocol servers
   - **Function `get_mcp_client()`**: Get or create the global MCP client instance
@@ -2962,13 +3161,13 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_server_info()`**: Get information about a specific server
   - **Function `get_all_servers()`**: Get information about all configured servers
 
-### File: `core_ai\src\ai_assistant\integrations\mcp_conversational.py`
+### File: `core_ai\integrations\mcp_conversational.py`
 - **Class `MCPConversationalEnhancer`**: Enhances conversational AI with MCP tool calling capabilities
   - **Function `__init__()`**: Initialize MCP enhancer
   - **Function `get_available_mcp_tools_description()`**: Get a description of available MCP tools for the AI to use
   - **Function `enhanced_process_message()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\integrations\mcp_manager.py`
+### File: `core_ai\integrations\mcp_manager.py`
 - **Class `MCPManager`**: High-level manager for MCP server connections and tool execution
   - **Function `__init__()`**: Initialize MCP Manager
   - **Function `_load_config()`**: Load MCP server configuration from JSON file
@@ -2980,7 +3179,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_status()`**: Get overall status of the MCP manager
   - **Function `clear_cache()`**: Clear the tools and resources cache
 
-### File: `core_ai\src\ai_assistant\integrations\music.py`
+### File: `core_ai\integrations\music.py`
 - **Class `SpotifyController`**: Spotify Web API integration with proper OAuth2 authentication
 - **Class `YouTubeMusicController`**: YouTube Music integration using ytmusicapi
   - **Function `search_youtube_music()`**: Search for songs on YouTube Music
@@ -3008,15 +3207,15 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `setup_ytmusic_auth()`**: Set up YouTube Music authentication
   - **Function `_ensure_authenticated()`**: Ensure we have valid authentication
 
-### File: `core_ai\src\ai_assistant\integrations\orchestrator_integration.py`
+### File: `core_ai\integrations\orchestrator_integration.py`
   - **Function `should_use_orchestrator()`**: Determine if command should use multi-step orchestration.
   - **Function `process_with_orchestrator()`**: Process command using task chain orchestrator.
   - **Function `get_orchestrator_status()`**: Get current orchestrator status.
 
-### File: `core_ai\src\ai_assistant\integrations\research.py`
+### File: `core_ai\integrations\research.py`
   - *(Documentation parsing failed for this file)*
 
-### File: `core_ai\src\ai_assistant\integrations\web_scraping.py`
+### File: `core_ai\integrations\web_scraping.py`
 - **Class `WebScrapingManager`**: Advanced web scraping and data aggregation manager
   - **Function `get_weather_info()`**: Get current weather information for a location Args:     location: City name or coordinates     api_key: OpenWeatherMap API key (optional, uses fre...
   - **Function `get_weather_forecast()`**: Get weather forecast for upcoming days Args:     location: City name     days: Number of days to forecast (1-7)
@@ -3031,7 +3230,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `__init__()`**: Signature: (self)
   - **Function `ensure_cache_dir()`**: Ensure cache directory exists
 
-### File: `core_ai\src\ai_assistant\integrations\web_search_integration.py`
+### File: `core_ai\integrations\web_search_integration.py`
 - **Class `SearchTriggerType`**: Triggers for web search.
 - **Class `SearchResult`**: A single search result.
 - **Class `SearchResponse`**: Response from web search.
@@ -3055,39 +3254,39 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `enhance_prompt_with_search()`**: Enhance user prompt with search results context.
   - **Function `get_search_stats()`**: Get search statistics.
 
-### File: `core_ai\src\ai_assistant\integrations\whatsapp.py`
+### File: `core_ai\integrations\whatsapp.py`
   - **Function `load_contacts()`**: Signature: ()
   - **Function `get_contact_number()`**: Signature: (name)
   - **Function `send_whatsapp_message()`**: Sends a WhatsApp message to a contact. 1. Looks up contact number. 2. Opens WhatsApp (Web or App) with pre-filled message. 3. Simulates 'Enter' to ...
 
-### File: `core_ai\src\ai_assistant\integrations\youtube_ops.py`
+### File: `core_ai\integrations\youtube_ops.py`
 - **Class `YouTubeDownloader`**: Core component.
   - **Function `__init__()`**: Signature: (self, download_path)
   - **Function `search_and_download_audio()`**: Searches for a video on YouTube and downloads the audio. Returns a dictionary with the result status and details.
 
-### File: `core_ai\src\ai_assistant\nlp\generate_dataset.py`
+### File: `core_ai\nlp\generate_dataset.py`
   - **Function `main()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\nlp\intent_extractor.py`
+### File: `core_ai\nlp\intent_extractor.py`
 - **Class `IntentResult`**: Core component.
 - **Class `IntentExtractor`**: A simple rule-based intent and entity extractor for natural language commands. Uses regex patterns to identify intents and extract entities.
   - **Function `__init__()`**: Signature: (self)
   - **Function `extract()`**: Extract intent and entities from the given text. Returns an IntentResult with the best match.
 
-### File: `core_ai\src\ai_assistant\nlp\predict_command.py`
+### File: `core_ai\nlp\predict_command.py`
 - **Class `OfflineCommandPredictor`**: Core component.
   - **Function `__init__()`**: Signature: (self)
   - **Function `predict()`**: Takes a natural language command (English, Hindi, or Bhojpuri)  and returns the corresponding INTENT tag.
 
-### File: `core_ai\src\ai_assistant\nlp\train_model.py`
+### File: `core_ai\nlp\train_model.py`
   - **Function `main()`**: Signature: ()
   - **Function `tokenize_function()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\tests\test_personalization.py`
+### File: `core_ai\tests\test_personalization.py`
   - **Function `test_context_optimizer()`**: Signature: ()
   - **Function `test_intent_recognizer()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\utils\advanced_logging.py`
+### File: `core_ai\utils\advanced_logging.py`
   - **Function `log_performance()`**: Decorator to log function performance
 - **Class `ContextualErrorLogger`**: Enhanced error logger with context information
 - **Class `APIRequestLogger`**: Logger for API requests and responses
@@ -3114,11 +3313,11 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `slow_function()`**: Signature: ()
   - **Function `wrapper()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\utils\backend_utils.py`
+### File: `core_ai\utils\backend_utils.py`
   - **Function `validate_input()`**: Validate input data against pattern
   - **Function `sanitize_command()`**: Sanitize command input to prevent injection
 
-### File: `core_ai\src\ai_assistant\utils\convert_prints.py`
+### File: `core_ai\utils\convert_prints.py`
 - **Class `PrintToLoggerConverter`**: Converts print statements to logger calls throughout the project
   - **Function `main()`**: Run the conversion
   - **Function `__init__()`**: Signature: (self, project_root)
@@ -3126,17 +3325,17 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `_should_skip_file()`**: Check if file should be skipped
   - **Function `_convert_file()`**: Convert a single file
 
-### File: `core_ai\src\ai_assistant\utils\dataset_generator.py`
+### File: `core_ai\utils\dataset_generator.py`
   - **Function `generate_dataset()`**: Signature: (num_samples)
 
-### File: `core_ai\src\ai_assistant\utils\embeddings.py`
+### File: `core_ai\utils\embeddings.py`
 - **Class `EmbeddingStore`**: Core component.
   - **Function `get_openai_embedding()`**: Get OpenAI embedding for text.
   - **Function `__init__()`**: Signature: (self, dim)
   - **Function `add()`**: Signature: (self, text, embedding)
   - **Function `search()`**: Signature: (self, query_embedding, top_k)
 
-### File: `core_ai\src\ai_assistant\utils\file_ops.py`
+### File: `core_ai\utils\file_ops.py`
 - **Class `FileOperationsManager`**: Advanced file operations manager with intelligent features
   - **Function `organize_files_by_type()`**: Organize files in a directory by their type/extension Args:     directory: Target directory to organize     create_subfolders: Whether to create su...
   - **Function `find_duplicate_files()`**: Find duplicate files in a directory based on file content hash Args:     directory: Directory to scan for duplicates     include_subdirs: Whether t...
@@ -3149,7 +3348,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `__init__()`**: Signature: (self)
   - **Function `ensure_backup_dir()`**: Ensure backup directory exists
 
-### File: `core_ai\src\ai_assistant\utils\logging_analyzer.py`
+### File: `core_ai\utils\logging_analyzer.py`
 - **Class `LoggingAnalyzer`**: Analyzes the entire project for logging issues and improvements.
   - **Function `main()`**: Run comprehensive logging analysis.
   - **Function `__init__()`**: Signature: (self, project_root)
@@ -3162,7 +3361,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `_should_skip_file()`**: Check if file should be skipped.
   - **Function `_generate_recommendations()`**: Generate recommendations for logging improvements.
 
-### File: `core_ai\src\ai_assistant\utils\logging_completion.py`
+### File: `core_ai\utils\logging_completion.py`
 - **Class `LoggingSystemValidator`**: Validates the complete logging system
   - **Function `create_logging_utilities()`**: Create helpful logging utilities
   - **Function `main()`**: Main function to complete logging system
@@ -3180,9 +3379,9 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `generate_report()`**: Generate comprehensive validation report
   - **Function `test_performance_function()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\utils\logging_config.py`
+### File: `core_ai\utils\logging_config.py`
 
-### File: `core_ai\src\ai_assistant\utils\multilingual.py`
+### File: `core_ai\utils\multilingual.py`
 - **Class `Language`**: Supported languages.
 - **Class `TranslationEngine`**: Available translation engines.
 - **Class `LanguageContext`**: Context information for language processing.
@@ -3218,24 +3417,24 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_language_stats()`**: Get language usage statistics.
   - **Function `callback()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\utils\secure_storage.py`
+### File: `core_ai\utils\secure_storage.py`
   - **Function `save_secure_key()`**: Save a secure key (like an API key) to the OS keychain.
   - **Function `get_secure_key()`**: Retrieve a secure key from the OS keychain. Returns empty string if not found.
   - **Function `delete_secure_key()`**: Delete a secure key from the OS keychain.
 
-### File: `core_ai\src\ai_assistant\utils\session_activity_logger.py`
+### File: `core_ai\utils\session_activity_logger.py`
 
-### File: `core_ai\src\ai_assistant\utils\session_init.py`
+### File: `core_ai\utils\session_init.py`
 
-### File: `core_ai\src\ai_assistant\utils\sitecustomize.py`
+### File: `core_ai\utils\sitecustomize.py`
 
-### File: `core_ai\src\ai_assistant\utils\tool_schemas.py`
+### File: `core_ai\utils\tool_schemas.py`
 
-### File: `core_ai\src\ai_assistant\utils\update_logging.py`
+### File: `core_ai\utils\update_logging.py`
   - **Function `update_logging_calls()`**: Update logging calls in a file
   - **Function `main()`**: Update all module files
 
-### File: `core_ai\src\ai_assistant\utils\user_data_logger.py`
+### File: `core_ai\utils\user_data_logger.py`
   - **Function `get_timestamp()`**: Signature: ()
   - **Function `save_data()`**: Saves data to the appropriate folder with a timestamp.
   - **Function `log_action()`**: Logs a user action.
@@ -3243,7 +3442,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `log_reply()`**: Logs an assistant reply.
   - **Function `log_module_usage()`**: Logs the usage of a module and function.
 
-### File: `core_ai\src\ai_assistant\vision\document_ocr.py`
+### File: `core_ai\vision\document_ocr.py`
 - **Class `DocumentAnalyzer`**: Advanced document analysis and OCR manager
   - **Function `check_ocr_dependencies()`**: Check which OCR dependencies are available
   - **Function `extract_text_from_image()`**: Extract text from an image using OCR Args:     image_path: Path to the image file     language: OCR language (eng, fra, deu, spa, etc.)     enhance...
@@ -3256,7 +3455,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `__init__()`**: Signature: (self)
   - **Function `ensure_cache_dir()`**: Ensure OCR cache directory exists
 
-### File: `core_ai\src\ai_assistant\vision\gemini_vision_provider.py`
+### File: `core_ai\vision\gemini_vision_provider.py`
 - **Class `GeminiVisionProvider`**: Google Gemini Vision API implementation.
   - **Function `__init__()`**: Initialize Gemini Vision provider.
   - **Function `_load_image()`**: Load image from path or return PIL Image as-is.
@@ -3269,7 +3468,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `provider_name()`**: Return provider name.
   - **Function `supported_features()`**: Return list of supported features.
 
-### File: `core_ai\src\ai_assistant\vision\image_utils.py`
+### File: `core_ai\vision\image_utils.py`
 - **Class `ImageProcessor`**: Utilities for image processing and optimization.
   - **Function `optimize_for_vlm()`**: Optimize image for VLM processing.
   - **Function `enhance_for_ocr()`**: Enhance image for better OCR results.
@@ -3283,7 +3482,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `resize_maintaining_aspect()`**: Resize image maintaining aspect ratio.
   - **Function `get_image_info()`**: Get information about an image.
 
-### File: `core_ai\src\ai_assistant\vision\multimodal.py`
+### File: `core_ai\vision\multimodal.py`
 - **Class `MultiModalAI`**: Advanced multi-modal AI system for visual understanding and generation.
   - **Function `analyze_current_screen()`**: Quick function to analyze current screen.
   - **Function `answer_visual_question_quick()`**: Quick function to answer visual questions about current screen.
@@ -3314,7 +3513,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `monitor_loop()`**: Signature: ()
 - **Class `Image`**: Core component.
 
-### File: `core_ai\src\ai_assistant\vision\vlm_provider.py`
+### File: `core_ai\vision\vlm_provider.py`
 - **Class `VLMResponse`**: Standardized response from VLM providers.
 - **Class `VLMProvider`**: Abstract base class for Vision Language Model providers.
   - **Function `to_dict()`**: Convert response to dictionary.
@@ -3333,7 +3532,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `provider_name()`**: Return the name of this provider.
   - **Function `supported_features()`**: Return list of supported features.
 
-### File: `core_ai\src\ai_assistant\voice\advanced_speech_recognizer.py`
+### File: `core_ai\voice\advanced_speech_recognizer.py`
 - **Class `RecognitionModel`**: Available recognition models
 - **Class `AdvancedSpeechRecognizer`**: Advanced speech recognition engine matching Google Assistant accuracy Multi-model approach with automatic fallback
   - **Function `get_advanced_speech_recognizer()`**: Get or create the advanced speech recognizer instance
@@ -3350,7 +3549,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `_resolve_model_path()`**: Signature: ()
 - **Class `AudioSource`**: Core component.
 
-### File: `core_ai\src\ai_assistant\voice\advanced_voice.py`
+### File: `core_ai\voice\advanced_voice.py`
 - **Class `VoiceProfileManager`**: Manages voice profiles and speaker identification
 - **Class `AdvancedWakeWordDetector`**: Enhanced wake word detection with fuzzy matching and learning
 - **Class `ContinuousListeningManager`**: Manages continuous listening with smart activation/deactivation
@@ -3396,7 +3595,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
 - **Class `UnknownValueError`**: Core component.
 - **Class `RequestError`**: Core component.
 
-### File: `core_ai\src\ai_assistant\voice\async_recognizer.py`
+### File: `core_ai\voice\async_recognizer.py`
   - **Function `init_async_recognizer()`**: Initialize the async recognizer singleton
   - **Function `recognize_background()`**: Start recognition in background and return Future
 - **Class `RecognitionMetrics`**: Track async recognition performance metrics
@@ -3407,7 +3606,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `record_failure()`**: Signature: (self)
   - **Function `get_stats()`**: Signature: (self)
 
-### File: `core_ai\src\ai_assistant\voice\emotion_detection.py`
+### File: `core_ai\voice\emotion_detection.py`
 - **Class `Emotion`**: Detected emotions
 - **Class `EmotionResult`**: Emotion detection result
 - **Class `SpeechEmotionDetector`**: Detects emotions from speech audio
@@ -3421,10 +3620,10 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_mood_trend()`**: Analyze mood trend over recent history
   - **Function `adapt_response_style()`**: Get response adaptation recommendations based on emotion
 
-### File: `core_ai\src\ai_assistant\voice\enhanced_wake_word.py`
+### File: `core_ai\voice\enhanced_wake_word.py`
   - **Function `enhanced_wake_word_detection()`**: Enhanced wake word detection with fuzzy matching for better accuracy
 
-### File: `core_ai\src\ai_assistant\voice\ml_features.py`
+### File: `core_ai\voice\ml_features.py`
 - **Class `SileroVAD`**: Deep learning-based VAD using Silero models
 - **Class `VoiceCloner`**: Voice cloning using Coqui TTS
 - **Class `SpeakerDiarizer`**: Speaker diarization using pyannote.audio
@@ -3438,7 +3637,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `diarize()`**: Perform speaker diarization on audio
   - **Function `identify_speakers()`**: Match diarized speakers to known voice profiles
 
-### File: `core_ai\src\ai_assistant\voice\multilingual_wake_words.py`
+### File: `core_ai\voice\multilingual_wake_words.py`
 - **Class `SupportedLanguage`**: Supported languages for wake word detection
 - **Class `WakeWordConfidence`**: Wake word detection confidence levels
 - **Class `PhonemeSequence`**: Phonemic representation of a wake word
@@ -3477,7 +3676,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_registered_wake_words()`**: Get list of registered wake words
   - **Function `update_confidence_threshold()`**: Update confidence threshold for a specific wake word
 
-### File: `core_ai\src\ai_assistant\voice\neural_voice_engine.py`
+### File: `core_ai\voice\neural_voice_engine.py`
 - **Class `VoiceGender`**: Voice gender options
 - **Class `SpeakingStyle`**: Speaking style options for natural conversation
 - **Class `NeuralVoiceEngine`**: High-quality neural voice synthesis engine
@@ -3488,7 +3687,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `synthesize_edge_tts_sync()`**: Signature: ()
   - **Function `speak()`**: Generate audio using KittenTTS, falling back to Edge-TTS. Returns the path to the audio file.
 
-### File: `core_ai\src\ai_assistant\voice\noise_reduction.py`
+### File: `core_ai\voice\noise_reduction.py`
 - **Class `NoiseReductionMethod`**: Available noise reduction methods
 - **Class `NoiseLevel`**: Noise reduction intensity levels
 - **Class `NoiseReductionConfig`**: Configuration for noise reduction system
@@ -3526,7 +3725,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_quality_metrics()`**: Get latest quality metrics
   - **Function `update_config()`**: Update noise reduction configuration
 
-### File: `core_ai\src\ai_assistant\voice\speaker_verification.py`
+### File: `core_ai\voice\speaker_verification.py`
 - **Class `VerificationResult`**: Speaker verification results
 - **Class `SecurityLevel`**: Security levels for speaker verification
 - **Class `VerificationConfig`**: Configuration for speaker verification system
@@ -3551,12 +3750,12 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_speaker_info()`**: Get information about enrolled speaker
   - **Function `update_security_level()`**: Update security level for verification
 
-### File: `core_ai\src\ai_assistant\voice\test_voice_recognition.py`
+### File: `core_ai\voice\test_voice_recognition.py`
   - **Function `test_voice_callback()`**: Callback function for voice recognition
   - **Function `test_vosk_models()`**: Test if Vosk models are available
   - **Function `main()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\voice\voice_activity_detection.py`
+### File: `core_ai\voice\voice_activity_detection.py`
 - **Class `VADSensitivity`**: Voice Activity Detection sensitivity levels
 - **Class `VADAlgorithm`**: Available VAD algorithms
 - **Class `VADConfig`**: Voice Activity Detection configuration
@@ -3591,7 +3790,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `process_audio_stream()`**: Process continuous audio stream with callback
   - **Function `calibrate_with_silence()`**: Auto-calibrate by recording silence
 
-### File: `core_ai\src\ai_assistant\voice\voice_fingerprinting.py`
+### File: `core_ai\voice\voice_fingerprinting.py`
 - **Class `RecognitionConfidence`**: Voice recognition confidence levels
 - **Class `VoiceQuality`**: Voice sample quality assessment
 - **Class `VoiceEmbedding`**: Voice embedding representation
@@ -3638,10 +3837,10 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `_save_user_profile()`**: Save user profile to disk
   - **Function `_load_user_profiles()`**: Load user profiles from disk
 
-### File: `core_ai\src\ai_assistant\voice\voice_settings_manager.py`
+### File: `core_ai\voice\voice_settings_manager.py`
   - *(Documentation parsing failed for this file)*
 
-### File: `core_ai\src\ai_assistant\voice\wake_word_detector.py`
+### File: `core_ai\voice\wake_word_detector.py`
 - **Class `WakeWordDetectionMode`**: Wake word detection modes
 - **Class `SmartWakeWordDetector`**: Always-on wake word detection like Google Assistant Low latency, works completely offline using PocketSphinx
 - **Class `WakeWordManager`**: Manages wake word detection and integration with main assistant Handles custom wake words, profiles, and learning
@@ -3665,7 +3864,7 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `set_custom_wake_words()`**: Set custom wake words
   - **Function `on_wake_word()`**: Signature: ()
 
-### File: `core_ai\src\ai_assistant\workflow\intent_registry.py`
+### File: `core_ai\workflow\intent_registry.py`
 - **Class `IntentMapping`**: Represents a mapping from intent to workflow template.
 - **Class `IntentRegistry`**: Registry for mapping natural language intents to workflow templates.
   - **Function `__init__()`**: Initialize the intent registry.
@@ -3675,13 +3874,13 @@ Below is the auto-generated AST documentation of all major Python modules in the
   - **Function `get_all_intents()`**: Get a list of all registered intents.
   - **Function `reload_templates()`**: Reload all template files.
 
-### File: `core_ai\src\ai_assistant\workflow\intent_router.py`
+### File: `core_ai\workflow\intent_router.py`
 - **Class `IntentRouter`**: Semantic Router for advanced intent classification. Uses local embeddings to map user queries to actionable routes.
   - **Function `__init__()`**: Signature: (self, threshold)
   - **Function `_define_routes()`**: Define the semantic routes for the system.
   - **Function `determine_intent()`**: Determine the intent of a query. Returns: (route_name, confidence_score)
 
-### File: `core_ai\src\ai_assistant\workflow\orchestrator.py`
+### File: `core_ai\workflow\orchestrator.py`
 - **Class `WorkflowOrchestrator`**: Manages high-level workflows that require coordination between multiple agents.
   - **Function `__init__()`**: Signature: (self, registry)
 
