@@ -24,6 +24,7 @@ from datetime import datetime
 from typing import Dict, List, Any, Optional, Union, Tuple
 import networkx as nx
 import sqlite3
+import json
 
 try:
     from sklearn.cluster import KMeans
@@ -542,6 +543,17 @@ class PersonalKnowledgeGraph:
             logger.warning(f"⚠️ Knowledge graph tables not found: {e}")
         finally:
             conn.close()
+
+    def get_stats(self) -> Dict[str, Any]:
+        """Return statistics about the personal knowledge graph."""
+        nodes_count = len(self.graph.nodes) if hasattr(self, 'graph') and self.graph else 0
+        edges_count = len(self.graph.edges) if hasattr(self, 'graph') and self.graph else 0
+        return {
+            'total_nodes': nodes_count,
+            'total_edges': edges_count,
+            'db_path': self.db_path,
+            'status': 'active'
+        }
     
     def add_knowledge_node(self, content: str, node_type: str, metadata: Dict[str, Any] = None) -> str:
         """Add a new knowledge node"""

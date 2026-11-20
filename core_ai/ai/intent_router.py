@@ -115,6 +115,7 @@ class IntentRouter:
         # Dedicated LLM for routing (separate from conversation history)
         self._router_llm = None
         self._local_classifier = None
+        self._gatekeeper = None
         self._tls = threading.local()
         self._init_router_llm()
 
@@ -724,12 +725,14 @@ class IntentRouter:
                 "platform": {"type": "string", "description": "Platform to play on (youtube, spotify, etc.)", "required": False}
             },
             tier1_patterns=[
-                # Verb prefix: play saiyaara, bajao kesariya, chalao believer, चलाओ सैयारा
-                r'^\s*(?:play|baja|bajao|bjao|bjado|bja\s+do|baja\s+do|laga|lagao|lagado|laga\s+do|sun|suno|chalao|chalado|chala\s+do|चलाओ|चला\s+दो|बजाओ|बजा\s+दो|लगाओ|लगा\s+दो|सुनाओ|प्ले\s+करो|प्ले\s+कर\s+दो)\s+(?:(?:a\s+)?(?:song|track|music|gaana|gana|गाना|सॉन्ग|सांग|गीत)\s+)?(?P<query>.+)',
-                # Compound verb prefix: gaana chalao saiyaara, gana bajao believer
-                r'^\s*(?:play\s+(?:a\s+)?(?:song|track|music)|gaana\s+(?:chalao|bajao|lagao)|gana\s+(?:chalao|bajao|lagao)|गाना\s+(?:चलाओ|बजाओ|लगाओ|सुनाओ)|song\s+(?:baja|bajao|bjao|chalao)|म्यूजिक\s+(?:चलाओ|बजाओ))\s+(?P<query>.+)',
-                # Query prefix: saiyaara gaana chalao, saiyaara chala do, सैयारा गाना चलाओ, सैयारा चलाओ, सैयारा बजा दो
-                r'^\s*(?P<query>.+?)\s+(?:(?:ka\s+)?(?:gaana|gana|गाना|song|track|music|गीत|सॉन्ग|सांग)\s+)?(?:play\s*(?:karo|krdo|kro|kar\s*do)?|chalao|chalado|chala\s+do|bajao|bjado|bjao|bja\s+do|lagao|lagado|laga\s+do|suno|sunao|चलाओ|चला\s+दो|बजाओ|बजा\s+दो|लगाओ|लगा\s+दो|सुनाओ|प्ले\s+करो|प्ले\s+कर\s+दो)\s*$',
+                # Explicit play/bajao prefix: play saiyaara, bajao kesariya, baja do arijit singh
+                r'^\s*(?:play|baja|bajao|bjao|bjado|bja\s+do|baja\s+do|बजाओ|बजा\s+दो|प्ले\s+करो|प्ले\s+कर\s+दो)\s+(?:(?:a\s+)?(?:song|track|music|gaana|gana|गाना|सॉन्ग|सांग|गीत)\s+)?(?P<query>.+)',
+                # Generic verb prefix with REQUIRED media noun: gaana chalao saiyaara, gana bajao believer, chalao gaana kesariya
+                r'^\s*(?:(?:chalao|chalado|chala\s+do|laga|lagao|lagado|laga\s+do|suno|sunao|चलाओ|चला\s+दो|लगाओ|लगा\s+दो|सुनाओ)\s+(?:a\s+)?(?:song|track|music|gaana|gana|गाना|सॉन्ग|सांग|गीत)|(?:song|track|music|gaana|gana|गाना|गीत|म्यूजिक)\s+(?:chalao|chalado|chala\s+do|laga|lagao|lagado|laga\s+do|bajao|bjao|sunao))\s+(?P<query>.+)',
+                # Query prefix with REQUIRED media noun: saiyaara gaana chalao, kesariya song bajao, believer music play karo
+                r'^\s*(?P<query>.+?)\s+(?:(?:ka\s+)?(?:gaana|gana|गाना|song|track|music|गीत|सॉन्ग|सांग))\s+(?:play\s*(?:karo|krdo|kro|kar\s*do)?|chalao|chalado|chala\s+do|bajao|bjado|bjao|bja\s+do|lagao|lagado|laga\s+do|suno|sunao|चलाओ|चला\s+दो|बजाओ|बजा\s+दो|लगाओ|लगा\s+दो|सुनाओ|प्ले\s+करो|प्ले\s+कर\s+दो)\s*$',
+                # Explicit bajao at end: saiyaara bajao, kesariya baja do, arijit singh bajao
+                r'^\s*(?P<query>.+?)\s+(?:bajao|bjado|bjao|bja\s+do|baja\s+do|बजाओ|बजा\s+दो|प्ले\s+करो|प्ले\s+कर\s+दो)\s*$',
                 # Platform specific: play believer on spotify
                 r'^\s*play\s+(?P<query>.+?)\s+on\s+(?P<platform>spotify|youtube(?:\s+music)?|yt\s+music)\s*$',
             ],
@@ -1050,6 +1053,14 @@ class IntentRouter:
                 for candidate in candidates:
                     match = re.search(pattern, candidate, re.IGNORECASE | re.UNICODE)
                     if match:
+                        # Active Closed-Loop Gatekeeper: If intent has negative feedback / penalty, bypass regex
+                        if self.is_intent_penalized(candidate, intent_name) or self.is_intent_penalized(message, intent_name):
+                            logger.warning(
+                                f"🚫 Intent '{intent_name}' is PENALIZED by Gatekeeper for query '{candidate}'. "
+                                f"Bypassing Tier 1 match so semantic router / LLM can resolve correctly."
+                            )
+                            continue
+
                         params: Dict[str, Any] = {}
                         groupdict = match.groupdict()
                         groups = match.groups()
@@ -1260,6 +1271,9 @@ class IntentRouter:
             intent_name = name_map.get(intent_name, intent_name)
 
             if intent_name in self.intents and confidence > 0.40:
+                if self.is_intent_penalized(message, intent_name):
+                    logger.warning(f"🚫 Tier 2 Semantic match for '{intent_name}' is penalized. Bypassing.")
+                    return None
                 logger.info(f"Tier 2 matched: {intent_name} (conf: {confidence:.2f}) ({elapsed:.2f}s)")
                 params = result.entities if hasattr(result, 'entities') else {}
                 if 'application' in params and 'target' not in params and params['application']:
@@ -1432,6 +1446,47 @@ class IntentRouter:
         """Return the precomputed Tier 1.5 vector matcher instance."""
         return IntentVectorMatcher()
 
+    @property
+    def gatekeeper(self) -> "IntentPenaltyGatekeeper":
+        """Return active closed-loop Intent Penalty Gatekeeper."""
+        if not hasattr(self, '_gatekeeper') or self._gatekeeper is None:
+            from core_ai.ai.intent_penalty_gatekeeper import get_intent_penalty_gatekeeper
+            self._gatekeeper = get_intent_penalty_gatekeeper()
+        return self._gatekeeper
+
+    def is_intent_penalized(self, message: str, intent_name: str, threshold: float = 0.5) -> bool:
+        """Check if an intent is penalized for this query pattern."""
+        try:
+            return self.gatekeeper.is_penalized(message, intent_name, threshold=threshold)
+        except Exception as e:
+            logger.debug(f"Gatekeeper check error: {e}")
+            return False
+
+    def record_intent_feedback(
+        self,
+        message: str,
+        intent_name: str,
+        success: bool,
+        reason: str = ""
+    ) -> float:
+        """Record positive reinforcement or negative penalty on an intent."""
+        try:
+            if success:
+                return self.gatekeeper.record_positive_feedback(message, intent_name)
+            else:
+                return self.gatekeeper.record_negative_feedback(message, intent_name, reason=reason)
+        except Exception as e:
+            logger.warning(f"Failed to record intent feedback: {e}")
+            return 0.0
+
+    def clear_intent_penalty(self, pattern_or_intent: str) -> int:
+        """Clear penalties for an intent or pattern."""
+        try:
+            return self.gatekeeper.clear_penalty(pattern_or_intent)
+        except Exception as e:
+            logger.warning(f"Failed to clear intent penalty: {e}")
+            return 0
+
     def _route_inner(self, message: str) -> Optional[IntentResult]:
         from core_ai.core.local_command_normalizer import normalize_hinglish_devanagari
         msg_clean = message.strip().lower()
@@ -1469,17 +1524,20 @@ class IntentRouter:
             if vm.is_available():
                 v_res = vm.match(message)
                 if v_res and v_res.intent_name in self.intents:
-                    logger.info(
-                        f"🎯 Intent routed (Tier 1.5 Vector): {v_res.intent_name} "
-                        f"(conf: {v_res.confidence:.2f}, phrase: '{v_res.matched_phrase}') → {v_res.parameters}"
-                    )
-                    return IntentResult(
-                        intent_name=v_res.intent_name,
-                        parameters=v_res.parameters,
-                        confidence=v_res.confidence,
-                        tier=1,
-                        raw_query=message,
-                    )
+                    if self.is_intent_penalized(message, v_res.intent_name):
+                        logger.warning(f"🚫 Tier 1.5 Vector match for '{v_res.intent_name}' is penalized. Bypassing.")
+                    else:
+                        logger.info(
+                            f"🎯 Intent routed (Tier 1.5 Vector): {v_res.intent_name} "
+                            f"(conf: {v_res.confidence:.2f}, phrase: '{v_res.matched_phrase}') → {v_res.parameters}"
+                        )
+                        return IntentResult(
+                            intent_name=v_res.intent_name,
+                            parameters=v_res.parameters,
+                            confidence=v_res.confidence,
+                            tier=1,
+                            raw_query=message,
+                        )
         except Exception as vm_err:
             logger.debug(f"Tier 1.5 vector match warning: {vm_err}")
 

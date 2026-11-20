@@ -474,7 +474,7 @@ class IntentExecutor:
             if app_lower in ('antigravity', 'vscode', 'vs code', 'code', 'both', 'dono'):
                 return self._setup_project({'ide': app_lower}, ctx=ctx)
         
-        # 1. Check for browser profile launches (e.g. 'chrome rancho', 'Rancho', 'rancho profile', 'open rancho')
+        # 1. Check for browser profile launches (e.g. 'chrome work', 'Personal', 'work profile', 'open personal')
         target_profile = params.get('profile') or params.get('browser_profile')
         if not target_profile:
             if app_lower not in ['chrome', 'google chrome', 'browser', 'web browser']:
@@ -887,6 +887,9 @@ class IntentExecutor:
     def _handle_email(self, params: Dict, ctx=None) -> Dict:
         """Read and summarize unread emails or open Gmail inbox."""
         import webbrowser
+        profile = (params.get("profile") or 
+                   params.get("browser_profile") or 
+                   (ctx.get_var("current_browser_profile") if ctx and hasattr(ctx, "get_var") else None))
         try:
             from core_ai.integrations.email_handler import read_emails, summarize_email, GmailManager
             mgr = GmailManager()
@@ -901,6 +904,17 @@ class IntentExecutor:
                 else:
                     return {'success': True, 'intent': 'read_email', 'result': "📧 आपके इनबॉक्स में कोई नया अनरीड ईमेल नहीं मिला।"}
             else:
+                if profile:
+                    try:
+                        from core_ai.automation.browser_profiles import launch_browser_profile
+                        if launch_browser_profile(profile, url="https://mail.google.com"):
+                            return {
+                                'success': True,
+                                'intent': 'read_email',
+                                'result': f"मैंने Chrome के {profile} प्रोफ़ाइल में Gmail खोल दिया है।",
+                            }
+                    except Exception as b_err:
+                        logger.debug(f"Could not open profile {profile}: {b_err}")
                 webbrowser.open("https://mail.google.com")
                 return {
                     'success': True,
@@ -908,6 +922,17 @@ class IntentExecutor:
                     'result': "मैंने आपका Gmail इनबॉक्स ब्राउज़र में खोल दिया है ताकि आप तुरंत ईमेल्स देख सकें।",
                 }
         except Exception as e:
+            if profile:
+                try:
+                    from core_ai.automation.browser_profiles import launch_browser_profile
+                    if launch_browser_profile(profile, url="https://mail.google.com"):
+                        return {
+                            'success': True,
+                            'intent': 'read_email',
+                            'result': f"मैंने Chrome के {profile} प्रोफ़ाइल में Gmail खोल दिया है।",
+                        }
+                except Exception:
+                    pass
             webbrowser.open("https://mail.google.com")
             return {
                 'success': True,

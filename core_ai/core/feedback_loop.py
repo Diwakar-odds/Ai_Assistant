@@ -96,3 +96,17 @@ class FeedbackLoop:
             logger.info("Adjusting system prompts/parameters to mitigate recurring issues.")
             return True
         return False
+
+    def record_direct_intent_feedback(self, query: str, intent_name: str, rating: int, comments: str = "") -> bool:
+        """Directly updates the active IntentPenaltyGatekeeper based on user feedback or action abort."""
+        try:
+            from core_ai.ai.intent_penalty_gatekeeper import get_intent_penalty_gatekeeper
+            gatekeeper = get_intent_penalty_gatekeeper()
+            if rating <= 2:
+                gatekeeper.record_negative_feedback(query, intent_name, penalty_delta=1.0, reason=comments)
+            elif rating >= 4:
+                gatekeeper.record_positive_feedback(query, intent_name, reward_delta=0.5)
+            return True
+        except Exception as e:
+            logger.warning(f"Failed to record intent feedback into gatekeeper: {e}")
+            return False
