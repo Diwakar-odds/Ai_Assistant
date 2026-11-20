@@ -175,8 +175,18 @@ def _get_learning_router_lazy():
             from core_ai.ai.auto_learning_router import LearningDataRouter
             learning_router = LearningDataRouter()
             logger.info("✅ Learning router initialized - AI will learn from all interactions")
+            try:
+                import voice_service as chat_handlers
+                chat_handlers.set_learning_router(learning_router)
+            except Exception:
+                pass
+            try:
+                from backend.routes.common import set_learning_router
+                set_learning_router(learning_router)
+            except Exception:
+                pass
         except Exception as e:
-            logger.warning(f"  Learning router not available: {e}")
+            logger.warning(f"⚠️ Learning router not available: {e}")
             LEARNING_ROUTER_AVAILABLE = False
             learning_router = None
     return learning_router
@@ -1652,7 +1662,7 @@ def start_server(host=None, port=None):
         try:
             import voice_service as chat_handlers
             chat_handlers.set_socketio(socketio)
-            chat_handlers.set_learning_router(learning_router if 'learning_router' in globals() else None)
+            chat_handlers.set_learning_router(_get_learning_router_lazy())
             logger.info("✅ Command handlers registered with local-first routing")
         except Exception as e:
             print(f"Could not register command handlers: {e}")

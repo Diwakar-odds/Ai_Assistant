@@ -1395,33 +1395,39 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     };
 
     const emergencyStop = async (): Promise<boolean> => {
+        // 1. Immediately reset busy states locally so user interface reacts instantly
+        setIsAITyping(false);
+        setBrainStatus((prev: any) => (prev ? { ...prev, is_busy: false, active_chains: [] } : prev));
+        const stoppedChains = activeChainsRef.current.map(c => ({ ...c, status: 'cancelled' as const }));
+        activeChainsRef.current = [];
+        setActiveChains([]);
+        if (stoppedChains.length > 0) {
+            const stoppedIds = new Set(stoppedChains.map(c => c.chain_id));
+            const nextHist = [
+                ...stoppedChains,
+                ...chainHistoryRef.current.filter(x => !stoppedIds.has(x.chain_id)),
+            ].slice(0, 50);
+            chainHistoryRef.current = nextHist;
+            setChainHistory(nextHist);
+        }
+        setTaskProgress(0);
+        addSystemLog('warning', 'Instant stop triggered');
+
+        // 2. Transmit immediate WebSocket emergency stop event
         if (socket && socket.connected) {
             socket.emit('emergency_stop', { source: 'webui' });
         }
-        const [execRes, emergRes] = await Promise.all([
-            apiFetchJson<any>(API_ENDPOINTS.chains.executiveStop, { method: 'POST', body: '{}' }),
-            apiFetchJson<any>(API_ENDPOINTS.chains.emergencyStop, { method: 'POST', body: '{}' }),
-        ]);
-        const ok = execRes.ok || emergRes.ok || Boolean(socket?.connected);
-        if (ok) {
-            const stoppedChains = activeChainsRef.current.map(c => ({ ...c, status: 'cancelled' as const }));
-            activeChainsRef.current = [];
-            setActiveChains([]);
-            if (stoppedChains.length > 0) {
-                const stoppedIds = new Set(stoppedChains.map(c => c.chain_id));
-                const nextHist = [
-                    ...stoppedChains,
-                    ...chainHistoryRef.current.filter(x => !stoppedIds.has(x.chain_id)),
-                ].slice(0, 50);
-                chainHistoryRef.current = nextHist;
-                setChainHistory(nextHist);
-            }
-            setBrainStatus((prev: any) => (prev ? { ...prev, is_busy: false, active_chains: [] } : prev));
-            setIsAITyping(false);
-            setTaskProgress(0);
-            addSystemLog('warning', 'Emergency stop triggered');
+
+        // 3. Dispatch parallel REST stop endpoints
+        try {
+            const [execRes, emergRes] = await Promise.all([
+                apiFetchJson<any>(API_ENDPOINTS.chains.executiveStop, { method: 'POST', body: '{}' }),
+                apiFetchJson<any>(API_ENDPOINTS.chains.emergencyStop, { method: 'POST', body: '{}' }),
+            ]);
+            return execRes.ok || emergRes.ok || Boolean(socket?.connected);
+        } catch {
+            return true;
         }
-        return ok;
     };
 
     const loadAgent = async (agentId: string): Promise<AgentDTO | null> => {
@@ -1567,9 +1573,11 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
                 message: command,
                 source: 'webui_chat',
                 client_message_id: clientMsgId,
+                session_id: backendActiveSessionIdRef.current || currentSession?.id || undefined,
                 offline_mode: useOfflineMode,
                 provider: curProvider,
                 model: curModel,
+                speak: Boolean(ttsEnabledRef.current && alwaysActiveRef.current),
             });
         } else {
             // Fallback to API

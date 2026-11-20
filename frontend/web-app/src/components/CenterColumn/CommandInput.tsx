@@ -11,21 +11,35 @@ const CommandInput = () => {
   const [historyIdx, setHistoryIdx] = useState<number>(-1);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  const { sendCommand, agents, activeChains, brainStatus, emergencyStop } = useDashboard();
+  const {
+    sendCommand,
+    agents,
+    activeChains,
+    brainStatus,
+    emergencyStop,
+    isAITyping,
+    orbState,
+  } = useDashboard();
 
   const analysis = useMemo(() => analyzeCommandInput(command), [command]);
   const isBusy = Boolean(
-    brainStatus?.is_busy ||
+    isAITyping ||
+      orbState === 'processing' ||
+      brainStatus?.is_busy ||
       (activeChains &&
         activeChains.some((c) => !['completed', 'failed', 'cancelled'].includes(String(c.status).toLowerCase())))
   );
 
-  // Auto-resize textarea cleanly up to 4 lines
+  // Auto-resize textarea cleanly up to 4 lines with guaranteed minimum height
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = 'auto';
-    el.style.height = `${Math.min(el.scrollHeight, 104)}px`;
+    const computedHeight = Math.max(46, Math.min(el.scrollHeight, 120));
+    el.style.height = `${computedHeight}px`;
+    if (el.scrollHeight <= 56) {
+      el.scrollTop = 0;
+    }
   }, [command]);
 
   const handleSubmit = (e?: React.FormEvent) => {
@@ -116,28 +130,33 @@ const CommandInput = () => {
         </div>
       )}
 
-      <div className="glass-panel rounded-lg p-1.5 flex items-end gap-2 focus-within:border-neon-cyan/50 transition-colors">
+      <div className="glass-panel rounded-xl p-2 flex items-center gap-2 focus-within:border-neon-cyan/50 transition-colors">
         <textarea
           ref={textareaRef}
           rows={1}
           value={command}
           onChange={(e) => setCommand(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder='Type a command, question, or chain (e.g. open chrome && search "latest AI news")...'
-          className="flex-1 bg-transparent text-white placeholder-gray-400 px-3 py-1.5 text-sm focus:outline-none resize-none leading-5 max-h-[104px]"
+          placeholder='Type a command, question, or chain (e.g. open chrome)...'
+          className="flex-1 bg-transparent text-white placeholder-gray-400/80 px-3.5 py-2.5 text-sm sm:text-base focus:outline-none resize-none leading-relaxed min-h-[46px] max-h-[120px] overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
         />
 
         {isBusy && (
-          <button
+          <motion.button
             type="button"
             onClick={() => emergencyStop()}
-            title="Emergency Stop Active Chains"
+            title="Instant Stop (Halts active AI thinking, routing & execution)"
             aria-label="Emergency Stop"
-            className="bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 px-2.5 py-2 rounded-md flex items-center gap-1 text-xs font-semibold transition-colors shrink-0"
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 text-red-300 hover:text-white px-3.5 py-2.5 rounded-lg flex items-center gap-1.5 text-xs sm:text-sm font-semibold transition-all shrink-0 shadow-[0_0_12px_rgba(239,68,68,0.25)] touch-manipulation cursor-pointer"
           >
-            <Square className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Stop</span>
-          </button>
+            <Square className="w-3.5 h-3.5 fill-current text-red-400" />
+            <span>Stop</span>
+          </motion.button>
         )}
 
         <motion.button
@@ -146,7 +165,7 @@ const CommandInput = () => {
           disabled={!command.trim()}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className="bg-[#3B82F6] text-white px-4 py-2 rounded-md flex items-center gap-1.5 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all touch-manipulation shrink-0"
+          className="bg-[#3B82F6] hover:bg-[#2563EB] text-white px-4 py-2.5 rounded-lg flex items-center gap-1.5 font-medium text-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all touch-manipulation shrink-0"
         >
           <Send className="w-4 h-4" />
           <span className="hidden xs:inline">Send</span>

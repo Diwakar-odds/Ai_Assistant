@@ -295,11 +295,11 @@ const ArcReactorRings = ({
     try {
       renderer = new THREE.WebGLRenderer({
         alpha: true,
-        antialias: true,
-        powerPreference: 'high-performance',
+        antialias: false,
+        powerPreference: 'low-power',
       });
       renderer.setClearColor(0x000000, 0);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setPixelRatio(1.0);
       renderer.setSize(width, height);
       renderer.domElement.style.width = '100%';
       renderer.domElement.style.height = '100%';
@@ -315,7 +315,7 @@ const ArcReactorRings = ({
       scene.add(orbGroup);
 
       const initialCfg = STATE_PALETTES[targetRef.current.state] || STATE_PALETTES.idle;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = 1.0;
 
       const sharedUniforms = {
         uTime: { value: 0 },
@@ -581,12 +581,29 @@ const ArcReactorRings = ({
       }
 
       let lastTime = performance.now();
+      let lastFrameTime = performance.now();
       let currentSpeed = initialCfg.speed;
       let currentSwirl = initialCfg.swirl;
       let smoothedAudio = 0;
 
+      // Battery & Low-resource Mode: Throttle refresh rate to 30 FPS max (instead of 60/120/144Hz)
+      const TARGET_FPS = 30;
+      const FRAME_INTERVAL = 1000 / TARGET_FPS; // ~33.3ms
+
       const animate = (now: number) => {
         rafId = requestAnimationFrame(animate);
+
+        // Pause completely when tab/window is in background to save battery & CPU
+        if (typeof document !== 'undefined' && document.hidden) {
+          return;
+        }
+
+        const elapsed = now - lastFrameTime;
+        if (elapsed < FRAME_INTERVAL) {
+          return; // Skip rendering frame to keep CPU/GPU low
+        }
+        lastFrameTime = now - (elapsed % FRAME_INTERVAL);
+
         const dt = Math.min(0.05, Math.max(0.001, (now - lastTime) * 0.001));
         lastTime = now;
 
@@ -658,9 +675,13 @@ const ArcReactorRings = ({
 
       const ctx = fallbackCanvas.getContext('2d');
       let t = 0;
+      let lastFallbackTime = performance.now();
 
-      const drawFallback = () => {
+      const drawFallback = (now: number) => {
         rafId = requestAnimationFrame(drawFallback);
+        if (typeof document !== 'undefined' && document.hidden) return;
+        if (now - lastFallbackTime < 33.3) return; // 30 FPS cap
+        lastFallbackTime = now;
         if (!ctx || !fallbackCanvas) return;
         const w = fallbackCanvas.width;
         const h = fallbackCanvas.height;

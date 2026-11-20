@@ -18,7 +18,7 @@ except Exception:
     ENHANCED_AI_AVAILABLE = False
 
 try:
-    from core_ai.ai.auto_learning_router import AutoLearningRouter
+    from core_ai.ai.auto_learning_router import LearningDataRouter
     LEARNING_ROUTER_AVAILABLE = True
 except Exception:
     LEARNING_ROUTER_AVAILABLE = False
@@ -871,7 +871,8 @@ async def api_enhanced_chat():
         
         # Log for learning
         if LEARNING_ROUTER_AVAILABLE and learning_router:
-            learning_router.route_conversation(message, result['text'], current_user)
+            learning_router.route_conversation(speaker='user', content=message, input_mode='chat')
+            learning_router.route_conversation(speaker='assistant', content=result.get('text', ''), input_mode='chat')
         
         return jsonify({
             "success": True,
@@ -1167,18 +1168,37 @@ def api_chat_stream():
                 except Exception as rag_err:
                     logger.debug(f"Historical RAG lookup skipped in stream: {rag_err}")
 
+                # Real-time Web Intelligence Grounding
+                web_grounding_block = ""
+                stream_message = message
+                try:
+                    from core_ai.integrations.web_intelligence import get_web_intelligence
+                    wi = get_web_intelligence()
+                    grounding = wi.ground_prompt(message, timeout=5.0)
+                    if grounding.has_grounding:
+                        web_grounding_block = grounding.context_block
+                        stream_message = f"{web_grounding_block}\n\nUser: {message}"
+                except Exception as wg_err:
+                    logger.debug(f"Web grounding lookup skipped in stream: {wg_err}")
+
+                combined_extra = ""
+                if rag_ctx:
+                    combined_extra += f"{rag_ctx}\n\n"
+                if web_grounding_block:
+                    combined_extra += f"{web_grounding_block}\n\n"
+
                 try:
                     from core_ai.core.jarvis_persona import build_persona_system_prompt
                     sys_prompt = build_persona_system_prompt(
                         provider=cur_provider,
                         model=cur_model,
                         surface="chat",
-                        extra_context=rag_ctx,
+                        extra_context=combined_extra.strip(),
                     )
                 except Exception:
                     sys_prompt = "You are Pulsar, an intelligent and helpful AI companion."
-                    if rag_ctx:
-                        sys_prompt = f"{sys_prompt}\n{rag_ctx}"
+                    if combined_extra:
+                        sys_prompt = f"{sys_prompt}\n{combined_extra.strip()}"
                 if hasattr(chat, 'set_system_message'):
                     chat.set_system_message(sys_prompt)
 
@@ -1190,7 +1210,7 @@ def api_chat_stream():
                 
                 try:
                     # Get streaming response
-                    for token in chat.chat(message, stream=True):
+                    for token in chat.chat(stream_message, stream=True):
                         if store.get_current_session().get('id') != active_sess_id:
                             yield f"data: {json.dumps({'done': True, 'aborted': True, 'reason': 'new_session', 'session_id': active_sess_id})}\n\n"
                             return

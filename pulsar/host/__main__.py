@@ -238,10 +238,15 @@ def run_host(port: int = 5000, start_dashboard: bool = False):
     set_process_app_user_model_id()
 
     # 3. Initialize Single Qt Application Event Loop
-    from PySide6.QtCore import QTimer
+    from PySide6.QtCore import Qt, QTimer
     from PySide6.QtGui import QIcon
     from PySide6.QtWidgets import QApplication
     from PySide6.QtNetwork import QLocalServer
+
+    try:
+        QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts, True)
+    except Exception:
+        pass
 
     app = QApplication.instance() or QApplication(sys.argv)
     app.setApplicationName("Pulsar AI Assistant")
@@ -329,6 +334,9 @@ def run_host(port: int = 5000, start_dashboard: bool = False):
         except Exception:
             return False
 
+    last_reconciled_orb_show = [None]
+    browser_dash_consecutive_misses = [0]
+
     def reconcile():
         """
         Single authoritative visibility rule:
@@ -339,10 +347,24 @@ def run_host(port: int = 5000, start_dashboard: bool = False):
         if quitting["active"]:
             return
         native_dash_open = dashboard.isVisible() and not dashboard.isMinimized()
-        browser_dash_open = False if native_dash_open else _detect_external_browser_dashboard_open()
+        if native_dash_open:
+            browser_dash_open = False
+            browser_dash_consecutive_misses[0] = 0
+        else:
+            raw_browser_open = _detect_external_browser_dashboard_open()
+            if raw_browser_open:
+                browser_dash_open = True
+                browser_dash_consecutive_misses[0] = 0
+            else:
+                browser_dash_consecutive_misses[0] += 1
+                # Require 2 consecutive misses (2.0s) to prevent transient tooltip/title blinks from flipping Orb
+                browser_dash_open = False if browser_dash_consecutive_misses[0] >= 2 else True
+
         dash_open = native_dash_open or browser_dash_open
         orb_should_show = True if always_show_orb["enabled"] else (not dash_open)
-        orb.set_reconciled_visible(orb_should_show)
+        if last_reconciled_orb_show[0] != orb_should_show:
+            last_reconciled_orb_show[0] = orb_should_show
+            orb.set_reconciled_visible(orb_should_show)
 
     # Lightweight 1.0s watcher so opening/minimizing localhost:5000 in Chrome/Edge auto-hides/shows Orb
     browser_watch_timer = QTimer()

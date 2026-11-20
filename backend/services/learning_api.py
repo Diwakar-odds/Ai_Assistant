@@ -7,8 +7,26 @@ Advanced Learning Systems API Endpoints
 FastAPI endpoints for all 16 learning systems
 """
 
-from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
+try:
+    from fastapi import APIRouter, HTTPException, Depends
+    from pydantic import BaseModel
+except ImportError:
+    class APIRouter:
+        def __init__(self, *args, **kwargs): pass
+        def get(self, *args, **kwargs): return lambda f: f
+        def post(self, *args, **kwargs): return lambda f: f
+        def put(self, *args, **kwargs): return lambda f: f
+        def delete(self, *args, **kwargs): return lambda f: f
+    class HTTPException(Exception):
+        def __init__(self, status_code: int = 500, detail: str = ""):
+            super().__init__(detail)
+            self.status_code = status_code
+            self.detail = detail
+    def Depends(*args, **kwargs): return None
+    class BaseModel:
+        def __init__(self, **kwargs):
+            for k, v in kwargs.items(): setattr(self, k, v)
+        def dict(self, *args, **kwargs): return vars(self)
 from typing import Dict, List, Optional
 from datetime import datetime
 import json

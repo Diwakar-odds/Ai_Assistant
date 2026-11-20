@@ -2109,7 +2109,11 @@ def handle_command(data):
         stream_id = None
         try:
             store = _get_chat_store()
-            sess_id = store.get_current_session().get('id')
+            req_sess_id = str(data.get('session_id') or '').strip()
+            if req_sess_id and hasattr(store, 'get_session') and store.get_session(req_sess_id):
+                sess_id = req_sess_id
+            else:
+                sess_id = store.get_current_session().get('id')
             boot_id = store.get_boot_id()
             user_msg_id = str(data.get('client_message_id') or '').strip() or store.next_message_id('user')
             ai_msg_id = store.next_message_id('ai')
@@ -2189,7 +2193,8 @@ def handle_command(data):
             build_persona_system_prompt,
         )
         coordinator = get_lifecycle_coordinator()
-        wants_speak = should_speak_for_request(data, default_for_chat=_is_tts_enabled())
+        default_chat_speak = False if str(source).lower() == 'webui_chat' else _is_tts_enabled()
+        wants_speak = should_speak_for_request(data, default_for_chat=default_chat_speak)
         turn_id = coordinator.begin_turn(command_text, source=source, speak=wants_speak)
         tts_enabled = wants_speak
 
@@ -2577,11 +2582,31 @@ def handle_command(data):
                 except Exception as rag_err:
                     logger.debug(f"Historical RAG lookup skipped: {rag_err}")
 
+                # === REAL-TIME WEB INTELLIGENCE GROUNDING ===
+                web_grounding_block = ""
+                stream_message = command_text
+                try:
+                    from core_ai.integrations.web_intelligence import get_web_intelligence
+                    wi = get_web_intelligence()
+                    grounding = wi.ground_prompt(command_text, timeout=5.0)
+                    if grounding.has_grounding:
+                        web_grounding_block = grounding.context_block
+                        stream_message = f"{web_grounding_block}\n\nUser: {command_text}"
+                        logger.info(f"🌐 [VOICE/CHAT] Real-time web intelligence grounded query ({grounding.source_engine})")
+                except Exception as wg_err:
+                    logger.debug(f"Web grounding lookup skipped in handle_command: {wg_err}")
+
+                combined_extra = ""
+                if rag_ctx:
+                    combined_extra += f"{rag_ctx}\n\n"
+                if web_grounding_block:
+                    combined_extra += f"{web_grounding_block}\n\n"
+
                 system_msg = build_persona_system_prompt(
                     provider=provider_name,
                     model=model_name,
                     surface=source or 'voice',
-                    extra_context=rag_ctx,
+                    extra_context=combined_extra.strip(),
                 )
                 if hasattr(chat, 'set_system_message'):
                     chat.set_system_message(system_msg)
@@ -2643,7 +2668,7 @@ def handle_command(data):
                 def _iter_with_gguf_fallback():
                     nonlocal provider_name, model_name, stream_error_msg
                     local_mode = is_local_provider(provider_name)
-                    stream_iter = iter(chat.chat(command_text, stream=True))
+                    stream_iter = iter(chat.chat(stream_message, stream=True))
                     first_yield = True
                     for ch in stream_iter:
                         if not _is_turn_still_live():
@@ -2659,13 +2684,13 @@ def handle_command(data):
                                     fb_chat = UnifiedChatInterface(provider='gguf', model='pulsar-final-q4_k_m', use_fallback=False)
                                     provider_name = 'gguf'
                                     model_name = 'pulsar-final-q4_k_m'
-                                    fb_sys = build_persona_system_prompt(provider='gguf', model=model_name, surface=source or 'voice', extra_context=rag_ctx)
+                                    fb_sys = build_persona_system_prompt(provider='gguf', model=model_name, surface=source or 'voice', extra_context=combined_extra.strip())
                                     if hasattr(fb_chat, 'set_system_message'):
                                         fb_chat.set_system_message(fb_sys)
                                     else:
                                         fb_chat.add_system_message(fb_sys)
                                     fb_first = True
-                                    for fb_ch in fb_chat.chat(command_text, stream=True):
+                                    for fb_ch in fb_chat.chat(stream_message, stream=True):
                                         if not _is_turn_still_live():
                                             return
                                         if fb_ch:

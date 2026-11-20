@@ -1325,6 +1325,19 @@ CORRECTED VERSION:
         active_provider = self._get_active_provider_name()
         active_model = self._get_active_model_name()
 
+        # Check Web Intelligence grounding for factual/real-time/sports queries
+        web_grounding_block = ""
+        grounded_command = command
+        try:
+            from core_ai.integrations.web_intelligence import get_web_intelligence
+            wi = get_web_intelligence()
+            grounding = wi.ground_prompt(command, timeout=5.0)
+            if grounding.has_grounding:
+                web_grounding_block = grounding.context_block
+                grounded_command = f"{web_grounding_block}\n\nUser: {command}"
+        except Exception as wg_err:
+            logger.debug(f"Web grounding check in AgentBrain skipped: {wg_err}")
+
         try:
             from core_ai.core.jarvis_persona import build_persona_system_prompt
             system_context = build_persona_system_prompt(
@@ -1332,6 +1345,7 @@ CORRECTED VERSION:
                 model=active_model,
                 active_window=window_info if include_screen else None,
                 surface="companion",
+                extra_context=web_grounding_block,
             )
         except Exception:
             win_line = (
@@ -1339,10 +1353,12 @@ CORRECTED VERSION:
                 if include_screen
                 else ""
             )
+            extra_wb = f"\n{web_grounding_block}\n" if web_grounding_block else ""
             system_context = (
                 f"You are Pulsar, a brilliant, friendly, personal desktop AI companion.\n"
                 f"You speak natural English or Hindi/Hinglish depending on the user.\n"
                 f"{win_line}"
+                f"{extra_wb}"
                 f"Keep your direct response concise (1-3 sentences)."
             )
 
@@ -1367,7 +1383,7 @@ CORRECTED VERSION:
                     model=target_m,
                     messages=[
                         {"role": "system", "content": system_context},
-                        {"role": "user", "content": command}
+                        {"role": "user", "content": grounded_command}
                     ],
                     max_tokens=500
                 )
@@ -1384,7 +1400,7 @@ CORRECTED VERSION:
                 target_m = LLMFactory.sanitize_model_for_provider('gguf', active_model)
                 chat_iface = UnifiedChatInterface(provider='gguf', model=target_m, use_fallback=False)
                 chat_iface.set_system_message(system_context)
-                res_txt = str(_run_in_tpool(chat_iface.chat, command, stream=False, max_tokens=64)).strip()
+                res_txt = str(_run_in_tpool(chat_iface.chat, grounded_command, stream=False, max_tokens=256)).strip()
                 if res_txt.startswith("Error:"):
                     raise RuntimeError(res_txt)
                 reply = res_txt
@@ -1407,7 +1423,7 @@ CORRECTED VERSION:
                 actual_provider = 'gemini'
                 actual_model = target_m
                 model = genai.GenerativeModel(target_m)
-                resp = model.generate_content(f"{system_context}\n\nUser: {command}")
+                resp = model.generate_content(f"{system_context}\n\nUser: {grounded_command}")
                 reply = (getattr(resp, 'text', '') or '').strip()
             except Exception as e:
                 logger.warning(f"Gemini routing failed: {e}")
@@ -1422,7 +1438,7 @@ CORRECTED VERSION:
                 logger.info("Falling back to local GGUF model after cloud provider failure...")
                 chat_iface = UnifiedChatInterface(provider='gguf', model='pulsar-final-q4_k_m', use_fallback=False)
                 chat_iface.set_system_message(system_context)
-                res_txt = str(_run_in_tpool(chat_iface.chat, command, stream=False, max_tokens=64)).strip()
+                res_txt = str(_run_in_tpool(chat_iface.chat, grounded_command, stream=False, max_tokens=256)).strip()
                 if res_txt and not res_txt.startswith("Error:"):
                     reply = res_txt
                     actual_provider = 'gguf'

@@ -235,6 +235,32 @@ def handle_chat_stream(data):
 
             chat = chat_sessions[session_id]
         
+        # Real-time Web Intelligence Grounding for direct WebSocket stream
+        web_grounding_block = ""
+        stream_message = message
+        try:
+            from core_ai.integrations.web_intelligence import get_web_intelligence
+            wi = get_web_intelligence()
+            grounding = wi.ground_prompt(message, timeout=5.0)
+            if grounding.has_grounding:
+                web_grounding_block = grounding.context_block
+                stream_message = f"{web_grounding_block}\n\nUser: {message}"
+        except Exception as wg_err:
+            logger.debug(f"Web grounding lookup skipped in handle_chat_stream: {wg_err}")
+
+        if web_grounding_block and hasattr(chat, 'set_system_message'):
+            try:
+                from core_ai.core.jarvis_persona import build_persona_system_prompt
+                sys_prompt = build_persona_system_prompt(
+                    provider=cur_provider,
+                    model=cur_model,
+                    surface="chat",
+                    extra_context=web_grounding_block.strip(),
+                )
+                chat.set_system_message(sys_prompt)
+            except Exception:
+                pass
+
         # Stream the response
         start_time = time.time()
         tokens = 0
@@ -242,7 +268,7 @@ def handle_chat_stream(data):
         
         try:
             # Stream tokens
-            for token in chat.chat(message, stream=True):
+            for token in chat.chat(stream_message, stream=True):
                 if tokens == 0 and str(token).strip().startswith('Error:'):
                     emit('chat_stream_error', {
                         'error': str(token),

@@ -481,9 +481,10 @@ class OrbWindow(QWidget):
         try:
             import ctypes
             hwnd = int(self.winId())
+            # SWP_NOREDRAW (0x0008) | SWP_NOOWNERZORDER (0x0200) prevents DWM desktop repaint flicker
             ctypes.windll.user32.SetWindowPos(
                 hwnd, HWND_TOPMOST, 0, 0, 0, 0,
-                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | 0x0008 | 0x0200,
             )
         except Exception:
             pass
@@ -609,8 +610,11 @@ class OrbWindow(QWidget):
             self._fade_anim = None
 
     def set_reconciled_visible(self, visible: bool, delay_ms: int = 120):
-        self._reconciled_visible = bool(visible)
-        effective = self._reconciled_visible and self._user_visible
+        target = bool(visible)
+        effective = target and self._user_visible
+        if self._reconciled_visible == target and self.isVisible() == effective:
+            return
+        self._reconciled_visible = target
         self._cancel_pending_animations()
 
         if not effective:

@@ -60,7 +60,7 @@ def get_chrome_executable() -> Optional[str]:
 def get_chrome_profiles() -> Dict[str, Dict]:
     """
     Reads Chrome's Local State file to discover all configured profiles dynamically.
-    Returns mapping from profile directory (e.g. 'Profile 9') to profile info.
+    Returns mapping from profile directory (e.g. 'Profile 1', 'Default') to profile info.
     """
     profiles = {}
     if not os.path.exists(CHROME_LOCAL_STATE):
@@ -113,7 +113,7 @@ def resolve_chrome_profile(profile_query: str) -> Optional[str]:
     if q in ['chrome', 'google chrome', 'browser', 'web browser']:
         return None
         
-    # 1. Exact directory match directly (e.g. 'profile 9', 'Profile 15', 'default')
+    # 1. Exact directory match directly (e.g. 'profile 1', 'Profile 2', 'default')
     m = re.match(r'^profile\s*(\d+)$', q, re.IGNORECASE)
     if m:
         dir_candidate = f"Profile {m.group(1)}"
@@ -178,6 +178,20 @@ def resolve_chrome_profile(profile_query: str) -> Optional[str]:
                 if re.search(pattern, q) or (clean_q and re.search(pattern, clean_q)):
                     return dir_name
                     
+    # 5. Dynamic lookup in Unified Memory for user-taught profile associations
+    try:
+        from core_ai.memory import MemoryService
+        ms = MemoryService.get()
+        hits = ms.store.search(f"{clean_q or q} profile", k=3, kinds=("fact",))
+        for h in hits:
+            m_prof = re.search(r'\b(profile\s*\d+|default)\b', h.get("content", ""), re.IGNORECASE)
+            if m_prof:
+                matched_dir = m_prof.group(1).title()
+                if not discovered or matched_dir in discovered:
+                    return matched_dir
+    except Exception as mem_err:
+        logger.debug(f"Memory lookup for profile skipped: {mem_err}")
+
     return None
 
 def extract_profile_from_text(text: str) -> Tuple[Optional[str], str]:
@@ -185,10 +199,10 @@ def extract_profile_from_text(text: str) -> Tuple[Optional[str], str]:
     Extracts a browser profile query or alias from user text, returning (profile_name, cleaned_text).
     
     Examples:
-        'play Arijit Singh in Rancho' -> ('rancho', 'play Arijit Singh')
-        'Rancho kholo' -> ('rancho', '')
-        'open saurashtra profile' -> ('saurashtra', 'open')
-        'search python in KIT' -> ('kit', 'search python')
+        'play music in work' -> ('work', 'play music')
+        'work profile kholo' -> ('work', '')
+        'open academic profile' -> ('academic', 'open')
+        'search python in college' -> ('college', 'search python')
     """
     if not text:
         return None, text
@@ -236,7 +250,7 @@ def get_requested_profile(
     params: Optional[Dict[str, Any]] = None,
     text: Optional[str] = None,
     ctx: Any = None,
-    default: Optional[str] = "Profile 3"
+    default: Optional[str] = "Default"
 ) -> Tuple[Optional[str], str]:
     """
     Dynamically determines the target browser profile following priority:
@@ -296,8 +310,15 @@ def launch_browser_profile(browser: str = "chrome", profile_query: Optional[str]
     if 'chrome' in browser_lower or 'browser' in browser_lower:
         chrome_exe = get_chrome_executable()
         if not chrome_exe:
-            logger.error("Google Chrome executable not found")
-            return False
+            logger.info("Google Chrome executable not found; smoothly falling back to default system browser.")
+            try:
+                import webbrowser
+                target_url = url or "https://www.google.com"
+                webbrowser.open(target_url)
+                return True
+            except Exception as e:
+                logger.error(f"Fallback browser launch failed: {e}")
+                return False
             
         profile_dir = resolve_chrome_profile(profile_query) if profile_query else None
         
@@ -315,7 +336,19 @@ def launch_browser_profile(browser: str = "chrome", profile_query: Optional[str]
             subprocess.Popen(args)
             return True
         except Exception as e:
-            logger.error(f"Failed to launch Chrome: {e}")
-            return False
+            logger.error(f"Failed to launch Chrome: {e}; falling back to system browser")
+            try:
+                import webbrowser
+                webbrowser.open(url or "https://www.google.com")
+                return True
+            except Exception:
+                return False
             
-    return False
+    # Generic browser / fallback for other browsers
+    try:
+        import webbrowser
+        webbrowser.open(url or "https://www.google.com")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to launch browser: {e}")
+        return False
