@@ -51,6 +51,8 @@ class WebQueryClassifier:
         r"^\s*(?:summarize|proofread|paraphrase|rewrite|translate)\s+(?:this|the\s+following|niche\s+likha)",
         r"^\s*(?:remember|yaad\s+rakho|save\s+to\s+memory|mera\s+naam\s+yaad)",
         r"^\s*(?:who\s+am\s+i|what\s+is\s+my\s+name|mera\s+naam\s+kya\s+hai)",
+        # Date, Time, Calendar queries (Direct local clock facts)
+        r"^\s*(?:what\s+is\s+today'?s?\s+date|aaj\s+date\s+kya\s+hai|aaj\s+ka\s+date|aaj\s+konsi\s+tarikh\s+hai|today'?s?\s+date|current\s+time|time\s+kya\s+hua|aaj\s+kya\s+din\s+hai|what\s+day\s+is\s+it|what\s+time\s+is\s+it|aaj\s+konsa\s+din\s+hai)\b",
     ]
 
     # Conversational / Greetings

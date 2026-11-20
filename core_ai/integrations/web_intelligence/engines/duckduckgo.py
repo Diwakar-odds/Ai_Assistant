@@ -35,10 +35,10 @@ class DuckDuckGoEngine(BaseSearchEngine):
         return True
 
     def search(self, query: str, num_results: int = 5) -> List[SearchResult]:
-        """Perform search using HTML POST with Lite endpoint fallback."""
-        results = self._search_html_post(query, num_results)
+        """Perform search using Lite endpoint (ultra-fast, ~1s) with HTML POST fallback."""
+        results = self._search_lite_post(query, num_results)
         if not results:
-            results = self._search_lite_post(query, num_results)
+            results = self._search_html_post(query, num_results)
         if not results:
             results = self._search_instant_answer(query, num_results)
         return results
