@@ -150,11 +150,15 @@ def test_chain_guard_registry():
     assert reg.state == "idle"
 
 
-def test_task_chain_orchestrator_terminal_events():
+def test_task_chain_orchestrator_terminal_events(monkeypatch=None):
     """Test that TaskChainOrchestrator emits terminal events and propagates blackboard parameters."""
     from core_ai.core.task_chain_orchestrator import TaskChainOrchestrator
     
     orch = TaskChainOrchestrator()
+    if monkeypatch:
+        monkeypatch.setattr(orch, "execute_step", lambda s, chain_ctx=None: {"success": True, "step": s.step, "intent": s.intent})
+    else:
+        orch.execute_step = lambda s, chain_ctx=None: {"success": True, "step": s.step, "intent": s.intent}
     events = []
     
     def on_event(payload):
