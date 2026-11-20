@@ -88,6 +88,13 @@ def trigger_emergency_stop(reason: str = "Global Emergency Stop Activated") -> d
         except Exception:
             pass
 
+        # 0.5 Invalidate active lifecycle turns & thinking immediately
+        try:
+            from core_ai.core.jarvis_persona import get_lifecycle_coordinator
+            get_lifecycle_coordinator().cancel_all(reason=reason)
+        except Exception:
+            pass
+
         # 1. Forcibly release mouse & keyboard control
         release_system_inputs()
 

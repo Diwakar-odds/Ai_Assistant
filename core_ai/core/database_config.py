@@ -48,6 +48,7 @@ DATABASES = {
     'automation_engine': DATA_DIR / 'automation' / 'automation_engine.db',
     'command_sequences': DATA_DIR / 'automation' / 'command_sequences.db',
     'command_success': DATA_DIR / 'automation' / 'command_success.db',
+    'intent_penalties': DATA_DIR / 'automation' / 'intent_penalties.db',
     'smart_commands': DATA_DIR / 'automation' / 'smart_commands.db',
     'task_scheduler': DATA_DIR / 'automation' / 'task_scheduler.db',
     'query_cache': DATA_DIR / 'caches' / 'query_cache.db',

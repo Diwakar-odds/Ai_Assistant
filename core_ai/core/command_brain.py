@@ -367,6 +367,17 @@ class ExecutiveBrain:
             if intent_name == "info_query" or intent_name == "conversational":
                 return CommandClassification.CONVERSATIONAL
 
+            # If intent is search_web, check if it's background grounding (commodity prices, weather, facts)
+            if intent_name == "search_web":
+                try:
+                    from core_ai.integrations.web_intelligence import get_web_intelligence, WebQueryMode
+                    mode, _ = get_web_intelligence().classify(command)
+                    if mode == WebQueryMode.BACKGROUND_GROUNDING:
+                        logger.info(f"🧠 [CommandBrain] Routing '{command}' to CONVERSATIONAL for headless web grounding")
+                        return CommandClassification.CONVERSATIONAL
+                except Exception as wi_err:
+                    logger.debug(f"Web intelligence classification check in brain error: {wi_err}")
+
             # If it's a known system intent, treat it as a new task
             system_intents = [
                 'open_app', 'close_app', 'search_web', 'youtube_search', 'youtube_history',

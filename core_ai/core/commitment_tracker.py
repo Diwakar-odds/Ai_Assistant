@@ -54,6 +54,27 @@ class CommitmentTracker:
         ''', (cid, text, action, deadline, party))
         conn.commit()
         conn.close()
+
+        # Synchronize to Unified Memory Store
+        try:
+            from core_ai.memory import MemoryService, resolve_time
+            res = resolve_time(deadline, datetime.now()) if deadline else None
+            ms = MemoryService.get()
+            ms.store.upsert(
+                kind="commitment",
+                content=action or text,
+                subject=party or "self",
+                importance=0.8,
+                confidence=0.9,
+                event_start=res.start.timestamp() if res else None,
+                event_end=res.end.timestamp() if res else None,
+                precision=res.precision if res else None,
+                time_expr=deadline,
+                payload={"cid": cid, "party": party}
+            )
+        except Exception as ms_err:
+            logger.debug(f"[MemoryService] commitment sync notice: {ms_err}")
+
         return cid
 
     def update_status(self, commitment_id: str, status: str):

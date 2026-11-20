@@ -1311,12 +1311,25 @@ def retrieve_unified_historical_context(
     retriever = get_memory_retriever(db_path=db_path)
     if only_when_triggered and not retriever.is_memory_query(query):
         return ""
-    return retriever.retrieve_unified_context(
+    legacy_ctx = retriever.retrieve_unified_context(
         query,
         max_chars=max_chars,
         max_results=max_results,
         current_session_id=current_session_id,
     )
+
+    # Seamless integration with 3-tier MemoryService
+    mem_ctx = ""
+    try:
+        from core_ai.memory import MemoryService
+        ms = MemoryService.get()
+        mem_ctx = ms.build_context(query, max_chars=max_chars // 2)
+    except Exception as ms_err:
+        logger.debug(f"[MemoryService] context build notice: {ms_err}")
+
+    if mem_ctx and legacy_ctx:
+        return f"{mem_ctx}\n\n{legacy_ctx}"
+    return mem_ctx or legacy_ctx
 
 
 def persist_turn_to_conversation_ai(
@@ -1450,6 +1463,16 @@ def persist_turn_to_conversation_ai(
                     logger.debug(f"[RAG] Vector turn persist warning: {v_err}")
 
                 conn.commit()
+
+        # Synchronize turn to Unified MemoryService (WorkingMemory + Episodes log)
+        try:
+            from core_ai.memory import MemoryService
+            ms = MemoryService.get()
+            ms.record_turn("user", u_clean, source=source)
+            ms.record_turn("assistant", a_clean, source=source)
+        except Exception as ms_err:
+            logger.debug(f"[MemoryService] sync notice: {ms_err}")
+
         return True
     except Exception as exc:
         logger.debug(f"[RAG] persist_turn_to_conversation_ai skipped: {exc}")

@@ -615,8 +615,18 @@ def build_persona_system_prompt(
     except Exception:
         pass
 
+    now = _dt.datetime.now()
+    temporal_context = (
+        f"CURRENT REAL-WORLD TEMPORAL CONTEXT:\n"
+        f"- Today's Date: {now.strftime('%A, %d %B %Y')}\n"
+        f"- Current Local Time: {now.strftime('%I:%M %p')}\n"
+        f"CRITICAL: When the user asks 'aaj date kya hai', 'what is today\\'s date', 'time kya hua', or about current date/time/year, "
+        f"always use this exact system date ({now.strftime('%d %B %Y')}). Never hallucinate past or random dates."
+    )
+
     sections = [
         f"You are {name}, an intelligent, human-like personal AI co-pilot.",
+        temporal_context,
     ]
     if user_dna_block:
         sections.append(user_dna_block)

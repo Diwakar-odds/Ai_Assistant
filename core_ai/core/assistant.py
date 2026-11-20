@@ -107,10 +107,10 @@ except ImportError:
 
 # Internal imports - Learning router
 try:
-    from auto_learning_router import LearningDataRouter
+    from core_ai.ai.auto_learning_router import LearningDataRouter
     LEARNING_ROUTER_AVAILABLE = True
     learning_router = LearningDataRouter()
-except ImportError:
+except (ImportError, Exception):
     LEARNING_ROUTER_AVAILABLE = False
     learning_router = None
 
@@ -1585,7 +1585,7 @@ Just speak naturally - I understand context! """
                     from core_ai.integrations.web_intelligence import get_web_intelligence
                     web_intel = get_web_intelligence()
                     # Ground against original query (preserves natural Hindi/Hinglish terms)
-                    grounding = web_intel.ground_prompt(message, timeout=3.5)
+                    grounding = web_intel.ground_prompt(message, timeout=5.0)
                     if grounding.has_grounding:
                         web_grounding_block = grounding.context_block
                         features_used.append("web_grounding")

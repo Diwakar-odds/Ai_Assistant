@@ -153,9 +153,8 @@ class ContextManager:
             storage_path: Path to store context data
         """
         if storage_path is None:
-            # ISOLATE STORAGE PER INSTANCE TO PREVENT CONFLICTS
-            instance_id = str(uuid.uuid4())[:8]
-            storage_path = f"data/conversation_context_{instance_id}.json"
+            # Deterministic storage path anchored to active context to prevent file fragmentation
+            storage_path = "data/context/active_context.json"
 
         self.storage_path = Path(storage_path)
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)

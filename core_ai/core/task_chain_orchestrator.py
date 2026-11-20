@@ -93,6 +93,13 @@ class ChainExecutionContext:
             if getattr(step, "output_key", None):
                 self.step_outputs[step.output_key] = entry
             self.step_outputs["prev"] = entry
+            # Propagate profile and app_name to blackboard key_vars
+            p_val = result.get("profile") or (step.params.get("profile") if getattr(step, "params", None) else None)
+            if p_val:
+                self.key_vars["current_browser_profile"] = p_val
+            app_val = result.get("app_name") or (step.params.get("app_name") if getattr(step, "params", None) else None)
+            if app_val:
+                self.key_vars["current_app"] = app_val
 
     def infer_missing_params(self, intent: str, params: Dict[str, Any]) -> Dict[str, Any]:
         merged = dict(params or {})
@@ -102,7 +109,7 @@ class ChainExecutionContext:
             except Exception:
                 pass
         with self._lock:
-            if intent in ("youtube_search", "search_web", "play_media") and not merged.get("profile"):
+            if intent in ("youtube_search", "search_web", "play_media", "read_email", "open_email", "open_browser", "open_url", "check_mail") and not merged.get("profile"):
                 if self.key_vars.get("current_browser_profile"):
                     merged["profile"] = self.key_vars["current_browser_profile"]
             if intent in ("send_message", "type_text", "skip_time") and not merged.get("app_name"):
@@ -540,7 +547,12 @@ class TaskChainOrchestrator:
         final_output: Any = None
         waves = self._build_execution_waves(steps)
 
+        terminal_emitted = False
+
         def _emit(event_type: str, **payload):
+            nonlocal terminal_emitted
+            if event_type in ("chain.completed", "chain.failed"):
+                terminal_emitted = True
             event_payload = {
                 "event_type": event_type,
                 "chain_id": chain_id,
@@ -572,6 +584,7 @@ class TaskChainOrchestrator:
                 # 1. Check stop/cancel before each wave
                 if self._is_cancelled(cancel_event):
                     ordered = [results_by_step[k] for k in sorted(results_by_step)]
+                    _emit("chain.failed", status="cancelled", error="Emergency stop invoked.", final_output=final_output)
                     return ExecutionResult(
                         success=steps_completed > 0,
                         steps_completed=steps_completed,
@@ -584,20 +597,8 @@ class TaskChainOrchestrator:
                         final_output=final_output,
                     )
 
-                # 2. Wait cleanly if paused (or check external IDLE abort)
-                if self.context_manager.get_state() == ExecutionState.IDLE:
-                    ordered = [results_by_step[k] for k in sorted(results_by_step)]
-                    return ExecutionResult(
-                        success=steps_completed > 0,
-                        steps_completed=steps_completed,
-                        total_steps=len(steps),
-                        results=ordered,
-                        message=f"Execution interrupted after {steps_completed} steps.",
-                        chain_id=chain_id,
-                        status="cancelled",
-                        final_output=final_output,
-                    )
-
+                # 2. Wait cleanly if paused
+                # (We do NOT abort on IDLE state here: external threads/cleanup must not cancel an active chain)
                 if self.context_manager.get_state() == ExecutionState.PAUSED or (pause_event is not None and pause_event.is_set()):
                     if self._resume_event.is_set() and (pause_event is None or not pause_event.is_set()):
                         # External caller set context_manager state to PAUSED directly without orchestrator.pause()
@@ -745,6 +746,7 @@ class TaskChainOrchestrator:
                             )
                         except Exception as rec_err:
                             logger.debug(f"Could not record pending recovery: {rec_err}")
+                        _emit("chain.failed", status="failed", error=fail_err, final_output=final_output)
                         return ExecutionResult(
                             success=False,
                             steps_completed=steps_completed,
@@ -777,6 +779,7 @@ class TaskChainOrchestrator:
             logger.error(f"Chain execution failed: {e}", exc_info=True)
             self.context_manager.set_state(ExecutionState.ERROR)
             ordered = [results_by_step[k] for k in sorted(results_by_step)]
+            _emit("chain.failed", status="failed", error=str(e), final_output=final_output)
             return ExecutionResult(
                 success=False,
                 steps_completed=steps_completed,
@@ -788,6 +791,10 @@ class TaskChainOrchestrator:
                 final_output=final_output,
             )
         finally:
+            if not terminal_emitted:
+                _emit("chain.completed" if steps_completed == len(steps) and len(steps) > 0 else "chain.failed",
+                      status="completed" if steps_completed == len(steps) and len(steps) > 0 else "failed",
+                      final_output=final_output)
             if self.context_manager.get_state() in (ExecutionState.EXECUTING, ExecutionState.COMPLETE):
                 self.context_manager.clear_task_chain()
 

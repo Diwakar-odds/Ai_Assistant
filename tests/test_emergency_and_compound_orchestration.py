@@ -77,11 +77,11 @@ class TestSystemOrchestrationAndEmergencyStop(unittest.TestCase):
     def test_04_context_profile_inheritance(self):
         """Verify that Step 2 inherits Work profile from context established by Step 1"""
         self.ctx.set_var('current_app', 'chrome')
-        self.ctx.set_var('current_browser_profile', 'Profile 9')
+        self.ctx.set_var('current_browser_profile', 'Profile 1')
         
         params = {'query': 'coke studio'}
         inferred = self.ctx.infer_missing_params('youtube_search', params)
-        self.assertEqual(inferred.get('profile'), 'Profile 9')
+        self.assertEqual(inferred.get('profile'), 'Profile 1')
         self.assertEqual(inferred.get('query'), 'coke studio')
 
     def test_05_programmatic_trigger_emergency_stop(self):

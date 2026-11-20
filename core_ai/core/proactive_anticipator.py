@@ -71,9 +71,19 @@ class ProactiveAnticipator:
         current_hour = now.hour
         context = self.context_opt.get_time_context()
         proactive_msg = None
+
+        # 0. Check Unified Memory Nudge Ladder (60, 30, 14, 7, 3, 1, 0 days, quiet hours)
+        try:
+            from core_ai.memory import MemoryService
+            ms = MemoryService.get()
+            payload = ms.proactive.next_payload()
+            if payload and payload.get("text"):
+                proactive_msg = payload["text"]
+        except Exception as e:
+            logger.debug(f"MemoryService proactive check notice: {e}")
         
-        # 1. Commitment Checks
-        if self.commitment_tracker:
+        # 1. Commitment Checks (Fallback)
+        if not proactive_msg and self.commitment_tracker:
             overdue = self.commitment_tracker.get_overdue()
             if overdue:
                 proactive_msg = f"Reminder: You have {len(overdue)} overdue commitments, including '{overdue[0].action}'. Shall we tackle them now?"
